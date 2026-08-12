@@ -6,9 +6,11 @@ Provides common mixins and utilities for all domain models.
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, Optional
-from sqlalchemy import Column, DateTime, String, Text, Boolean, Integer
-from sqlalchemy.orm import deprecated
+from sqlalchemy import Column, DateTime, String, Boolean
+from sqlalchemy.orm import declarative_base
+
+
+Base = declarative_base()
 
 
 class StatusEnum(str, Enum):
@@ -20,30 +22,16 @@ class StatusEnum(str, Enum):
 
 
 class EntityMixin:
-    """
-    Mixin providing common fields and methods for all entities.
-    """
+    """Mixin providing common fields and methods for all entities."""
 
-    # Timestamps
-    created_at: Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at: Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    status = Column(String(32), default=StatusEnum.ACTIVE.value, nullable=False)
+    is_deleted = Column(Boolean, default=False, nullable=False)
+    name = Column(String(255), nullable=True)
 
-    # Status field
-    status: Column(String, default="active")
-
-    # Soft delete flag
-    is_deleted: Column(Boolean, default=False)
-
-    # Human-readable name
-    name: Column(String, nullable=False)
-
-    # Relationship helper
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}(name={self.name!r}, status={self.status!r})>"
-
-
-# Import here to avoid circular imports
-from .connection import engine, SessionLocal
 
 
 # Core domain models will inherit from EntityMixin
