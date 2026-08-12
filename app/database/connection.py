@@ -8,7 +8,11 @@ and database connection pooling for offline operation.
 import os
 from typing import Generator
 from sqlalchemy import create_engine
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.orm import sessionmaker
+from app.database.base import Base
+
+# Import all models so SQLAlchemy can register table metadata before create_all().
+import app.models  # noqa: F401
 
 
 def get_database_path() -> str:
@@ -38,9 +42,6 @@ SessionLocal = sessionmaker(
     bind=engine,
     expire_on_commit=False,
 )
-
-# Base class for declarative models
-Base = declarative_base()
 
 
 def get_db() -> Generator:

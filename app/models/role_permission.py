@@ -1,11 +1,10 @@
-import uuid
-from sqlalchemy import Column, String, ForeignKey
-from .base import Base
+from sqlalchemy import Table, Column, String, ForeignKey
+from app.database.base import Base
 
 
-class RolePermission(Base):
-    __tablename__ = "role_permissions"
-
-    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    role_id = Column(String(36), ForeignKey("roles.id"), nullable=False)
-    permission_id = Column(String(36), ForeignKey("permissions.id"), nullable=False)
+role_permissions = Table(
+    "role_permissions",
+    Base.metadata,
+    Column("role_id", String(36), ForeignKey("roles.id"), primary_key=True, nullable=False),
+    Column("permission_id", String(36), ForeignKey("permissions.id"), primary_key=True, nullable=False),
+)

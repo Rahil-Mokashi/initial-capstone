@@ -28,15 +28,25 @@ A petrol pump management system needs to handle fuel inventory, sales, procureme
 - [x] Database connection module (app/database/connection.py)
 - [x] Database base module (app/database/base.py)
 - [x] Core models directory structure
-- [x] User model (app/models/user.py)
+- [x] User model (app/models/user.py) with proper fields
 - [x] Role model (app/models/role.py)
 - [x] Permission model (app/models/permission.py)
-- [x] RolePermission model (app/models/role_permission.py)
-- [x] Inventory Service (app/services/inventory_service.py)
+- [x] Fuel model (app/models/fuel.py)
+- [x] User Repository (app/repositories/user_repository.py)
+- [x] Fuel Repository (app/repositories/fuel_repository.py)
 - [x] Auth Service (app/services/auth_service.py)
+- [x] Inventory Service (app/services/inventory_service.py)
+- [x] Core security (app/core/security.py) with password hashing
+- [x] Configuration (app/core/config.py) with Pydantic v2 ConfigDict
+- [x] Logging (app/core/logging.py)
+- [x] Database initialization (init_db)
+- [x] Initial data seeding (seed_initial_data) with admin user
+- [x] MVP UI stub (app/ui/main_window.py) with PySide6 support
+- [x] Core tests (tests/test_core_setup.py) passing
+- [x] Git repository initialized with core framework commit
 
 ## Current Module
-Service layer development - building business logic services
+MVP core framework complete — app can initialize, seed data, and optionally launch UI.
 
 ## Pending Modules
 - Complete model definitions for all entities
