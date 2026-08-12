@@ -6,13 +6,14 @@ Handles user login, logout, and session management
 from datetime import datetime, timedelta
 from typing import Optional, Tuple
 import secrets
-import hashlib
+
+from app.core.security import verify_password
 
 
 class AuthService:
     """Service for authentication and authorization operations"""
 
-    def __init__(self, user_repo, role_repo, permission_repo):
+    def __init__(self, user_repo, role_repo=None, permission_repo=None):
         self._user_repo = user_repo
         self._role_repo = role_repo
         self._permission_repo = permission_repo
@@ -33,17 +34,12 @@ class AuthService:
         if user.is_locked:
             return False, None, "Account is locked due to failed attempts"
 
-        if not self._verify_password(password, user.password_hash):
+        if not verify_password(password, user.password_hash):
             self._record_failed_login(user.id)
             return False, None, "Invalid password"
 
         self._record_successful_login(user.id)
         return True, self._build_user_response(user), None
-
-    def _verify_password(self, password: str, password_hash: str) -> bool:
-        """Verify password against stored hash"""
-        pwd_hash = hashlib.sha256(password.encode()).hexdigest()
-        return secrets.compare_digest(pwd_hash, password_hash)
 
     def _record_failed_login(self, user_id: int) -> None:
         """Record failed login attempt"""
