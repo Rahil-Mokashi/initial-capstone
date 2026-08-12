@@ -67,7 +67,7 @@ class AuthService:
             "first_name": user.first_name,
             "last_name": user.last_name,
             "role": user.role.name if user.role else None,
-            "permissions": [p.name for p in user.role.permissions] if user.role and hasattr(user.role, 'permissions') else []
+            "permissions": [],
         }
 
     def check_permission(self, user_id: int, permission: str) -> bool:
@@ -75,11 +75,6 @@ class AuthService:
         user = self._user_repo.get_by_id(user_id)
         if not user or not user.role:
             return False
-
-        # Check role permissions
-        for rp in user.role.role_permissions:
-            if rp.permission.name == permission:
-                return True
         return False
 
     def logout(self, user_id: int) -> bool:

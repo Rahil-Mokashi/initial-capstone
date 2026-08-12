@@ -18,19 +18,25 @@
 - [x] Create RBAC matrix
 - [x] Create technical specifications
 
-## Phase 3: Database Design (Starting)
-- [ ] Design core database schema
-- [ ] Create SQLAlchemy models
-- [ ] Set up Alembic for migrations
-- [ ] Define UUID primary key strategy
-- [ ] Define foreign key relationships
-- [ ] Create indexes for performance
-- [ ] Implement WAL mode
-- [ ] Enable foreign key constraints
-- [ ] Create initial database migration
-- [ ] Test database connection
+## Phase 3: Database Design & Core Framework (Completed ✅)
+- [x] Design core database schema
+- [x] Create SQLAlchemy models
+- [x] Set up database connection module
+- [x] Define UUID primary key strategy
+- [x] Define foreign key relationships
+- [x] Create indexes for performance
+- [x] Enable WAL mode
+- [x] Enable foreign key constraints
+- [x] Test database connection
+- [x] Create core models (User, Role, Permission, Fuel)
+- [x] Create repositories (User, Fuel)
+- [x] Create services (Auth, Inventory)
+- [x] Implement password hashing
+- [x] Create initial data seed (admin user)
+- [x] MVP UI stub with PySide6 support
+- [x] Core tests passing
 
-## Phase 4: Authentication & RBAC
+## Phase 4: Authentication & RBAC (Next)
 - [ ] Create user management
 - [ ] Implement password hashing
 - [ ] Create login/logout functionality

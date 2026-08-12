@@ -12,4 +12,3 @@ class Role(EntityMixin, Base):
     description = Column(String(512), nullable=True)
 
     users = relationship("User", back_populates="role")
-    permissions = relationship("Permission", secondary="role_permissions", back_populates="roles")

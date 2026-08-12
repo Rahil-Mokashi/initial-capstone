@@ -105,17 +105,16 @@ cd petrol-pump-erp
 
 # Create virtual environment
 python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
 
-# Initialize database
-python -m app.database.init_db
-
 # Run the application
 python -m app.main
 ```
+
+> If PySide6 is installed, the application launches the desktop UI. Otherwise the app starts in CLI fallback mode and prints initialization status.
 
 ## Requirements
 
