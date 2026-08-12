@@ -4,24 +4,15 @@ Service layer for petrol pump operations
 
 from datetime import datetime
 from typing import List, Optional
-from ..database.models.base import QueryFilterBase
-from ..database.repository import Repository
+
+from app.repositories.fuel_repository import FuelRepository
 
 
-class InventoryService(QueryFilterBase):
+class InventoryService:
     """Service level interface for fuel inventory operations"""
 
-    def __init__(self, repo: Repository):
+    def __init__(self, repo: FuelRepository):
         self._repo = repo
-
-    def _apply_filter(self, query, filters: dict) -> Query:
-        """Apply business logic filters"""
-        query = super()._apply_filter(query, filters)
-
-        # Add default filters
-        if "status" in filters and not filters["status"]:
-            query = query.filter_by(status="active")
-        return query
 
     def get_available_fuel(self) -> List[dict]:
         """Get all fuel types available for selling"""
@@ -31,46 +22,25 @@ class InventoryService(QueryFilterBase):
                 "type": fuel.fuel_type,
                 "rate": fuel.rate_per_liter,
                 "capacity": fuel.capacity,
-                "opening_stock": fuel.opening_stock
+                "opening_stock": fuel.opening_stock,
             }
-            for fuel in self._repo.get_all_fuel()
-            if fuel.is_active
+            for fuel in self._repo.list_active()
         ]
 
-    def update_fuel_capacity(self, fuel_id: int, quantity: float) -> Optional[dict]:
+    def update_fuel_capacity(self, fuel_id: str, quantity: float) -> Optional[dict]:
         """Update fuel capacity after sale"""
         fuel = self._repo.get_by_id(fuel_id)
         if fuel and fuel.is_active and quantity <= fuel.current_stock:
             fuel.current_stock -= quantity
-            fuel.last_updated = datetime.utcnow()
+            fuel.updated_at = datetime.utcnow()
             self._repo.update(fuel)
             return {
                 "id": fuel.id,
                 "type": fuel.fuel_type,
                 "updated_quantity": quantity,
-                "new_stock": fuel.current_stock
+                "new_stock": fuel.current_stock,
             }
         return None
-
-    def generate_report(self, period: str) -> dict:
-        """Generate aggregation report for given period"""
-        # Filter by date range
-        from_date = datetime.now().replace(day=1)
-        to_date = datetime.now().replace(day=1)  # Simplified for example
-
-        results = self._repo.execute_query(
-            """SELECT fuel_type, SUM(amount) as total_sales
-             FROM sales
-             WHERE sale_date BETWEEN :from_date AND :to_date
-             GROUP BY fuel_type""",
-            {"from_date": date(from_date.year, from_date.month, 1),
-             "to_date": to_date}
-        )
-
-        return {
-            "period": period,
-            "summary": dict(results) if results else {}
-        }
 
 
 # Single Responsibility Principle - Only handles inventory operations
