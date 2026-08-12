@@ -5,23 +5,30 @@ Handles SQLAlchemy engine creation, session management,
 and database connection pooling for offline operation.
 """
 
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
-from typing import Generator, Optional
 import os
+from typing import Generator
+from sqlalchemy import create_engine
+from sqlalchemy.orm import declarative_base, sessionmaker
+
+
+def get_database_path() -> str:
+    """Return the database path from environment or default location."""
+    return os.environ.get(
+        "PETROL_PUMP_DB_PATH",
+        os.path.join(os.path.dirname(__file__), "..", "petrol_pump.db"),
+    )
+
 
 # Database URL - SQLite file
-DB_PATH = os.path.join(os.path.dirname(__file__), "..", "petrol_pump.db")
+DB_PATH = get_database_path()
 
-# Create engine with WAL mode for better concurrency
+# Create engine with SQLite-specific settings
 engine = create_engine(
     f"sqlite:///{DB_PATH}",
     echo=False,
     connect_args={
         "check_same_thread": False,
-        "pool_pre_ping": True,
-    }
+    },
 )
 
 # Create session factory
@@ -29,7 +36,7 @@ SessionLocal = sessionmaker(
     autocommit=False,
     autoflush=False,
     bind=engine,
-    expire_on_commit=False
+    expire_on_commit=False,
 )
 
 # Base class for declarative models
