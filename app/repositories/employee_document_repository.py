@@ -3,6 +3,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 
 from app.models.employee_document import EmployeeDocument
+from app.repositories.base import safe_commit
 
 
 class EmployeeDocumentRepository:
@@ -21,11 +22,11 @@ class EmployeeDocumentRepository:
 
     def add(self, document: EmployeeDocument) -> EmployeeDocument:
         self._session.add(document)
-        self._session.commit()
+        safe_commit(self._session)
         self._session.refresh(document)
         return document
 
     def update(self, document: EmployeeDocument) -> EmployeeDocument:
-        self._session.commit()
+        safe_commit(self._session)
         self._session.refresh(document)
         return document

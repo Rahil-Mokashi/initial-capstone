@@ -3,6 +3,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from app.models.audit_log import AuditLog
+from app.repositories.base import safe_commit
 
 
 class AuditLogRepository:
@@ -37,7 +38,7 @@ class AuditLogRepository:
             device_info=device_info,
         )
         self._session.add(entry)
-        self._session.commit()
+        safe_commit(self._session)
         self._session.refresh(entry)
         return entry
 

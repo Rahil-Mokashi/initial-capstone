@@ -4,6 +4,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 
 from app.models.attendance import Attendance
+from app.repositories.base import safe_commit
 
 
 class AttendanceRepository:
@@ -35,11 +36,11 @@ class AttendanceRepository:
 
     def add(self, attendance: Attendance) -> Attendance:
         self._session.add(attendance)
-        self._session.commit()
+        safe_commit(self._session)
         self._session.refresh(attendance)
         return attendance
 
     def update(self, attendance: Attendance) -> Attendance:
-        self._session.commit()
+        safe_commit(self._session)
         self._session.refresh(attendance)
         return attendance

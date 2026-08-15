@@ -7,7 +7,8 @@ and database connection pooling for offline operation.
 
 import os
 from typing import Generator
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker
 from app.database.base import Base
 
@@ -34,6 +35,24 @@ engine = create_engine(
         "check_same_thread": False,
     },
 )
+
+
+@event.listens_for(Engine, "connect")
+def _enable_sqlite_pragmas(dbapi_connection, connection_record) -> None:
+    """SQLite disables foreign-key enforcement and WAL mode by default.
+
+    Without this, every ForeignKey() in app/models is enforced only by
+    application code, not by the database itself (CLAUDE.md: "Always use
+    foreign keys"; problemstatement.md #24: "Enable SQLite foreign keys",
+    "Use WAL mode where appropriate"). This runs on every new DBAPI
+    connection, including ones opened by other engines (e.g. in tests),
+    so it's guarded to only touch actual sqlite3 connections.
+    """
+    if type(dbapi_connection).__module__.startswith("sqlite3"):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.close()
 
 # Create session factory
 SessionLocal = sessionmaker(

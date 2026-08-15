@@ -25,8 +25,8 @@
 - [x] Define UUID primary key strategy
 - [x] Define foreign key relationships
 - [x] Create indexes for performance
-- [x] Enable WAL mode
-- [x] Enable foreign key constraints
+- [x] Enable WAL mode (marked done here originally, but the `PRAGMA` was never actually wired up until 2026-08-15 — see Phase 7's database-integrity note)
+- [x] Enable foreign key constraints (same correction — actually enforced as of 2026-08-15)
 - [x] Test database connection
 - [x] Create core models (User, Role, Permission, Fuel)
 - [x] Create repositories (User, Fuel)
@@ -36,7 +36,7 @@
 - [x] MVP UI stub with PySide6 support
 - [x] Core tests passing
 
-## Phase 4: Authentication & RBAC (Core logic complete; UI pending)
+## Phase 4: Authentication & RBAC (Complete)
 - [x] Create user management
 - [x] Implement password hashing
 - [x] Create login/logout functionality (AuthService.authenticate/logout — service layer only, no UI yet)
@@ -73,24 +73,26 @@
 - [ ] Implement holiday tracking (HOLIDAY is a valid status per day, but there's no holiday calendar entity yet)
 - [x] Attendance UI (app/ui/attendance_window.py: date-filterable roster, mark dialog, correction dialog)
 
-## Phase 7: Shift Management
-- [ ] Implement shift opening workflow
-- [ ] Record opening meter readings
-- [ ] Assign attendants to nozzles per shift
-- [ ] Track shift start/end times
-- [ ] Implement shift closing with reconciliation
-- [ ] Prevent editing of finalized shifts
-- [ ] Create controlled reopening/adjustment workflows
-- [ ] Create shift reports
+## Phase 7: Shift Management (Complete except full reconciliation, deferred to Phase 15)
+- [x] Implement shift opening workflow (ShiftService.open_shift — one row per shift_date+shift_label, duplicate rejected)
+- [x] Record opening meter readings (NozzleAssignmentCreate.opening_meter, non-negative validated)
+- [x] Assign attendants to nozzles per shift (assign_nozzle — rejects a second active assignment for the same employee or the same nozzle within a shift, rejects assignment to an inactive nozzle or a non-open shift)
+- [x] Track shift start/end times (Shift.start_time/end_time)
+- [ ] Implement shift closing with reconciliation (closing meter readings are captured via complete_nozzle_assignment and required before close_shift will succeed; cash/UPI/card/fuel reconciliation itself is deferred to Phase 15, once sales/payments/inventory exist)
+- [x] Prevent editing of finalized shifts (assign/complete/cancel all rejected once a shift is closed)
+- [x] Create controlled reopening/adjustment workflows (reopen_shift: requires the stricter SHIFT_REOPEN permission — not granted to SHIFT_SUPERVISOR — plus a non-blank reason, audit-logged)
+- [ ] Create shift reports (deferred to Phase 16: Reporting System)
+- [x] Shift UI (app/ui/shift_window.py: list, open dialog, detail dialog with assign/complete/cancel/close/reopen)
 
-## Phase 8: Nozzle Management
-- [ ] Create nozzle master data
-- [ ] Track fuel types per nozzle
-- [ ] Implement nozzle status (active, inactive, maintenance)
-- [ ] Create nozzle assignment history
-- [ ] Track opening/closing meter readings
-- [ ] Prevent duplicate nozzle assignments
-- [ ] Create nozzle reports
+## Phase 8: Nozzle Management (Minimal master data exists; full CRUD/UI pending)
+- [x] Create nozzle master data (minimal: Dispenser and Nozzle models exist, created directly via repository — no create/edit UI yet)
+- [x] Track fuel types per nozzle (Nozzle.fuel_id FK to the existing Fuel model)
+- [x] Implement nozzle status (active, inactive, maintenance — NozzleStatus enum; only "active" nozzles can be assigned)
+- [x] Create nozzle assignment history (NozzleAssignment rows persist per shift; no dedicated history/report view yet)
+- [x] Track opening/closing meter readings (NozzleAssignment.opening_meter/closing_meter, closing validated >= opening)
+- [x] Prevent duplicate nozzle assignments (enforced in ShiftService.assign_nozzle — see Phase 7)
+- [ ] Create nozzle reports (deferred to Phase 16)
+- [ ] Full Dispenser/Nozzle master-data UI (create, edit, retire a dispenser/nozzle) — not built yet; that's the remaining scope of this phase
 
 ## Phase 9: Tank & Inventory Management
 - [ ] Create tank master data
@@ -268,12 +270,13 @@ A feature is complete only when:
 - [ ] GitHub issue updated
 
 ## Current Focus
-Phase 6 (Attendance Management) is complete end to end — service layer and UI, tested. Phase 7 (Shift Management) is next.
+Phase 7 (Shift Management, including nozzle assignment) is complete end to end — service layer and UI, tested. A database-integrity audit also found and fixed two systemic gaps: SQLite FK enforcement and WAL mode were never actually turned on, and no repository rolled back a failed commit. Both are fixed and covered by tests/test_database_integrity.py.
 
 ## Next Immediate Tasks
-1. Begin Phase 7: Shift model (open/close workflow), then replace Attendance.shift_label with a real foreign key to Shift
-2. Expand the `ROLE_PERMISSIONS` matrix in app/core/constants.py as each new module is implemented
-3. Consider revisiting `Fuel` model's `Float` fields for money/quantity before real financial data is stored
+1. Migrate `Attendance.shift_label` (free text) to a real foreign key against the now-existing `Shift` model
+2. Build the full Nozzle/Dispenser master-data UI to finish Phase 8 (create/edit/retire dispensers and nozzles — the service layer only has minimal read access today)
+3. Expand the `ROLE_PERMISSIONS` matrix in app/core/constants.py as each new module is implemented
+4. Consider revisiting `Fuel` model's `Float` fields for money/quantity before real financial data is stored
 
 ## Long-term Considerations (Not for Initial Release)
 While building for offline-only operation, the architecture should not prevent future expansion:

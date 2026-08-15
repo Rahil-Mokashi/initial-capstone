@@ -17,12 +17,16 @@ from app.repositories.attendance_repository import AttendanceRepository
 from app.repositories.audit_log_repository import AuditLogRepository
 from app.repositories.employee_document_repository import EmployeeDocumentRepository
 from app.repositories.employee_repository import EmployeeRepository
+from app.repositories.nozzle_assignment_repository import NozzleAssignmentRepository
+from app.repositories.nozzle_repository import NozzleRepository
 from app.repositories.role_repository import RoleRepository
+from app.repositories.shift_repository import ShiftRepository
 from app.repositories.user_repository import UserRepository
 from app.repositories.user_session_repository import UserSessionRepository
 from app.services.attendance_service import AttendanceService
 from app.services.auth_service import AuthService
 from app.services.employee_service import EmployeeService
+from app.services.shift_service import ShiftService
 from app.ui.styles import STYLESHEET
 
 SESSION_CHECK_INTERVAL_MS = 60_000
@@ -38,16 +42,19 @@ class MainWindow(QMainWindow):
         auth_service: AuthService,
         employee_service: EmployeeService,
         attendance_service: AttendanceService,
+        shift_service: ShiftService,
         user_data: dict,
     ):
         super().__init__()
         self._auth_service = auth_service
         self._employee_service = employee_service
         self._attendance_service = attendance_service
+        self._shift_service = shift_service
         self._user_data = user_data
         self._session_token = user_data["session_token"]
         self._employee_window = None
         self._attendance_window = None
+        self._shift_window = None
 
         self.setWindowTitle("Petrol Pump ERP")
         self.setMinimumSize(720, 520)
@@ -79,6 +86,12 @@ class MainWindow(QMainWindow):
             self._auth_service.check_permission(user_data["id"], Permission.ATTENDANCE_VIEW.value)
         )
 
+        shifts_button = QPushButton("Shifts")
+        shifts_button.setObjectName("secondaryButton")
+        shifts_button.setCursor(Qt.PointingHandCursor)
+        shifts_button.clicked.connect(self._open_shifts)
+        shifts_button.setVisible(self._auth_service.check_permission(user_data["id"], Permission.SHIFT_VIEW.value))
+
         logout_button = QPushButton("Logout")
         logout_button.setObjectName("secondaryButton")
         logout_button.setCursor(Qt.PointingHandCursor)
@@ -90,6 +103,7 @@ class MainWindow(QMainWindow):
         top_bar_layout.addStretch()
         top_bar_layout.addWidget(employees_button)
         top_bar_layout.addWidget(attendance_button)
+        top_bar_layout.addWidget(shifts_button)
         top_bar_layout.addWidget(logout_button)
         top_bar.setLayout(top_bar_layout)
 
@@ -146,6 +160,14 @@ class MainWindow(QMainWindow):
         )
         self._attendance_window.show()
 
+    def _open_shifts(self) -> None:
+        from app.ui.shift_window import ShiftListWindow
+
+        self._shift_window = ShiftListWindow(
+            self._shift_service, self._employee_service, self._auth_service, self._user_data["id"]
+        )
+        self._shift_window.show()
+
 
 class AppController:
     """Owns the login <-> main window transition and the shared AuthService."""
@@ -174,6 +196,15 @@ class AppController:
             audit_repo,
             self._auth_service,
         )
+        self._shift_service = ShiftService(
+            ShiftRepository(self._db_session),
+            NozzleAssignmentRepository(self._db_session),
+            employee_repo,
+            NozzleRepository(self._db_session),
+            user_repo,
+            audit_repo,
+            self._auth_service,
+        )
         self.login_window = None
         self.main_window = None
 
@@ -193,7 +224,9 @@ class AppController:
             self.login_window.close()
             self.login_window = None
 
-        self.main_window = MainWindow(self._auth_service, self._employee_service, self._attendance_service, user_data)
+        self.main_window = MainWindow(
+            self._auth_service, self._employee_service, self._attendance_service, self._shift_service, user_data
+        )
         self.main_window.logout_requested.connect(self._on_logout)
         self.main_window.show()
 
