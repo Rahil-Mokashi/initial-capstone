@@ -86,7 +86,8 @@
 
 ## Phase 8: Nozzle Management (Complete except reports, deferred to Phase 16)
 - [x] Create nozzle master data (NozzleService.create_dispenser/create_nozzle, full CRUD via app/ui/nozzle_window.py)
-- [x] Track fuel types per nozzle (Nozzle.fuel_id FK to the existing Fuel model)
+- [x] Enforce site layout rule confirmed by the user: every dispenser has exactly 2 nozzles (`MAX_NOZZLES_PER_DISPENSER`, `NozzleService.create_nozzle` rejects a 3rd)
+- [x] Track fuel types per nozzle (Nozzle.fuel_id FK to the existing Fuel model; Petrol/Diesel/Power seeded by default per the user's confirmed business rule)
 - [x] Implement nozzle status (active, inactive, maintenance — NozzleStatus enum; only "active" nozzles can be assigned; set_nozzle_status requires a reason and is audit-logged)
 - [x] Create nozzle assignment history (NozzleAssignment rows persist per shift; no dedicated history/report view yet)
 - [x] Track opening/closing meter readings (NozzleAssignment.opening_meter/closing_meter, closing validated >= opening)
@@ -94,15 +95,15 @@
 - [ ] Create nozzle reports (deferred to Phase 16)
 - [x] Full Dispenser/Nozzle master-data UI (app/ui/nozzle_window.py: tabbed Dispensers/Nozzles, add forms, status-change with reason; deactivating a nozzle currently assigned in an open shift is blocked)
 
-## Phase 9: Tank & Inventory Management
-- [ ] Create tank master data
-- [ ] Track fuel types and capacity
-- [ ] Record tank dimensions and calibration
-- [ ] Implement dip reading tracking
-- [ ] Track current stock levels
-- [ ] Record tank transactions (receipts, issues, adjustments)
-- [ ] Implement fuel reconciliation
-- [ ] Create tank inventory reports
+## Phase 9: Tank & Inventory Management (Complete except reports, deferred to Phase 16)
+- [x] Create tank master data (Tank model + TankService.create_tank/set_tank_status, app/ui/tank_window.py)
+- [x] Track fuel types and capacity (Tank.fuel_id FK to Fuel; capacity validated on create and on every transaction)
+- [x] Record tank dimensions and calibration (Tank.calibration_info free-text field)
+- [x] Implement dip reading tracking (TankReading: employee, optional shift, dip value, physical stock, remarks — never silently changes book stock)
+- [x] Track current stock levels (Tank.current_stock, moved only by recorded transactions)
+- [x] Record tank transactions (receipts, issues, adjustments — TankTransactionType; receipts/issues validated against capacity/negative stock, adjustments require a reason)
+- [x] Implement fuel reconciliation (FuelReconciliation: Expected = Opening + Received - Sold, compared against a physical reading, variance classified via configurable thresholds — NORMAL/WARNING/INVESTIGATION_REQUIRED/APPROVAL_REQUIRED, never assumed to be theft; accepted reconciliation becomes the new baseline for the next period)
+- [ ] Create tank inventory reports (deferred to Phase 16: Reporting System)
 
 ## Phase 10: Procurement Management
 - [ ] Create supplier master data
@@ -172,6 +173,7 @@
 - [ ] Create reconciliation reports
 
 ## Phase 16: Reporting System
+- [ ] **User requirement (2026-08-15): every fuel-related report must be sectioned by fuel type** (a Petrol section, a Diesel section, a Power section), not just shown as an aggregate total. Tank/Nozzle already carry `fuel_id`, so the grouping data exists — this is a report-layer requirement to keep in mind for every report below that touches fuel volumes/stock/sales.
 - [ ] Implement daily reports (sales, fuel, payment, cash, UPI, card, credit, expense, inventory, reconciliation, attendant, shift, tank, nozzle, purchase)
 - [ ] Implement shift reports (summary, attendant-wise, nozzle-wise, fuel-wise, payment-wise, reconciliation)
 - [ ] Implement attendant reports (attendance, shift history, nozzle assignment, sales, fuel volume, transaction counts, collections, reconciliation history)
@@ -270,13 +272,14 @@ A feature is complete only when:
 - [ ] GitHub issue updated
 
 ## Current Focus
-Phase 8 (Nozzle Management) is complete end to end — service layer and UI, tested (128/128 tests passing project-wide). Phases 4-8 are all done. The user's team is reviewing the running app before deciding on further changes.
+Phase 9 (Tank & Inventory Management) is complete end to end — service layer and UI, tested (161/161 tests passing project-wide). Phases 4-9 are all done. The user's team is reviewing the running app before deciding on further changes.
 
 ## Next Immediate Tasks
-1. Migrate `Attendance.shift_label` (free text) to a real foreign key against the now-existing `Shift` model
-2. Expand the `ROLE_PERMISSIONS` matrix in app/core/constants.py as each new module is implemented
-3. Consider revisiting `Fuel` model's `Float` fields for money/quantity before real financial data is stored
-4. Begin Phase 9 (Tank & Inventory Management) once the team's feedback on Phases 4-8 comes back
+1. **Attendant self-service view** (user-raised gap, 2026-08-15): `UserRole.ATTENDANT` currently has zero permissions, so an attendant sees an empty dashboard — they need to at least see their own current nozzle/fuel-type assignment. Needs a new, narrowly-scoped "my assignment" permission distinct from `SHIFT_VIEW`/`NOZZLE_VIEW` (which expose everyone's data).
+2. Migrate `Attendance.shift_label` (free text) to a real foreign key against the now-existing `Shift` model
+3. Expand the `ROLE_PERMISSIONS` matrix in app/core/constants.py as each new module is implemented
+4. Consider revisiting `Fuel`/`Tank`'s `Float` fields for money/quantity before real financial data is stored
+5. Begin Phase 10 (Procurement Management) once the team's feedback on Phases 4-9 comes back — Procurement will eventually create Tank RECEIPT transactions automatically from supplier deliveries
 
 ## Long-term Considerations (Not for Initial Release)
 While building for offline-only operation, the architecture should not prevent future expansion:

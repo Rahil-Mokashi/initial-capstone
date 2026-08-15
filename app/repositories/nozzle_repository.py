@@ -25,6 +25,9 @@ class NozzleRepository:
     def list_for_dispenser(self, dispenser_id: str) -> List[Nozzle]:
         return self._session.query(Nozzle).filter_by(is_deleted=False, dispenser_id=dispenser_id).all()
 
+    def count_for_dispenser(self, dispenser_id: str) -> int:
+        return self._session.query(Nozzle).filter_by(is_deleted=False, dispenser_id=dispenser_id).count()
+
     def add(self, nozzle: Nozzle) -> Nozzle:
         self._session.add(nozzle)
         safe_commit(self._session)

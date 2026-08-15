@@ -76,6 +76,42 @@ class AssignmentStatus(str, Enum):
     CANCELLED = "cancelled"
 
 
+class TankStatus(str, Enum):
+    """Values stored in Tank.status (problemstatement.md #13)."""
+
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+    MAINTENANCE = "maintenance"
+
+
+class TankTransactionType(str, Enum):
+    """Values stored in TankTransaction.transaction_type (problemstatement.md #13)."""
+
+    RECEIPT = "receipt"
+    ISSUE = "issue"
+    ADJUSTMENT = "adjustment"
+
+
+class VarianceClassification(str, Enum):
+    """Fuel reconciliation variance classification (problemstatement.md #14).
+
+    Never assume a variance means theft — these are graduated review
+    levels, not accusations.
+    """
+
+    NORMAL = "normal"
+    WARNING = "warning"
+    INVESTIGATION_REQUIRED = "investigation_required"
+    APPROVAL_REQUIRED = "approval_required"
+
+
+# Fuel reconciliation variance thresholds (problemstatement.md #14: "Thresholds
+# must be configurable"). Expressed as a percentage of expected closing stock.
+FUEL_VARIANCE_WARNING_THRESHOLD_PERCENT = 0.5
+FUEL_VARIANCE_INVESTIGATION_THRESHOLD_PERCENT = 1.0
+FUEL_VARIANCE_APPROVAL_THRESHOLD_PERCENT = 2.0
+
+
 # ADMIN and OWNER get every permission; other roles get a minimal starter set.
 # Business owners should refine this matrix as each module is implemented.
 ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
@@ -126,3 +162,14 @@ MAX_FAILED_LOGIN_ATTEMPTS = 5
 
 # Session management default, overridable via Settings.session_timeout_hours
 DEFAULT_SESSION_TIMEOUT_HOURS = 8
+
+# Site layout rule (confirmed by the user 2026-08-15): the number of
+# dispensers at a pump varies, but every dispenser has exactly two nozzles.
+# Each nozzle can dispense any single fuel type (commonly Petrol, Diesel, or
+# Power/premium) — enforced in NozzleService.create_nozzle.
+MAX_NOZZLES_PER_DISPENSER = 2
+
+# Default fuel types seeded so nozzle/tank setup has something to select
+# out of the box. Rates are left at 0.0 deliberately — real prices must be
+# configured by the site, never guessed.
+DEFAULT_FUEL_TYPES = ["Petrol", "Diesel", "Power"]

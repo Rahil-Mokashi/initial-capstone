@@ -73,6 +73,24 @@ def test_seed_is_idempotent(db_session):
     assert db_session.query(Role).filter_by(name=UserRole.ADMIN.value).count() == 1
 
 
+def test_seed_creates_default_fuel_types(db_session):
+    from app.core.constants import DEFAULT_FUEL_TYPES
+    from app.models.fuel import Fuel
+
+    seed_initial_data()
+    fuel_types = {f.fuel_type for f in db_session.query(Fuel).all()}
+    assert fuel_types == set(DEFAULT_FUEL_TYPES)
+
+
+def test_seed_fuel_types_idempotent(db_session):
+    from app.models.fuel import Fuel
+
+    seed_initial_data()
+    seed_initial_data()
+    assert db_session.query(Fuel).count() == len(db_session.query(Fuel).all())
+    assert db_session.query(Fuel).filter_by(fuel_type="Petrol").count() == 1
+
+
 def test_authenticate_success(auth_service):
     success, data, error = auth_service.authenticate("admin", DEFAULT_ADMIN_PASSWORD)
     assert success is True

@@ -95,16 +95,16 @@ A petrol pump management system needs to handle fuel inventory, sales, procureme
 - [x] `ShiftService.open_shift` now validates `supervisor_id` actually exists (`NotFoundError` otherwise) instead of allowing a dangling reference
 
 ## Current Module
-Phase 8: Nozzle Management is done end-to-end (service layer + UI, tested) — full Dispenser/Nozzle CRUD, status transitions, and a tabbed management screen. Phases 4-7 (Auth & RBAC, Employee & HR, Attendance, Shift Management) are also done end-to-end. Database integrity (FK enforcement, WAL mode, safe commit/rollback) and end-to-end exception handling (startup failures, every UI action) have been audited and hardened across the whole app. The login screen and main-window dashboard were redesigned for a more eye-catching, minimal look (gradient hero panel, quick-access cards).
+Phase 9: Tank & Inventory Management is done end-to-end (service layer + UI, tested) — Tank master data, dip readings, transactions (receipt/issue/adjustment), and fuel reconciliation with configurable variance thresholds. Phases 4-8 (Auth & RBAC, Employee & HR, Attendance, Shift Management, Nozzle Management) are also done end-to-end. Database integrity (FK enforcement, WAL mode, safe commit/rollback) and end-to-end exception handling (startup failures, every UI action) have been audited and hardened across the whole app. The login screen and main-window dashboard were redesigned for a more eye-catching, minimal look (gradient hero panel, quick-access cards).
 
-- [x] NOZZLE_VIEW/NOZZLE_MANAGE permissions added to the RBAC matrix (SHIFT_SUPERVISOR/ACCOUNTANT get view-only; MANAGER/ADMIN/OWNER get manage)
-- [x] DispenserRepository/NozzleRepository extended with get_by_code/update/list_all (previously read-only, minimal)
-- [x] NozzleAssignmentRepository.get_active_for_nozzle() — cross-shift active-assignment lookup, used to block deactivating a nozzle currently in use
-- [x] app/schemas/nozzle.py: DispenserCreate, NozzleCreate
-- [x] NozzleService (app/services/nozzle_service.py): create_dispenser/create_nozzle (rejects duplicate codes, validates dispenser is active and fuel exists), set_dispenser_status/set_nozzle_status (both require a reason, audit-logged; nozzle deactivation blocked while an assignment is active), list_dispensers/list_nozzles/get_nozzle
-- [x] app/ui/nozzle_window.py: NozzleManagementWindow (tabbed Dispensers/Nozzles), add-forms, status-change dialogs; wired into MainWindow as a "Nozzles" button and dashboard card, gated on NOZZLE_VIEW
-- [x] Added QTabWidget/QTabBar styling to app/ui/styles.py — was previously unstyled and fell back to a jarring dark native theme
-- [x] tests/test_nozzle_service.py (16 tests) and tests/test_nozzle_ui.py (8 tests)
+- [x] Tank, TankReading, TankTransaction, FuelReconciliation models (problemstatement.md #13/#14). Tank is distinct from Fuel (a fuel-type lookup already used by Nozzle) — a pump can have more than one tank per fuel type, each with its own capacity/stock; `Fuel.capacity/current_stock/opening_stock` are effectively superseded by `Tank`'s own fields and are a known redundancy left alone rather than changed without a migration path (no Alembic yet)
+- [x] TankStatus/TankTransactionType/VarianceClassification enums and configurable reconciliation thresholds (`FUEL_VARIANCE_*_THRESHOLD_PERCENT`) in app/core/constants.py — reused the existing INVENTORY_VIEW/INVENTORY_MANAGE permissions (defined since Phase 3, never wired to a real feature until now) rather than adding new ones
+- [x] app/schemas/tank.py: TankCreate, TankReadingCreate, TankTransactionCreate, ReconciliationPerform
+- [x] TankRepository, TankReadingRepository, TankTransactionRepository, FuelReconciliationRepository
+- [x] TankService (app/services/tank_service.py): create_tank, set_tank_status (reason required, audit-logged), record_reading (an observation — never silently changes book stock), record_transaction (receipt/issue/adjustment; rejects overflow past capacity, negative stock, or an adjustment with no reason), perform_reconciliation (computes expected closing stock, variance, and classification against configurable thresholds; resets the tank's book stock to the physical figure as the new baseline, audit-logged with old/new stock)
+- [x] app/ui/tank_window.py: TankListWindow, TankFormDialog, TankDetailDialog (tabbed Transactions/Readings/Reconciliation with Receipt/Issue/Adjustment/Record Reading/Reconcile/Change Status actions); wired into MainWindow as a "Tanks" button and dashboard card, gated on INVENTORY_VIEW
+- [x] tests/test_tank_service.py (26 tests, including parametrized variance-classification cases) and tests/test_tank_ui.py (7 tests)
+- [x] Business rule confirmed by the user: every dispenser has exactly 2 nozzles, and each nozzle's fuel is commonly Petrol/Diesel/Power. `MAX_NOZZLES_PER_DISPENSER` now enforced in `NozzleService.create_nozzle`; `DEFAULT_FUEL_TYPES` (Petrol/Diesel/Power) now seeded automatically — see "Business Rules Confirmed By The User" below. 4 new tests (2 in test_nozzle_service.py, 2 in test_auth_rbac.py).
 
 ## Known Bugs (Fixed)
 - [x] `app/services/inventory_service.py` defined a `PaymentRepository(Repository)` class with an unimported base class and SQLite-incompatible raw SQL (`NOW()`), which raised `NameError` on import. Removed, along with an unrelated unused `EmployeeService` stub. (fixed 2026-08-15)
@@ -120,11 +120,12 @@ Phase 8: Nozzle Management is done end-to-end (service layer + UI, tested) — f
 
 ## Pending Modules
 - User-provisioning flow for employees who need login access (currently Employee.user_id can only link an *existing* User; there's no "create login for this employee" service method yet)
-- HR/attendance/shift/nozzle reports module (deferred to Phase 16: Reporting System)
+- HR/attendance/shift/nozzle/tank reports module (deferred to Phase 16: Reporting System) — the user has explicitly asked (2026-08-15) for these to be broken down **by fuel type** (a Petrol section, a Diesel section, a Power section), not just aggregate totals. Since Tank/Nozzle both already carry a `fuel_id`, the data needed for this grouping already exists; only the report views themselves are pending.
+- **Attendant self-service view** (raised by the user 2026-08-15): an attendant assigned to a nozzle needs to see which nozzle and fuel type they're currently assigned to. This surfaces a real gap: `UserRole.ATTENDANT` currently has an *empty* permission set (`ROLE_PERMISSIONS[UserRole.ATTENDANT] == ()`), so a logged-in attendant sees a completely empty dashboard today — they can't see their own shift/nozzle assignment at all. Needs: a minimal "my assignment" read permission/view scoped to the acting user's own `NozzleAssignment`, distinct from the existing `SHIFT_VIEW`/`NOZZLE_VIEW` (which expose everyone's data and are correctly withheld from attendants).
 - Holiday calendar / leave-balance tracking (Attendance can record LEAVE/HOLIDAY status per day, but there's no holiday calendar or leave-quota entity yet)
-- Full shift-close reconciliation (cash/UPI/card/fuel) — deferred to Phase 15, once sales/payments/inventory modules exist; Phase 7 only covers opening meter/closing meter + nozzle assignment
+- Full shift-close reconciliation (cash/UPI/card/fuel) — deferred to Phase 15, once sales/payments modules exist; Phase 7 only covers opening meter/closing meter + nozzle assignment
 - `Attendance.shift_label` is still free-text, not a real FK to `Shift` (both now exist; migrating this is still pending)
-- Tank/inventory modules beyond the current Fuel stub
+- Procurement (Phase 10) will eventually create Tank RECEIPT transactions automatically from supplier deliveries; for now receipts are recorded manually
 - Sales, payments, credit modules
 - Reconciliation module
 - Reporting and printing modules
@@ -146,9 +147,12 @@ Phase 8: Nozzle Management is done end-to-end (service layer + UI, tested) — f
 
 ## Open Questions
 - Number of attendants/fuel attendants needed?
-- Number of dispensers/nozzles required?
-- Required reports list?
+- Required reports list beyond "broken down by fuel type" (which specific reports, over which date ranges, exported how)?
 - Supplier management complexity?
+
+## Business Rules Confirmed By The User
+- (2026-08-15) A pump has a variable ("random") number of dispensers, but **every dispenser has exactly 2 nozzles**. Enforced in `NozzleService.create_nozzle` via `MAX_NOZZLES_PER_DISPENSER` (`app/core/constants.py`); a 3rd nozzle on the same dispenser raises `ConflictError`.
+- (2026-08-15) Each nozzle dispenses exactly one fuel type, and that type is commonly **Petrol, Diesel, or Power** (a premium/branded fuel variant). These three are now seeded by default as `Fuel` rows (`DEFAULT_FUEL_TYPES` in constants.py, seeded via `_seed_fuel_types` in `app/database/seed.py`) so nozzle/tank setup has them available out of the box — seeded at `rate_per_liter=0.0` since real prices must be configured by the site, never guessed.
 
 ## Assumptions
 - Single petrol pump location
@@ -187,6 +191,8 @@ Phase 8: Nozzle Management is done end-to-end (service layer + UI, tested) — f
 - [x] Database integrity tests (`tests/test_database_integrity.py`) — 5/5 passing (WAL mode active, FK enforcement active, invalid FK rejected, session recovers after `safe_commit` rollback, documents the broken behavior without it)
 - [x] Nozzle Management tests (`tests/test_nozzle_service.py`) — 16/16 passing (create dispenser/nozzle, duplicate-code rejection, status-change reason requirement, blocks deactivating a nozzle with an active assignment, RBAC)
 - [x] Nozzle Management UI tests (`tests/test_nozzle_ui.py`) — 8/8 passing (visibility, form validation, tab display, permission gating)
+- [x] Tank & Inventory tests (`tests/test_tank_service.py`) — 26/26 passing (tank creation, capacity/negative-stock guards, receipt/issue/adjustment rules, reading vs. book-stock separation, parametrized variance classification, reconciliation math including period rollover, RBAC)
+- [x] Tank & Inventory UI tests (`tests/test_tank_ui.py`) — 7/7 passing (visibility, form validation, transaction/reconciliation flows, unexpected-error fallback)
 - [ ] Integration tests (pending)
 - [ ] Report generation tests (pending)
 - [ ] Backup/Restore tests (pending)
@@ -201,7 +207,7 @@ Phase 8: Nozzle Management is done end-to-end (service layer + UI, tested) — f
 ## Git/GitHub Status
 - Repository: https://github.com/Rahil-Mokashi/initial-capstone.git
 - Active branch: `feature/core-framework` (not yet merged to `main`)
-- Latest work: Phase 8 Nozzle Management (Dispenser/Nozzle CRUD, status transitions, tabbed UI) on top of the exception-handling hardening pass and the eye-catching/minimal UI redesign
+- Latest work: Phase 9 Tank & Inventory Management (tank master data, dip readings, transactions, fuel reconciliation) on top of Phase 8, the exception-handling hardening pass, and the eye-catching/minimal UI redesign
 
 ## Future Scope
 - The current offline desktop application is Phase 1 of a two-phase plan. Once the offline ERP proves itself in real use, the plan is to build a second phase: a web application backed by a cloud database with cloud data synchronization. Architecture decisions in the current phase (repository/service separation, UUID primary keys, clean domain models) are being made with this eventual migration in mind, even though no cloud/web code is being written yet.
@@ -212,4 +218,4 @@ Phase 8: Nozzle Management is done end-to-end (service layer + UI, tested) — f
 - Known Qt/QSS gotcha worth remembering for future custom widgets: a plain `QWidget` subclass needs `self.setAttribute(Qt.WA_StyledBackground, True)` or its stylesheet `background-color`/`border`/`border-radius` will silently not render (see `DashboardCard` in `app/ui/main_window.py`). Built-in widgets like `QFrame`/`QPushButton`/`QDialog` don't need this.
 
 ## Next Task
-Phase 8 (Nozzle Management) is complete end-to-end, service layer and UI (128/128 tests passing project-wide). The database foundation, application-wide exception handling, and the login/dashboard visual redesign are also done. Waiting on the user's team to review the running app and come back with detailed feedback before further changes. Candidate next steps once that lands: migrate `Attendance.shift_label` to a real FK against `Shift`, or begin Phase 9 (Tank & Inventory Management) per ROADMAP.md.
+Phase 9 (Tank & Inventory Management) is complete end-to-end, service layer and UI (161/161 tests passing project-wide). Phases 4-9 are all done. Waiting on the user's team to review the running app and come back with detailed feedback before further changes. Candidate next steps once that lands: migrate `Attendance.shift_label` to a real FK against `Shift`, or begin Phase 10 (Procurement Management) per ROADMAP.md.

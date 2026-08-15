@@ -142,6 +142,21 @@ def test_create_nozzle_unknown_dispenser_raises_not_found(nozzle_service, admin_
         nozzle_service.create_nozzle(admin_id, NozzleCreate(code="N1", dispenser_id="does-not-exist", fuel_id=fuel_id))
 
 
+def test_dispenser_can_have_up_to_two_nozzles(nozzle_service, admin_id, fuel_id):
+    dispenser = nozzle_service.create_dispenser(admin_id, DispenserCreate(code="D1"))
+    nozzle_service.create_nozzle(admin_id, NozzleCreate(code="N1", dispenser_id=dispenser.id, fuel_id=fuel_id))
+    nozzle_service.create_nozzle(admin_id, NozzleCreate(code="N2", dispenser_id=dispenser.id, fuel_id=fuel_id))
+    assert len(nozzle_service.list_nozzles(admin_id)) == 2
+
+
+def test_third_nozzle_on_same_dispenser_raises_conflict(nozzle_service, admin_id, fuel_id):
+    dispenser = nozzle_service.create_dispenser(admin_id, DispenserCreate(code="D1"))
+    nozzle_service.create_nozzle(admin_id, NozzleCreate(code="N1", dispenser_id=dispenser.id, fuel_id=fuel_id))
+    nozzle_service.create_nozzle(admin_id, NozzleCreate(code="N2", dispenser_id=dispenser.id, fuel_id=fuel_id))
+    with pytest.raises(ConflictError):
+        nozzle_service.create_nozzle(admin_id, NozzleCreate(code="N3", dispenser_id=dispenser.id, fuel_id=fuel_id))
+
+
 def test_create_nozzle_unknown_fuel_raises_not_found(nozzle_service, admin_id):
     dispenser = nozzle_service.create_dispenser(admin_id, DispenserCreate(code="D1"))
     with pytest.raises(NotFoundError):
