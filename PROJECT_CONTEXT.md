@@ -95,7 +95,7 @@ A petrol pump management system needs to handle fuel inventory, sales, procureme
 - [x] `ShiftService.open_shift` now validates `supervisor_id` actually exists (`NotFoundError` otherwise) instead of allowing a dangling reference
 
 ## Current Module
-Phase 7: Shift Management is done end-to-end (service layer + UI, tested), including nozzle assignment. Phases 4-6 (Auth & RBAC, Employee & HR, Attendance) are also done end-to-end. Database integrity (FK enforcement, WAL mode, safe commit/rollback) was audited and hardened across the whole app.
+Phase 7: Shift Management is done end-to-end (service layer + UI, tested), including nozzle assignment. Phases 4-6 (Auth & RBAC, Employee & HR, Attendance) are also done end-to-end. Database integrity (FK enforcement, WAL mode, safe commit/rollback) and end-to-end exception handling (startup failures, every UI action) have been audited and hardened across the whole app.
 
 ## Known Bugs (Fixed)
 - [x] `app/services/inventory_service.py` defined a `PaymentRepository(Repository)` class with an unimported base class and SQLite-incompatible raw SQL (`NOW()`), which raised `NameError` on import. Removed, along with an unrelated unused `EmployeeService` stub. (fixed 2026-08-15)
@@ -105,6 +105,9 @@ Phase 7: Shift Management is done end-to-end (service layer + UI, tested), inclu
 - [x] SQLite foreign-key enforcement and WAL mode were never actually enabled despite being explicitly required by CLAUDE.md/problemstatement.md — fixed via a `connect` event listener in `app/database/connection.py`. (fixed 2026-08-15)
 - [x] Every repository committed directly via `session.commit()` with no rollback on failure, meaning a single failed write would leave that login's shared session broken for every subsequent operation. Fixed via a shared `safe_commit()` helper used everywhere. (fixed 2026-08-15)
 - [x] `ShiftService.open_shift` accepted a `supervisor_id` without checking it referenced a real user. (fixed 2026-08-15)
+- [x] `app/database/connection.py`'s `get_connection()` was annotated/documented as a generator (`next(get_connection())`) but implemented as a plain `return`, which would raise `TypeError` if ever called as documented. It was also unused and encouraged bypassing the repository layer, so it was removed rather than fixed. (fixed 2026-08-15)
+- [x] `app/main.py` had no error handling around `init_db()`/`seed_initial_data()` — any startup failure (disk full, permission denied, corrupted DB) crashed with a raw traceback. Now wrapped and translated into a single `DatabaseInitializationError`, logged via `app.core.logging.logger`. (fixed 2026-08-15)
+- [x] Every UI dialog only caught `AppError`/`ValidationError`, so an unexpected exception (a DB error, a bug) from any service call would propagate uncaught through a Qt slot. Every dialog action across login/employee/attendance/shift now has a final `except Exception` that logs the full traceback and shows a generic, safe message via `describe_unexpected_error()` (`app/ui/qt_utils.py`) instead of crashing or silently misbehaving. (fixed 2026-08-15)
 
 ## Pending Modules
 - User-provisioning flow for employees who need login access (currently Employee.user_id can only link an *existing* User; there's no "create login for this employee" service method yet)
@@ -163,15 +166,15 @@ Phase 7: Shift Management is done end-to-end (service layer + UI, tested), inclu
 - No internet dependency
 
 ## Testing Status
-- [x] Core setup smoke tests (`tests/test_core_setup.py`) — 2/2 passing
+- [x] Core setup smoke tests (`tests/test_core_setup.py`) — 3/3 passing (init/seed success path, plus startup DB failures now raise a clean `DatabaseInitializationError` instead of a raw traceback)
 - [x] Authentication/RBAC tests (`tests/test_auth_rbac.py`) — 13/13 passing (login success/failure, generic error messages, lockout, permission checks, session validate/expire/logout, password policy, audit logging, decorator enforcement)
-- [x] Login UI tests (`tests/test_login_ui.py`) — 6/6 passing (login screen display, validation, success/failure paths, logout, auto-logout on expiry)
+- [x] Login UI tests (`tests/test_login_ui.py`) — 7/7 passing (login screen display, validation, success/failure paths, logout, auto-logout on expiry, unexpected-error fallback)
 - [x] Employee/HR tests (`tests/test_employee_service.py`) — 16/16 passing (creation, validation, permissions, status/exit workflow, documents, audit logging)
-- [x] Employee/HR UI tests (`tests/test_employee_ui.py`) — 9/9 passing (list/search, permission-based visibility, form validation, edit, status/exit, documents)
+- [x] Employee/HR UI tests (`tests/test_employee_ui.py`) — 10/10 passing (list/search, permission-based visibility, form validation, edit, status/exit, documents, unexpected-error fallback)
 - [x] Attendance tests (`tests/test_attendance_service.py`) — 13/13 passing (marking, duplicate rejection, permissions, schema validation, correction workflow, filtering)
-- [x] Attendance UI tests (`tests/test_attendance_ui.py`) — 7/7 passing (visibility, date filtering, marking, duplicate rejection, correction reason requirement, view-only disabling)
+- [x] Attendance UI tests (`tests/test_attendance_ui.py`) — 8/8 passing (visibility, date filtering, marking, duplicate rejection, correction reason requirement, view-only disabling, unexpected-error fallback)
 - [x] Shift/nozzle-assignment tests (`tests/test_shift_service.py`) — 23/23 passing (open/close, duplicate rejection, nozzle-assignment prevention rules, meter validation, reopen workflow and permission, RBAC)
-- [x] Shift UI tests (`tests/test_shift_ui.py`) — 6/6 passing (visibility, list display, open/assign/close/reopen flows)
+- [x] Shift UI tests (`tests/test_shift_ui.py`) — 7/7 passing (visibility, list display, open/assign/close/reopen flows, unexpected-error fallback)
 - [x] Database integrity tests (`tests/test_database_integrity.py`) — 5/5 passing (WAL mode active, FK enforcement active, invalid FK rejected, session recovers after `safe_commit` rollback, documents the broken behavior without it)
 - [ ] Integration tests (pending)
 - [ ] Report generation tests (pending)
@@ -196,4 +199,4 @@ Phase 7: Shift Management is done end-to-end (service layer + UI, tested), inclu
 - The client expects a clean, elegant, polished UI (not a bare functional stub) for every screen, balanced against the problem statement's UX priorities (speed, minimal clicks, large readable numbers for a busy pump environment). `app/ui/styles.py` holds one shared stylesheet so every future screen stays visually consistent — extend it rather than styling widgets ad hoc.
 
 ## Next Task
-Phase 7 (Shift Management) is complete end-to-end, service layer and UI (99/99 tests passing project-wide), and the database foundation has been hardened (FK enforcement, WAL mode, safe commit/rollback). Next: either migrate `Attendance.shift_label` to a real FK against `Shift`, or move on to Phase 8 (Nozzle Management — full CRUD/UI for Dispenser/Nozzle master data) per ROADMAP.md.
+Phase 7 (Shift Management) is complete end-to-end, service layer and UI (104/104 tests passing project-wide), and both the database foundation (FK enforcement, WAL mode, safe commit/rollback) and application-wide exception handling (startup failures, every UI action's unexpected-error fallback) have been hardened. Next: either migrate `Attendance.shift_label` to a real FK against `Shift`, or move on to Phase 8 (Nozzle Management — full CRUD/UI for Dispenser/Nozzle master data) per ROADMAP.md.

@@ -27,7 +27,7 @@ from PySide6.QtWidgets import (
 from app.core.constants import AttendanceStatus, Permission
 from app.core.exceptions import AppError
 from app.schemas.attendance import AttendanceCorrection, AttendanceMark
-from app.ui.qt_utils import qdate_to_date
+from app.ui.qt_utils import describe_unexpected_error, qdate_to_date
 
 TABLE_HEADERS = ["Employee", "Status", "Check In", "Check Out", "Overtime (min)", "Corrected"]
 
@@ -204,6 +204,9 @@ class AttendanceMarkDialog(QDialog):
         except AppError as exc:
             self._show_error(str(exc))
             return
+        except Exception as exc:  # noqa: BLE001 - last resort so a DB/unexpected error can't crash the dialog
+            self._show_error(describe_unexpected_error(exc))
+            return
 
         self.accept()
 
@@ -285,6 +288,9 @@ class AttendanceCorrectionDialog(QDialog):
             return
         except (AppError, ValueError) as exc:
             self._show_error(str(exc))
+            return
+        except Exception as exc:  # noqa: BLE001 - last resort so a DB/unexpected error can't crash the dialog
+            self._show_error(describe_unexpected_error(exc))
             return
 
         self.accept()

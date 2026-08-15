@@ -154,6 +154,22 @@ def test_mark_dialog_saves_valid_attendance(qapp, attendance_service, employee_s
     assert records[0].status == AttendanceStatus.ABSENT.value
 
 
+def test_mark_dialog_shows_generic_message_on_unexpected_error(qapp, attendance_service, employee_service, admin_id, employee_id, monkeypatch):
+    from app.ui.attendance_window import AttendanceMarkDialog
+
+    service, _ = employee_service
+
+    def boom(*args, **kwargs):
+        raise RuntimeError("simulated DB outage")
+
+    monkeypatch.setattr(attendance_service, "mark_attendance", boom)
+
+    dialog = AttendanceMarkDialog(attendance_service, service, admin_id, date_to_qdate(date(2026, 5, 1)))
+    dialog._save()  # must not raise
+
+    assert "Something went wrong" in dialog.error_label.text()
+
+
 def test_mark_dialog_rejects_duplicate_for_same_day(qapp, attendance_service, employee_service, admin_id, employee_id):
     from app.ui.attendance_window import AttendanceMarkDialog
     from app.schemas.attendance import AttendanceMark

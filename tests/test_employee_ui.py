@@ -157,6 +157,26 @@ def test_add_employee_dialog_shows_error_for_invalid_contact(qapp, employee_serv
     assert len(service.list_employees(admin_id)) == 0
 
 
+def test_add_employee_dialog_shows_generic_message_on_unexpected_error(qapp, employee_service, admin_id, monkeypatch):
+    from app.ui.employee_window import EmployeeFormDialog
+
+    service, _ = employee_service
+
+    def boom(*args, **kwargs):
+        raise RuntimeError("simulated DB outage")
+
+    monkeypatch.setattr(service, "create_employee", boom)
+
+    dialog = EmployeeFormDialog(service, admin_id)
+    dialog.first_name_input.setText("Anita")
+    dialog.last_name_input.setText("Sharma")
+    dialog.contact_input.setText("9876500000")
+
+    dialog._save()  # must not raise
+
+    assert "Something went wrong" in dialog.error_label.text()
+
+
 def test_detail_dialog_save_profile_updates_employee(qapp, employee_service, admin_id):
     from app.ui.employee_window import EmployeeDetailDialog
 

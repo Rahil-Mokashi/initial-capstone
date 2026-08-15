@@ -28,7 +28,7 @@ from PySide6.QtWidgets import (
 from app.core.constants import Permission
 from app.core.exceptions import AppError
 from app.schemas.shift import NozzleAssignmentComplete, NozzleAssignmentCreate, ShiftOpen
-from app.ui.qt_utils import qdate_to_date
+from app.ui.qt_utils import describe_unexpected_error, qdate_to_date
 
 SHIFT_TABLE_HEADERS = ["Date", "Shift", "Status", "Opened By"]
 ASSIGNMENT_TABLE_HEADERS = ["Employee", "Nozzle", "Opening", "Closing", "Status"]
@@ -168,6 +168,9 @@ class ShiftOpenDialog(QDialog):
         except AppError as exc:
             self._show_error(str(exc))
             return
+        except Exception as exc:  # noqa: BLE001 - last resort so a DB/unexpected error can't crash the dialog
+            self._show_error(describe_unexpected_error(exc))
+            return
 
         self.accept()
 
@@ -288,6 +291,8 @@ class ShiftDetailDialog(QDialog):
                 )
             except (ValidationError, AppError, ValueError) as exc:
                 QMessageBox.warning(self, "Could not complete assignment", str(exc))
+            except Exception as exc:  # noqa: BLE001
+                QMessageBox.warning(self, "Could not complete assignment", describe_unexpected_error(exc))
         else:
             reason, ok = QInputDialog.getText(self, "Cancel assignment", "Reason:")
             if not ok or not reason.strip():
@@ -296,6 +301,8 @@ class ShiftDetailDialog(QDialog):
                 self._shift_service.cancel_nozzle_assignment(self._actor_user_id, assignment_id, reason.strip())
             except (AppError, ValueError) as exc:
                 QMessageBox.warning(self, "Could not cancel assignment", str(exc))
+            except Exception as exc:  # noqa: BLE001
+                QMessageBox.warning(self, "Could not cancel assignment", describe_unexpected_error(exc))
         self._refresh()
 
     def _close_shift(self) -> None:
@@ -306,6 +313,8 @@ class ShiftDetailDialog(QDialog):
             self._shift_service.close_shift(self._actor_user_id, self._shift_id)
         except AppError as exc:
             QMessageBox.warning(self, "Could not close shift", str(exc))
+        except Exception as exc:  # noqa: BLE001
+            QMessageBox.warning(self, "Could not close shift", describe_unexpected_error(exc))
         self._refresh()
 
     def _reopen_shift(self) -> None:
@@ -316,6 +325,8 @@ class ShiftDetailDialog(QDialog):
             self._shift_service.reopen_shift(self._actor_user_id, self._shift_id, reason.strip())
         except (AppError, ValueError) as exc:
             QMessageBox.warning(self, "Could not reopen shift", str(exc))
+        except Exception as exc:  # noqa: BLE001
+            QMessageBox.warning(self, "Could not reopen shift", describe_unexpected_error(exc))
         self._refresh()
 
 
@@ -385,6 +396,9 @@ class NozzleAssignDialog(QDialog):
             return
         except AppError as exc:
             self._show_error(str(exc))
+            return
+        except Exception as exc:  # noqa: BLE001 - last resort so a DB/unexpected error can't crash the dialog
+            self._show_error(describe_unexpected_error(exc))
             return
 
         self.accept()
