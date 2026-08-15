@@ -35,3 +35,13 @@ class NotFoundError(AppError):
 
 class ConflictError(AppError):
     """Raised when an operation would violate a uniqueness/business constraint."""
+
+
+class DatabaseInitializationError(AppError):
+    """Raised when the database cannot be created/seeded at application startup.
+
+    Wraps the underlying SQLAlchemyError/OSError so callers (main.py, the
+    UI launcher) can show a clear message instead of a raw traceback —
+    problemstatement.md #43 requires a "Database error" notification and
+    #44 requires the app to stay responsive/fail predictably.
+    """

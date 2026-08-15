@@ -56,6 +56,20 @@ def test_wrong_password_shows_generic_error_and_stays_on_login(controller):
     assert controller.login_window.password_input.text() == ""
 
 
+def test_unexpected_error_during_login_shows_generic_message_not_a_crash(controller, monkeypatch):
+    def boom(*args, **kwargs):
+        raise RuntimeError("simulated DB outage")
+
+    monkeypatch.setattr(controller.login_window._auth_service, "authenticate", boom)
+
+    controller.login_window.username_input.setText("admin")
+    controller.login_window.password_input.setText("whatever")
+    controller.login_window._attempt_login()  # must not raise
+
+    assert controller.main_window is None
+    assert "Something went wrong" in controller.login_window.error_label.text()
+
+
 def test_empty_fields_show_validation_message_without_calling_auth(controller):
     controller.login_window.username_input.setText("")
     controller.login_window.password_input.setText("")

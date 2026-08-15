@@ -172,6 +172,20 @@ def test_open_shift_dialog_saves(qapp, shift_service, employee_service, admin_id
     assert len(shift_service.list_shifts(admin_id)) == 1
 
 
+def test_open_shift_dialog_shows_generic_message_on_unexpected_error(qapp, shift_service, employee_service, admin_id, monkeypatch):
+    from app.ui.shift_window import ShiftOpenDialog
+
+    def boom(*args, **kwargs):
+        raise RuntimeError("simulated DB outage")
+
+    monkeypatch.setattr(shift_service, "open_shift", boom)
+
+    dialog = ShiftOpenDialog(shift_service, admin_id)
+    dialog._save()  # must not raise
+
+    assert "Something went wrong" in dialog.error_label.text()
+
+
 def test_open_shift_dialog_rejects_duplicate(qapp, shift_service, employee_service, admin_id):
     from app.ui.shift_window import ShiftOpenDialog
 

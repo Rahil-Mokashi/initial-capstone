@@ -33,7 +33,7 @@ from PySide6.QtWidgets import (
 from app.core.constants import EmployeeStatus, Permission
 from app.core.exceptions import AppError
 from app.schemas.employee import EmployeeCreate, EmployeeUpdate
-from app.ui.qt_utils import qdate_to_date
+from app.ui.qt_utils import describe_unexpected_error, qdate_to_date
 
 TABLE_HEADERS = ["Code", "Name", "Designation", "Department", "Status", "Joining Date"]
 
@@ -212,6 +212,9 @@ class EmployeeFormDialog(QDialog):
         except AppError as exc:
             self._show_error(str(exc))
             return
+        except Exception as exc:  # noqa: BLE001 - last resort so a DB/unexpected error can't crash the dialog
+            self._show_error(describe_unexpected_error(exc))
+            return
 
         self.accept()
 
@@ -279,6 +282,8 @@ class EmployeeDetailDialog(QDialog):
             )
         except (ValidationError, AppError) as exc:
             QMessageBox.warning(self, "Could not save", str(exc))
+        except Exception as exc:  # noqa: BLE001
+            QMessageBox.warning(self, "Could not save", describe_unexpected_error(exc))
 
     def _build_status_section(self) -> QWidget:
         section = QWidget()
@@ -321,6 +326,8 @@ class EmployeeDetailDialog(QDialog):
             )
         except AppError as exc:
             QMessageBox.warning(self, "Could not change status", str(exc))
+        except Exception as exc:  # noqa: BLE001
+            QMessageBox.warning(self, "Could not change status", describe_unexpected_error(exc))
 
     def _record_exit(self) -> None:
         confirm = QMessageBox.question(
@@ -341,6 +348,8 @@ class EmployeeDetailDialog(QDialog):
             self.status_combo.setCurrentText(self._employee.status)
         except AppError as exc:
             QMessageBox.warning(self, "Could not record exit", str(exc))
+        except Exception as exc:  # noqa: BLE001
+            QMessageBox.warning(self, "Could not record exit", describe_unexpected_error(exc))
 
     def _build_documents_section(self) -> QWidget:
         section = QWidget()
@@ -390,6 +399,8 @@ class EmployeeDetailDialog(QDialog):
             self._refresh_documents()
         except AppError as exc:
             QMessageBox.warning(self, "Could not add document", str(exc))
+        except Exception as exc:  # noqa: BLE001
+            QMessageBox.warning(self, "Could not add document", describe_unexpected_error(exc))
 
     def _remove_selected_document(self) -> None:
         item = self.documents_list.currentItem()
@@ -406,3 +417,5 @@ class EmployeeDetailDialog(QDialog):
             self._refresh_documents()
         except AppError as exc:
             QMessageBox.warning(self, "Could not remove document", str(exc))
+        except Exception as exc:  # noqa: BLE001
+            QMessageBox.warning(self, "Could not remove document", describe_unexpected_error(exc))

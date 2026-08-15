@@ -144,9 +144,11 @@ Everything below is implemented, tested, and running — not planned. Each modul
 - **Controlled reopening**: reopening a closed shift requires a stricter permission (not granted to `SHIFT_SUPERVISOR`) and a reason, and is audit-logged — a closed shift is never freely editable
 - Full cash/UPI/card/fuel reconciliation is intentionally deferred to Phase 15, once the sales/payments/inventory modules it depends on exist
 
-### Database integrity (cross-cutting, hardened 2026-08-15)
+### Database integrity & exception handling (cross-cutting, hardened 2026-08-15)
 - SQLite foreign-key enforcement (`PRAGMA foreign_keys=ON`) and WAL mode (`PRAGMA journal_mode=WAL`) are enabled on every connection — every `ForeignKey()` declared in the models is actually enforced by the database, not just by application code
 - Every repository write commits through a shared `safe_commit()` helper that rolls back cleanly on failure, so a failed write can't leave a session unusable for the rest of that login
+- Application startup (`app/main.py`) wraps database init/seed failures into a single `DatabaseInitializationError` with a clear message and a logged traceback, instead of crashing with a raw stack trace
+- Every UI dialog's save/action handler catches its specific errors (validation, business-rule conflicts) for a precise message, then falls back to a generic "something went wrong" message for anything unexpected — logged in full, never left to crash the app or a Qt event-loop callback
 
 Not yet built: Nozzle/Dispenser master-data management UI (Phase 8, only minimal models exist), Tank & Inventory, Procurement, Sales, Payments, Credit, Expenses, Reconciliation, Reporting, Printing, Backup/Restore. See [ROADMAP.md](ROADMAP.md) for the full phase-by-phase plan.
 
@@ -162,7 +164,7 @@ Not yet built: Nozzle/Dispenser master-data management UI (Phase 8, only minimal
 | ORM | SQLAlchemy 2.x | in use |
 | Validation | Pydantic v2 | in use |
 | Configuration | pydantic-settings | in use |
-| Testing | pytest | in use — 99 tests |
+| Testing | pytest | in use — 104 tests |
 | Logging | Python standard `logging` | in use |
 | Migrations | Alembic | **planned, not yet integrated** — schema changes currently go through `Base.metadata.create_all()` |
 | PDF reports | ReportLab | **planned** — Phase 16/17 |
@@ -195,7 +197,7 @@ PetrolPumpERP/
 │   ├── schemas/                 # Pydantic input-validation schemas
 │   ├── services/                # Business logic, RBAC checks, audit logging
 │   └── ui/                      # PySide6 windows/dialogs + shared stylesheet
-├── tests/                       # pytest suite (99 tests)
+├── tests/                       # pytest suite (104 tests)
 ├── docs/
 │   └── screenshots/             # Screenshots used in this README
 ├── requirements.txt
@@ -253,7 +255,7 @@ On first run this will:
 pytest
 ```
 
-All 99 tests should pass. To run a single module's tests:
+All 104 tests should pass, in well under a minute. To run a single module's tests:
 
 ```bash
 pytest tests/test_auth_rbac.py -v

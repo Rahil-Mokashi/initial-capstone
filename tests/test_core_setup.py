@@ -1,6 +1,11 @@
 import os
+
+import pytest
 from sqlalchemy import create_engine
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
+
+from app.core.exceptions import DatabaseInitializationError
 from app.main import main
 from app.database.connection import DB_PATH
 
@@ -24,3 +29,14 @@ def test_main_runs_without_error(monkeypatch, tmp_path):
     )
     monkeypatch.setattr("app.core.logging.setup_logging", lambda: None)
     main(run_ui=False)
+
+
+def test_main_wraps_database_errors_in_a_clean_exception(monkeypatch):
+    def boom():
+        raise OperationalError("CREATE TABLE ...", {}, Exception("disk I/O error"))
+
+    monkeypatch.setattr("app.core.logging.setup_logging", lambda: None)
+    monkeypatch.setattr("app.main.init_db", boom)
+
+    with pytest.raises(DatabaseInitializationError):
+        main(run_ui=False)

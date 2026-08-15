@@ -85,16 +85,6 @@ def init_db() -> None:
     Base.metadata.create_all(bind=engine)
 
 
-def get_connection() -> Generator:
-    """
-    Get a database connection for raw SQL queries.
-
-    Usage:
-        conn = next(get_connection())
-    """
-    return engine.connect()
-
-
 if __name__ == "__main__":
     # Initialize the database
     init_db()

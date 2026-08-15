@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import QColor
 
 from app.services.auth_service import AuthService
+from app.ui.qt_utils import describe_unexpected_error
 
 
 def get_device_info() -> str:
@@ -109,9 +110,14 @@ class LoginWindow(QMainWindow):
             self._set_error("Enter both username and password.")
             return
 
-        success, user_data, error = self._auth_service.authenticate(
-            username, password, device_info=get_device_info()
-        )
+        try:
+            success, user_data, error = self._auth_service.authenticate(
+                username, password, device_info=get_device_info()
+            )
+        except Exception as exc:  # noqa: BLE001 - last resort so a DB/unexpected error can't crash the login screen
+            self._set_error(describe_unexpected_error(exc))
+            return
+
         if not success:
             self._set_error(error or "Login failed.")
             self.password_input.clear()

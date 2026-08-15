@@ -27,6 +27,7 @@ from app.services.attendance_service import AttendanceService
 from app.services.auth_service import AuthService
 from app.services.employee_service import EmployeeService
 from app.services.shift_service import ShiftService
+from app.ui.qt_utils import describe_unexpected_error
 from app.ui.styles import STYLESHEET
 
 SESSION_CHECK_INTERVAL_MS = 60_000
@@ -140,10 +141,15 @@ class MainWindow(QMainWindow):
             self._session_timer.stop()
             QMessageBox.information(self, "Session expired", "Your session has expired. Please log in again.")
             self.logout_requested.emit(True)
+        except Exception as exc:  # noqa: BLE001 - a periodic timer callback must never crash the app
+            describe_unexpected_error(exc)
 
     def _logout(self) -> None:
         self._session_timer.stop()
-        self._auth_service.logout(self._session_token)
+        try:
+            self._auth_service.logout(self._session_token)
+        except Exception as exc:  # noqa: BLE001 - still return the user to the login screen even if this fails
+            describe_unexpected_error(exc)
         self.logout_requested.emit(False)
 
     def _open_employees(self) -> None:
