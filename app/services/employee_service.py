@@ -175,6 +175,11 @@ class EmployeeService:
         return self._get_or_raise(employee_id)
 
     @require_permission(Permission.EMPLOYEE_VIEW.value)
+    def list_documents(self, actor_user_id: str, employee_id: str) -> List[EmployeeDocument]:
+        self._get_or_raise(employee_id)
+        return self._document_repo.list_for_employee(employee_id)
+
+    @require_permission(Permission.EMPLOYEE_VIEW.value)
     def list_employees(self, actor_user_id: str) -> List[Employee]:
         return self._employee_repo.list_all()
 

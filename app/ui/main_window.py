@@ -10,12 +10,17 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.core.constants import Permission
 from app.core.exceptions import SessionExpiredError
 from app.database import connection as db_connection
 from app.repositories.audit_log_repository import AuditLogRepository
+from app.repositories.employee_document_repository import EmployeeDocumentRepository
+from app.repositories.employee_repository import EmployeeRepository
+from app.repositories.role_repository import RoleRepository
 from app.repositories.user_repository import UserRepository
 from app.repositories.user_session_repository import UserSessionRepository
 from app.services.auth_service import AuthService
+from app.services.employee_service import EmployeeService
 from app.ui.styles import STYLESHEET
 
 SESSION_CHECK_INTERVAL_MS = 60_000
@@ -26,10 +31,13 @@ class MainWindow(QMainWindow):
 
     logout_requested = Signal(bool)  # bool: True if the logout was due to session expiry
 
-    def __init__(self, auth_service: AuthService, user_data: dict):
+    def __init__(self, auth_service: AuthService, employee_service: EmployeeService, user_data: dict):
         super().__init__()
         self._auth_service = auth_service
+        self._employee_service = employee_service
+        self._user_data = user_data
         self._session_token = user_data["session_token"]
+        self._employee_window = None
 
         self.setWindowTitle("Petrol Pump ERP")
         self.setMinimumSize(720, 520)
@@ -45,6 +53,14 @@ class MainWindow(QMainWindow):
         role_tag = QLabel(user_data.get("role") or "No role")
         role_tag.setObjectName("roleTag")
 
+        employees_button = QPushButton("Employees")
+        employees_button.setObjectName("secondaryButton")
+        employees_button.setCursor(Qt.PointingHandCursor)
+        employees_button.clicked.connect(self._open_employees)
+        employees_button.setVisible(
+            self._auth_service.check_permission(user_data["id"], Permission.EMPLOYEE_VIEW.value)
+        )
+
         logout_button = QPushButton("Logout")
         logout_button.setObjectName("secondaryButton")
         logout_button.setCursor(Qt.PointingHandCursor)
@@ -54,6 +70,7 @@ class MainWindow(QMainWindow):
         top_bar_layout.addSpacing(8)
         top_bar_layout.addWidget(role_tag)
         top_bar_layout.addStretch()
+        top_bar_layout.addWidget(employees_button)
         top_bar_layout.addWidget(logout_button)
         top_bar.setLayout(top_bar_layout)
 
@@ -96,16 +113,32 @@ class MainWindow(QMainWindow):
         self._auth_service.logout(self._session_token)
         self.logout_requested.emit(False)
 
+    def _open_employees(self) -> None:
+        from app.ui.employee_window import EmployeeListWindow
+
+        self._employee_window = EmployeeListWindow(self._employee_service, self._auth_service, self._user_data["id"])
+        self._employee_window.show()
+
 
 class AppController:
     """Owns the login <-> main window transition and the shared AuthService."""
 
     def __init__(self):
         self._db_session = db_connection.SessionLocal()
+        user_repo = UserRepository(self._db_session)
+        audit_repo = AuditLogRepository(self._db_session)
         self._auth_service = AuthService(
-            UserRepository(self._db_session),
-            AuditLogRepository(self._db_session),
+            user_repo,
+            audit_repo,
             UserSessionRepository(self._db_session),
+        )
+        self._employee_service = EmployeeService(
+            EmployeeRepository(self._db_session),
+            EmployeeDocumentRepository(self._db_session),
+            user_repo,
+            RoleRepository(self._db_session),
+            audit_repo,
+            self._auth_service,
         )
         self.login_window = None
         self.main_window = None
@@ -126,7 +159,7 @@ class AppController:
             self.login_window.close()
             self.login_window = None
 
-        self.main_window = MainWindow(self._auth_service, user_data)
+        self.main_window = MainWindow(self._auth_service, self._employee_service, user_data)
         self.main_window.logout_requested.connect(self._on_logout)
         self.main_window.show()
 

@@ -172,11 +172,11 @@ def test_add_and_remove_document(employee_service, admin_id):
     employee = employee_service.create_employee(admin_id, make_employee_data())
     doc = employee_service.add_document(admin_id, employee.id, "ID Proof", "/docs/id.pdf")
 
-    docs = employee_service._document_repo.list_for_employee(employee.id)
+    docs = employee_service.list_documents(admin_id, employee.id)
     assert len(docs) == 1
 
     employee_service.remove_document(admin_id, doc.id, "Wrong file uploaded")
-    docs_after = employee_service._document_repo.list_for_employee(employee.id)
+    docs_after = employee_service.list_documents(admin_id, employee.id)
     assert len(docs_after) == 0
 
 

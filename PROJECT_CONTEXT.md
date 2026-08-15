@@ -69,9 +69,11 @@ A petrol pump management system needs to handle fuel inventory, sales, procureme
 - [x] EMPLOYEE_VIEW/EMPLOYEE_MANAGE permissions added to the RBAC matrix (app/core/constants.py)
 - [x] NotFoundError/ConflictError added to app/core/exceptions.py
 - [x] Employee/HR test suite (tests/test_employee_service.py) — 16 tests covering creation, sequential employee codes, validation, permission enforcement, status/exit workflow, document add/remove, audit logging
+- [x] Employee/HR UI (app/ui/employee_window.py) — EmployeeListWindow (searchable table), EmployeeFormDialog (add), EmployeeDetailDialog (edit profile, status/exit workflow with confirmation, document add/remove); "Employees" button added to MainWindow's top bar, hidden unless the user has EMPLOYEE_VIEW; manage actions (save/status/exit/documents) disabled for view-only roles
+- [x] Employee UI test suite (tests/test_employee_ui.py) — 9 tests covering list display/search, permission-based visibility, add-employee validation, profile edit, status change, exit confirmation flow, document add/remove, manage-action disabling for view-only roles
 
 ## Current Module
-Phase 5: Employee & HR Management (service layer complete; UI pending). Phase 4 (Authentication & RBAC) is done end-to-end.
+Phase 5: Employee & HR Management is done end-to-end (service layer + UI, tested). Phase 4 (Authentication & RBAC) is also done end-to-end.
 
 ## Known Bugs (Fixed)
 - [x] `app/services/inventory_service.py` defined a `PaymentRepository(Repository)` class with an unimported base class and SQLite-incompatible raw SQL (`NOW()`), which raised `NameError` on import. Removed, along with an unrelated unused `EmployeeService` stub. (fixed 2026-08-15)
@@ -80,8 +82,8 @@ Phase 5: Employee & HR Management (service layer complete; UI pending). Phase 4 
 - [x] `datetime.utcnow()` (deprecated in Python 3.12+, which this project targets 3.13+ for) replaced with `datetime.now(timezone.utc)` in `EntityMixin` and `inventory_service.py`. (fixed 2026-08-15)
 
 ## Pending Modules
-- Employee/HR UI screens (list, create, edit, document upload — service layer is done, no UI yet)
 - User-provisioning flow for employees who need login access (currently Employee.user_id can only link an *existing* User; there's no "create login for this employee" service method yet)
+- HR reports module (deferred to Phase 16: Reporting System)
 - Attendance module
 - Shift management
 - Nozzle/tank/inventory modules beyond the current Fuel stub
@@ -136,6 +138,7 @@ Phase 5: Employee & HR Management (service layer complete; UI pending). Phase 4 
 - [x] Authentication/RBAC tests (`tests/test_auth_rbac.py`) — 13/13 passing (login success/failure, generic error messages, lockout, permission checks, session validate/expire/logout, password policy, audit logging, decorator enforcement)
 - [x] Login UI tests (`tests/test_login_ui.py`) — 6/6 passing (login screen display, validation, success/failure paths, logout, auto-logout on expiry)
 - [x] Employee/HR tests (`tests/test_employee_service.py`) — 16/16 passing (creation, validation, permissions, status/exit workflow, documents, audit logging)
+- [x] Employee/HR UI tests (`tests/test_employee_ui.py`) — 9/9 passing (list/search, permission-based visibility, form validation, edit, status/exit, documents)
 - [ ] Integration tests (pending)
 - [ ] Report generation tests (pending)
 - [ ] Backup/Restore tests (pending)
@@ -159,4 +162,4 @@ Phase 5: Employee & HR Management (service layer complete; UI pending). Phase 4 
 - The client expects a clean, elegant, polished UI (not a bare functional stub) for every screen, balanced against the problem statement's UX priorities (speed, minimal clicks, large readable numbers for a busy pump environment). `app/ui/styles.py` holds one shared stylesheet so every future screen stays visually consistent — extend it rather than styling widgets ad hoc.
 
 ## Next Task
-Employee/HR service layer is complete (36/36 tests passing project-wide). Next: build the Employee/HR UI screens (list/create/edit/documents), then move to Phase 6 (Attendance Management) per ROADMAP.md.
+Phase 5 (Employee/HR) is complete end-to-end, service layer and UI (45/45 tests passing project-wide). Next: Phase 6 (Attendance Management) per ROADMAP.md.

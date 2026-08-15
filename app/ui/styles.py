@@ -16,6 +16,9 @@ COLOR_PRIMARY_HOVER = "#1D4ED8"
 COLOR_PRIMARY_PRESSED = "#1E40AF"
 COLOR_DANGER = "#DC2626"
 COLOR_DANGER_BG = "#FEF2F2"
+COLOR_DANGER_HOVER = "#B91C1C"
+COLOR_SUCCESS_BG = "#ECFDF5"
+COLOR_SUCCESS = "#059669"
 
 STYLESHEET = f"""
 * {{
@@ -110,5 +113,80 @@ QLabel#roleTag {{
     padding: 2px 10px;
     font-size: 12px;
     font-weight: 600;
+}}
+
+QLabel#statusTagActive {{
+    background-color: {COLOR_SUCCESS_BG};
+    color: {COLOR_SUCCESS};
+    border-radius: 10px;
+    padding: 2px 10px;
+    font-size: 12px;
+    font-weight: 600;
+}}
+
+QLabel#statusTagInactive {{
+    background-color: {COLOR_DANGER_BG};
+    color: {COLOR_DANGER};
+    border-radius: 10px;
+    padding: 2px 10px;
+    font-size: 12px;
+    font-weight: 600;
+}}
+
+QPushButton#dangerButton {{
+    background-color: {COLOR_SURFACE};
+    color: {COLOR_DANGER};
+    border: 1.5px solid #FCA5A5;
+}}
+
+QPushButton#dangerButton:hover {{
+    background-color: {COLOR_DANGER_BG};
+    color: {COLOR_DANGER_HOVER};
+}}
+
+QComboBox, QDateEdit {{
+    background-color: {COLOR_SURFACE};
+    border: 1.5px solid {COLOR_BORDER};
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 14px;
+}}
+
+QComboBox:focus, QDateEdit:focus {{
+    border: 1.5px solid {COLOR_PRIMARY};
+}}
+
+QDialog {{
+    background-color: {COLOR_BG};
+}}
+
+QTableWidget {{
+    background-color: {COLOR_SURFACE};
+    border: 1px solid {COLOR_BORDER};
+    border-radius: 8px;
+    gridline-color: {COLOR_BORDER};
+    selection-background-color: #DBEAFE;
+    selection-color: {COLOR_TEXT};
+}}
+
+QHeaderView::section {{
+    background-color: {COLOR_BG};
+    color: {COLOR_TEXT_MUTED};
+    padding: 8px;
+    border: none;
+    border-bottom: 1px solid {COLOR_BORDER};
+    font-weight: 600;
+}}
+
+QListWidget {{
+    background-color: {COLOR_SURFACE};
+    border: 1px solid {COLOR_BORDER};
+    border-radius: 8px;
+}}
+
+QLabel#sectionTitle {{
+    font-size: 15px;
+    font-weight: 600;
+    margin-top: 8px;
 }}
 """

@@ -51,7 +51,7 @@
 - [x] Main window shows current user/role and supports logout + auto-logout on session expiry
 - [ ] Wire permission decorator into real service methods as those services are built
 
-## Phase 5: Employee & HR Management (Service layer complete; UI and reports pending)
+## Phase 5: Employee & HR Management (Complete except HR reports, deferred to Phase 16)
 - [x] Create employee master data (Employee model, EmployeeService.create_employee/update_employee)
 - [x] Implement employee documents (EmployeeDocument model, add_document/remove_document, soft delete)
 - [x] Track joining/exit information (joining_date/exit_date, record_exit — never hard-deletes the employee)
@@ -60,7 +60,7 @@
 - [x] Create emergency contact tracking (emergency_contact_name/phone fields)
 - [x] Assign employees to outlets/departments (assigned_outlet field, defaults to "Main Outlet" per single-location assumption)
 - [ ] Create HR reports module (deferred to Phase 16: Reporting System)
-- [ ] Employee/HR UI screens (list, create, edit, document upload)
+- [x] Employee/HR UI screens (app/ui/employee_window.py: list with search, add form, detail/edit dialog with status/exit workflow and document management)
 - [ ] User-provisioning flow for employees who need login access (Employee.user_id can currently only link an existing User)
 
 ## Phase 6: Attendance Management
@@ -267,13 +267,12 @@ A feature is complete only when:
 - [ ] GitHub issue updated
 
 ## Current Focus
-Phase 5's service layer (employee master data, documents, status/exit, RBAC, audit) is complete and tested. UI and Phase 6 (Attendance) are next.
+Phase 5 (Employee & HR Management) is complete end to end — service layer and UI, tested. Phase 6 (Attendance) is next.
 
 ## Next Immediate Tasks
-1. Build Employee/HR UI screens (list, create, edit, document upload) following the login screen's shared stylesheet
-2. Begin Phase 6: Attendance model, repository, and service (check-in/check-out, present/absent/late/half-day/leave)
-3. Expand the `ROLE_PERMISSIONS` matrix in app/core/constants.py as each new module is implemented
-4. Consider revisiting `Fuel` model's `Float` fields for money/quantity before real financial data is stored
+1. Begin Phase 6: Attendance model, repository, and service (check-in/check-out, present/absent/late/half-day/leave, correction workflow requiring authorization per problemstatement.md #9)
+2. Expand the `ROLE_PERMISSIONS` matrix in app/core/constants.py as each new module is implemented
+3. Consider revisiting `Fuel` model's `Float` fields for money/quantity before real financial data is stored
 
 ## Long-term Considerations (Not for Initial Release)
 While building for offline-only operation, the architecture should not prevent future expansion:
