@@ -95,7 +95,9 @@ A petrol pump management system needs to handle fuel inventory, sales, procureme
 - [x] `ShiftService.open_shift` now validates `supervisor_id` actually exists (`NotFoundError` otherwise) instead of allowing a dangling reference
 
 ## Current Module
-Phase 9: Tank & Inventory Management is done end-to-end (service layer + UI, tested) — Tank master data, dip readings, transactions (receipt/issue/adjustment), and fuel reconciliation with configurable variance thresholds. Phases 4-8 (Auth & RBAC, Employee & HR, Attendance, Shift Management, Nozzle Management) are also done end-to-end. Database integrity (FK enforcement, WAL mode, safe commit/rollback) and end-to-end exception handling (startup failures, every UI action) have been audited and hardened across the whole app. The login screen and main-window dashboard were redesigned for a more eye-catching, minimal look (gradient hero panel, quick-access cards).
+Phase 9: Tank & Inventory Management is done end-to-end (service layer + UI, tested) — Tank master data, dip readings, transactions (receipt/issue/adjustment), and fuel reconciliation with configurable variance thresholds. Phases 4-8 (Auth & RBAC, Employee & HR, Attendance, Shift Management, Nozzle Management) are also done end-to-end. Database integrity (FK enforcement, WAL mode, safe commit/rollback) and end-to-end exception handling (startup failures, every UI action) have been audited and hardened across the whole app. The login screen and main-window dashboard were redesigned for a more eye-catching, minimal look (gradient hero panel, quick-access cards). The app can now also be packaged into a standalone Windows .exe (Phase 20 work, started early at the user's request — see Deployment Status).
+
+- [x] PyInstaller packaging (`petrol_pump_erp.spec`, `requirements-build.txt`) — see "Deployment Status" for details and the two real bugs this surfaced (DB path under a frozen build, and a matplotlib/PySide6 hook interaction)
 
 - [x] Tank, TankReading, TankTransaction, FuelReconciliation models (problemstatement.md #13/#14). Tank is distinct from Fuel (a fuel-type lookup already used by Nozzle) — a pump can have more than one tank per fuel type, each with its own capacity/stock; `Fuel.capacity/current_stock/opening_stock` are effectively superseded by `Tank`'s own fields and are a known redundancy left alone rather than changed without a migration path (no Alembic yet)
 - [x] TankStatus/TankTransactionType/VarianceClassification enums and configurable reconciliation thresholds (`FUEL_VARIANCE_*_THRESHOLD_PERCENT`) in app/core/constants.py — reused the existing INVENTORY_VIEW/INVENTORY_MANAGE permissions (defined since Phase 3, never wired to a real feature until now) rather than adding new ones
@@ -117,6 +119,7 @@ Phase 9: Tank & Inventory Management is done end-to-end (service layer + UI, tes
 - [x] `app/database/connection.py`'s `get_connection()` was annotated/documented as a generator (`next(get_connection())`) but implemented as a plain `return`, which would raise `TypeError` if ever called as documented. It was also unused and encouraged bypassing the repository layer, so it was removed rather than fixed. (fixed 2026-08-15)
 - [x] `app/main.py` had no error handling around `init_db()`/`seed_initial_data()` — any startup failure (disk full, permission denied, corrupted DB) crashed with a raw traceback. Now wrapped and translated into a single `DatabaseInitializationError`, logged via `app.core.logging.logger`. (fixed 2026-08-15)
 - [x] Every UI dialog only caught `AppError`/`ValidationError`, so an unexpected exception (a DB error, a bug) from any service call would propagate uncaught through a Qt slot. Every dialog action across login/employee/attendance/shift now has a final `except Exception` that logs the full traceback and shows a generic, safe message via `describe_unexpected_error()` (`app/ui/qt_utils.py`) instead of crashing or silently misbehaving. (fixed 2026-08-15)
+- [x] `get_database_path()` resolved the DB file relative to `app/database/connection.py`'s own location, which works in a normal checkout but would silently reset the database on every launch once packaged with PyInstaller (a onefile build re-extracts to a fresh temp directory every run). Fixed by detecting the frozen state and using a stable per-user directory (`%LOCALAPPDATA%\PetrolPumpERP`) instead. Found and fixed while setting up packaging, verified against a simulated fresh PC. (fixed 2026-08-15)
 
 ## Pending Modules
 - User-provisioning flow for employees who need login access (currently Employee.user_id can only link an *existing* User; there's no "create login for this employee" service method yet)
@@ -179,8 +182,8 @@ Phase 9: Tank & Inventory Management is done end-to-end (service layer + UI, tes
 - No internet dependency
 
 ## Testing Status
-- [x] Core setup smoke tests (`tests/test_core_setup.py`) — 3/3 passing (init/seed success path, plus startup DB failures now raise a clean `DatabaseInitializationError` instead of a raw traceback)
-- [x] Authentication/RBAC tests (`tests/test_auth_rbac.py`) — 13/13 passing (login success/failure, generic error messages, lockout, permission checks, session validate/expire/logout, password policy, audit logging, decorator enforcement)
+- [x] Core setup smoke tests (`tests/test_core_setup.py`) — 5/5 passing (init/seed success path, startup DB failures raise a clean `DatabaseInitializationError`, frozen-build DB path resolves to `%LOCALAPPDATA%` not the temp extraction dir, env-var override still wins even when frozen)
+- [x] Authentication/RBAC tests (`tests/test_auth_rbac.py`) — 15/15 passing (login success/failure, generic error messages, lockout, permission checks, session validate/expire/logout, password policy, audit logging, decorator enforcement, default fuel-type seeding and its idempotency)
 - [x] Login UI tests (`tests/test_login_ui.py`) — 7/7 passing (login screen display, validation, success/failure paths, logout, auto-logout on expiry, unexpected-error fallback)
 - [x] Employee/HR tests (`tests/test_employee_service.py`) — 16/16 passing (creation, validation, permissions, status/exit workflow, documents, audit logging)
 - [x] Employee/HR UI tests (`tests/test_employee_ui.py`) — 10/10 passing (list/search, permission-based visibility, form validation, edit, status/exit, documents, unexpected-error fallback)
@@ -189,7 +192,7 @@ Phase 9: Tank & Inventory Management is done end-to-end (service layer + UI, tes
 - [x] Shift/nozzle-assignment tests (`tests/test_shift_service.py`) — 23/23 passing (open/close, duplicate rejection, nozzle-assignment prevention rules, meter validation, reopen workflow and permission, RBAC)
 - [x] Shift UI tests (`tests/test_shift_ui.py`) — 7/7 passing (visibility, list display, open/assign/close/reopen flows, unexpected-error fallback)
 - [x] Database integrity tests (`tests/test_database_integrity.py`) — 5/5 passing (WAL mode active, FK enforcement active, invalid FK rejected, session recovers after `safe_commit` rollback, documents the broken behavior without it)
-- [x] Nozzle Management tests (`tests/test_nozzle_service.py`) — 16/16 passing (create dispenser/nozzle, duplicate-code rejection, status-change reason requirement, blocks deactivating a nozzle with an active assignment, RBAC)
+- [x] Nozzle Management tests (`tests/test_nozzle_service.py`) — 18/18 passing (create dispenser/nozzle, duplicate-code rejection, status-change reason requirement, blocks deactivating a nozzle with an active assignment, the confirmed 2-nozzles-per-dispenser cap, RBAC)
 - [x] Nozzle Management UI tests (`tests/test_nozzle_ui.py`) — 8/8 passing (visibility, form validation, tab display, permission gating)
 - [x] Tank & Inventory tests (`tests/test_tank_service.py`) — 26/26 passing (tank creation, capacity/negative-stock guards, receipt/issue/adjustment rules, reading vs. book-stock separation, parametrized variance classification, reconciliation math including period rollover, RBAC)
 - [x] Tank & Inventory UI tests (`tests/test_tank_ui.py`) — 7/7 passing (visibility, form validation, transaction/reconciliation flows, unexpected-error fallback)
@@ -201,13 +204,13 @@ Phase 9: Tank & Inventory Management is done end-to-end (service layer + UI, tes
 - [ ] Initial backup created (pending)
 
 ## Deployment Status
-- [ ] PyInstaller packaging (pending)
+- [x] PyInstaller packaging — `petrol_pump_erp.spec` + `requirements-build.txt`; `pyinstaller petrol_pump_erp.spec` produces a single `dist/PetrolPumpERP.exe` (~90MB), verified end-to-end against a simulated fresh PC (empty fake `%LOCALAPPDATA%`): correct database created in the right per-user location, login window rendered correctly. No proper installer (Start Menu entry/uninstaller) yet — just a standalone .exe, which is what the user asked for ("downloadable so I can install this app... works there freshly on their different PCs").
 - [x] Initial commit created and pushed to GitHub
 
 ## Git/GitHub Status
 - Repository: https://github.com/Rahil-Mokashi/initial-capstone.git
 - Active branch: `feature/core-framework` (not yet merged to `main`)
-- Latest work: Phase 9 Tank & Inventory Management (tank master data, dip readings, transactions, fuel reconciliation) on top of Phase 8, the exception-handling hardening pass, and the eye-catching/minimal UI redesign
+- Latest work: standalone Windows executable packaging (Phase 20, started early at the user's request) on top of Phase 9 Tank & Inventory Management, Phase 8, the exception-handling hardening pass, and the eye-catching/minimal UI redesign
 
 ## Future Scope
 - The current offline desktop application is Phase 1 of a two-phase plan. Once the offline ERP proves itself in real use, the plan is to build a second phase: a web application backed by a cloud database with cloud data synchronization. Architecture decisions in the current phase (repository/service separation, UUID primary keys, clean domain models) are being made with this eventual migration in mind, even though no cloud/web code is being written yet.
@@ -218,4 +221,4 @@ Phase 9: Tank & Inventory Management is done end-to-end (service layer + UI, tes
 - Known Qt/QSS gotcha worth remembering for future custom widgets: a plain `QWidget` subclass needs `self.setAttribute(Qt.WA_StyledBackground, True)` or its stylesheet `background-color`/`border`/`border-radius` will silently not render (see `DashboardCard` in `app/ui/main_window.py`). Built-in widgets like `QFrame`/`QPushButton`/`QDialog` don't need this.
 
 ## Next Task
-Phase 9 (Tank & Inventory Management) is complete end-to-end, service layer and UI (161/161 tests passing project-wide). Phases 4-9 are all done. Waiting on the user's team to review the running app and come back with detailed feedback before further changes. Candidate next steps once that lands: migrate `Attendance.shift_label` to a real FK against `Shift`, or begin Phase 10 (Procurement Management) per ROADMAP.md.
+Phases 4-9 are all complete end-to-end (165/165 tests passing project-wide), and the app can now be built into a standalone Windows executable (`pyinstaller petrol_pump_erp.spec`) to hand to the user's team for review — that was the immediate ask (2026-08-15) and is done. Waiting on the team's detailed feedback before further changes. Candidate next steps once that lands: the attendant self-service view and fuel-sectioned reports (both documented above under Pending Modules), migrating `Attendance.shift_label` to a real FK against `Shift`, or beginning Phase 10 (Procurement Management) per ROADMAP.md.

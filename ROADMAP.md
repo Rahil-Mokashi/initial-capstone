@@ -224,17 +224,21 @@
 - [ ] Test error handling
 - [ ] Test edge cases (internet unavailable, computer restart during transaction, etc.)
 
-## Phase 20: Packaging & Deployment
-- [ ] Create PyInstaller build configuration
-- [ ] Create Windows executable
-- [ ] Create installer package
+## Phase 20: Packaging & Deployment (Started early, 2026-08-15, at the user's request — needed a build to hand to their team)
+- [x] Create PyInstaller build configuration (`petrol_pump_erp.spec`, `requirements-build.txt`)
+- [x] Create Windows executable (`pyinstaller petrol_pump_erp.spec` → single-file `dist/PetrolPumpERP.exe`, ~90MB, verified on a simulated fresh PC — no Python or dependencies required on the target machine)
+- [ ] Create installer package (currently a standalone .exe, not a proper installer with Start Menu entry/uninstaller)
 - [ ] Implement configuration system
-- [ ] Initialize database on first run
+- [x] Initialize database on first run (already worked in dev; the packaging effort's real find was that the *path resolution* needed fixing — see below)
 - [ ] Create default directories (backups, logs, reports)
 - [ ] Package user documentation
 - [ ] Package administrator documentation
 - [ ] Package recovery documentation
 - [ ] Create release process
+
+**Bug found and fixed while packaging**: `app/database/connection.py` resolved the DB path relative to its own file location, which works fine in a normal checkout but breaks under a PyInstaller onefile build — that kind of build re-extracts to a *new* temp directory on every single launch, so the database would have silently reset every time the app started. Fixed by detecting the frozen state (`sys.frozen`) and using a stable per-user directory (`%LOCALAPPDATA%\PetrolPumpERP`) instead. Verified end-to-end against a simulated fresh PC (empty fake `LOCALAPPDATA`): the app created its database in the right place and the login screen rendered correctly. Covered by `tests/test_core_setup.py`.
+
+**Build-size tradeoff**: tried excluding matplotlib/PIL/tkinter (pulled in as false-positive transitive candidates, not actually used by this app) to shrink the ~94MB build. That broke PySide6's Qt platform-plugin bundling — the packaged app exited silently right after startup with no window and no error, because matplotlib's Qt-backend hook turns out to be what triggers PyInstaller's fuller PySide6 plugin collection. Reverted; documented in the spec file so nobody re-attempts this without knowing why it fails.
 
 ## Phase 21: Pilot Deployment & Feedback
 - [ ] Deploy to test petrol pump location

@@ -15,6 +15,7 @@ This README is the detailed, up-to-date entry point for the project. It reflects
 - [Getting started](#getting-started)
 - [Running the app](#running-the-app)
 - [Running the tests](#running-the-tests)
+- [Building a standalone Windows executable](#building-a-standalone-windows-executable)
 - [Architecture](#architecture)
 - [Security & data-integrity model](#security--data-integrity-model)
 - [Database](#database)
@@ -185,12 +186,12 @@ Not yet built: Tank & Inventory, Procurement, Sales, Payments, Credit, Expenses,
 | ORM | SQLAlchemy 2.x | in use |
 | Validation | Pydantic v2 | in use |
 | Configuration | pydantic-settings | in use |
-| Testing | pytest | in use — 128 tests |
+| Testing | pytest | in use — 165 tests |
 | Logging | Python standard `logging` | in use |
 | Migrations | Alembic | **planned, not yet integrated** — schema changes currently go through `Base.metadata.create_all()` |
 | PDF reports | ReportLab | **planned** — Phase 16/17 |
 | Excel reports | openpyxl | **planned** — Phase 16/17 |
-| Packaging | PyInstaller | **planned** — Phase 20 |
+| Packaging | PyInstaller | in use — see [Building a standalone Windows executable](#building-a-standalone-windows-executable) |
 
 This table is deliberately honest about what's a real dependency today (see `requirements.txt`) versus what's still on the roadmap.
 
@@ -218,7 +219,7 @@ PetrolPumpERP/
 │   ├── schemas/                 # Pydantic input-validation schemas
 │   ├── services/                # Business logic, RBAC checks, audit logging
 │   └── ui/                      # PySide6 windows/dialogs + shared stylesheet
-├── tests/                       # pytest suite (128 tests)
+├── tests/                       # pytest suite (165 tests)
 ├── docs/
 │   └── screenshots/             # Screenshots used in this README
 ├── requirements.txt
@@ -276,17 +277,38 @@ On first run this will:
 pytest
 ```
 
-All 128 tests should pass, in well under a minute. To run a single module's tests:
+All 165 tests should pass, in well under a minute. To run a single module's tests:
 
 ```bash
 pytest tests/test_auth_rbac.py -v
 pytest tests/test_employee_service.py tests/test_employee_ui.py -v
 pytest tests/test_attendance_service.py tests/test_attendance_ui.py -v
 pytest tests/test_shift_service.py tests/test_shift_ui.py -v
+pytest tests/test_nozzle_service.py tests/test_nozzle_ui.py -v
+pytest tests/test_tank_service.py tests/test_tank_ui.py -v
 pytest tests/test_database_integrity.py -v
 ```
 
 UI tests drive real PySide6 widgets (not mocks) but never call `.exec()` on a modal dialog — `QMessageBox`/`QInputDialog`/`QFileDialog` calls are monkeypatched where a test needs to simulate a user's choice, so the suite runs headlessly without hanging on a dialog waiting for a click that will never come.
+
+---
+
+## Building a standalone Windows executable
+
+To hand the app to someone without them installing Python or any dependencies:
+
+```bash
+pip install -r requirements-build.txt
+pyinstaller petrol_pump_erp.spec
+```
+
+This produces a single file, `dist/PetrolPumpERP.exe` (~90MB — PySide6/Qt is the bulk of that). Copy that one file to any Windows PC and double-click it to run; nothing else needs to be installed.
+
+**Each install gets its own fresh, persistent database automatically.** This matters more than it sounds: a PyInstaller onefile build re-extracts itself to a new temporary directory on *every single launch*, so resolving the database path relative to the running executable (as a normal dev checkout does) would silently wipe the database on every restart once packaged. `app/database/connection.py` detects the frozen/packaged state and instead stores the database at `%LOCALAPPDATA%\PetrolPumpERP\petrol_pump.db` — a stable location that survives restarts and is private to whichever Windows user account runs it. This is covered by `tests/test_core_setup.py::test_frozen_build_uses_per_user_app_data_dir_not_temp_extraction_path`.
+
+On first launch on a new PC, the app creates that database, seeds the six roles/permissions and default fuel types, and creates the same dev admin login described above (`admin` / `Admin@123`) — change it before real use.
+
+⚠️ `petrol_pump_erp.spec` intentionally bundles matplotlib/PIL/tkinter even though this app doesn't use them directly — excluding them was tried and broke PySide6's Qt platform-plugin bundling (the app exited silently right after startup, no window, no error). See the comment at the top of the spec file for the full story before trying to slim the build down.
 
 ---
 
