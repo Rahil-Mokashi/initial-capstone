@@ -204,7 +204,7 @@ Not yet built: Procurement, Sales, Payments, Credit, Expenses, full Reconciliati
 | ORM | SQLAlchemy 2.x | in use |
 | Validation | Pydantic v2 | in use |
 | Configuration | pydantic-settings | in use |
-| Testing | pytest | in use — 186 tests |
+| Testing | pytest | in use — 202 tests |
 | Logging | Python standard `logging` | in use |
 | Migrations | Alembic | **planned, not yet integrated** — schema changes currently go through `Base.metadata.create_all()` |
 | PDF reports | ReportLab | **planned** — Phase 16/17 |
@@ -237,7 +237,7 @@ PetrolPumpERP/
 │   ├── schemas/                 # Pydantic input-validation schemas
 │   ├── services/                # Business logic, RBAC checks, audit logging
 │   └── ui/                      # PySide6 windows/dialogs + shared stylesheet
-├── tests/                       # pytest suite (186 tests)
+├── tests/                       # pytest suite (202 tests)
 ├── docs/
 │   └── screenshots/             # Screenshots used in this README
 ├── requirements.txt
@@ -295,7 +295,7 @@ On first run this will:
 pytest
 ```
 
-All 186 tests should pass, in well under a minute. To run a single module's tests:
+All 202 tests should pass, in well under a minute. To run a single module's tests:
 
 ```bash
 pytest tests/test_auth_rbac.py -v
