@@ -44,6 +44,18 @@ A petrol pump management system needs to handle fuel inventory, sales, procureme
 - [x] MVP UI stub (app/ui/main_window.py) with PySide6 support
 - [x] Core tests (tests/test_core_setup.py) passing
 - [x] Git repository initialized with core framework commit
+- [x] Roles/permissions constants (app/core/constants.py) — six business roles, baseline permission matrix, password policy, lockout threshold
+- [x] Custom exceptions (app/core/exceptions.py) — AuthenticationError, AccountLockedError, SessionExpiredError, PermissionDeniedError, WeakPasswordError
+- [x] Password policy validation (`validate_password_strength` in app/core/security.py)
+- [x] Session token hashing (`hash_token` in app/core/security.py) — session tokens stored as SHA-256 hashes, not raw
+- [x] AuditLog model (app/models/audit_log.py) — immutable, append-only, no update/delete
+- [x] UserSession model (app/models/user_session.py) — tracks active sessions with expiry
+- [x] `role_permissions` many-to-many wired between Role and Permission (was defined but never registered/used before)
+- [x] AuditLogRepository, UserSessionRepository (app/repositories/)
+- [x] Full AuthService rewrite (app/services/auth_service.py) — login/logout, session issue/validate/auto-expire, real RBAC permission checks, audit logging on every auth event, generic error messages (no username enumeration)
+- [x] `require_permission` decorator (app/core/permissions.py) for service-layer authorization checks
+- [x] seed.py now seeds all six roles and the baseline permission matrix, not just an admin user
+- [x] Auth/RBAC test suite (tests/test_auth_rbac.py) — 13 tests covering login, lockout, permissions, session expiry, audit logging, password policy, the decorator
 
 ## Current Module
 Phase 4: Authentication & RBAC (in progress) — building on the completed core framework.
@@ -51,11 +63,10 @@ Phase 4: Authentication & RBAC (in progress) — building on the completed core 
 ## Known Bugs (Fixed)
 - [x] `app/services/inventory_service.py` defined a `PaymentRepository(Repository)` class with an unimported base class and SQLite-incompatible raw SQL (`NOW()`), which raised `NameError` on import. Removed, along with an unrelated unused `EmployeeService` stub. (fixed 2026-08-15)
 - [x] `app/database/session.py` duplicated the `SessionLocal` factory already defined in `app/database/connection.py`. It now re-exports the single instance from `connection.py` instead of redefining it. (fixed 2026-08-15)
+- [x] `app/models/role_permission.py` defined the `role_permissions` table but it was never imported anywhere, so the table silently never existed in the actual database. Now imported in `app/models/__init__.py` and wired as a real relationship. (fixed 2026-08-15)
+- [x] `datetime.utcnow()` (deprecated in Python 3.12+, which this project targets 3.13+ for) replaced with `datetime.now(timezone.utc)` in `EntityMixin` and `inventory_service.py`. (fixed 2026-08-15)
 
 ## Pending Modules
-- RBAC: wire `role_permissions` many-to-many relationship, seed roles/permissions, implement real permission checks (in progress)
-- Session management with auto logout (in progress)
-- Audit logging for authentication events (in progress)
 - Employee/HR module
 - Attendance module
 - Shift management
@@ -72,7 +83,8 @@ Phase 4: Authentication & RBAC (in progress) — building on the completed core 
 - Single-file SQLite database
 - Desktop-only deployment
 - `Fuel` model uses `Float` for rate/capacity/stock fields rather than `Numeric`/fixed-point — acceptable for the MVP stub but should be revisited before real financial data is stored, per the project's data-integrity priority
-- RBAC permission checking (`AuthService.check_permission`) is currently a stub that always returns `False`; being implemented now in Phase 4
+- Default seeded admin password (`Admin@123`, in `app/database/seed.py`) is a known dev-only credential; must be changed before any real deployment. No "force password change on first login" flow exists yet.
+- Permission matrix in `app/core/constants.py` (`ROLE_PERMISSIONS`) only covers the modules that exist so far (users, inventory, audit); it must grow as each new module (sales, shifts, HR, etc.) is implemented
 
 ## Open Questions
 - Number of attendants/fuel attendants needed?
@@ -106,7 +118,7 @@ Phase 4: Authentication & RBAC (in progress) — building on the completed core 
 
 ## Testing Status
 - [x] Core setup smoke tests (`tests/test_core_setup.py`) — 2/2 passing
-- [ ] Authentication/RBAC tests (in progress, Phase 4)
+- [x] Authentication/RBAC tests (`tests/test_auth_rbac.py`) — 13/13 passing (login success/failure, generic error messages, lockout, permission checks, session validate/expire/logout, password policy, audit logging, decorator enforcement)
 - [ ] Integration tests (pending)
 - [ ] Report generation tests (pending)
 - [ ] Backup/Restore tests (pending)
@@ -121,10 +133,10 @@ Phase 4: Authentication & RBAC (in progress) — building on the completed core 
 ## Git/GitHub Status
 - Repository: https://github.com/Rahil-Mokashi/initial-capstone.git
 - Active branch: `feature/core-framework` (not yet merged to `main`)
-- Latest pushed commit: cleanup fix for `inventory_service.py`/`session.py`
+- Latest work: Phase 4 Authentication & RBAC implementation (auth service, sessions, audit log, permission decorator, seeding, tests)
 
 ## Future Scope
 - The current offline desktop application is Phase 1 of a two-phase plan. Once the offline ERP proves itself in real use, the plan is to build a second phase: a web application backed by a cloud database with cloud data synchronization. Architecture decisions in the current phase (repository/service separation, UUID primary keys, clean domain models) are being made with this eventual migration in mind, even though no cloud/web code is being written yet.
 
 ## Next Task
-Implement Phase 4 (Authentication & RBAC): audit logging, session management, role/permission seeding and enforcement, and tests.
+Phase 4 core pieces (login, sessions, RBAC, audit logging, tests) are implemented. Remaining Phase 4 items: wire an actual login UI flow (currently only the MVP stub window exists) and expand the permission matrix as new modules are added. After that, move to Phase 5 (Employee & HR Management) per ROADMAP.md.
