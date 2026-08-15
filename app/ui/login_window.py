@@ -5,6 +5,7 @@ import platform
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QGraphicsDropShadowEffect,
+    QHBoxLayout,
     QLabel,
     QLineEdit,
     QMainWindow,
@@ -17,9 +18,63 @@ from PySide6.QtGui import QColor
 from app.services.auth_service import AuthService
 from app.ui.qt_utils import describe_unexpected_error
 
+HERO_BULLETS = [
+    "Works fully offline",
+    "Role-based access control",
+    "Complete audit trail",
+]
+
 
 def get_device_info() -> str:
     return platform.node() or "unknown-device"
+
+
+def _build_hero_panel() -> QWidget:
+    """Left-hand brand panel: what makes the login screen feel like a
+    product rather than a bare form."""
+    panel = QWidget()
+    panel.setObjectName("heroPanel")
+    panel.setMinimumWidth(380)
+
+    badge = QWidget()
+    badge.setObjectName("heroBadge")
+    badge.setFixedSize(44, 44)
+    badge_layout = QVBoxLayout(badge)
+    badge_layout.setContentsMargins(0, 0, 0, 0)
+    badge_glyph = QLabel("⛽")
+    badge_glyph.setObjectName("heroBadgeGlyph")
+    badge_glyph.setAlignment(Qt.AlignCenter)
+    badge_layout.addWidget(badge_glyph)
+
+    title = QLabel("Petrol Pump ERP")
+    title.setObjectName("heroTitle")
+    title.setWordWrap(True)
+
+    tagline = QLabel("Sales, shifts, staff, and attendance — built to run reliably without the internet.")
+    tagline.setObjectName("heroTagline")
+    tagline.setWordWrap(True)
+
+    bullets_layout = QVBoxLayout()
+    bullets_layout.setSpacing(10)
+    for text in HERO_BULLETS:
+        bullet = QLabel(f"✓  {text}")
+        bullet.setObjectName("heroBullet")
+        bullets_layout.addWidget(bullet)
+
+    content_layout = QVBoxLayout()
+    content_layout.setContentsMargins(48, 56, 48, 56)
+    content_layout.setSpacing(0)
+    content_layout.addWidget(badge)
+    content_layout.addSpacing(28)
+    content_layout.addWidget(title)
+    content_layout.addSpacing(12)
+    content_layout.addWidget(tagline)
+    content_layout.addSpacing(32)
+    content_layout.addLayout(bullets_layout)
+    content_layout.addStretch()
+
+    panel.setLayout(content_layout)
+    return panel
 
 
 class LoginWindow(QMainWindow):
@@ -37,23 +92,23 @@ class LoginWindow(QMainWindow):
         self._auth_service = auth_service
 
         self.setWindowTitle("Petrol Pump ERP - Login")
-        self.setMinimumSize(420, 480)
+        self.setMinimumSize(820, 500)
 
-        background = QWidget()
-        background.setObjectName("background")
+        form_side = QWidget()
+        form_side.setObjectName("background")
 
         card = QWidget()
         card.setObjectName("card")
         card.setFixedWidth(340)
         card_shadow = QGraphicsDropShadowEffect(card)
-        card_shadow.setBlurRadius(24)
-        card_shadow.setOffset(0, 6)
-        card_shadow.setColor(QColor(0, 0, 0, 40))
+        card_shadow.setBlurRadius(28)
+        card_shadow.setOffset(0, 8)
+        card_shadow.setColor(QColor(79, 70, 229, 35))
         card.setGraphicsEffect(card_shadow)
 
-        title = QLabel("Petrol Pump ERP")
-        title.setObjectName("title")
-        title.setAlignment(Qt.AlignCenter)
+        heading = QLabel("Welcome back")
+        heading.setObjectName("title")
+        heading.setAlignment(Qt.AlignCenter)
 
         subtitle = QLabel("Sign in to continue")
         subtitle.setObjectName("subtitle")
@@ -80,7 +135,7 @@ class LoginWindow(QMainWindow):
         card_layout = QVBoxLayout()
         card_layout.setContentsMargins(32, 36, 32, 36)
         card_layout.setSpacing(6)
-        card_layout.addWidget(title)
+        card_layout.addWidget(heading)
         card_layout.addWidget(subtitle)
         card_layout.addSpacing(24)
         card_layout.addWidget(self.username_input)
@@ -92,13 +147,22 @@ class LoginWindow(QMainWindow):
         card_layout.addWidget(self.error_label)
         card.setLayout(card_layout)
 
-        background_layout = QVBoxLayout()
-        background_layout.addStretch()
-        background_layout.addWidget(card, alignment=Qt.AlignCenter)
-        background_layout.addStretch()
-        background.setLayout(background_layout)
+        form_layout = QVBoxLayout()
+        form_layout.addStretch()
+        form_layout.addWidget(card, alignment=Qt.AlignCenter)
+        form_layout.addStretch()
+        form_side.setLayout(form_layout)
 
-        self.setCentralWidget(background)
+        root_layout = QHBoxLayout()
+        root_layout.setContentsMargins(0, 0, 0, 0)
+        root_layout.setSpacing(0)
+        root_layout.addWidget(_build_hero_panel(), stretch=4)
+        root_layout.addWidget(form_side, stretch=5)
+
+        root = QWidget()
+        root.setLayout(root_layout)
+        self.setCentralWidget(root)
+
         self.username_input.setFocus()
 
     def _attempt_login(self) -> None:

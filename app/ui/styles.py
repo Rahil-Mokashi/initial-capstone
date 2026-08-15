@@ -1,19 +1,27 @@
 """Shared visual style for the desktop UI.
 
-A single stylesheet keeps every screen visually consistent. Kept simple and
-fast-rendering per problemstatement.md's UX guidance (speed over visual
-complexity) — this is polish via consistent spacing/color/typography, not
-heavy decoration.
+A single stylesheet keeps every screen visually consistent. The palette is
+deliberately small — one confident primary (indigo) plus one sparingly-used
+accent (amber, reserved for the login hero panel) — so the app reads as
+eye-catching through hierarchy, whitespace, and one strong color choice
+rather than decoration. Kept fast-rendering per problemstatement.md's UX
+guidance (speed over visual complexity).
 """
 
-COLOR_BG = "#F4F6F9"
+COLOR_BG = "#F5F6FB"
 COLOR_SURFACE = "#FFFFFF"
-COLOR_BORDER = "#E2E5EB"
-COLOR_TEXT = "#1F2430"
-COLOR_TEXT_MUTED = "#6B7280"
-COLOR_PRIMARY = "#2563EB"
-COLOR_PRIMARY_HOVER = "#1D4ED8"
-COLOR_PRIMARY_PRESSED = "#1E40AF"
+COLOR_BORDER = "#E3E5F0"
+COLOR_TEXT = "#1B1E2B"
+COLOR_TEXT_MUTED = "#6B7086"
+
+COLOR_PRIMARY = "#4F46E5"
+COLOR_PRIMARY_HOVER = "#4338CA"
+COLOR_PRIMARY_PRESSED = "#3730A3"
+COLOR_PRIMARY_SOFT = "#EEF0FE"
+
+COLOR_ACCENT = "#F59E0B"
+COLOR_ACCENT_SOFT = "#FEF3C7"
+
 COLOR_DANGER = "#DC2626"
 COLOR_DANGER_BG = "#FEF2F2"
 COLOR_DANGER_HOVER = "#B91C1C"
@@ -34,12 +42,12 @@ QMainWindow, QWidget#background {{
 QWidget#card {{
     background-color: {COLOR_SURFACE};
     border: 1px solid {COLOR_BORDER};
-    border-radius: 12px;
+    border-radius: 14px;
 }}
 
 QLabel#title {{
-    font-size: 22px;
-    font-weight: 600;
+    font-size: 23px;
+    font-weight: 700;
     color: {COLOR_TEXT};
 }}
 
@@ -51,7 +59,7 @@ QLabel#subtitle {{
 QLabel#errorLabel {{
     color: {COLOR_DANGER};
     background-color: {COLOR_DANGER_BG};
-    border-radius: 6px;
+    border-radius: 8px;
     padding: 8px;
     font-size: 12px;
 }}
@@ -62,6 +70,7 @@ QLineEdit {{
     border-radius: 8px;
     padding: 10px 12px;
     font-size: 14px;
+    selection-background-color: {COLOR_PRIMARY_SOFT};
 }}
 
 QLineEdit:focus {{
@@ -86,6 +95,11 @@ QPushButton:pressed {{
     background-color: {COLOR_PRIMARY_PRESSED};
 }}
 
+QPushButton:disabled {{
+    background-color: #C7C9D9;
+    color: #F5F6FB;
+}}
+
 QPushButton#secondaryButton {{
     background-color: {COLOR_SURFACE};
     color: {COLOR_TEXT};
@@ -94,6 +108,12 @@ QPushButton#secondaryButton {{
 
 QPushButton#secondaryButton:hover {{
     background-color: {COLOR_BG};
+}}
+
+QPushButton#secondaryButton:disabled {{
+    background-color: {COLOR_SURFACE};
+    color: #B7BACB;
+    border: 1.5px solid {COLOR_BORDER};
 }}
 
 QWidget#topBar {{
@@ -107,7 +127,7 @@ QLabel#userLabel {{
 }}
 
 QLabel#roleTag {{
-    background-color: #EEF2FF;
+    background-color: {COLOR_PRIMARY_SOFT};
     color: {COLOR_PRIMARY};
     border-radius: 10px;
     padding: 2px 10px;
@@ -144,7 +164,13 @@ QPushButton#dangerButton:hover {{
     color: {COLOR_DANGER_HOVER};
 }}
 
-QComboBox, QDateEdit {{
+QPushButton#dangerButton:disabled {{
+    background-color: {COLOR_SURFACE};
+    color: #E9B9B9;
+    border: 1.5px solid {COLOR_BORDER};
+}}
+
+QComboBox, QDateEdit, QSpinBox, QDoubleSpinBox {{
     background-color: {COLOR_SURFACE};
     border: 1.5px solid {COLOR_BORDER};
     border-radius: 8px;
@@ -152,7 +178,7 @@ QComboBox, QDateEdit {{
     font-size: 14px;
 }}
 
-QComboBox:focus, QDateEdit:focus {{
+QComboBox:focus, QDateEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus {{
     border: 1.5px solid {COLOR_PRIMARY};
 }}
 
@@ -163,9 +189,9 @@ QDialog {{
 QTableWidget {{
     background-color: {COLOR_SURFACE};
     border: 1px solid {COLOR_BORDER};
-    border-radius: 8px;
+    border-radius: 10px;
     gridline-color: {COLOR_BORDER};
-    selection-background-color: #DBEAFE;
+    selection-background-color: {COLOR_PRIMARY_SOFT};
     selection-color: {COLOR_TEXT};
 }}
 
@@ -181,12 +207,87 @@ QHeaderView::section {{
 QListWidget {{
     background-color: {COLOR_SURFACE};
     border: 1px solid {COLOR_BORDER};
-    border-radius: 8px;
+    border-radius: 10px;
 }}
 
 QLabel#sectionTitle {{
     font-size: 15px;
     font-weight: 600;
     margin-top: 8px;
+}}
+
+/* --- Login hero panel --- */
+
+QWidget#heroPanel {{
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+        stop:0 #4F46E5, stop:1 #4338CA);
+}}
+
+QLabel#heroTitle {{
+    color: white;
+    font-size: 30px;
+    font-weight: 700;
+}}
+
+QLabel#heroTagline {{
+    color: #E0E1FB;
+    font-size: 14px;
+}}
+
+QLabel#heroBullet {{
+    color: #EDEEFD;
+    font-size: 13px;
+}}
+
+QWidget#heroBadge {{
+    background-color: rgba(255, 255, 255, 30);
+    border-radius: 22px;
+}}
+
+QLabel#heroBadgeGlyph {{
+    color: white;
+    font-size: 22px;
+    font-weight: 700;
+}}
+
+/* --- Dashboard quick-access cards --- */
+
+QWidget#dashCard {{
+    background-color: {COLOR_SURFACE};
+    border: 1px solid {COLOR_BORDER};
+    border-radius: 14px;
+}}
+
+QWidget#dashCard:hover {{
+    border: 1px solid {COLOR_PRIMARY};
+}}
+
+QLabel#dashCardIcon {{
+    background-color: {COLOR_PRIMARY_SOFT};
+    color: {COLOR_PRIMARY};
+    border-radius: 10px;
+    font-size: 18px;
+    font-weight: 700;
+    qproperty-alignment: AlignCenter;
+}}
+
+QLabel#dashCardTitle {{
+    font-size: 15px;
+    font-weight: 700;
+}}
+
+QLabel#dashCardSubtitle {{
+    font-size: 12px;
+    color: {COLOR_TEXT_MUTED};
+}}
+
+QLabel#dashGreeting {{
+    font-size: 24px;
+    font-weight: 700;
+}}
+
+QLabel#dashDate {{
+    font-size: 13px;
+    color: {COLOR_TEXT_MUTED};
 }}
 """

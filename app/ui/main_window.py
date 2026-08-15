@@ -1,11 +1,17 @@
+from datetime import datetime
+
 from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QApplication,
+    QGraphicsDropShadowEffect,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QMessageBox,
     QMainWindow,
     QPushButton,
+    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
@@ -31,6 +37,65 @@ from app.ui.qt_utils import describe_unexpected_error
 from app.ui.styles import STYLESHEET
 
 SESSION_CHECK_INTERVAL_MS = 60_000
+
+
+class DashboardCard(QWidget):
+    """A clickable quick-access tile on the landing dashboard."""
+
+    def __init__(self, icon: str, title: str, subtitle: str, on_click, parent=None):
+        super().__init__(parent)
+        self.setObjectName("dashCard")
+        self.setCursor(Qt.PointingHandCursor)
+        self.setAttribute(Qt.WA_Hover, True)
+        self.setAttribute(Qt.WA_StyledBackground, True)
+        self._on_click = on_click
+
+        icon_label = QLabel(icon)
+        icon_label.setObjectName("dashCardIcon")
+        icon_label.setFixedSize(46, 46)
+
+        title_label = QLabel(title)
+        title_label.setObjectName("dashCardTitle")
+
+        subtitle_label = QLabel(subtitle)
+        subtitle_label.setObjectName("dashCardSubtitle")
+        subtitle_label.setWordWrap(True)
+
+        text_layout = QVBoxLayout()
+        text_layout.setContentsMargins(0, 0, 0, 0)
+        text_layout.setSpacing(2)
+        text_layout.addWidget(title_label)
+        text_layout.addWidget(subtitle_label)
+
+        layout = QHBoxLayout()
+        layout.setContentsMargins(18, 18, 18, 18)
+        layout.setSpacing(14)
+        layout.addWidget(icon_label)
+        layout.addLayout(text_layout, stretch=1)
+        self.setLayout(layout)
+
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.setMinimumHeight(108)
+
+        shadow = QGraphicsDropShadowEffect(self)
+        shadow.setBlurRadius(20)
+        shadow.setOffset(0, 4)
+        shadow.setColor(QColor(27, 30, 43, 22))
+        self.setGraphicsEffect(shadow)
+
+    def mousePressEvent(self, event) -> None:  # noqa: N802 - Qt override
+        if event.button() == Qt.LeftButton:
+            self._on_click()
+        super().mousePressEvent(event)
+
+
+def _greeting_for_now() -> str:
+    hour = datetime.now().hour
+    if hour < 12:
+        return "Good morning"
+    if hour < 17:
+        return "Good afternoon"
+    return "Good evening"
 
 
 class MainWindow(QMainWindow):
@@ -108,16 +173,49 @@ class MainWindow(QMainWindow):
         top_bar_layout.addWidget(logout_button)
         top_bar.setLayout(top_bar_layout)
 
-        message = QLabel("Welcome to Petrol Pump ERP\nMore modules are on the way.")
-        message.setObjectName("subtitle")
-        message.setAlignment(Qt.AlignCenter)
+        display_name = user_data.get("first_name") or user_data["username"]
+        greeting = QLabel(f"{_greeting_for_now()}, {display_name}")
+        greeting.setObjectName("dashGreeting")
+
+        today_label = QLabel(datetime.now().strftime("%A, %d %B %Y"))
+        today_label.setObjectName("dashDate")
+
+        header_layout = QVBoxLayout()
+        header_layout.setSpacing(4)
+        header_layout.addWidget(greeting)
+        header_layout.addWidget(today_label)
+
+        cards = [
+            ("👥", "Employees", "Staff, documents, and status", self._open_employees, Permission.EMPLOYEE_VIEW),
+            ("🕒", "Attendance", "Mark and review attendance", self._open_attendance, Permission.ATTENDANCE_VIEW),
+            ("⛽", "Shifts", "Open/close shifts, assign nozzles", self._open_shifts, Permission.SHIFT_VIEW),
+        ]
+
+        cards_grid = QGridLayout()
+        cards_grid.setSpacing(16)
+        column = 0
+        for icon, title, subtitle, handler, permission in cards:
+            if not self._auth_service.check_permission(user_data["id"], permission.value):
+                continue
+            cards_grid.addWidget(DashboardCard(icon, title, subtitle, handler), 0, column)
+            cards_grid.setColumnStretch(column, 1)
+            column += 1
+
+        empty_state = QLabel("Nothing to show yet — ask an administrator for access to a module.")
+        empty_state.setObjectName("subtitle")
+
+        body_layout = QVBoxLayout()
+        body_layout.setContentsMargins(32, 32, 32, 32)
+        body_layout.setSpacing(24)
+        body_layout.addLayout(header_layout)
+        if column > 0:
+            body_layout.addLayout(cards_grid)
+        else:
+            body_layout.addWidget(empty_state)
+        body_layout.addStretch()
 
         body = QWidget()
         body.setObjectName("background")
-        body_layout = QVBoxLayout()
-        body_layout.addStretch()
-        body_layout.addWidget(message)
-        body_layout.addStretch()
         body.setLayout(body_layout)
 
         layout = QVBoxLayout()
