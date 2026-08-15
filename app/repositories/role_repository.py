@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
@@ -14,3 +14,6 @@ class RoleRepository:
 
     def get_by_name(self, name: str) -> Optional[Role]:
         return self._session.query(Role).filter_by(name=name).first()
+
+    def list_all(self) -> List[Role]:
+        return self._session.query(Role).order_by(Role.name).all()

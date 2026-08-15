@@ -211,6 +211,18 @@ class ShiftService:
     def list_active_nozzles(self, actor_user_id: str):
         return self._nozzle_repo.list_active()
 
+    @require_permission(Permission.MY_ASSIGNMENT_VIEW.value)
+    def get_my_active_assignment(self, actor_user_id: str) -> Optional[NozzleAssignment]:
+        """The acting user's own current nozzle/fuel assignment, if any —
+        problemstatement.md #38: an attendant should see "My Nozzle".
+        Returns None (not NotFoundError) when there's simply nothing to
+        show: no linked Employee record, or no active assignment right now.
+        """
+        employee = self._employee_repo.get_by_user_id(actor_user_id)
+        if not employee:
+            return None
+        return self._assignment_repo.get_active_for_employee(employee.id)
+
     def _get_shift_or_raise(self, shift_id: str) -> Shift:
         shift = self._shift_repo.get_by_id(shift_id)
         if not shift:
