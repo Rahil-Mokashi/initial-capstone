@@ -56,6 +56,11 @@ A petrol pump management system needs to handle fuel inventory, sales, procureme
 - [x] `require_permission` decorator (app/core/permissions.py) for service-layer authorization checks
 - [x] seed.py now seeds all six roles and the baseline permission matrix, not just an admin user
 - [x] Auth/RBAC test suite (tests/test_auth_rbac.py) — 13 tests covering login, lockout, permissions, session expiry, audit logging, password policy, the decorator
+- [x] Login screen (app/ui/login_window.py) wired to AuthService — card UI, inline error banner, Enter-to-submit
+- [x] Main window redesigned (app/ui/main_window.py) — top bar with username/role badge, Logout button, auto-logout via a 60s session-validity timer
+- [x] AppController (app/ui/main_window.py) — owns the shared AuthService/DB session and the login <-> main window transition
+- [x] Shared UI stylesheet (app/ui/styles.py) — consistent color palette, rounded inputs/buttons/cards, applied app-wide via QApplication.setStyleSheet
+- [x] UI test suite (tests/test_login_ui.py) — 6 tests covering login window display, wrong-password/empty-field handling, successful login, logout, and auto-logout on session expiry
 
 ## Current Module
 Phase 4: Authentication & RBAC (in progress) — building on the completed core framework.
@@ -119,6 +124,7 @@ Phase 4: Authentication & RBAC (in progress) — building on the completed core 
 ## Testing Status
 - [x] Core setup smoke tests (`tests/test_core_setup.py`) — 2/2 passing
 - [x] Authentication/RBAC tests (`tests/test_auth_rbac.py`) — 13/13 passing (login success/failure, generic error messages, lockout, permission checks, session validate/expire/logout, password policy, audit logging, decorator enforcement)
+- [x] Login UI tests (`tests/test_login_ui.py`) — 6/6 passing (login screen display, validation, success/failure paths, logout, auto-logout on expiry)
 - [ ] Integration tests (pending)
 - [ ] Report generation tests (pending)
 - [ ] Backup/Restore tests (pending)
@@ -138,5 +144,8 @@ Phase 4: Authentication & RBAC (in progress) — building on the completed core 
 ## Future Scope
 - The current offline desktop application is Phase 1 of a two-phase plan. Once the offline ERP proves itself in real use, the plan is to build a second phase: a web application backed by a cloud database with cloud data synchronization. Architecture decisions in the current phase (repository/service separation, UUID primary keys, clean domain models) are being made with this eventual migration in mind, even though no cloud/web code is being written yet.
 
+## UI/UX Decisions
+- The client expects a clean, elegant, polished UI (not a bare functional stub) for every screen, balanced against the problem statement's UX priorities (speed, minimal clicks, large readable numbers for a busy pump environment). `app/ui/styles.py` holds one shared stylesheet so every future screen stays visually consistent — extend it rather than styling widgets ad hoc.
+
 ## Next Task
-Phase 4 core pieces (login, sessions, RBAC, audit logging, tests) are implemented. Remaining Phase 4 items: wire an actual login UI flow (currently only the MVP stub window exists) and expand the permission matrix as new modules are added. After that, move to Phase 5 (Employee & HR Management) per ROADMAP.md.
+Phase 4 is functionally complete: login screen, sessions, RBAC, audit logging, and tests are all in place and passing. Next: expand the permission matrix as new modules are added, then move to Phase 5 (Employee & HR Management) per ROADMAP.md.
