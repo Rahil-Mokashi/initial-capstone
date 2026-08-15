@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 from app.models.fuel import Fuel
+from app.repositories.base import safe_commit
 
 
 class FuelRepository:
@@ -14,11 +15,11 @@ class FuelRepository:
 
     def add(self, fuel: Fuel):
         self._session.add(fuel)
-        self._session.commit()
+        safe_commit(self._session)
         self._session.refresh(fuel)
         return fuel
 
     def update(self, fuel: Fuel):
-        self._session.commit()
+        safe_commit(self._session)
         self._session.refresh(fuel)
         return fuel

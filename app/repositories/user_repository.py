@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 from app.models.user import User
+from app.repositories.base import safe_commit
 
 
 class UserRepository:
@@ -14,11 +15,11 @@ class UserRepository:
 
     def add(self, user: User):
         self._session.add(user)
-        self._session.commit()
+        safe_commit(self._session)
         self._session.refresh(user)
         return user
 
     def update(self, user: User):
-        self._session.commit()
+        safe_commit(self._session)
         self._session.refresh(user)
         return user

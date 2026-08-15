@@ -26,6 +26,9 @@ class Permission(str, Enum):
     EMPLOYEE_MANAGE = "employee.manage"
     ATTENDANCE_VIEW = "attendance.view"
     ATTENDANCE_MANAGE = "attendance.manage"
+    SHIFT_VIEW = "shift.view"
+    SHIFT_MANAGE = "shift.manage"
+    SHIFT_REOPEN = "shift.reopen"
 
 
 class EmployeeStatus(str, Enum):
@@ -48,6 +51,29 @@ class AttendanceStatus(str, Enum):
     HOLIDAY = "holiday"
 
 
+class ShiftStatus(str, Enum):
+    """Values stored in Shift.status (problemstatement.md #11)."""
+
+    OPEN = "open"
+    CLOSED = "closed"
+
+
+class NozzleStatus(str, Enum):
+    """Values stored in Nozzle.status (problemstatement.md #15)."""
+
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+    MAINTENANCE = "maintenance"
+
+
+class AssignmentStatus(str, Enum):
+    """Values stored in NozzleAssignment.status (problemstatement.md #8)."""
+
+    ACTIVE = "active"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+
+
 # ADMIN and OWNER get every permission; other roles get a minimal starter set.
 # Business owners should refine this matrix as each module is implemented.
 ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
@@ -61,18 +87,24 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
         Permission.EMPLOYEE_MANAGE,
         Permission.ATTENDANCE_VIEW,
         Permission.ATTENDANCE_MANAGE,
+        Permission.SHIFT_VIEW,
+        Permission.SHIFT_MANAGE,
+        Permission.SHIFT_REOPEN,
     ),
     UserRole.ACCOUNTANT: (
         Permission.INVENTORY_VIEW,
         Permission.AUDIT_VIEW,
         Permission.EMPLOYEE_VIEW,
         Permission.ATTENDANCE_VIEW,
+        Permission.SHIFT_VIEW,
     ),
     UserRole.SHIFT_SUPERVISOR: (
         Permission.INVENTORY_VIEW,
         Permission.EMPLOYEE_VIEW,
         Permission.ATTENDANCE_VIEW,
         Permission.ATTENDANCE_MANAGE,
+        Permission.SHIFT_VIEW,
+        Permission.SHIFT_MANAGE,
     ),
     UserRole.ATTENDANT: (),
 }

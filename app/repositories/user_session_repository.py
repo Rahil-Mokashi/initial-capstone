@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.core.security import hash_token
 from app.models.user_session import UserSession
+from app.repositories.base import safe_commit
 
 
 class UserSessionRepository:
@@ -19,7 +20,7 @@ class UserSessionRepository:
             device_info=device_info,
         )
         self._session.add(entry)
-        self._session.commit()
+        safe_commit(self._session)
         self._session.refresh(entry)
         return entry
 
@@ -32,12 +33,12 @@ class UserSessionRepository:
 
     def touch(self, session_entry: UserSession) -> UserSession:
         session_entry.last_activity_at = datetime.now(timezone.utc)
-        self._session.commit()
+        safe_commit(self._session)
         self._session.refresh(session_entry)
         return session_entry
 
     def invalidate(self, session_entry: UserSession) -> UserSession:
         session_entry.is_active = False
-        self._session.commit()
+        safe_commit(self._session)
         self._session.refresh(session_entry)
         return session_entry

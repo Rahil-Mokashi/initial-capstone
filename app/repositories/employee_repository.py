@@ -4,6 +4,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.models.employee import Employee
+from app.repositories.base import safe_commit
 
 
 class EmployeeRepository:
@@ -33,11 +34,11 @@ class EmployeeRepository:
 
     def add(self, employee: Employee) -> Employee:
         self._session.add(employee)
-        self._session.commit()
+        safe_commit(self._session)
         self._session.refresh(employee)
         return employee
 
     def update(self, employee: Employee) -> Employee:
-        self._session.commit()
+        safe_commit(self._session)
         self._session.refresh(employee)
         return employee
