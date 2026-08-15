@@ -71,9 +71,17 @@ A petrol pump management system needs to handle fuel inventory, sales, procureme
 - [x] Employee/HR test suite (tests/test_employee_service.py) — 16 tests covering creation, sequential employee codes, validation, permission enforcement, status/exit workflow, document add/remove, audit logging
 - [x] Employee/HR UI (app/ui/employee_window.py) — EmployeeListWindow (searchable table), EmployeeFormDialog (add), EmployeeDetailDialog (edit profile, status/exit workflow with confirmation, document add/remove); "Employees" button added to MainWindow's top bar, hidden unless the user has EMPLOYEE_VIEW; manage actions (save/status/exit/documents) disabled for view-only roles
 - [x] Employee UI test suite (tests/test_employee_ui.py) — 9 tests covering list display/search, permission-based visibility, add-employee validation, profile edit, status change, exit confirmation flow, document add/remove, manage-action disabling for view-only roles
+- [x] AttendanceStatus enum (present/absent/late/half_day/leave/holiday) and ATTENDANCE_VIEW/ATTENDANCE_MANAGE permissions added to app/core/constants.py
+- [x] Attendance model (app/models/attendance.py) — one record per employee per day (unique constraint); shift_label is free-text since the Shift entity doesn't exist yet (Phase 7); corrections tracked via correction_reason/corrected_by_id/corrected_at rather than a plain overwrite
+- [x] Pydantic schemas (app/schemas/attendance.py) — AttendanceMark/AttendanceCorrection, validate check-out >= check-in and non-negative overtime
+- [x] AttendanceRepository, AttendanceService (app/services/attendance_service.py) — mark_attendance (rejects duplicates via ConflictError) and correct_attendance (requires a non-blank reason, audit-logs old/new snapshot), all permission-checked
+- [x] Attendance/HR test suite (tests/test_attendance_service.py) — 13 tests covering marking, duplicate rejection, permission enforcement, schema validation, the correction workflow, date-range/day filtering
+- [x] Attendance UI (app/ui/attendance_window.py) — AttendanceWindow (date-filterable daily roster), AttendanceMarkDialog, AttendanceCorrectionDialog (requires a reason, manage actions disabled for view-only roles); "Attendance" button added to MainWindow's top bar, gated on ATTENDANCE_VIEW
+- [x] Attendance UI test suite (tests/test_attendance_ui.py) — 7 tests covering visibility, date filtering, marking, duplicate rejection, correction reason requirement, and view-only disabling
+- [x] Shared app/ui/qt_utils.py for QDate<->date conversion (extracted out of employee_window.py so attendance_window.py doesn't duplicate it)
 
 ## Current Module
-Phase 5: Employee & HR Management is done end-to-end (service layer + UI, tested). Phase 4 (Authentication & RBAC) is also done end-to-end.
+Phase 6: Attendance Management is done end-to-end (service layer + UI, tested). Phases 4 (Auth & RBAC) and 5 (Employee & HR) are also done end-to-end.
 
 ## Known Bugs (Fixed)
 - [x] `app/services/inventory_service.py` defined a `PaymentRepository(Repository)` class with an unimported base class and SQLite-incompatible raw SQL (`NOW()`), which raised `NameError` on import. Removed, along with an unrelated unused `EmployeeService` stub. (fixed 2026-08-15)
@@ -83,8 +91,8 @@ Phase 5: Employee & HR Management is done end-to-end (service layer + UI, tested
 
 ## Pending Modules
 - User-provisioning flow for employees who need login access (currently Employee.user_id can only link an *existing* User; there's no "create login for this employee" service method yet)
-- HR reports module (deferred to Phase 16: Reporting System)
-- Attendance module
+- HR/attendance reports module (deferred to Phase 16: Reporting System)
+- Holiday calendar / leave-balance tracking (Attendance can record LEAVE/HOLIDAY status per day, but there's no holiday calendar or leave-quota entity yet)
 - Shift management
 - Nozzle/tank/inventory modules beyond the current Fuel stub
 - Sales, payments, credit modules
@@ -100,7 +108,8 @@ Phase 5: Employee & HR Management is done end-to-end (service layer + UI, tested
 - Desktop-only deployment
 - `Fuel` model uses `Float` for rate/capacity/stock fields rather than `Numeric`/fixed-point — acceptable for the MVP stub but should be revisited before real financial data is stored, per the project's data-integrity priority
 - Default seeded admin password (`Admin@123`, in `app/database/seed.py`) is a known dev-only credential; must be changed before any real deployment. No "force password change on first login" flow exists yet.
-- Permission matrix in `app/core/constants.py` (`ROLE_PERMISSIONS`) only covers the modules that exist so far (users, inventory, audit, employees); it must grow as each new module (sales, shifts, etc.) is implemented
+- Permission matrix in `app/core/constants.py` (`ROLE_PERMISSIONS`) only covers the modules that exist so far (users, inventory, audit, employees, attendance); it must grow as each new module (sales, shifts, etc.) is implemented
+- `Attendance.shift_label` is a free-text field, not a foreign key, since the Shift entity doesn't exist yet (Phase 7); replace with a real relationship once shifts are modeled
 - `EmployeeRepository.next_employee_code()` generates codes from a row count; fine for a single-user offline desktop app (rows are never hard-deleted) but would need a real sequence if this ever became multi-writer
 
 ## Open Questions
@@ -139,6 +148,8 @@ Phase 5: Employee & HR Management is done end-to-end (service layer + UI, tested
 - [x] Login UI tests (`tests/test_login_ui.py`) — 6/6 passing (login screen display, validation, success/failure paths, logout, auto-logout on expiry)
 - [x] Employee/HR tests (`tests/test_employee_service.py`) — 16/16 passing (creation, validation, permissions, status/exit workflow, documents, audit logging)
 - [x] Employee/HR UI tests (`tests/test_employee_ui.py`) — 9/9 passing (list/search, permission-based visibility, form validation, edit, status/exit, documents)
+- [x] Attendance tests (`tests/test_attendance_service.py`) — 13/13 passing (marking, duplicate rejection, permissions, schema validation, correction workflow, filtering)
+- [x] Attendance UI tests (`tests/test_attendance_ui.py`) — 7/7 passing (visibility, date filtering, marking, duplicate rejection, correction reason requirement, view-only disabling)
 - [ ] Integration tests (pending)
 - [ ] Report generation tests (pending)
 - [ ] Backup/Restore tests (pending)
@@ -162,4 +173,4 @@ Phase 5: Employee & HR Management is done end-to-end (service layer + UI, tested
 - The client expects a clean, elegant, polished UI (not a bare functional stub) for every screen, balanced against the problem statement's UX priorities (speed, minimal clicks, large readable numbers for a busy pump environment). `app/ui/styles.py` holds one shared stylesheet so every future screen stays visually consistent — extend it rather than styling widgets ad hoc.
 
 ## Next Task
-Phase 5 (Employee/HR) is complete end-to-end, service layer and UI (45/45 tests passing project-wide). Next: Phase 6 (Attendance Management) per ROADMAP.md.
+Phase 6 (Attendance) is complete end-to-end, service layer and UI (65/65 tests passing project-wide). Next: Phase 7 (Shift Management) per ROADMAP.md — note that once Shift exists, Attendance.shift_label should become a real foreign key.

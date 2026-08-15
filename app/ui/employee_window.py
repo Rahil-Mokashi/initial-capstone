@@ -33,12 +33,9 @@ from PySide6.QtWidgets import (
 from app.core.constants import EmployeeStatus, Permission
 from app.core.exceptions import AppError
 from app.schemas.employee import EmployeeCreate, EmployeeUpdate
+from app.ui.qt_utils import qdate_to_date
 
 TABLE_HEADERS = ["Code", "Name", "Designation", "Department", "Status", "Joining Date"]
-
-
-def _qdate_to_date(qdate: QDate) -> date:
-    return date(qdate.year(), qdate.month(), qdate.day())
 
 
 class EmployeeListWindow(QMainWindow):
@@ -204,7 +201,7 @@ class EmployeeFormDialog(QDialog):
                 designation=self.designation_input.text().strip() or None,
                 department=self.department_input.text().strip() or None,
                 assigned_outlet=self.outlet_input.text().strip() or None,
-                joining_date=_qdate_to_date(self.joining_date_input.date()),
+                joining_date=qdate_to_date(self.joining_date_input.date()),
                 emergency_contact_name=self.emergency_name_input.text().strip() or None,
                 emergency_contact_phone=self.emergency_phone_input.text().strip() or None,
             )
