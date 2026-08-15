@@ -36,9 +36,9 @@
 - [x] MVP UI stub with PySide6 support
 - [x] Core tests passing
 
-## Phase 4: Authentication & RBAC (Next)
-- [ ] Create user management
-- [ ] Implement password hashing
+## Phase 4: Authentication & RBAC (In Progress)
+- [x] Create user management
+- [x] Implement password hashing
 - [ ] Create login/logout functionality
 - [ ] Implement session management
 - [ ] Create role-based access control
@@ -46,7 +46,7 @@
 - [ ] Implement permission checking decorators
 - [ ] Create audit logging for authentication events
 - [ ] Implement password policy
-- [ ] Add login attempt protection
+- [x] Add login attempt protection (failed_attempts/is_locked fields on User; lockout logic in AuthService)
 
 ## Phase 5: Employee & HR Management
 - [ ] Create employee master data
@@ -262,15 +262,15 @@ A feature is complete only when:
 - [ ] GitHub issue updated
 
 ## Current Focus
-Currently in Phase 3: Database Design
+Currently in Phase 4: Authentication & RBAC
 
 ## Next Immediate Tasks
-1. Create database connection module
-2. Create SQLAlchemy base model
-3. Define core entities (User, Role, Permission)
-4. Set up Alembic migrations
-5. Create initial migration for core tables
-6. Test database operations
+1. Wire the `role_permissions` many-to-many relationship between Role and Permission
+2. Seed the six business roles (ADMIN, OWNER, MANAGER, ACCOUNTANT, SHIFT_SUPERVISOR, ATTENDANT) and baseline permissions
+3. Add AuditLog model + repository (immutable, no update/delete) and wire into AuthService
+4. Add UserSession model + repository for session management with auto logout
+5. Implement real `AuthService.check_permission`, `logout`, and a permission-checking decorator
+6. Write pytest coverage for authentication, lockout, RBAC, session expiry, and audit logging
 
 ## Long-term Considerations (Not for Initial Release)
 While building for offline-only operation, the architecture should not prevent future expansion:
