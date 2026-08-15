@@ -95,7 +95,16 @@ A petrol pump management system needs to handle fuel inventory, sales, procureme
 - [x] `ShiftService.open_shift` now validates `supervisor_id` actually exists (`NotFoundError` otherwise) instead of allowing a dangling reference
 
 ## Current Module
-Phase 7: Shift Management is done end-to-end (service layer + UI, tested), including nozzle assignment. Phases 4-6 (Auth & RBAC, Employee & HR, Attendance) are also done end-to-end. Database integrity (FK enforcement, WAL mode, safe commit/rollback) and end-to-end exception handling (startup failures, every UI action) have been audited and hardened across the whole app.
+Phase 8: Nozzle Management is done end-to-end (service layer + UI, tested) — full Dispenser/Nozzle CRUD, status transitions, and a tabbed management screen. Phases 4-7 (Auth & RBAC, Employee & HR, Attendance, Shift Management) are also done end-to-end. Database integrity (FK enforcement, WAL mode, safe commit/rollback) and end-to-end exception handling (startup failures, every UI action) have been audited and hardened across the whole app. The login screen and main-window dashboard were redesigned for a more eye-catching, minimal look (gradient hero panel, quick-access cards).
+
+- [x] NOZZLE_VIEW/NOZZLE_MANAGE permissions added to the RBAC matrix (SHIFT_SUPERVISOR/ACCOUNTANT get view-only; MANAGER/ADMIN/OWNER get manage)
+- [x] DispenserRepository/NozzleRepository extended with get_by_code/update/list_all (previously read-only, minimal)
+- [x] NozzleAssignmentRepository.get_active_for_nozzle() — cross-shift active-assignment lookup, used to block deactivating a nozzle currently in use
+- [x] app/schemas/nozzle.py: DispenserCreate, NozzleCreate
+- [x] NozzleService (app/services/nozzle_service.py): create_dispenser/create_nozzle (rejects duplicate codes, validates dispenser is active and fuel exists), set_dispenser_status/set_nozzle_status (both require a reason, audit-logged; nozzle deactivation blocked while an assignment is active), list_dispensers/list_nozzles/get_nozzle
+- [x] app/ui/nozzle_window.py: NozzleManagementWindow (tabbed Dispensers/Nozzles), add-forms, status-change dialogs; wired into MainWindow as a "Nozzles" button and dashboard card, gated on NOZZLE_VIEW
+- [x] Added QTabWidget/QTabBar styling to app/ui/styles.py — was previously unstyled and fell back to a jarring dark native theme
+- [x] tests/test_nozzle_service.py (16 tests) and tests/test_nozzle_ui.py (8 tests)
 
 ## Known Bugs (Fixed)
 - [x] `app/services/inventory_service.py` defined a `PaymentRepository(Repository)` class with an unimported base class and SQLite-incompatible raw SQL (`NOW()`), which raised `NameError` on import. Removed, along with an unrelated unused `EmployeeService` stub. (fixed 2026-08-15)
@@ -111,10 +120,10 @@ Phase 7: Shift Management is done end-to-end (service layer + UI, tested), inclu
 
 ## Pending Modules
 - User-provisioning flow for employees who need login access (currently Employee.user_id can only link an *existing* User; there's no "create login for this employee" service method yet)
-- HR/attendance/shift reports module (deferred to Phase 16: Reporting System)
+- HR/attendance/shift/nozzle reports module (deferred to Phase 16: Reporting System)
 - Holiday calendar / leave-balance tracking (Attendance can record LEAVE/HOLIDAY status per day, but there's no holiday calendar or leave-quota entity yet)
-- Full Nozzle/Dispenser master-data management (CRUD, status transitions, UI) — Phase 8; only the minimal models needed for shift assignment exist so far
 - Full shift-close reconciliation (cash/UPI/card/fuel) — deferred to Phase 15, once sales/payments/inventory modules exist; Phase 7 only covers opening meter/closing meter + nozzle assignment
+- `Attendance.shift_label` is still free-text, not a real FK to `Shift` (both now exist; migrating this is still pending)
 - Tank/inventory modules beyond the current Fuel stub
 - Sales, payments, credit modules
 - Reconciliation module
@@ -176,6 +185,8 @@ Phase 7: Shift Management is done end-to-end (service layer + UI, tested), inclu
 - [x] Shift/nozzle-assignment tests (`tests/test_shift_service.py`) — 23/23 passing (open/close, duplicate rejection, nozzle-assignment prevention rules, meter validation, reopen workflow and permission, RBAC)
 - [x] Shift UI tests (`tests/test_shift_ui.py`) — 7/7 passing (visibility, list display, open/assign/close/reopen flows, unexpected-error fallback)
 - [x] Database integrity tests (`tests/test_database_integrity.py`) — 5/5 passing (WAL mode active, FK enforcement active, invalid FK rejected, session recovers after `safe_commit` rollback, documents the broken behavior without it)
+- [x] Nozzle Management tests (`tests/test_nozzle_service.py`) — 16/16 passing (create dispenser/nozzle, duplicate-code rejection, status-change reason requirement, blocks deactivating a nozzle with an active assignment, RBAC)
+- [x] Nozzle Management UI tests (`tests/test_nozzle_ui.py`) — 8/8 passing (visibility, form validation, tab display, permission gating)
 - [ ] Integration tests (pending)
 - [ ] Report generation tests (pending)
 - [ ] Backup/Restore tests (pending)
@@ -190,7 +201,7 @@ Phase 7: Shift Management is done end-to-end (service layer + UI, tested), inclu
 ## Git/GitHub Status
 - Repository: https://github.com/Rahil-Mokashi/initial-capstone.git
 - Active branch: `feature/core-framework` (not yet merged to `main`)
-- Latest work: Phase 7 Shift Management (shift open/close, nozzle assignment, reopen workflow) plus a database-integrity hardening pass (FK enforcement, WAL mode, safe commit/rollback)
+- Latest work: Phase 8 Nozzle Management (Dispenser/Nozzle CRUD, status transitions, tabbed UI) on top of the exception-handling hardening pass and the eye-catching/minimal UI redesign
 
 ## Future Scope
 - The current offline desktop application is Phase 1 of a two-phase plan. Once the offline ERP proves itself in real use, the plan is to build a second phase: a web application backed by a cloud database with cloud data synchronization. Architecture decisions in the current phase (repository/service separation, UUID primary keys, clean domain models) are being made with this eventual migration in mind, even though no cloud/web code is being written yet.
@@ -201,4 +212,4 @@ Phase 7: Shift Management is done end-to-end (service layer + UI, tested), inclu
 - Known Qt/QSS gotcha worth remembering for future custom widgets: a plain `QWidget` subclass needs `self.setAttribute(Qt.WA_StyledBackground, True)` or its stylesheet `background-color`/`border`/`border-radius` will silently not render (see `DashboardCard` in `app/ui/main_window.py`). Built-in widgets like `QFrame`/`QPushButton`/`QDialog` don't need this.
 
 ## Next Task
-Phase 7 (Shift Management) is complete end-to-end, service layer and UI (104/104 tests passing project-wide), and both the database foundation (FK enforcement, WAL mode, safe commit/rollback) and application-wide exception handling (startup failures, every UI action's unexpected-error fallback) have been hardened. Next: either migrate `Attendance.shift_label` to a real FK against `Shift`, or move on to Phase 8 (Nozzle Management — full CRUD/UI for Dispenser/Nozzle master data) per ROADMAP.md.
+Phase 8 (Nozzle Management) is complete end-to-end, service layer and UI (128/128 tests passing project-wide). The database foundation, application-wide exception handling, and the login/dashboard visual redesign are also done. Waiting on the user's team to review the running app and come back with detailed feedback before further changes. Candidate next steps once that lands: migrate `Attendance.shift_label` to a real FK against `Shift`, or begin Phase 9 (Tank & Inventory Management) per ROADMAP.md.

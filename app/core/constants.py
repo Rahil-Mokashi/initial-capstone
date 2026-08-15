@@ -29,6 +29,8 @@ class Permission(str, Enum):
     SHIFT_VIEW = "shift.view"
     SHIFT_MANAGE = "shift.manage"
     SHIFT_REOPEN = "shift.reopen"
+    NOZZLE_VIEW = "nozzle.view"
+    NOZZLE_MANAGE = "nozzle.manage"
 
 
 class EmployeeStatus(str, Enum):
@@ -90,6 +92,8 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
         Permission.SHIFT_VIEW,
         Permission.SHIFT_MANAGE,
         Permission.SHIFT_REOPEN,
+        Permission.NOZZLE_VIEW,
+        Permission.NOZZLE_MANAGE,
     ),
     UserRole.ACCOUNTANT: (
         Permission.INVENTORY_VIEW,
@@ -97,6 +101,7 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
         Permission.EMPLOYEE_VIEW,
         Permission.ATTENDANCE_VIEW,
         Permission.SHIFT_VIEW,
+        Permission.NOZZLE_VIEW,
     ),
     UserRole.SHIFT_SUPERVISOR: (
         Permission.INVENTORY_VIEW,
@@ -105,6 +110,7 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
         Permission.ATTENDANCE_MANAGE,
         Permission.SHIFT_VIEW,
         Permission.SHIFT_MANAGE,
+        Permission.NOZZLE_VIEW,
     ),
     UserRole.ATTENDANT: (),
 }

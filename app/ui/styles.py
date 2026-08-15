@@ -186,6 +186,34 @@ QDialog {{
     background-color: {COLOR_BG};
 }}
 
+QTabWidget::pane {{
+    background-color: {COLOR_BG};
+    border: 1px solid {COLOR_BORDER};
+    border-radius: 10px;
+    top: -1px;
+}}
+
+QTabBar::tab {{
+    background-color: transparent;
+    color: {COLOR_TEXT_MUTED};
+    padding: 8px 18px;
+    margin-right: 4px;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    font-weight: 600;
+}}
+
+QTabBar::tab:selected {{
+    background-color: {COLOR_SURFACE};
+    color: {COLOR_PRIMARY};
+    border: 1px solid {COLOR_BORDER};
+    border-bottom: none;
+}}
+
+QTabBar::tab:hover:!selected {{
+    color: {COLOR_TEXT};
+}}
+
 QTableWidget {{
     background-color: {COLOR_SURFACE};
     border: 1px solid {COLOR_BORDER};
