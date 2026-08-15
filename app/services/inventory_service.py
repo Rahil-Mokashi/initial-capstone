@@ -2,7 +2,7 @@
 Service layer for petrol pump operations
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from app.repositories.fuel_repository import FuelRepository
@@ -32,7 +32,7 @@ class InventoryService:
         fuel = self._repo.get_by_id(fuel_id)
         if fuel and fuel.is_active and quantity <= fuel.current_stock:
             fuel.current_stock -= quantity
-            fuel.updated_at = datetime.utcnow()
+            fuel.updated_at = datetime.now(timezone.utc)
             self._repo.update(fuel)
             return {
                 "id": fuel.id,

@@ -36,17 +36,19 @@
 - [x] MVP UI stub with PySide6 support
 - [x] Core tests passing
 
-## Phase 4: Authentication & RBAC (In Progress)
+## Phase 4: Authentication & RBAC (Core logic complete; UI pending)
 - [x] Create user management
 - [x] Implement password hashing
-- [ ] Create login/logout functionality
-- [ ] Implement session management
-- [ ] Create role-based access control
-- [ ] Define user roles: ADMIN, OWNER, MANAGER, ACCOUNTANT, SHIFT_SUPERVISOR, ATTENDANT
-- [ ] Implement permission checking decorators
-- [ ] Create audit logging for authentication events
-- [ ] Implement password policy
+- [x] Create login/logout functionality (AuthService.authenticate/logout — service layer only, no UI yet)
+- [x] Implement session management (UserSession model, session token hashing, expiry, auto logout on validate_session)
+- [x] Create role-based access control (role_permissions relationship, ROLE_PERMISSIONS matrix, AuthService.check_permission)
+- [x] Define user roles: ADMIN, OWNER, MANAGER, ACCOUNTANT, SHIFT_SUPERVISOR, ATTENDANT (app/core/constants.py UserRole enum, seeded)
+- [x] Implement permission checking decorators (require_permission in app/core/permissions.py)
+- [x] Create audit logging for authentication events (AuditLog model + AuditLogRepository; login success/failure/lockout/logout/session expiry all recorded)
+- [x] Implement password policy (validate_password_strength — min length, upper/lower/digit)
 - [x] Add login attempt protection (failed_attempts/is_locked fields on User; lockout logic in AuthService)
+- [ ] Login UI screen (still only the MVP stub window exists)
+- [ ] Wire permission decorator into real service methods as those services are built
 
 ## Phase 5: Employee & HR Management
 - [ ] Create employee master data
@@ -262,15 +264,13 @@ A feature is complete only when:
 - [ ] GitHub issue updated
 
 ## Current Focus
-Currently in Phase 4: Authentication & RBAC
+Phase 4 service-layer logic (auth, RBAC, sessions, audit log) is done and tested. Moving toward Phase 5, plus a login UI.
 
 ## Next Immediate Tasks
-1. Wire the `role_permissions` many-to-many relationship between Role and Permission
-2. Seed the six business roles (ADMIN, OWNER, MANAGER, ACCOUNTANT, SHIFT_SUPERVISOR, ATTENDANT) and baseline permissions
-3. Add AuditLog model + repository (immutable, no update/delete) and wire into AuthService
-4. Add UserSession model + repository for session management with auto logout
-5. Implement real `AuthService.check_permission`, `logout`, and a permission-checking decorator
-6. Write pytest coverage for authentication, lockout, RBAC, session expiry, and audit logging
+1. Build a login UI screen wired to AuthService (replacing/extending the MVP stub window)
+2. Begin Phase 5: Employee master data model, repository, and service
+3. Expand the `ROLE_PERMISSIONS` matrix in app/core/constants.py as each new module is implemented
+4. Consider revisiting `Fuel` model's `Float` fields for money/quantity before real financial data is stored
 
 ## Long-term Considerations (Not for Initial Release)
 While building for offline-only operation, the architecture should not prevent future expansion:

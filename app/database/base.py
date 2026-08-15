@@ -4,7 +4,7 @@ Base model class for SQLAlchemy ORM in Petrol Pump ERP.
 Provides common mixins and utilities for all domain models.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from sqlalchemy import Column, DateTime, String, Boolean
 from sqlalchemy.orm import declarative_base
@@ -24,8 +24,13 @@ class StatusEnum(str, Enum):
 class EntityMixin:
     """Mixin providing common fields and methods for all entities."""
 
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
     status = Column(String(32), default=StatusEnum.ACTIVE.value, nullable=False)
     is_deleted = Column(Boolean, default=False, nullable=False)
     name = Column(String(255), nullable=True)
