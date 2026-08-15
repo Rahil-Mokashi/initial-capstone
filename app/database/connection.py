@@ -6,6 +6,7 @@ and database connection pooling for offline operation.
 """
 
 import os
+import sys
 from typing import Generator
 from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
@@ -16,12 +17,28 @@ from app.database.base import Base
 import app.models  # noqa: F401
 
 
+def _default_database_path() -> str:
+    """Where the DB lives when PETROL_PUMP_DB_PATH isn't set.
+
+    A PyInstaller onefile build unpacks to a fresh temp directory
+    (sys._MEIPASS) on every single launch, so resolving the path relative
+    to this file's location — as a normal dev checkout does — would
+    silently reset the database every time the app starts once packaged.
+    When frozen, use a stable per-user app-data directory instead, e.g.
+    %LOCALAPPDATA%\\PetrolPumpERP on Windows, so data survives restarts
+    and each install on each PC gets its own fresh, persistent database.
+    """
+    if getattr(sys, "frozen", False):
+        base_dir = os.environ.get("LOCALAPPDATA") or os.path.expanduser("~")
+        app_dir = os.path.join(base_dir, "PetrolPumpERP")
+        os.makedirs(app_dir, exist_ok=True)
+        return os.path.join(app_dir, "petrol_pump.db")
+    return os.path.join(os.path.dirname(__file__), "..", "petrol_pump.db")
+
+
 def get_database_path() -> str:
     """Return the database path from environment or default location."""
-    return os.environ.get(
-        "PETROL_PUMP_DB_PATH",
-        os.path.join(os.path.dirname(__file__), "..", "petrol_pump.db"),
-    )
+    return os.environ.get("PETROL_PUMP_DB_PATH", _default_database_path())
 
 
 # Database URL - SQLite file
