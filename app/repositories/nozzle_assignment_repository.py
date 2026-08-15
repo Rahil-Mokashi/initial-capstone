@@ -30,6 +30,11 @@ class NozzleAssignmentRepository:
             .first()
         )
 
+    def get_active_for_nozzle(self, nozzle_id: str) -> Optional[NozzleAssignment]:
+        """Any active assignment for this nozzle, across all shifts — used to
+        block deactivating a nozzle that's currently in use."""
+        return self._session.query(NozzleAssignment).filter_by(nozzle_id=nozzle_id, status="active").first()
+
     def add(self, assignment: NozzleAssignment) -> NozzleAssignment:
         self._session.add(assignment)
         safe_commit(self._session)

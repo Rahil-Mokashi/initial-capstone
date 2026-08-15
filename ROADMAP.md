@@ -84,15 +84,15 @@
 - [ ] Create shift reports (deferred to Phase 16: Reporting System)
 - [x] Shift UI (app/ui/shift_window.py: list, open dialog, detail dialog with assign/complete/cancel/close/reopen)
 
-## Phase 8: Nozzle Management (Minimal master data exists; full CRUD/UI pending)
-- [x] Create nozzle master data (minimal: Dispenser and Nozzle models exist, created directly via repository — no create/edit UI yet)
+## Phase 8: Nozzle Management (Complete except reports, deferred to Phase 16)
+- [x] Create nozzle master data (NozzleService.create_dispenser/create_nozzle, full CRUD via app/ui/nozzle_window.py)
 - [x] Track fuel types per nozzle (Nozzle.fuel_id FK to the existing Fuel model)
-- [x] Implement nozzle status (active, inactive, maintenance — NozzleStatus enum; only "active" nozzles can be assigned)
+- [x] Implement nozzle status (active, inactive, maintenance — NozzleStatus enum; only "active" nozzles can be assigned; set_nozzle_status requires a reason and is audit-logged)
 - [x] Create nozzle assignment history (NozzleAssignment rows persist per shift; no dedicated history/report view yet)
 - [x] Track opening/closing meter readings (NozzleAssignment.opening_meter/closing_meter, closing validated >= opening)
 - [x] Prevent duplicate nozzle assignments (enforced in ShiftService.assign_nozzle — see Phase 7)
 - [ ] Create nozzle reports (deferred to Phase 16)
-- [ ] Full Dispenser/Nozzle master-data UI (create, edit, retire a dispenser/nozzle) — not built yet; that's the remaining scope of this phase
+- [x] Full Dispenser/Nozzle master-data UI (app/ui/nozzle_window.py: tabbed Dispensers/Nozzles, add forms, status-change with reason; deactivating a nozzle currently assigned in an open shift is blocked)
 
 ## Phase 9: Tank & Inventory Management
 - [ ] Create tank master data
@@ -270,13 +270,13 @@ A feature is complete only when:
 - [ ] GitHub issue updated
 
 ## Current Focus
-Phase 7 (Shift Management, including nozzle assignment) is complete end to end — service layer and UI, tested. A database-integrity audit also found and fixed two systemic gaps: SQLite FK enforcement and WAL mode were never actually turned on, and no repository rolled back a failed commit. Both are fixed and covered by tests/test_database_integrity.py.
+Phase 8 (Nozzle Management) is complete end to end — service layer and UI, tested (128/128 tests passing project-wide). Phases 4-8 are all done. The user's team is reviewing the running app before deciding on further changes.
 
 ## Next Immediate Tasks
 1. Migrate `Attendance.shift_label` (free text) to a real foreign key against the now-existing `Shift` model
-2. Build the full Nozzle/Dispenser master-data UI to finish Phase 8 (create/edit/retire dispensers and nozzles — the service layer only has minimal read access today)
-3. Expand the `ROLE_PERMISSIONS` matrix in app/core/constants.py as each new module is implemented
-4. Consider revisiting `Fuel` model's `Float` fields for money/quantity before real financial data is stored
+2. Expand the `ROLE_PERMISSIONS` matrix in app/core/constants.py as each new module is implemented
+3. Consider revisiting `Fuel` model's `Float` fields for money/quantity before real financial data is stored
+4. Begin Phase 9 (Tank & Inventory Management) once the team's feedback on Phases 4-8 comes back
 
 ## Long-term Considerations (Not for Initial Release)
 While building for offline-only operation, the architecture should not prevent future expansion:

@@ -15,11 +15,19 @@ class DispenserRepository:
     def get_by_id(self, dispenser_id: str) -> Optional[Dispenser]:
         return self._session.query(Dispenser).filter_by(id=dispenser_id, is_deleted=False).first()
 
+    def get_by_code(self, code: str) -> Optional[Dispenser]:
+        return self._session.query(Dispenser).filter_by(code=code, is_deleted=False).first()
+
     def list_all(self) -> List[Dispenser]:
         return self._session.query(Dispenser).filter_by(is_deleted=False).all()
 
     def add(self, dispenser: Dispenser) -> Dispenser:
         self._session.add(dispenser)
+        safe_commit(self._session)
+        self._session.refresh(dispenser)
+        return dispenser
+
+    def update(self, dispenser: Dispenser) -> Dispenser:
         safe_commit(self._session)
         self._session.refresh(dispenser)
         return dispenser

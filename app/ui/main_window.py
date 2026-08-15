@@ -21,8 +21,10 @@ from app.core.exceptions import SessionExpiredError
 from app.database import connection as db_connection
 from app.repositories.attendance_repository import AttendanceRepository
 from app.repositories.audit_log_repository import AuditLogRepository
+from app.repositories.dispenser_repository import DispenserRepository
 from app.repositories.employee_document_repository import EmployeeDocumentRepository
 from app.repositories.employee_repository import EmployeeRepository
+from app.repositories.fuel_repository import FuelRepository
 from app.repositories.nozzle_assignment_repository import NozzleAssignmentRepository
 from app.repositories.nozzle_repository import NozzleRepository
 from app.repositories.role_repository import RoleRepository
@@ -32,6 +34,7 @@ from app.repositories.user_session_repository import UserSessionRepository
 from app.services.attendance_service import AttendanceService
 from app.services.auth_service import AuthService
 from app.services.employee_service import EmployeeService
+from app.services.nozzle_service import NozzleService
 from app.services.shift_service import ShiftService
 from app.ui.qt_utils import describe_unexpected_error
 from app.ui.styles import STYLESHEET
@@ -109,6 +112,8 @@ class MainWindow(QMainWindow):
         employee_service: EmployeeService,
         attendance_service: AttendanceService,
         shift_service: ShiftService,
+        nozzle_service: NozzleService,
+        fuel_repo,
         user_data: dict,
     ):
         super().__init__()
@@ -116,11 +121,14 @@ class MainWindow(QMainWindow):
         self._employee_service = employee_service
         self._attendance_service = attendance_service
         self._shift_service = shift_service
+        self._nozzle_service = nozzle_service
+        self._fuel_repo = fuel_repo
         self._user_data = user_data
         self._session_token = user_data["session_token"]
         self._employee_window = None
         self._attendance_window = None
         self._shift_window = None
+        self._nozzle_window = None
 
         self.setWindowTitle("Petrol Pump ERP")
         self.setMinimumSize(720, 520)
@@ -158,6 +166,12 @@ class MainWindow(QMainWindow):
         shifts_button.clicked.connect(self._open_shifts)
         shifts_button.setVisible(self._auth_service.check_permission(user_data["id"], Permission.SHIFT_VIEW.value))
 
+        nozzles_button = QPushButton("Nozzles")
+        nozzles_button.setObjectName("secondaryButton")
+        nozzles_button.setCursor(Qt.PointingHandCursor)
+        nozzles_button.clicked.connect(self._open_nozzles)
+        nozzles_button.setVisible(self._auth_service.check_permission(user_data["id"], Permission.NOZZLE_VIEW.value))
+
         logout_button = QPushButton("Logout")
         logout_button.setObjectName("secondaryButton")
         logout_button.setCursor(Qt.PointingHandCursor)
@@ -170,6 +184,7 @@ class MainWindow(QMainWindow):
         top_bar_layout.addWidget(employees_button)
         top_bar_layout.addWidget(attendance_button)
         top_bar_layout.addWidget(shifts_button)
+        top_bar_layout.addWidget(nozzles_button)
         top_bar_layout.addWidget(logout_button)
         top_bar.setLayout(top_bar_layout)
 
@@ -189,6 +204,7 @@ class MainWindow(QMainWindow):
             ("👥", "Employees", "Staff, documents, and status", self._open_employees, Permission.EMPLOYEE_VIEW),
             ("🕒", "Attendance", "Mark and review attendance", self._open_attendance, Permission.ATTENDANCE_VIEW),
             ("⛽", "Shifts", "Open/close shifts, assign nozzles", self._open_shifts, Permission.SHIFT_VIEW),
+            ("🔧", "Nozzles", "Manage dispensers and nozzles", self._open_nozzles, Permission.NOZZLE_VIEW),
         ]
 
         cards_grid = QGridLayout()
@@ -272,6 +288,14 @@ class MainWindow(QMainWindow):
         )
         self._shift_window.show()
 
+    def _open_nozzles(self) -> None:
+        from app.ui.nozzle_window import NozzleManagementWindow
+
+        self._nozzle_window = NozzleManagementWindow(
+            self._nozzle_service, self._fuel_repo, self._auth_service, self._user_data["id"]
+        )
+        self._nozzle_window.show()
+
 
 class AppController:
     """Owns the login <-> main window transition and the shared AuthService."""
@@ -300,12 +324,23 @@ class AppController:
             audit_repo,
             self._auth_service,
         )
+        nozzle_repo = NozzleRepository(self._db_session)
+        nozzle_assignment_repo = NozzleAssignmentRepository(self._db_session)
         self._shift_service = ShiftService(
             ShiftRepository(self._db_session),
-            NozzleAssignmentRepository(self._db_session),
+            nozzle_assignment_repo,
             employee_repo,
-            NozzleRepository(self._db_session),
+            nozzle_repo,
             user_repo,
+            audit_repo,
+            self._auth_service,
+        )
+        self._fuel_repo = FuelRepository(self._db_session)
+        self._nozzle_service = NozzleService(
+            DispenserRepository(self._db_session),
+            nozzle_repo,
+            self._fuel_repo,
+            nozzle_assignment_repo,
             audit_repo,
             self._auth_service,
         )
@@ -329,7 +364,13 @@ class AppController:
             self.login_window = None
 
         self.main_window = MainWindow(
-            self._auth_service, self._employee_service, self._attendance_service, self._shift_service, user_data
+            self._auth_service,
+            self._employee_service,
+            self._attendance_service,
+            self._shift_service,
+            self._nozzle_service,
+            self._fuel_repo,
+            user_data,
         )
         self.main_window.logout_requested.connect(self._on_logout)
         self.main_window.show()
