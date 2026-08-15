@@ -22,6 +22,17 @@ class Permission(str, Enum):
     INVENTORY_VIEW = "inventory.view"
     INVENTORY_MANAGE = "inventory.manage"
     AUDIT_VIEW = "audit.view"
+    EMPLOYEE_VIEW = "employee.view"
+    EMPLOYEE_MANAGE = "employee.manage"
+
+
+class EmployeeStatus(str, Enum):
+    """Values stored in Employee.status (EntityMixin's generic status column)."""
+
+    ACTIVE = "active"
+    ON_LEAVE = "on_leave"
+    SUSPENDED = "suspended"
+    TERMINATED = "terminated"
 
 
 # ADMIN and OWNER get every permission; other roles get a minimal starter set.
@@ -29,9 +40,15 @@ class Permission(str, Enum):
 ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
     UserRole.ADMIN: tuple(Permission),
     UserRole.OWNER: tuple(Permission),
-    UserRole.MANAGER: (Permission.INVENTORY_VIEW, Permission.INVENTORY_MANAGE, Permission.AUDIT_VIEW),
-    UserRole.ACCOUNTANT: (Permission.INVENTORY_VIEW, Permission.AUDIT_VIEW),
-    UserRole.SHIFT_SUPERVISOR: (Permission.INVENTORY_VIEW,),
+    UserRole.MANAGER: (
+        Permission.INVENTORY_VIEW,
+        Permission.INVENTORY_MANAGE,
+        Permission.AUDIT_VIEW,
+        Permission.EMPLOYEE_VIEW,
+        Permission.EMPLOYEE_MANAGE,
+    ),
+    UserRole.ACCOUNTANT: (Permission.INVENTORY_VIEW, Permission.AUDIT_VIEW, Permission.EMPLOYEE_VIEW),
+    UserRole.SHIFT_SUPERVISOR: (Permission.INVENTORY_VIEW, Permission.EMPLOYEE_VIEW),
     UserRole.ATTENDANT: (),
 }
 
