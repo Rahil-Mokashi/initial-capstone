@@ -132,7 +132,7 @@ Thumbs.db
 # Petrol Pump ERP specific
 petrol_pump.db
 *.sqlite3
-backups/*.db
+**/backups/*.db
 *.log
 reports/*.pdf
 reports/*.xlsx

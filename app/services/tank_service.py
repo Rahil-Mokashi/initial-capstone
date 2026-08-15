@@ -10,6 +10,7 @@ physical figure so the next period starts from a verified baseline.
 """
 
 from datetime import datetime, timezone
+from decimal import Decimal
 from typing import List, Optional
 
 from app.core.constants import (
@@ -30,8 +31,10 @@ from app.models.tank_transaction import TankTransaction
 from app.schemas.tank import ReconciliationPerform, TankCreate, TankReadingCreate, TankTransactionCreate
 
 
-def classify_variance(variance_percent: float) -> VarianceClassification:
-    magnitude = abs(variance_percent)
+def classify_variance(variance_percent: Decimal) -> VarianceClassification:
+    # Thresholds are plain floats (static config, not money) - compare in
+    # float space rather than mixing Decimal with float, which Python rejects.
+    magnitude = abs(float(variance_percent))
     if magnitude <= FUEL_VARIANCE_WARNING_THRESHOLD_PERCENT:
         return VarianceClassification.NORMAL
     if magnitude <= FUEL_VARIANCE_INVESTIGATION_THRESHOLD_PERCENT:
@@ -225,7 +228,9 @@ class TankService:
         expected_closing_stock = opening_stock + received - issued
         variance = data.physical_stock - expected_closing_stock
         variance_percent = (
-            (variance / expected_closing_stock) * 100 if expected_closing_stock != 0 else (0.0 if variance == 0 else 100.0)
+            (variance / expected_closing_stock) * 100
+            if expected_closing_stock != 0
+            else (Decimal("0") if variance == 0 else Decimal("100"))
         )
         classification = classify_variance(variance_percent)
 

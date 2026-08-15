@@ -115,6 +115,7 @@ class AuthService:
             "last_name": user.last_name,
             "role": user.role.name if user.role else None,
             "permissions": sorted(p.name for p in user.role.permissions) if user.role else [],
+            "must_change_password": user.must_change_password,
         }
 
     def validate_session(self, token: str):

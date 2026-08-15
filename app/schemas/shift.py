@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 from typing import Optional
 
 from pydantic import BaseModel, field_validator
@@ -21,23 +22,23 @@ class ShiftOpen(BaseModel):
 class NozzleAssignmentCreate(BaseModel):
     employee_id: str
     nozzle_id: str
-    opening_meter: float
+    opening_meter: Decimal
     remarks: Optional[str] = None
 
     @field_validator("opening_meter")
     @classmethod
-    def non_negative(cls, value: float) -> float:
+    def non_negative(cls, value: Decimal) -> Decimal:
         if value < 0:
             raise ValueError("opening_meter cannot be negative")
         return value
 
 
 class NozzleAssignmentComplete(BaseModel):
-    closing_meter: float
+    closing_meter: Decimal
 
     @field_validator("closing_meter")
     @classmethod
-    def non_negative(cls, value: float) -> float:
+    def non_negative(cls, value: Decimal) -> Decimal:
         if value < 0:
             raise ValueError("closing_meter cannot be negative")
         return value

@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import Column, Float, ForeignKey, String, Text
+from sqlalchemy import Column, ForeignKey, Numeric, String, Text
 from sqlalchemy.orm import relationship
 
 from .base import Base, EntityMixin
@@ -22,9 +22,9 @@ class Tank(EntityMixin, Base):
     code = Column(String(32), unique=True, nullable=False, index=True)
     fuel_id = Column(String(36), ForeignKey("fuels.id"), nullable=False)
 
-    capacity = Column(Float, nullable=False)
-    current_stock = Column(Float, nullable=False, default=0.0)
-    opening_stock = Column(Float, nullable=False, default=0.0)
+    capacity = Column(Numeric(12, 3), nullable=False)
+    current_stock = Column(Numeric(12, 3), nullable=False, default=0)
+    opening_stock = Column(Numeric(12, 3), nullable=False, default=0)
 
     calibration_info = Column(Text, nullable=True)
 

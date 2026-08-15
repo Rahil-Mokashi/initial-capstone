@@ -11,9 +11,10 @@ from typing import Generator
 from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker
-from app.database.base import Base
+from app.core.logging import logger
 
-# Import all models so SQLAlchemy can register table metadata before create_all().
+# Import all models so SQLAlchemy can register table metadata before
+# Alembic's autogenerate/upgrade compares it against the database.
 import app.models  # noqa: F401
 
 
@@ -96,10 +97,31 @@ def get_db() -> Generator:
 
 def init_db() -> None:
     """
-    Initialize the database and create all tables.
-    Should be called once during application startup.
+    Bring the database up to the latest schema via Alembic migrations
+    (CLAUDE.md: "never modify database schema without migration") rather
+    than a blunt create_all() — this also applies to the very first
+    launch, whose single "baseline schema" migration creates every
+    table. If a schema change is actually about to be applied to a
+    database that already has data in it, back it up first (CLAUDE.md:
+    "backup before migrations").
     """
-    Base.metadata.create_all(bind=engine)
+    from app.database import backup as backup_module
+    from app.database import migrations
+
+    # Read the module-global DB_PATH (not a fresh get_database_path()
+    # call) so tests that monkeypatch app.database.connection.DB_PATH
+    # directly - without also overriding PETROL_PUMP_DB_PATH - still
+    # migrate the path they actually intend, not the real default one.
+    db_path = DB_PATH
+    db_has_data = os.path.exists(db_path) and os.path.getsize(db_path) > 0
+    if db_has_data and migrations.has_pending_migrations(db_path):
+        try:
+            backup_path = backup_module.create_backup(db_path, reason="pre_migration")
+            logger.info("Pre-migration backup created at %s", backup_path)
+        except OSError:
+            logger.warning("Could not create a pre-migration backup; proceeding anyway", exc_info=True)
+
+    migrations.upgrade_to_head(db_path)
 
 
 if __name__ == "__main__":

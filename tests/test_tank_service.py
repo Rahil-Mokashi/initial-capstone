@@ -1,4 +1,5 @@
-from datetime import date
+from datetime import date, datetime, time, timedelta, timezone
+from decimal import Decimal
 
 import pytest
 from pydantic import ValidationError
@@ -15,6 +16,7 @@ from app.models.audit_log import AuditLog
 from app.models.employee import Employee
 from app.models.fuel import Fuel
 from app.models.role import Role
+from app.models.tank_transaction import TankTransaction
 from app.models.user import User
 from app.repositories.audit_log_repository import AuditLogRepository
 from app.repositories.employee_repository import EmployeeRepository
@@ -74,7 +76,7 @@ def attendant_id(db_session):
 
 @pytest.fixture()
 def fuel_id(db_session):
-    fuel = Fuel(fuel_type="Petrol", rate_per_liter=100.0, capacity=10000.0, current_stock=5000.0)
+    fuel = Fuel(fuel_type="Petrol", rate_per_liter=100.0)
     db_session.add(fuel)
     db_session.commit()
     return fuel.id
@@ -290,6 +292,56 @@ def test_set_tank_status_requires_reason(tank_service, admin_id, fuel_id):
     tank = make_tank(tank_service, admin_id, fuel_id)
     with pytest.raises(ValueError):
         tank_service.set_tank_status(admin_id, tank.id, TankStatus.MAINTENANCE, "")
+
+
+def test_sum_for_tank_by_type_finds_a_transaction_recorded_just_now_when_queried_for_today(
+    tank_service, admin_id, fuel_id, db_session
+):
+    """Regression test: sum_for_tank_by_type widens date_from/date_to (local
+    calendar dates) to full-day boundaries before comparing against
+    transaction_at (stored UTC-aware). A transaction recorded "now" must
+    always be found when querying for "today" — this silently failed
+    whenever local time ran ahead of UTC (e.g. IST, UTC+5:30) and the
+    naive local-midnight boundary was compared directly against the
+    UTC-stamped column, because the transaction's UTC timestamp is still
+    technically "yesterday" from UTC's point of view."""
+    tank = make_tank(tank_service, admin_id, fuel_id)
+    transaction = TankTransaction(
+        tank_id=tank.id,
+        transaction_type=TankTransactionType.RECEIPT.value,
+        quantity=Decimal("100.0"),
+        recorded_by_id=admin_id,
+        transaction_at=datetime.now(timezone.utc),
+    )
+    db_session.add(transaction)
+    db_session.commit()
+
+    txn_repo = TankTransactionRepository(db_session)
+    total = txn_repo.sum_for_tank_by_type(
+        tank.id, TankTransactionType.RECEIPT.value, date_from=date.today(), date_to=date.today()
+    )
+    assert total == 100.0
+
+
+def test_sum_for_tank_by_type_excludes_transactions_outside_the_requested_day(
+    tank_service, admin_id, fuel_id, db_session
+):
+    tank = make_tank(tank_service, admin_id, fuel_id)
+    yesterday_transaction = TankTransaction(
+        tank_id=tank.id,
+        transaction_type=TankTransactionType.RECEIPT.value,
+        quantity=Decimal("50.0"),
+        recorded_by_id=admin_id,
+        transaction_at=datetime.now(timezone.utc) - timedelta(days=2),
+    )
+    db_session.add(yesterday_transaction)
+    db_session.commit()
+
+    txn_repo = TankTransactionRepository(db_session)
+    total = txn_repo.sum_for_tank_by_type(
+        tank.id, TankTransactionType.RECEIPT.value, date_from=date.today(), date_to=date.today()
+    )
+    assert total == 0
 
 
 def test_list_tanks_readings_transactions_reconciliations(tank_service, admin_id, fuel_id, employee_id):

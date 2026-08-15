@@ -88,7 +88,7 @@ def fuel_repo(db_session):
 
 @pytest.fixture()
 def fuel_id(db_session):
-    fuel = Fuel(fuel_type="Petrol", rate_per_liter=100.0, capacity=10000.0, current_stock=5000.0)
+    fuel = Fuel(fuel_type="Petrol", rate_per_liter=100.0)
     db_session.add(fuel)
     db_session.commit()
     return fuel.id

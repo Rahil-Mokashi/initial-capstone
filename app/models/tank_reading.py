@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, DateTime, Float, ForeignKey, String, Text
+from sqlalchemy import Column, DateTime, ForeignKey, Numeric, String, Text
 from sqlalchemy.orm import relationship
 
 from .base import Base
@@ -24,8 +24,8 @@ class TankReading(Base):
     shift_id = Column(String(36), ForeignKey("shifts.id"), nullable=True)
 
     reading_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False, index=True)
-    dip_value = Column(Float, nullable=True)
-    physical_stock = Column(Float, nullable=False)
+    dip_value = Column(Numeric(12, 3), nullable=True)
+    physical_stock = Column(Numeric(12, 3), nullable=False)
     remarks = Column(Text, nullable=True)
 
     tank = relationship("Tank")

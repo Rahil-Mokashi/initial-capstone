@@ -149,7 +149,7 @@ def attendant_with_employee(db_session, employee_service, admin_id):
 def nozzle_id(db_session):
     from app.models.fuel import Fuel
 
-    fuel = Fuel(fuel_type="Petrol", rate_per_liter=100.0, capacity=10000.0, current_stock=5000.0)
+    fuel = Fuel(fuel_type="Petrol", rate_per_liter=100.0)
     db_session.add(fuel)
     db_session.commit()
 

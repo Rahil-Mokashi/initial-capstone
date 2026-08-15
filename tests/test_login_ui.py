@@ -7,6 +7,7 @@ from sqlalchemy.orm import sessionmaker
 import app.models  # noqa: F401  (registers all table metadata)
 from app.database.base import Base
 from app.database.seed import DEFAULT_ADMIN_PASSWORD, seed_initial_data
+from app.models.user import User
 from app.repositories.user_session_repository import UserSessionRepository
 
 
@@ -29,6 +30,16 @@ def seeded_db(tmp_path, monkeypatch):
     monkeypatch.setattr("app.database.connection.SessionLocal", session_factory)
 
     seed_initial_data()
+    # These tests exercise login/logout/session behavior, not the forced
+    # first-login password rotation (that flow has its own dedicated
+    # tests) - clear the seeded admin's must_change_password so a modal,
+    # un-closable ChangePasswordDialog doesn't block the event loop here.
+    session = session_factory()
+    admin = session.query(User).filter_by(username="admin").first()
+    admin.must_change_password = False
+    session.commit()
+    session.close()
+
     return session_factory
 
 

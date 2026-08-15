@@ -10,7 +10,8 @@ financial/management reports with PDF/Excel export and print preview — is
 much larger and deliberately not attempted here.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from decimal import Decimal
 from typing import List, Optional
 
 from app.core.constants import Permission
@@ -22,11 +23,11 @@ class FuelTypeSummary:
     fuel_type: str
     fuel_id: str
     tank_count: int = 0
-    total_capacity: float = 0.0
-    total_current_stock: float = 0.0
+    total_capacity: Decimal = field(default_factory=lambda: Decimal("0"))
+    total_current_stock: Decimal = field(default_factory=lambda: Decimal("0"))
     nozzle_count: int = 0
     active_nozzle_count: int = 0
-    latest_variance_percent: Optional[float] = None
+    latest_variance_percent: Optional[Decimal] = None
     latest_variance_classification: Optional[str] = None
 
 
@@ -53,8 +54,8 @@ class ReportService:
                 fuel_type=fuel.fuel_type,
                 fuel_id=fuel.id,
                 tank_count=len(fuel_tanks),
-                total_capacity=sum(t.capacity for t in fuel_tanks),
-                total_current_stock=sum(t.current_stock for t in fuel_tanks),
+                total_capacity=sum((t.capacity for t in fuel_tanks), Decimal("0")),
+                total_current_stock=sum((t.current_stock for t in fuel_tanks), Decimal("0")),
                 nozzle_count=len(fuel_nozzles),
                 active_nozzle_count=len([n for n in fuel_nozzles if n.status == "active"]),
             )
