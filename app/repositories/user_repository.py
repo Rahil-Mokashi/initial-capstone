@@ -1,3 +1,5 @@
+from typing import List
+
 from sqlalchemy.orm import Session
 from app.models.user import User
 from app.repositories.base import safe_commit
@@ -12,6 +14,12 @@ class UserRepository:
 
     def get_by_username(self, username: str):
         return self._session.query(User).filter_by(username=username, is_deleted=False).first()
+
+    def get_by_email(self, email: str):
+        return self._session.query(User).filter_by(email=email, is_deleted=False).first()
+
+    def list_all(self) -> List[User]:
+        return self._session.query(User).filter_by(is_deleted=False).all()
 
     def add(self, user: User):
         self._session.add(user)

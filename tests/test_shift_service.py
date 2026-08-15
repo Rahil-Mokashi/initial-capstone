@@ -131,6 +131,21 @@ def other_employee_id(employee_service, admin_id):
 
 
 @pytest.fixture()
+def attendant_with_employee(db_session, employee_service, admin_id):
+    """An ATTENDANT-role User whose login is linked to an Employee record —
+    the setup needed for the "my assignment" self-service lookup."""
+    attendant_user = make_user(db_session, UserRole.ATTENDANT.value, "attendant1")
+    employee = employee_service.create_employee(
+        admin_id,
+        EmployeeCreate(
+            first_name="Amit", last_name="Shah", contact_number="9988776655",
+            joining_date=date(2026, 1, 1), user_id=attendant_user.id,
+        ),
+    )
+    return attendant_user.id, employee.id
+
+
+@pytest.fixture()
 def nozzle_id(db_session):
     from app.models.fuel import Fuel
 
@@ -325,3 +340,43 @@ def test_list_shifts_and_list_nozzle_assignments(shift_service, admin_id, employ
 
     assert len(shift_service.list_shifts(admin_id)) == 1
     assert len(shift_service.list_nozzle_assignments(admin_id, shift.id)) == 1
+
+
+def test_attendant_with_no_employee_record_sees_no_assignment(shift_service, db_session):
+    seed_initial_data()
+    lone_attendant = make_user(db_session, UserRole.ATTENDANT.value, "lone_attendant")
+    assert shift_service.get_my_active_assignment(lone_attendant.id) is None
+
+
+def test_attendant_with_employee_but_no_active_assignment_sees_none(shift_service, attendant_with_employee):
+    attendant_user_id, _ = attendant_with_employee
+    assert shift_service.get_my_active_assignment(attendant_user_id) is None
+
+
+def test_attendant_sees_their_own_active_assignment(shift_service, admin_id, attendant_with_employee, nozzle_id):
+    attendant_user_id, employee_id = attendant_with_employee
+    shift = shift_service.open_shift(admin_id, ShiftOpen(shift_date=date(2026, 6, 1), shift_label="Morning"))
+    shift_service.assign_nozzle(
+        admin_id, shift.id, NozzleAssignmentCreate(employee_id=employee_id, nozzle_id=nozzle_id, opening_meter=1000.0)
+    )
+
+    assignment = shift_service.get_my_active_assignment(attendant_user_id)
+    assert assignment is not None
+    assert assignment.employee_id == employee_id
+    assert assignment.nozzle_id == nozzle_id
+
+
+def test_attendant_no_longer_sees_completed_assignment(shift_service, admin_id, attendant_with_employee, nozzle_id):
+    attendant_user_id, employee_id = attendant_with_employee
+    shift = shift_service.open_shift(admin_id, ShiftOpen(shift_date=date(2026, 6, 1), shift_label="Morning"))
+    assignment = shift_service.assign_nozzle(
+        admin_id, shift.id, NozzleAssignmentCreate(employee_id=employee_id, nozzle_id=nozzle_id, opening_meter=1000.0)
+    )
+    shift_service.complete_nozzle_assignment(admin_id, assignment.id, NozzleAssignmentComplete(closing_meter=1200.0))
+
+    assert shift_service.get_my_active_assignment(attendant_user_id) is None
+
+
+def test_shift_supervisor_cannot_use_attendant_self_service_lookup(shift_service, shift_supervisor_id):
+    with pytest.raises(PermissionDeniedError):
+        shift_service.get_my_active_assignment(shift_supervisor_id)

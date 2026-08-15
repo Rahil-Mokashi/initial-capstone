@@ -35,6 +35,11 @@ class NozzleAssignmentRepository:
         block deactivating a nozzle that's currently in use."""
         return self._session.query(NozzleAssignment).filter_by(nozzle_id=nozzle_id, status="active").first()
 
+    def get_active_for_employee(self, employee_id: str) -> Optional[NozzleAssignment]:
+        """Any active assignment for this employee, across all shifts — the
+        attendant self-service "what am I assigned to right now" lookup."""
+        return self._session.query(NozzleAssignment).filter_by(employee_id=employee_id, status="active").first()
+
     def add(self, assignment: NozzleAssignment) -> NozzleAssignment:
         self._session.add(assignment)
         safe_commit(self._session)

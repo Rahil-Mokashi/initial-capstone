@@ -37,7 +37,7 @@
 - [x] Core tests passing
 
 ## Phase 4: Authentication & RBAC (Complete)
-- [x] Create user management
+- [x] Create user management (User model since Phase 3; full provisioning UI added 2026-08-15 per user request — `app/services/user_service.py` + `app/ui/user_management_window.py`: create logins for any of the six roles, multiple users per role, activate/deactivate/unlock/change-role, all reason-required and audit-logged; gated on `Permission.USER_MANAGE`, visible only to ADMIN/OWNER)
 - [x] Implement password hashing
 - [x] Create login/logout functionality (AuthService.authenticate/logout — service layer only, no UI yet)
 - [x] Implement session management (UserSession model, session token hashing, expiry, auto logout on validate_session)
@@ -92,7 +92,8 @@
 - [x] Create nozzle assignment history (NozzleAssignment rows persist per shift; no dedicated history/report view yet)
 - [x] Track opening/closing meter readings (NozzleAssignment.opening_meter/closing_meter, closing validated >= opening)
 - [x] Prevent duplicate nozzle assignments (enforced in ShiftService.assign_nozzle — see Phase 7)
-- [ ] Create nozzle reports (deferred to Phase 16)
+- [x] Attendant self-service assignment view (user-raised gap, 2026-08-15): new `Permission.MY_ASSIGNMENT_VIEW` granted to `UserRole.ATTENDANT`; `ShiftService.get_my_active_assignment` + `app/ui/my_shift_window.py` let a logged-in attendant see their own current nozzle/fuel/dispenser assignment (previously an empty dashboard)
+- [~] Nozzle reports: fuel-type-sectioned summary (active nozzle counts per Petrol/Diesel/Power) done via `ReportService.get_fuel_type_summary` + `app/ui/report_window.py`; assignment-history/print/export reports still deferred to Phase 16
 - [x] Full Dispenser/Nozzle master-data UI (app/ui/nozzle_window.py: tabbed Dispensers/Nozzles, add forms, status-change with reason; deactivating a nozzle currently assigned in an open shift is blocked)
 
 ## Phase 9: Tank & Inventory Management (Complete except reports, deferred to Phase 16)
@@ -103,7 +104,7 @@
 - [x] Track current stock levels (Tank.current_stock, moved only by recorded transactions)
 - [x] Record tank transactions (receipts, issues, adjustments — TankTransactionType; receipts/issues validated against capacity/negative stock, adjustments require a reason)
 - [x] Implement fuel reconciliation (FuelReconciliation: Expected = Opening + Received - Sold, compared against a physical reading, variance classified via configurable thresholds — NORMAL/WARNING/INVESTIGATION_REQUIRED/APPROVAL_REQUIRED, never assumed to be theft; accepted reconciliation becomes the new baseline for the next period)
-- [ ] Create tank inventory reports (deferred to Phase 16: Reporting System)
+- [~] Tank inventory reports: fuel-type-sectioned summary (tank count/capacity/current stock and worst reconciliation variance per Petrol/Diesel/Power) done via `ReportService.get_fuel_type_summary` + `app/ui/report_window.py`; transaction-history/print/PDF/Excel export reports still deferred to Phase 16
 
 ## Phase 10: Procurement Management
 - [ ] Create supplier master data
@@ -276,14 +277,14 @@ A feature is complete only when:
 - [ ] GitHub issue updated
 
 ## Current Focus
-Phase 9 (Tank & Inventory Management) is complete end to end — service layer and UI, tested (161/161 tests passing project-wide). Phases 4-9 are all done. The user's team is reviewing the running app before deciding on further changes.
+Phase 9 (Tank & Inventory Management) is complete end to end — service layer and UI, tested. On top of that, three more user-requested features are also done end-to-end: the attendant self-service "My Shift" view, fuel-type-sectioned (Petrol/Diesel/Power) tank & nozzle reports, and full User Management (create logins for any of the six roles, multiple users per role). 186/186 tests passing project-wide. Per the user's instruction to keep building while the team's feedback is pending, work has moved on to Phase 10 (Procurement Management).
 
 ## Next Immediate Tasks
-1. **Attendant self-service view** (user-raised gap, 2026-08-15): `UserRole.ATTENDANT` currently has zero permissions, so an attendant sees an empty dashboard — they need to at least see their own current nozzle/fuel-type assignment. Needs a new, narrowly-scoped "my assignment" permission distinct from `SHIFT_VIEW`/`NOZZLE_VIEW` (which expose everyone's data).
+1. Begin Phase 10 (Procurement Management) — Procurement will eventually create Tank RECEIPT transactions automatically from supplier deliveries.
 2. Migrate `Attendance.shift_label` (free text) to a real foreign key against the now-existing `Shift` model
 3. Expand the `ROLE_PERMISSIONS` matrix in app/core/constants.py as each new module is implemented
 4. Consider revisiting `Fuel`/`Tank`'s `Float` fields for money/quantity before real financial data is stored
-5. Begin Phase 10 (Procurement Management) once the team's feedback on Phases 4-9 comes back — Procurement will eventually create Tank RECEIPT transactions automatically from supplier deliveries
+5. PDF/Excel export and Print/Preview for reports, per CLAUDE.md's Reporting Rules — not yet implemented for any report (`ReportService.get_fuel_type_summary` currently only feeds the on-screen UI)
 
 ## Long-term Considerations (Not for Initial Release)
 While building for offline-only operation, the architecture should not prevent future expansion:

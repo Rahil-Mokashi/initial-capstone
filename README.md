@@ -161,10 +161,28 @@ Everything below is implemented, tested, and running — not planned. Each modul
 - **Controlled reopening**: reopening a closed shift requires a stricter permission (not granted to `SHIFT_SUPERVISOR`) and a reason, and is audit-logged — a closed shift is never freely editable
 - Full cash/UPI/card/fuel reconciliation is intentionally deferred to Phase 15, once the sales/payments/inventory modules it depends on exist
 
-### Nozzle Management (Phase 8 — complete, reports deferred)
+### Nozzle Management (Phase 8 — complete, full reports deferred)
 - Dispenser and Nozzle master data: create, and change status (active/inactive/maintenance) with a required reason, audit-logged
 - A nozzle can only be created under an active dispenser; deactivating a nozzle that's currently assigned in an open shift is blocked
+- Every dispenser has exactly 2 nozzles (confirmed business rule, enforced — a 3rd nozzle on the same dispenser is rejected); each nozzle dispenses one fuel type, commonly Petrol, Diesel, or Power (seeded by default)
 - Tabbed management screen (Dispensers / Nozzles) gated on view/manage permissions, same as every other module
+- **Attendant self-service "My Shift" view**: a logged-in attendant sees their own current nozzle/fuel/dispenser assignment and opening meter reading on a dedicated screen — previously attendants saw a completely empty dashboard since their role had no permissions at all
+
+### Tank & Inventory Management (Phase 9 — complete, full reports deferred)
+- Tank master data (distinct from a nozzle's fuel-type lookup — a pump can have multiple tanks per fuel type), status changes with a required reason
+- Dip readings recorded as observations that never silently change book stock
+- Transactions: receipt, issue, adjustment — rejects overflow past capacity, negative stock, or an adjustment with no reason
+- Fuel reconciliation: expected closing stock (opening + received − sold) compared against a physical reading, variance classified against configurable thresholds (normal/warning/investigation-required/approval-required) — never assumed to be theft; an accepted reconciliation becomes the new baseline
+
+### Reports (fuel-type-sectioned, full reporting module deferred to Phase 16)
+- A dedicated Reports screen, sectioned by fuel type (Petrol / Diesel / Power), showing tank count, total capacity, current stock, nozzle/active-nozzle counts, and the latest reconciliation variance per fuel type
+- Print/Preview/PDF/Excel export are not yet implemented for any report (required by the project's reporting rules, tracked as pending work)
+
+### User Management (Phase 4 extension — complete)
+- Admins/owners can create login accounts for any of the six roles, with multiple users allowed per role (several attendants, several accountants, etc.)
+- Password strength is validated on every new account (the existing policy, now actually wired in for the first time)
+- Activate/deactivate, unlock a locked account, and change a user's role — every action requires a non-blank reason and is audit-logged; accounts are never deleted
+- The "Users" button/dashboard card is only visible to roles holding `Permission.USER_MANAGE` (ADMIN/OWNER), following the same permission-gated visibility pattern used by every module — a logged-in user only ever sees the buttons and pages their role actually grants them
 
 ### Database integrity & exception handling (cross-cutting, hardened 2026-08-15)
 - SQLite foreign-key enforcement (`PRAGMA foreign_keys=ON`) and WAL mode (`PRAGMA journal_mode=WAL`) are enabled on every connection — every `ForeignKey()` declared in the models is actually enforced by the database, not just by application code
@@ -172,7 +190,7 @@ Everything below is implemented, tested, and running — not planned. Each modul
 - Application startup (`app/main.py`) wraps database init/seed failures into a single `DatabaseInitializationError` with a clear message and a logged traceback, instead of crashing with a raw stack trace
 - Every UI dialog's save/action handler catches its specific errors (validation, business-rule conflicts) for a precise message, then falls back to a generic "something went wrong" message for anything unexpected — logged in full, never left to crash the app or a Qt event-loop callback
 
-Not yet built: Tank & Inventory, Procurement, Sales, Payments, Credit, Expenses, Reconciliation, Reporting, Printing, Backup/Restore. See [ROADMAP.md](ROADMAP.md) for the full phase-by-phase plan.
+Not yet built: Procurement, Sales, Payments, Credit, Expenses, full Reconciliation module, full Reporting System (print/PDF/Excel export), Printing, Backup/Restore. See [ROADMAP.md](ROADMAP.md) for the full phase-by-phase plan.
 
 ---
 
@@ -186,7 +204,7 @@ Not yet built: Tank & Inventory, Procurement, Sales, Payments, Credit, Expenses,
 | ORM | SQLAlchemy 2.x | in use |
 | Validation | Pydantic v2 | in use |
 | Configuration | pydantic-settings | in use |
-| Testing | pytest | in use — 165 tests |
+| Testing | pytest | in use — 186 tests |
 | Logging | Python standard `logging` | in use |
 | Migrations | Alembic | **planned, not yet integrated** — schema changes currently go through `Base.metadata.create_all()` |
 | PDF reports | ReportLab | **planned** — Phase 16/17 |
@@ -219,7 +237,7 @@ PetrolPumpERP/
 │   ├── schemas/                 # Pydantic input-validation schemas
 │   ├── services/                # Business logic, RBAC checks, audit logging
 │   └── ui/                      # PySide6 windows/dialogs + shared stylesheet
-├── tests/                       # pytest suite (165 tests)
+├── tests/                       # pytest suite (186 tests)
 ├── docs/
 │   └── screenshots/             # Screenshots used in this README
 ├── requirements.txt
@@ -277,7 +295,7 @@ On first run this will:
 pytest
 ```
 
-All 165 tests should pass, in well under a minute. To run a single module's tests:
+All 186 tests should pass, in well under a minute. To run a single module's tests:
 
 ```bash
 pytest tests/test_auth_rbac.py -v
@@ -364,8 +382,10 @@ This offline desktop application is phase one of a two-phase plan. Once it prove
 | 5: Employee & HR Management | ✅ Complete (HR reports deferred to Phase 16) |
 | 6: Attendance Management | ✅ Complete (holiday calendar/leave-balance tracking deferred) |
 | 7: Shift Management | ✅ Complete (full reconciliation deferred to Phase 15) |
-| 8: Nozzle Management | ✅ Complete (nozzle reports deferred to Phase 16) |
-| 9–22: Tank/Inventory, Procurement, Sales, Payments, Credit, Expenses, Reconciliation, Reporting, Printing, Backup, Testing, Packaging, Pilot, Release | ⬜ Not started |
+| 8: Nozzle Management | ✅ Complete (fuel-type-sectioned summary done; full nozzle reports deferred to Phase 16) |
+| 9: Tank & Inventory Management | ✅ Complete (fuel-type-sectioned summary done; full tank reports deferred to Phase 16) |
+| User Management (Phase 4 extension) | ✅ Complete — logins for all 6 roles, multiple users per role |
+| 10–22: Procurement, Sales, Payments, Credit, Expenses, Reconciliation, full Reporting System, Printing, Backup, Testing, Packaging, Pilot, Release | ⬜ Not started (Packaging/Phase 20 started early — see below) |
 
 See [ROADMAP.md](ROADMAP.md) for the full, granular breakdown of every phase.
 

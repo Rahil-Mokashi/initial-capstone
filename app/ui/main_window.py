@@ -39,8 +39,10 @@ from app.services.attendance_service import AttendanceService
 from app.services.auth_service import AuthService
 from app.services.employee_service import EmployeeService
 from app.services.nozzle_service import NozzleService
+from app.services.report_service import ReportService
 from app.services.shift_service import ShiftService
 from app.services.tank_service import TankService
+from app.services.user_service import UserService
 from app.ui.qt_utils import describe_unexpected_error
 from app.ui.styles import STYLESHEET
 
@@ -119,6 +121,9 @@ class MainWindow(QMainWindow):
         shift_service: ShiftService,
         nozzle_service: NozzleService,
         tank_service: TankService,
+        report_service: ReportService,
+        user_service: UserService,
+        role_repo,
         fuel_repo,
         user_data: dict,
     ):
@@ -129,6 +134,9 @@ class MainWindow(QMainWindow):
         self._shift_service = shift_service
         self._nozzle_service = nozzle_service
         self._tank_service = tank_service
+        self._report_service = report_service
+        self._user_service = user_service
+        self._role_repo = role_repo
         self._fuel_repo = fuel_repo
         self._user_data = user_data
         self._session_token = user_data["session_token"]
@@ -137,6 +145,9 @@ class MainWindow(QMainWindow):
         self._shift_window = None
         self._nozzle_window = None
         self._tank_window = None
+        self._my_shift_window = None
+        self._report_window = None
+        self._user_window = None
 
         self.setWindowTitle("Petrol Pump ERP")
         self.setMinimumSize(720, 520)
@@ -186,6 +197,26 @@ class MainWindow(QMainWindow):
         tanks_button.clicked.connect(self._open_tanks)
         tanks_button.setVisible(self._auth_service.check_permission(user_data["id"], Permission.INVENTORY_VIEW.value))
 
+        my_shift_button = QPushButton("My Shift")
+        my_shift_button.setObjectName("secondaryButton")
+        my_shift_button.setCursor(Qt.PointingHandCursor)
+        my_shift_button.clicked.connect(self._open_my_shift)
+        my_shift_button.setVisible(
+            self._auth_service.check_permission(user_data["id"], Permission.MY_ASSIGNMENT_VIEW.value)
+        )
+
+        reports_button = QPushButton("Reports")
+        reports_button.setObjectName("secondaryButton")
+        reports_button.setCursor(Qt.PointingHandCursor)
+        reports_button.clicked.connect(self._open_reports)
+        reports_button.setVisible(self._auth_service.check_permission(user_data["id"], Permission.INVENTORY_VIEW.value))
+
+        users_button = QPushButton("Users")
+        users_button.setObjectName("secondaryButton")
+        users_button.setCursor(Qt.PointingHandCursor)
+        users_button.clicked.connect(self._open_users)
+        users_button.setVisible(self._auth_service.check_permission(user_data["id"], Permission.USER_MANAGE.value))
+
         logout_button = QPushButton("Logout")
         logout_button.setObjectName("secondaryButton")
         logout_button.setCursor(Qt.PointingHandCursor)
@@ -200,6 +231,9 @@ class MainWindow(QMainWindow):
         top_bar_layout.addWidget(shifts_button)
         top_bar_layout.addWidget(nozzles_button)
         top_bar_layout.addWidget(tanks_button)
+        top_bar_layout.addWidget(my_shift_button)
+        top_bar_layout.addWidget(reports_button)
+        top_bar_layout.addWidget(users_button)
         top_bar_layout.addWidget(logout_button)
         top_bar.setLayout(top_bar_layout)
 
@@ -221,6 +255,9 @@ class MainWindow(QMainWindow):
             ("⛽", "Shifts", "Open/close shifts, assign nozzles", self._open_shifts, Permission.SHIFT_VIEW),
             ("🔧", "Nozzles", "Manage dispensers and nozzles", self._open_nozzles, Permission.NOZZLE_VIEW),
             ("🛢️", "Tanks", "Stock, transactions, reconciliation", self._open_tanks, Permission.INVENTORY_VIEW),
+            ("🪪", "My Shift", "Your current nozzle and fuel assignment", self._open_my_shift, Permission.MY_ASSIGNMENT_VIEW),
+            ("📊", "Reports", "Fuel stock and reconciliation by fuel type", self._open_reports, Permission.INVENTORY_VIEW),
+            ("🔐", "Users", "Create logins and manage roles", self._open_users, Permission.USER_MANAGE),
         ]
 
         cards_grid = QGridLayout()
@@ -320,6 +357,26 @@ class MainWindow(QMainWindow):
         )
         self._tank_window.show()
 
+    def _open_my_shift(self) -> None:
+        from app.ui.my_shift_window import MyShiftWindow
+
+        self._my_shift_window = MyShiftWindow(self._shift_service, self._auth_service, self._user_data["id"])
+        self._my_shift_window.show()
+
+    def _open_reports(self) -> None:
+        from app.ui.report_window import FuelTypeSummaryReportWindow
+
+        self._report_window = FuelTypeSummaryReportWindow(
+            self._report_service, self._auth_service, self._user_data["id"]
+        )
+        self._report_window.show()
+
+    def _open_users(self) -> None:
+        from app.ui.user_management_window import UserListWindow
+
+        self._user_window = UserListWindow(self._user_service, self._role_repo, self._user_data["id"])
+        self._user_window.show()
+
 
 class AppController:
     """Owns the login <-> main window transition and the shared AuthService."""
@@ -328,17 +385,24 @@ class AppController:
         self._db_session = db_connection.SessionLocal()
         user_repo = UserRepository(self._db_session)
         audit_repo = AuditLogRepository(self._db_session)
+        self._role_repo = RoleRepository(self._db_session)
         self._auth_service = AuthService(
             user_repo,
             audit_repo,
             UserSessionRepository(self._db_session),
+        )
+        self._user_service = UserService(
+            user_repo,
+            self._role_repo,
+            audit_repo,
+            self._auth_service,
         )
         employee_repo = EmployeeRepository(self._db_session)
         self._employee_service = EmployeeService(
             employee_repo,
             EmployeeDocumentRepository(self._db_session),
             user_repo,
-            RoleRepository(self._db_session),
+            self._role_repo,
             audit_repo,
             self._auth_service,
         )
@@ -368,14 +432,23 @@ class AppController:
             audit_repo,
             self._auth_service,
         )
+        tank_repo = TankRepository(self._db_session)
+        reconciliation_repo = FuelReconciliationRepository(self._db_session)
         self._tank_service = TankService(
-            TankRepository(self._db_session),
+            tank_repo,
             TankReadingRepository(self._db_session),
             TankTransactionRepository(self._db_session),
-            FuelReconciliationRepository(self._db_session),
+            reconciliation_repo,
             self._fuel_repo,
             employee_repo,
             audit_repo,
+            self._auth_service,
+        )
+        self._report_service = ReportService(
+            self._fuel_repo,
+            tank_repo,
+            nozzle_repo,
+            reconciliation_repo,
             self._auth_service,
         )
         self.login_window = None
@@ -404,6 +477,9 @@ class AppController:
             self._shift_service,
             self._nozzle_service,
             self._tank_service,
+            self._report_service,
+            self._user_service,
+            self._role_repo,
             self._fuel_repo,
             user_data,
         )

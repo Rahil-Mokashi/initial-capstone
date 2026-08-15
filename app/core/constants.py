@@ -31,6 +31,7 @@ class Permission(str, Enum):
     SHIFT_REOPEN = "shift.reopen"
     NOZZLE_VIEW = "nozzle.view"
     NOZZLE_MANAGE = "nozzle.manage"
+    MY_ASSIGNMENT_VIEW = "my_assignment.view"
 
 
 class EmployeeStatus(str, Enum):
@@ -148,7 +149,7 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
         Permission.SHIFT_MANAGE,
         Permission.NOZZLE_VIEW,
     ),
-    UserRole.ATTENDANT: (),
+    UserRole.ATTENDANT: (Permission.MY_ASSIGNMENT_VIEW,),
 }
 
 # Password policy (problemstatement.md #39: "Implement password policy")

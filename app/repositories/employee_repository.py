@@ -17,6 +17,9 @@ class EmployeeRepository:
     def get_by_code(self, employee_code: str) -> Optional[Employee]:
         return self._session.query(Employee).filter_by(employee_code=employee_code, is_deleted=False).first()
 
+    def get_by_user_id(self, user_id: str) -> Optional[Employee]:
+        return self._session.query(Employee).filter_by(user_id=user_id, is_deleted=False).first()
+
     def list_all(self) -> List[Employee]:
         return self._session.query(Employee).filter_by(is_deleted=False).all()
 
