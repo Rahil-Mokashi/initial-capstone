@@ -277,7 +277,7 @@ A feature is complete only when:
 - [ ] GitHub issue updated
 
 ## Current Focus
-Phase 9 (Tank & Inventory Management) is complete end to end — service layer and UI, tested. On top of that, three more user-requested features are also done end-to-end: the attendant self-service "My Shift" view, fuel-type-sectioned (Petrol/Diesel/Power) tank & nozzle reports, and full User Management (create logins for any of the six roles, multiple users per role). 186/186 tests passing project-wide. Per the user's instruction to keep building while the team's feedback is pending, work has moved on to Phase 10 (Procurement Management).
+Phase 9 (Tank & Inventory Management) is complete end to end — service layer and UI, tested. On top of that, three more user-requested features are also done end-to-end: the attendant self-service "My Shift" view, fuel-type-sectioned (Petrol/Diesel/Power) tank & nozzle reports, and full User Management (create logins for any of the six roles, multiple users per role). 202/202 tests passing project-wide. Per the user's instruction to keep building while the team's feedback is pending, work has moved on to Phase 10 (Procurement Management).
 
 ## Next Immediate Tasks
 1. Begin Phase 10 (Procurement Management) — Procurement will eventually create Tank RECEIPT transactions automatically from supplier deliveries.
