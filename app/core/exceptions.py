@@ -27,3 +27,11 @@ class PermissionDeniedError(AppError):
 
 class WeakPasswordError(AppError):
     """Raised when a password does not meet the configured password policy."""
+
+
+class NotFoundError(AppError):
+    """Raised when a requested record does not exist (or is soft-deleted)."""
+
+
+class ConflictError(AppError):
+    """Raised when an operation would violate a uniqueness/business constraint."""

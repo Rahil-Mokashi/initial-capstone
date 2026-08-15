@@ -61,9 +61,17 @@ A petrol pump management system needs to handle fuel inventory, sales, procureme
 - [x] AppController (app/ui/main_window.py) — owns the shared AuthService/DB session and the login <-> main window transition
 - [x] Shared UI stylesheet (app/ui/styles.py) — consistent color palette, rounded inputs/buttons/cards, applied app-wide via QApplication.setStyleSheet
 - [x] UI test suite (tests/test_login_ui.py) — 6 tests covering login window display, wrong-password/empty-field handling, successful login, logout, and auto-logout on session expiry
+- [x] Employee model (app/models/employee.py) — HR master record, distinct from User (login account); exit tracked via status/exit_date, never deleted
+- [x] EmployeeDocument model (app/models/employee_document.py) — soft-deletable document references (ID proof, etc.)
+- [x] Pydantic validation schemas (app/schemas/employee.py) — EmployeeCreate/EmployeeUpdate with name/phone validation
+- [x] EmployeeRepository, EmployeeDocumentRepository, RoleRepository (app/repositories/)
+- [x] EmployeeService (app/services/employee_service.py) — create/update/status-change/exit/document management, all permission-checked (EMPLOYEE_VIEW/EMPLOYEE_MANAGE) and audit-logged
+- [x] EMPLOYEE_VIEW/EMPLOYEE_MANAGE permissions added to the RBAC matrix (app/core/constants.py)
+- [x] NotFoundError/ConflictError added to app/core/exceptions.py
+- [x] Employee/HR test suite (tests/test_employee_service.py) — 16 tests covering creation, sequential employee codes, validation, permission enforcement, status/exit workflow, document add/remove, audit logging
 
 ## Current Module
-Phase 4: Authentication & RBAC (in progress) — building on the completed core framework.
+Phase 5: Employee & HR Management (service layer complete; UI pending). Phase 4 (Authentication & RBAC) is done end-to-end.
 
 ## Known Bugs (Fixed)
 - [x] `app/services/inventory_service.py` defined a `PaymentRepository(Repository)` class with an unimported base class and SQLite-incompatible raw SQL (`NOW()`), which raised `NameError` on import. Removed, along with an unrelated unused `EmployeeService` stub. (fixed 2026-08-15)
@@ -72,7 +80,8 @@ Phase 4: Authentication & RBAC (in progress) — building on the completed core 
 - [x] `datetime.utcnow()` (deprecated in Python 3.12+, which this project targets 3.13+ for) replaced with `datetime.now(timezone.utc)` in `EntityMixin` and `inventory_service.py`. (fixed 2026-08-15)
 
 ## Pending Modules
-- Employee/HR module
+- Employee/HR UI screens (list, create, edit, document upload — service layer is done, no UI yet)
+- User-provisioning flow for employees who need login access (currently Employee.user_id can only link an *existing* User; there's no "create login for this employee" service method yet)
 - Attendance module
 - Shift management
 - Nozzle/tank/inventory modules beyond the current Fuel stub
@@ -89,7 +98,8 @@ Phase 4: Authentication & RBAC (in progress) — building on the completed core 
 - Desktop-only deployment
 - `Fuel` model uses `Float` for rate/capacity/stock fields rather than `Numeric`/fixed-point — acceptable for the MVP stub but should be revisited before real financial data is stored, per the project's data-integrity priority
 - Default seeded admin password (`Admin@123`, in `app/database/seed.py`) is a known dev-only credential; must be changed before any real deployment. No "force password change on first login" flow exists yet.
-- Permission matrix in `app/core/constants.py` (`ROLE_PERMISSIONS`) only covers the modules that exist so far (users, inventory, audit); it must grow as each new module (sales, shifts, HR, etc.) is implemented
+- Permission matrix in `app/core/constants.py` (`ROLE_PERMISSIONS`) only covers the modules that exist so far (users, inventory, audit, employees); it must grow as each new module (sales, shifts, etc.) is implemented
+- `EmployeeRepository.next_employee_code()` generates codes from a row count; fine for a single-user offline desktop app (rows are never hard-deleted) but would need a real sequence if this ever became multi-writer
 
 ## Open Questions
 - Number of attendants/fuel attendants needed?
@@ -125,6 +135,7 @@ Phase 4: Authentication & RBAC (in progress) — building on the completed core 
 - [x] Core setup smoke tests (`tests/test_core_setup.py`) — 2/2 passing
 - [x] Authentication/RBAC tests (`tests/test_auth_rbac.py`) — 13/13 passing (login success/failure, generic error messages, lockout, permission checks, session validate/expire/logout, password policy, audit logging, decorator enforcement)
 - [x] Login UI tests (`tests/test_login_ui.py`) — 6/6 passing (login screen display, validation, success/failure paths, logout, auto-logout on expiry)
+- [x] Employee/HR tests (`tests/test_employee_service.py`) — 16/16 passing (creation, validation, permissions, status/exit workflow, documents, audit logging)
 - [ ] Integration tests (pending)
 - [ ] Report generation tests (pending)
 - [ ] Backup/Restore tests (pending)
@@ -148,4 +159,4 @@ Phase 4: Authentication & RBAC (in progress) — building on the completed core 
 - The client expects a clean, elegant, polished UI (not a bare functional stub) for every screen, balanced against the problem statement's UX priorities (speed, minimal clicks, large readable numbers for a busy pump environment). `app/ui/styles.py` holds one shared stylesheet so every future screen stays visually consistent — extend it rather than styling widgets ad hoc.
 
 ## Next Task
-Phase 4 is functionally complete: login screen, sessions, RBAC, audit logging, and tests are all in place and passing. Next: expand the permission matrix as new modules are added, then move to Phase 5 (Employee & HR Management) per ROADMAP.md.
+Employee/HR service layer is complete (36/36 tests passing project-wide). Next: build the Employee/HR UI screens (list/create/edit/documents), then move to Phase 6 (Attendance Management) per ROADMAP.md.

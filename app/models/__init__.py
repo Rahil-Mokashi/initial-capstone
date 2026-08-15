@@ -1,6 +1,8 @@
 """Model package for Petrol Pump ERP."""
 
 from .audit_log import AuditLog
+from .employee import Employee
+from .employee_document import EmployeeDocument
 from .fuel import Fuel
 from .permission import Permission
 from .role import Role
@@ -10,6 +12,8 @@ from .user_session import UserSession
 
 __all__ = [
     "AuditLog",
+    "Employee",
+    "EmployeeDocument",
     "Fuel",
     "Permission",
     "Role",
