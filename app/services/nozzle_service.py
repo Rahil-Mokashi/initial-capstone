@@ -9,7 +9,7 @@ deactivated, not removed, so its assignment history stays intact.
 
 from typing import List, Optional
 
-from app.core.constants import NozzleStatus, Permission
+from app.core.constants import MAX_NOZZLES_PER_DISPENSER, NozzleStatus, Permission
 from app.core.exceptions import ConflictError, NotFoundError
 from app.core.permissions import require_permission
 from app.database.base import StatusEnum
@@ -75,6 +75,13 @@ class NozzleService:
         dispenser = self._get_dispenser_or_raise(data.dispenser_id)
         if dispenser.status != StatusEnum.ACTIVE.value:
             raise ConflictError(f"Dispenser {dispenser.code} is not active ({dispenser.status})")
+
+        existing_count = self._nozzle_repo.count_for_dispenser(data.dispenser_id)
+        if existing_count >= MAX_NOZZLES_PER_DISPENSER:
+            raise ConflictError(
+                f"Dispenser {dispenser.code} already has {existing_count} nozzles "
+                f"(maximum {MAX_NOZZLES_PER_DISPENSER} per dispenser)"
+            )
 
         if not self._fuel_repo.get_by_id(data.fuel_id):
             raise NotFoundError(f"Fuel type not found: {data.fuel_id}")

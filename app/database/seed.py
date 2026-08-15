@@ -2,13 +2,25 @@ import uuid
 from datetime import datetime, timezone
 
 from app import database as db_package
-from app.core.constants import ROLE_PERMISSIONS, Permission as PermissionName, UserRole
+from app.core.constants import DEFAULT_FUEL_TYPES, ROLE_PERMISSIONS, Permission as PermissionName, UserRole
 from app.core.security import hash_password
+from app.models.fuel import Fuel
 from app.models.permission import Permission
 from app.models.role import Role
 from app.models.user import User
 
 DEFAULT_ADMIN_PASSWORD = "Admin@123"
+
+
+def _seed_fuel_types(session) -> None:
+    """Ensure the site's baseline fuel types exist (problemstatement.md #15:
+    nozzles need a fuel type to dispense). Rates are left at 0.0 — the site
+    must configure real prices, never guessed by the seed."""
+    existing_names = {f.fuel_type for f in session.query(Fuel).all()}
+    for fuel_type in DEFAULT_FUEL_TYPES:
+        if fuel_type not in existing_names:
+            session.add(Fuel(id=str(uuid.uuid4()), fuel_type=fuel_type, rate_per_liter=0.0))
+    session.flush()
 
 
 def _seed_roles_and_permissions(session) -> dict:
@@ -52,6 +64,7 @@ def seed_initial_data() -> None:
     session = db_package.connection.SessionLocal()
     try:
         roles_by_name = _seed_roles_and_permissions(session)
+        _seed_fuel_types(session)
 
         existing_admin = session.query(User).filter_by(username="admin").first()
         if existing_admin:
