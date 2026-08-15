@@ -1,5 +1,6 @@
 """Model package for Petrol Pump ERP."""
 
+from .attendance import Attendance
 from .audit_log import AuditLog
 from .employee import Employee
 from .employee_document import EmployeeDocument
@@ -11,6 +12,7 @@ from .user import User
 from .user_session import UserSession
 
 __all__ = [
+    "Attendance",
     "AuditLog",
     "Employee",
     "EmployeeDocument",

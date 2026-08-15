@@ -63,14 +63,15 @@
 - [x] Employee/HR UI screens (app/ui/employee_window.py: list with search, add form, detail/edit dialog with status/exit workflow and document management)
 - [ ] User-provisioning flow for employees who need login access (Employee.user_id can currently only link an existing User)
 
-## Phase 6: Attendance Management
-- [ ] Track check-in/check-out
-- [ ] Manage attendance status (present, absent, late, half day, leave)
-- [ ] Record shift and supervisor information
-- [ ] Implement attendance correction workflow
-- [ ] Create attendance reports
-- [ ] Track overtime-ready fields
-- [ ] Implement holiday tracking
+## Phase 6: Attendance Management (Complete except reports/holiday calendar)
+- [x] Track check-in/check-out (Attendance.check_in_time/check_out_time, validated check-out >= check-in)
+- [x] Manage attendance status (present, absent, late, half day, leave, holiday — AttendanceStatus enum)
+- [x] Record shift and supervisor information (shift_label free-text pending Phase 7's Shift entity; supervisor_id FK to User)
+- [x] Implement attendance correction workflow (AttendanceService.correct_attendance: requires a reason, permission-checked, audit-logged with old/new snapshot, never a silent overwrite)
+- [ ] Create attendance reports (deferred to Phase 16: Reporting System)
+- [x] Track overtime-ready fields (overtime_minutes, non-negative validated)
+- [ ] Implement holiday tracking (HOLIDAY is a valid status per day, but there's no holiday calendar entity yet)
+- [x] Attendance UI (app/ui/attendance_window.py: date-filterable roster, mark dialog, correction dialog)
 
 ## Phase 7: Shift Management
 - [ ] Implement shift opening workflow
@@ -267,10 +268,10 @@ A feature is complete only when:
 - [ ] GitHub issue updated
 
 ## Current Focus
-Phase 5 (Employee & HR Management) is complete end to end — service layer and UI, tested. Phase 6 (Attendance) is next.
+Phase 6 (Attendance Management) is complete end to end — service layer and UI, tested. Phase 7 (Shift Management) is next.
 
 ## Next Immediate Tasks
-1. Begin Phase 6: Attendance model, repository, and service (check-in/check-out, present/absent/late/half-day/leave, correction workflow requiring authorization per problemstatement.md #9)
+1. Begin Phase 7: Shift model (open/close workflow), then replace Attendance.shift_label with a real foreign key to Shift
 2. Expand the `ROLE_PERMISSIONS` matrix in app/core/constants.py as each new module is implemented
 3. Consider revisiting `Fuel` model's `Float` fields for money/quantity before real financial data is stored
 

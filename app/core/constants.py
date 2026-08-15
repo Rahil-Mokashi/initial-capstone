@@ -24,6 +24,8 @@ class Permission(str, Enum):
     AUDIT_VIEW = "audit.view"
     EMPLOYEE_VIEW = "employee.view"
     EMPLOYEE_MANAGE = "employee.manage"
+    ATTENDANCE_VIEW = "attendance.view"
+    ATTENDANCE_MANAGE = "attendance.manage"
 
 
 class EmployeeStatus(str, Enum):
@@ -33,6 +35,17 @@ class EmployeeStatus(str, Enum):
     ON_LEAVE = "on_leave"
     SUSPENDED = "suspended"
     TERMINATED = "terminated"
+
+
+class AttendanceStatus(str, Enum):
+    """Values stored in Attendance.status (problemstatement.md #9)."""
+
+    PRESENT = "present"
+    ABSENT = "absent"
+    LATE = "late"
+    HALF_DAY = "half_day"
+    LEAVE = "leave"
+    HOLIDAY = "holiday"
 
 
 # ADMIN and OWNER get every permission; other roles get a minimal starter set.
@@ -46,9 +59,21 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
         Permission.AUDIT_VIEW,
         Permission.EMPLOYEE_VIEW,
         Permission.EMPLOYEE_MANAGE,
+        Permission.ATTENDANCE_VIEW,
+        Permission.ATTENDANCE_MANAGE,
     ),
-    UserRole.ACCOUNTANT: (Permission.INVENTORY_VIEW, Permission.AUDIT_VIEW, Permission.EMPLOYEE_VIEW),
-    UserRole.SHIFT_SUPERVISOR: (Permission.INVENTORY_VIEW, Permission.EMPLOYEE_VIEW),
+    UserRole.ACCOUNTANT: (
+        Permission.INVENTORY_VIEW,
+        Permission.AUDIT_VIEW,
+        Permission.EMPLOYEE_VIEW,
+        Permission.ATTENDANCE_VIEW,
+    ),
+    UserRole.SHIFT_SUPERVISOR: (
+        Permission.INVENTORY_VIEW,
+        Permission.EMPLOYEE_VIEW,
+        Permission.ATTENDANCE_VIEW,
+        Permission.ATTENDANCE_MANAGE,
+    ),
     UserRole.ATTENDANT: (),
 }
 
