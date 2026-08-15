@@ -41,36 +41,3 @@ class InventoryService:
                 "new_stock": fuel.current_stock,
             }
         return None
-
-
-# Single Responsibility Principle - Only handles inventory operations
-class EmployeeService:
-    """Service layer for employee operations"""
-
-    def __init__(self, repo):
-        self._repo = repo
-
-    def assign_nozzle(self, employee_id: int, nozzle_id: int, shift_id: int) -> bool:
-        """Validate and assign nozzle to employee"""
-        # Business logic validation
-        if not self._repo.get_employee_shift(employee_id, shift_id):
-            return False
-        if self._repo.get_nozzle_assignments(nozzle_id):
-            return False
-        return True
-
-
-# Repository pattern separated from service layer
-class PaymentRepository(Repository):
-    """Data access layer for payment operations"""
-
-    def record_payment(self, sale_id: int, amount: float, payment_method: str) -> bool:
-        """Record payment with proper accounting"""
-        if amount <= 0:
-            return False
-        return self._session.execute(
-            """INSERT INTO payments
-             (sale_id, amount, payment_method, created_at)
-             VALUES (:sale_id, :amount, :payment_method, NOW())""",
-            {"sale_id": sale_id, "amount": amount, "payment_method": payment_method}
-        ).rowcount > 0

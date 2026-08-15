@@ -1,18 +1,3 @@
-from sqlalchemy.orm import sessionmaker
-from .connection import engine
+from app.database.connection import SessionLocal, get_db
 
-
-SessionLocal = sessionmaker(
-    autoflush=False,
-    autocommit=False,
-    bind=engine,
-    expire_on_commit=False,
-)
-
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+__all__ = ["SessionLocal", "get_db"]
