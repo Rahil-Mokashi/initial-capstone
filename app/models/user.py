@@ -16,6 +16,7 @@ class User(EntityMixin, Base):
     is_active = Column(Boolean, default=True, nullable=False)
     is_locked = Column(Boolean, default=False, nullable=False)
     failed_attempts = Column(Integer, default=0, nullable=False)
+    must_change_password = Column(Boolean, default=False, nullable=False)
     last_login = Column(DateTime, nullable=True)
     role_id = Column(String(36), ForeignKey("roles.id"), nullable=True)
 

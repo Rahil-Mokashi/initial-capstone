@@ -11,9 +11,9 @@ project's rule against destroying historical/security data.
 from typing import List
 
 from app.core.constants import Permission
-from app.core.exceptions import ConflictError, NotFoundError, WeakPasswordError
+from app.core.exceptions import AuthenticationError, ConflictError, NotFoundError, WeakPasswordError
 from app.core.permissions import require_permission
-from app.core.security import hash_password, validate_password_strength
+from app.core.security import hash_password, validate_password_strength, verify_password
 from app.models.user import User
 from app.schemas.user import UserCreate
 
@@ -50,6 +50,10 @@ class UserService:
             is_active=True,
             is_locked=False,
             failed_attempts=0,
+            # An admin-assigned password is a temporary one from the
+            # account holder's point of view - force them to set their
+            # own on first login rather than staying on it indefinitely.
+            must_change_password=True,
         )
         user = self._user_repo.add(user)
         self._audit_repo.record(
@@ -127,6 +131,57 @@ class UserService:
             description=reason.strip(),
             old_value=old_role_name,
             new_value=role.name,
+        )
+        return user
+
+    @require_permission(Permission.USER_MANAGE.value)
+    def reset_password(self, actor_user_id: str, user_id: str, new_password: str, reason: str) -> User:
+        """Admin-initiated reset, e.g. because a user forgot their
+        password and is locked out with no self-service recovery path.
+        Sets must_change_password so the temporary password an admin
+        just typed doesn't become permanent by default."""
+        if not reason or not reason.strip():
+            raise ValueError("A reason is required to reset a user's password")
+
+        password_errors = validate_password_strength(new_password)
+        if password_errors:
+            raise WeakPasswordError("; ".join(password_errors))
+
+        user = self._get_user_or_raise(user_id)
+        user.password_hash = hash_password(new_password)
+        user.must_change_password = True
+        user = self._user_repo.update(user)
+        self._audit_repo.record(
+            event_type="user_password_reset",
+            actor_id=actor_user_id,
+            entity_type="User",
+            entity_id=user.id,
+            description=reason.strip(),
+        )
+        return user
+
+    def change_own_password(self, actor_user_id: str, current_password: str, new_password: str) -> User:
+        """Self-service password change - any authenticated user may
+        change their own password, no USER_MANAGE permission required.
+        Used both for the forced first-login rotation and for a
+        voluntary later change."""
+        user = self._get_user_or_raise(actor_user_id)
+        if not verify_password(current_password, user.password_hash):
+            raise AuthenticationError("Current password is incorrect")
+
+        password_errors = validate_password_strength(new_password)
+        if password_errors:
+            raise WeakPasswordError("; ".join(password_errors))
+
+        user.password_hash = hash_password(new_password)
+        user.must_change_password = False
+        user = self._user_repo.update(user)
+        self._audit_repo.record(
+            event_type="user_password_changed",
+            actor_id=actor_user_id,
+            entity_type="User",
+            entity_id=user.id,
+            description="Self-service password change",
         )
         return user
 

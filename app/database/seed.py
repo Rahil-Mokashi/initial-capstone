@@ -82,6 +82,10 @@ def seed_initial_data() -> None:
             is_active=True,
             is_locked=False,
             failed_attempts=0,
+            # DEFAULT_ADMIN_PASSWORD is a known, publicly-committed dev
+            # credential - force it to be rotated on first real login
+            # rather than trusting every deployment to remember to change it.
+            must_change_password=True,
             role=roles_by_name[UserRole.ADMIN.value],
             created_at=now,
             updated_at=now,

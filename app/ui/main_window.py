@@ -217,6 +217,11 @@ class MainWindow(QMainWindow):
         users_button.clicked.connect(self._open_users)
         users_button.setVisible(self._auth_service.check_permission(user_data["id"], Permission.USER_MANAGE.value))
 
+        change_password_button = QPushButton("Change Password")
+        change_password_button.setObjectName("secondaryButton")
+        change_password_button.setCursor(Qt.PointingHandCursor)
+        change_password_button.clicked.connect(self._open_change_password)
+
         logout_button = QPushButton("Logout")
         logout_button.setObjectName("secondaryButton")
         logout_button.setCursor(Qt.PointingHandCursor)
@@ -234,6 +239,7 @@ class MainWindow(QMainWindow):
         top_bar_layout.addWidget(my_shift_button)
         top_bar_layout.addWidget(reports_button)
         top_bar_layout.addWidget(users_button)
+        top_bar_layout.addWidget(change_password_button)
         top_bar_layout.addWidget(logout_button)
         top_bar.setLayout(top_bar_layout)
 
@@ -377,6 +383,12 @@ class MainWindow(QMainWindow):
         self._user_window = UserListWindow(self._user_service, self._role_repo, self._user_data["id"])
         self._user_window.show()
 
+    def _open_change_password(self) -> None:
+        from app.ui.change_password_dialog import ChangePasswordDialog
+
+        dialog = ChangePasswordDialog(self._user_service, self._user_data["id"], forced=False, parent=self)
+        dialog.exec()
+
 
 class AppController:
     """Owns the login <-> main window transition and the shared AuthService."""
@@ -469,6 +481,13 @@ class AppController:
         if self.login_window:
             self.login_window.close()
             self.login_window = None
+
+        if user_data.get("must_change_password"):
+            from app.ui.change_password_dialog import ChangePasswordDialog
+
+            dialog = ChangePasswordDialog(self._user_service, user_data["id"], forced=True)
+            dialog.exec()
+            user_data = dict(user_data, must_change_password=False)
 
         self.main_window = MainWindow(
             self._auth_service,

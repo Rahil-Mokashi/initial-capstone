@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, DateTime, Float, ForeignKey, String
+from sqlalchemy import Column, DateTime, ForeignKey, Numeric, String
 from sqlalchemy.orm import relationship
 
 from .base import Base, EntityMixin
@@ -27,8 +27,8 @@ class NozzleAssignment(EntityMixin, Base):
     start_time = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     end_time = Column(DateTime, nullable=True)
 
-    opening_meter = Column(Float, nullable=False)
-    closing_meter = Column(Float, nullable=True)
+    opening_meter = Column(Numeric(12, 3), nullable=False)
+    closing_meter = Column(Numeric(12, 3), nullable=True)
 
     assigned_by_id = Column(String(36), ForeignKey("users.id"), nullable=False)
     remarks = Column(String(512), nullable=True)

@@ -5,7 +5,13 @@ from sqlalchemy.orm import sessionmaker
 
 import app.models  # noqa: F401  (registers all table metadata)
 from app.core.constants import UserRole
-from app.core.exceptions import ConflictError, NotFoundError, PermissionDeniedError, WeakPasswordError
+from app.core.exceptions import (
+    AuthenticationError,
+    ConflictError,
+    NotFoundError,
+    PermissionDeniedError,
+    WeakPasswordError,
+)
 from app.core.security import hash_password
 from app.database.base import Base
 from app.database.seed import seed_initial_data
@@ -93,6 +99,11 @@ def test_create_user(user_service, admin_id, attendant_role_id):
     assert user.role_id == attendant_role_id
     assert user.is_active is True
     assert user.is_locked is False
+
+
+def test_create_user_forces_password_change_on_first_login(user_service, admin_id, attendant_role_id):
+    user = user_service.create_user(admin_id, make_user_data(role_id=attendant_role_id))
+    assert user.must_change_password is True
 
 
 def test_create_user_records_audit_log(user_service, admin_id, attendant_role_id, db_session):
@@ -191,3 +202,66 @@ def test_multiple_users_can_share_the_same_role(user_service, admin_id, attendan
     user2 = user_service.create_user(admin_id, make_user_data(role_id=attendant_role_id, username="attendant.b", email="b@example.com"))
     assert user1.role_id == user2.role_id == attendant_role_id
     assert len(user_service.list_users(admin_id)) == 3  # admin + these two
+
+
+def test_reset_password_requires_reason(user_service, admin_id, attendant_role_id):
+    user = user_service.create_user(admin_id, make_user_data(role_id=attendant_role_id))
+    with pytest.raises(ValueError):
+        user_service.reset_password(admin_id, user.id, "NewStrong@123", "")
+
+
+def test_reset_password_rejects_weak_password(user_service, admin_id, attendant_role_id):
+    user = user_service.create_user(admin_id, make_user_data(role_id=attendant_role_id))
+    with pytest.raises(WeakPasswordError):
+        user_service.reset_password(admin_id, user.id, "weak", "User forgot their password")
+
+
+def test_reset_password_forces_change_on_next_login(user_service, admin_id, attendant_role_id):
+    user = user_service.create_user(admin_id, make_user_data(role_id=attendant_role_id))
+    # A real self-service change would already have cleared this after
+    # first login; force it False here to prove reset_password re-sets it.
+    user.must_change_password = False
+
+    updated = user_service.reset_password(admin_id, user.id, "NewStrong@123", "User forgot their password")
+    assert updated.must_change_password is True
+
+
+def test_reset_password_shift_supervisor_denied(user_service, shift_supervisor_id, attendant_role_id, admin_id):
+    user = user_service.create_user(admin_id, make_user_data(role_id=attendant_role_id))
+    with pytest.raises(PermissionDeniedError):
+        user_service.reset_password(shift_supervisor_id, user.id, "NewStrong@123", "Forgot password")
+
+
+def test_change_own_password_requires_correct_current_password(user_service, admin_id, attendant_role_id):
+    user = user_service.create_user(admin_id, make_user_data(role_id=attendant_role_id))
+    with pytest.raises(AuthenticationError):
+        user_service.change_own_password(user.id, "wrong-current-password", "NewStrong@123")
+
+
+def test_change_own_password_rejects_weak_new_password(user_service, admin_id, attendant_role_id):
+    user = user_service.create_user(admin_id, make_user_data(role_id=attendant_role_id))
+    with pytest.raises(WeakPasswordError):
+        user_service.change_own_password(user.id, "Strong@123", "weak")
+
+
+def test_change_own_password_clears_must_change_password_flag(user_service, admin_id, attendant_role_id):
+    user = user_service.create_user(admin_id, make_user_data(role_id=attendant_role_id))
+    assert user.must_change_password is True
+
+    updated = user_service.change_own_password(user.id, "Strong@123", "NewStrong@123")
+    assert updated.must_change_password is False
+
+
+def test_change_own_password_records_audit_log(user_service, admin_id, attendant_role_id, db_session):
+    user = user_service.create_user(admin_id, make_user_data(role_id=attendant_role_id))
+    user_service.change_own_password(user.id, "Strong@123", "NewStrong@123")
+    events = {log.event_type for log in db_session.query(AuditLog).all()}
+    assert "user_password_changed" in events
+
+
+def test_change_own_password_does_not_require_user_manage_permission(user_service, attendant_role_id, admin_id):
+    """An attendant with no USER_MANAGE permission must still be able to
+    change their own password - the whole point is that it's self-service."""
+    attendant = user_service.create_user(admin_id, make_user_data(role_id=attendant_role_id))
+    updated = user_service.change_own_password(attendant.id, "Strong@123", "NewStrong@123")
+    assert updated.must_change_password is False

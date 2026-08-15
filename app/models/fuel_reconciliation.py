@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, Date, DateTime, Float, ForeignKey, String, Text
+from sqlalchemy import Column, Date, DateTime, ForeignKey, Numeric, String, Text
 from sqlalchemy.orm import relationship
 
 from .base import Base
@@ -23,13 +23,13 @@ class FuelReconciliation(Base):
     tank_id = Column(String(36), ForeignKey("tanks.id"), nullable=False, index=True)
     reconciliation_date = Column(Date, nullable=False, index=True)
 
-    opening_stock = Column(Float, nullable=False)
-    received_quantity = Column(Float, nullable=False)
-    sold_quantity = Column(Float, nullable=False)
-    expected_closing_stock = Column(Float, nullable=False)
-    physical_stock = Column(Float, nullable=False)
-    variance = Column(Float, nullable=False)
-    variance_percent = Column(Float, nullable=False)
+    opening_stock = Column(Numeric(12, 3), nullable=False)
+    received_quantity = Column(Numeric(12, 3), nullable=False)
+    sold_quantity = Column(Numeric(12, 3), nullable=False)
+    expected_closing_stock = Column(Numeric(12, 3), nullable=False)
+    physical_stock = Column(Numeric(12, 3), nullable=False)
+    variance = Column(Numeric(12, 3), nullable=False)
+    variance_percent = Column(Numeric(8, 3), nullable=False)
     classification = Column(String(32), nullable=False)
 
     performed_by_id = Column(String(36), ForeignKey("users.id"), nullable=False)

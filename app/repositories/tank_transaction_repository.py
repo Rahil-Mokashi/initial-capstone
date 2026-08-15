@@ -1,4 +1,5 @@
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timezone
+from decimal import Decimal
 from typing import List, Optional
 
 from sqlalchemy.orm import Session
@@ -24,16 +25,21 @@ class TankTransactionRepository:
 
     def sum_for_tank_by_type(
         self, tank_id: str, transaction_type: str, date_from: Optional[date] = None, date_to: Optional[date] = None
-    ) -> float:
-        """date_from/date_to are calendar dates; widened to the full day so a
-        transaction recorded on date_to itself (with a time component) isn't
-        excluded by a naive date<->datetime comparison."""
+    ) -> Decimal:
+        """date_from/date_to are local calendar dates; widened to the full
+        local day, then converted to UTC-aware instants before comparing
+        against transaction_at (stored UTC-aware) — a naive local-midnight
+        boundary compared directly against a UTC timestamp silently drops
+        transactions recorded after local midnight whenever local time runs
+        ahead of UTC (e.g. IST, UTC+5:30)."""
         query = self._session.query(TankTransaction).filter_by(tank_id=tank_id, transaction_type=transaction_type)
         if date_from:
-            query = query.filter(TankTransaction.transaction_at >= datetime.combine(date_from, time.min))
+            start_of_day = datetime.combine(date_from, time.min).astimezone(timezone.utc)
+            query = query.filter(TankTransaction.transaction_at >= start_of_day)
         if date_to:
-            query = query.filter(TankTransaction.transaction_at <= datetime.combine(date_to, time.max))
-        return sum(t.quantity for t in query.all())
+            end_of_day = datetime.combine(date_to, time.max).astimezone(timezone.utc)
+            query = query.filter(TankTransaction.transaction_at <= end_of_day)
+        return sum((t.quantity for t in query.all()), Decimal("0"))
 
     def add(self, transaction: TankTransaction) -> TankTransaction:
         self._session.add(transaction)

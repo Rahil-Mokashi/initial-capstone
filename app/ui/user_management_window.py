@@ -231,6 +231,10 @@ class UserDetailDialog(QDialog):
         self.unlock_button.setObjectName("dangerButton")
         self.unlock_button.clicked.connect(self._unlock)
 
+        self.reset_password_button = QPushButton("Reset Password")
+        self.reset_password_button.setObjectName("secondaryButton")
+        self.reset_password_button.clicked.connect(self._reset_password)
+
         close_button = QPushButton("Close")
         close_button.setObjectName("secondaryButton")
         close_button.clicked.connect(self.accept)
@@ -245,6 +249,7 @@ class UserDetailDialog(QDialog):
         layout.addLayout(role_row)
         layout.addWidget(self.toggle_active_button)
         layout.addWidget(self.unlock_button)
+        layout.addWidget(self.reset_password_button)
         layout.addLayout(bottom_row)
         self.setLayout(layout)
 
@@ -295,4 +300,24 @@ class UserDetailDialog(QDialog):
             QMessageBox.warning(self, "Could not unlock account", str(exc))
         except Exception as exc:  # noqa: BLE001
             QMessageBox.warning(self, "Could not unlock account", describe_unexpected_error(exc))
+        self._refresh()
+
+    def _reset_password(self) -> None:
+        new_password, ok = QInputDialog.getText(
+            self, "Reset password", "New temporary password:", QLineEdit.Password
+        )
+        if not ok or not new_password:
+            return
+        reason, ok = QInputDialog.getText(self, "Reset password", "Reason:")
+        if not ok or not reason.strip():
+            return
+        try:
+            self._user_service.reset_password(self._actor_user_id, self._user_id, new_password, reason.strip())
+            QMessageBox.information(
+                self, "Password reset", "The user will be asked to set their own password on next login."
+            )
+        except (AppError, ValueError) as exc:
+            QMessageBox.warning(self, "Could not reset password", str(exc))
+        except Exception as exc:  # noqa: BLE001
+            QMessageBox.warning(self, "Could not reset password", describe_unexpected_error(exc))
         self._refresh()
