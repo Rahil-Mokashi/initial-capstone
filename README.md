@@ -280,7 +280,7 @@ Not yet built: Payments (dedicated reconciliation reporting beyond what Sale alr
 | ORM | SQLAlchemy 2.x | in use |
 | Validation | Pydantic v2 | in use |
 | Configuration | pydantic-settings | in use |
-| Testing | pytest | in use — 434 tests |
+| Testing | pytest | in use — 435 tests |
 | Logging | Python standard `logging` | in use — console + a rotating file colocated with the database |
 | Migrations | Alembic | in use — `init_db()` runs `alembic upgrade head`, not `Base.metadata.create_all()` |
 | PDF reports | ReportLab | in use — fuel-type summary report, more reports to follow in Phase 16 |
@@ -314,7 +314,7 @@ PetrolPumpERP/
 │   ├── schemas/                 # Pydantic input-validation schemas
 │   ├── services/                # Business logic, RBAC checks, audit logging
 │   └── ui/                      # PySide6 windows/dialogs + shared stylesheet
-├── tests/                       # pytest suite (434 tests)
+├── tests/                       # pytest suite (435 tests)
 ├── docs/
 │   └── screenshots/             # Screenshots used in this README
 ├── requirements.txt
@@ -372,7 +372,7 @@ On first run this will:
 pytest
 ```
 
-All 434 tests should pass, in well under a minute. To run a single module's tests:
+All 435 tests should pass, in well under a minute. To run a single module's tests:
 
 ```bash
 pytest tests/test_auth_rbac.py -v
@@ -472,7 +472,10 @@ This offline desktop application is phase one of a two-phase plan. Once it prove
 | 16: Reporting System | 🟡 Partial — six reports closing out every earlier phase's own "deferred to Phase 16" promise; the full problemstatement.md #25-32 enumeration (daily/HR/inventory/management reports) is not started |
 | 17: Printing System | 🟡 Complete for every report/document that exists today (print preview, CSV export, receipts, statements); print configuration management and document types tied to the still-missing Phase 16 reports are deferred |
 | 18: Backup & Recovery | 🟡 Complete except configurable backup location, recovery-workflow documentation, and optional encryption |
-| 19–22: Testing, Pilot, Release | ⬜ Not started (Packaging/Phase 20 started early — see below) |
+| 19: Testing | 🟡 Largely already satisfied by each module's own tests; added the one real gap (a cross-service integration test) |
+| 20: Packaging & Deployment | 🟡 Started early (standalone .exe works end-to-end) — installer, config system, and packaged docs still open |
+| 21: Pilot Deployment & Feedback | ⬜ Requires the user's real-world deployment/feedback — not something an agent can complete |
+| 22: Final Release | ⬜ Depends on Phase 21 |
 
 See [ROADMAP.md](ROADMAP.md) for the full, granular breakdown of every phase.
 
