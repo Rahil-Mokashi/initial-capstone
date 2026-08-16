@@ -23,6 +23,7 @@ from app.repositories.employee_repository import EmployeeRepository
 from app.repositories.fuel_reconciliation_repository import FuelReconciliationRepository
 from app.repositories.fuel_repository import FuelRepository
 from app.repositories.nozzle_repository import NozzleRepository
+from app.repositories.payment_repository import PaymentRepository
 from app.repositories.sale_repository import SaleRepository
 from app.repositories.shift_repository import ShiftRepository
 from app.repositories.tank_reading_repository import TankReadingRepository
@@ -179,7 +180,7 @@ def sale_service(db_session, tank_service, auth_service):
     return SaleService(
         SaleRepository(db_session), ShiftRepository(db_session), NozzleRepository(db_session),
         FuelRepository(db_session), EmployeeRepository(db_session), CustomerRepository(db_session),
-        TankRepository(db_session), tank_service, audit_repo, auth_service,
+        TankRepository(db_session), tank_service, audit_repo, auth_service, PaymentRepository(db_session),
     )
 
 
@@ -256,6 +257,34 @@ def test_sales_window_gates_record_button_on_manage_permission(
     window = SalesWindow(sale_service, shift_service, employee_service, auth_service, accountant_id)
     assert window.sales_tab.add_button.isHidden() is True
     assert window.customers_tab.add_button.isHidden() is True
+
+
+def test_sale_row_shows_payment_status(
+    qapp, sale_service, shift_service, employee_service, fuel_repo, auth_service, admin_id, open_shift_id, nozzle_id, employee_id
+):
+    from app.ui.sales_window import SalesTab
+
+    tab = SalesTab(sale_service, shift_service, employee_service, auth_service, admin_id, can_manage=True)
+    from app.schemas.sale import SaleCreate
+    from app.core.constants import PaymentMethod
+    from decimal import Decimal
+
+    sale_service.create_sale(
+        admin_id,
+        SaleCreate(shift_id=open_shift_id, nozzle_id=nozzle_id, employee_id=employee_id, quantity=Decimal("5"), payment_method=PaymentMethod.CASH),
+    )
+    tab.refresh()
+    assert tab.table.item(0, 7).text() == "Success"
+
+
+def test_manage_buttons_hidden_for_view_only_role(
+    qapp, sale_service, shift_service, employee_service, fuel_repo, auth_service, accountant_id
+):
+    from app.ui.sales_window import SalesTab
+
+    tab = SalesTab(sale_service, shift_service, employee_service, auth_service, accountant_id, can_manage=False)
+    assert tab.mark_failed_button.isHidden() is True
+    assert tab.refund_button.isHidden() is True
 
 
 def test_customer_form_creates_customer(qapp, sale_service, admin_id):

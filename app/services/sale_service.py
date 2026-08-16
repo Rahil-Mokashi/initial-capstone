@@ -1,4 +1,4 @@
-"""Sales service layer (problemstatement.md #16, #17, Phase 11).
+"""Sales service layer (problemstatement.md #16, #17, Phases 11-12).
 
 Depends on TankService (not just TankRepository) for the exact same
 reason ProcurementService does: a sale moves fuel out of a tank through
@@ -9,16 +9,26 @@ time, so a completed sale's amount must never silently shift later).
 Sales are never deleted - cancel_sale changes status and posts a
 compensating ADJUSTMENT transaction to put the fuel back, matching the
 project's VOID/REVERSE/ADJUST-not-DELETE rule.
+
+Every sale also creates its own Payment record (problemstatement.md
+#17: settlement is tracked separately from the sale itself, since fuel
+can be dispensed - a completed sale - while money is still owed, e.g.
+a CREDIT sale's payment starts PENDING). Payments live on this service
+rather than a separate one because they're a 1:1 satellite of Sale,
+created/reversed on the exact same permission (SALE_MANAGE) at the
+exact same moments - the same reasoning already applied to folding
+Customer CRUD in here rather than a standalone CustomerService.
 """
 
 from decimal import Decimal
 from typing import List, Optional
 
-from app.core.constants import PaymentMethod, Permission, SaleStatus, ShiftStatus, TankTransactionType
+from app.core.constants import PaymentMethod, PaymentStatus, Permission, SaleStatus, ShiftStatus, TankTransactionType
 from app.core.exceptions import ConflictError, NotFoundError
 from app.core.permissions import require_permission
 from app.database.base import StatusEnum
 from app.models.customer import Customer
+from app.models.payment import Payment
 from app.models.sale import Sale
 from app.schemas.customer import CustomerCreate
 from app.schemas.sale import SaleCreate
@@ -26,7 +36,7 @@ from app.schemas.tank import TankTransactionCreate
 
 
 class SaleService:
-    def __init__(self, sale_repo, shift_repo, nozzle_repo, fuel_repo, employee_repo, customer_repo, tank_repo, tank_service, audit_repo, auth_service):
+    def __init__(self, sale_repo, shift_repo, nozzle_repo, fuel_repo, employee_repo, customer_repo, tank_repo, tank_service, audit_repo, auth_service, payment_repo):
         self._sale_repo = sale_repo
         self._shift_repo = shift_repo
         self._nozzle_repo = nozzle_repo
@@ -37,6 +47,7 @@ class SaleService:
         self._tank_service = tank_service
         self._audit_repo = audit_repo
         self._auth_service = auth_service
+        self._payment_repo = payment_repo
 
     @require_permission(Permission.SALE_MANAGE.value)
     def create_sale(self, actor_user_id: str, data: SaleCreate) -> Sale:
@@ -96,6 +107,19 @@ class SaleService:
         sale.tank_transaction_id = transaction.id
         sale = self._sale_repo.update(sale)
 
+        payment_status = PaymentStatus.PENDING if data.payment_method == PaymentMethod.CREDIT else PaymentStatus.SUCCESS
+        payment = Payment(
+            sale_id=sale.id,
+            amount=amount,
+            method=data.payment_method.value,
+            reference_number=data.reference_number,
+            status=payment_status.value,
+            shift_id=data.shift_id,
+            attendant_id=data.employee_id,
+            recorded_by_id=actor_user_id,
+        )
+        self._payment_repo.add(payment)
+
         self._audit_repo.record(
             event_type="sale_recorded",
             actor_id=actor_user_id,
@@ -139,6 +163,12 @@ class SaleService:
         sale.reversal_transaction_id = reversal.id
         sale = self._sale_repo.update(sale)
 
+        payment = self._payment_repo.get_by_sale_id(sale.id)
+        if payment and payment.status not in (PaymentStatus.REVERSED.value, PaymentStatus.REFUNDED.value):
+            payment.status = PaymentStatus.REVERSED.value
+            payment.status_reason = f"Sale {sale.receipt_number} cancelled: {reason.strip()}"
+            self._payment_repo.update(payment)
+
         self._audit_repo.record(
             event_type="sale_cancelled",
             actor_id=actor_user_id,
@@ -147,6 +177,68 @@ class SaleService:
             description=reason.strip(),
         )
         return sale
+
+    # ------------------------------------------------------------------
+    # Payments (problemstatement.md #17)
+    # ------------------------------------------------------------------
+
+    @require_permission(Permission.SALE_VIEW.value)
+    def list_payments(self, actor_user_id: str) -> List[Payment]:
+        return self._payment_repo.list_all()
+
+    @require_permission(Permission.SALE_VIEW.value)
+    def get_payment_for_sale(self, actor_user_id: str, sale_id: str) -> Optional[Payment]:
+        return self._payment_repo.get_by_sale_id(sale_id)
+
+    @require_permission(Permission.SALE_MANAGE.value)
+    def mark_payment_failed(self, actor_user_id: str, payment_id: str, reason: str) -> Payment:
+        if not reason or not reason.strip():
+            raise ValueError("A reason is required to mark a payment as failed")
+
+        payment = self._get_payment_or_raise(payment_id)
+        if payment.status != PaymentStatus.SUCCESS.value:
+            raise ConflictError(f"Cannot mark a payment with status {payment.status} as failed")
+
+        payment.status = PaymentStatus.FAILED.value
+        payment.status_reason = reason.strip()
+        payment = self._payment_repo.update(payment)
+
+        self._audit_repo.record(
+            event_type="payment_marked_failed",
+            actor_id=actor_user_id,
+            entity_type="Payment",
+            entity_id=payment.id,
+            description=reason.strip(),
+        )
+        return payment
+
+    @require_permission(Permission.SALE_MANAGE.value)
+    def refund_payment(self, actor_user_id: str, payment_id: str, reason: str) -> Payment:
+        if not reason or not reason.strip():
+            raise ValueError("A reason is required to refund a payment")
+
+        payment = self._get_payment_or_raise(payment_id)
+        if payment.status != PaymentStatus.SUCCESS.value:
+            raise ConflictError(f"Cannot refund a payment with status {payment.status}")
+
+        payment.status = PaymentStatus.REFUNDED.value
+        payment.status_reason = reason.strip()
+        payment = self._payment_repo.update(payment)
+
+        self._audit_repo.record(
+            event_type="payment_refunded",
+            actor_id=actor_user_id,
+            entity_type="Payment",
+            entity_id=payment.id,
+            description=reason.strip(),
+        )
+        return payment
+
+    def _get_payment_or_raise(self, payment_id: str) -> Payment:
+        payment = self._payment_repo.get_by_id(payment_id)
+        if not payment:
+            raise NotFoundError(f"Payment not found: {payment_id}")
+        return payment
 
     # ------------------------------------------------------------------
     # Customers

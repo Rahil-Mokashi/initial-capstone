@@ -6,7 +6,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 import app.models  # noqa: F401  (registers all table metadata)
-from app.core.constants import PaymentMethod, SaleStatus, ShiftStatus, UserRole
+from app.core.constants import PaymentMethod, PaymentStatus, SaleStatus, ShiftStatus, UserRole
 from app.core.exceptions import ConflictError, NotFoundError, PermissionDeniedError
 from app.core.security import hash_password
 from app.database.base import Base, StatusEnum
@@ -25,6 +25,7 @@ from app.repositories.employee_repository import EmployeeRepository
 from app.repositories.fuel_reconciliation_repository import FuelReconciliationRepository
 from app.repositories.fuel_repository import FuelRepository
 from app.repositories.nozzle_repository import NozzleRepository
+from app.repositories.payment_repository import PaymentRepository
 from app.repositories.sale_repository import SaleRepository
 from app.repositories.shift_repository import ShiftRepository
 from app.repositories.tank_reading_repository import TankReadingRepository
@@ -147,7 +148,7 @@ def sale_service(db_session, tank_service):
     return SaleService(
         SaleRepository(db_session), ShiftRepository(db_session), NozzleRepository(db_session),
         FuelRepository(db_session), EmployeeRepository(db_session), CustomerRepository(db_session),
-        TankRepository(db_session), tank_service, audit_repo, auth_service,
+        TankRepository(db_session), tank_service, audit_repo, auth_service, PaymentRepository(db_session),
     )
 
 
@@ -273,6 +274,94 @@ def test_cannot_cancel_an_already_cancelled_sale(sale_service, admin_id, open_sh
     sale_service.cancel_sale(admin_id, sale.id, "First cancellation")
     with pytest.raises(ConflictError):
         sale_service.cancel_sale(admin_id, sale.id, "Second cancellation")
+
+
+# --------------------------------------------------------------------
+# Payments (problemstatement.md #17)
+# --------------------------------------------------------------------
+
+def test_cash_sale_creates_a_successful_payment(sale_service, admin_id, open_shift_id, nozzle_id, employee_id):
+    sale = sale_service.create_sale(admin_id, make_sale_data(shift_id=open_shift_id, nozzle_id=nozzle_id, employee_id=employee_id))
+    payment = sale_service.get_payment_for_sale(admin_id, sale.id)
+    assert payment.status == PaymentStatus.SUCCESS.value
+    assert payment.method == PaymentMethod.CASH.value
+    assert payment.amount == sale.amount
+
+
+def test_credit_sale_creates_a_pending_payment(sale_service, admin_id, open_shift_id, nozzle_id, employee_id):
+    customer = sale_service.create_customer(admin_id, CustomerCreate(name="Ravi Transports"))
+    sale = sale_service.create_sale(
+        admin_id,
+        make_sale_data(shift_id=open_shift_id, nozzle_id=nozzle_id, employee_id=employee_id, payment_method=PaymentMethod.CREDIT, customer_id=customer.id),
+    )
+    payment = sale_service.get_payment_for_sale(admin_id, sale.id)
+    assert payment.status == PaymentStatus.PENDING.value
+
+
+def test_upi_sale_stores_reference_number(sale_service, admin_id, open_shift_id, nozzle_id, employee_id):
+    sale = sale_service.create_sale(
+        admin_id,
+        make_sale_data(
+            shift_id=open_shift_id, nozzle_id=nozzle_id, employee_id=employee_id,
+            payment_method=PaymentMethod.UPI, reference_number="UPI-REF-12345",
+        ),
+    )
+    payment = sale_service.get_payment_for_sale(admin_id, sale.id)
+    assert payment.reference_number == "UPI-REF-12345"
+
+
+def test_cancelling_a_sale_reverses_its_payment(sale_service, admin_id, open_shift_id, nozzle_id, employee_id):
+    sale = sale_service.create_sale(admin_id, make_sale_data(shift_id=open_shift_id, nozzle_id=nozzle_id, employee_id=employee_id))
+    sale_service.cancel_sale(admin_id, sale.id, "Customer changed their mind")
+    payment = sale_service.get_payment_for_sale(admin_id, sale.id)
+    assert payment.status == PaymentStatus.REVERSED.value
+
+
+def test_mark_payment_failed_requires_reason(sale_service, admin_id, open_shift_id, nozzle_id, employee_id):
+    sale = sale_service.create_sale(admin_id, make_sale_data(shift_id=open_shift_id, nozzle_id=nozzle_id, employee_id=employee_id))
+    payment = sale_service.get_payment_for_sale(admin_id, sale.id)
+    with pytest.raises(ValueError):
+        sale_service.mark_payment_failed(admin_id, payment.id, "")
+
+
+def test_mark_payment_failed(sale_service, admin_id, open_shift_id, nozzle_id, employee_id):
+    sale = sale_service.create_sale(admin_id, make_sale_data(shift_id=open_shift_id, nozzle_id=nozzle_id, employee_id=employee_id))
+    payment = sale_service.get_payment_for_sale(admin_id, sale.id)
+    failed = sale_service.mark_payment_failed(admin_id, payment.id, "Card declined after fuel dispensed")
+    assert failed.status == PaymentStatus.FAILED.value
+    assert failed.status_reason == "Card declined after fuel dispensed"
+
+
+def test_cannot_mark_a_reversed_payment_as_failed(sale_service, admin_id, open_shift_id, nozzle_id, employee_id):
+    sale = sale_service.create_sale(admin_id, make_sale_data(shift_id=open_shift_id, nozzle_id=nozzle_id, employee_id=employee_id))
+    sale_service.cancel_sale(admin_id, sale.id, "Cancelled")
+    payment = sale_service.get_payment_for_sale(admin_id, sale.id)
+    with pytest.raises(ConflictError):
+        sale_service.mark_payment_failed(admin_id, payment.id, "Too late")
+
+
+def test_refund_payment(sale_service, admin_id, open_shift_id, nozzle_id, employee_id):
+    sale = sale_service.create_sale(admin_id, make_sale_data(shift_id=open_shift_id, nozzle_id=nozzle_id, employee_id=employee_id))
+    payment = sale_service.get_payment_for_sale(admin_id, sale.id)
+    refunded = sale_service.refund_payment(admin_id, payment.id, "Customer overpaid")
+    assert refunded.status == PaymentStatus.REFUNDED.value
+
+
+def test_cannot_refund_a_pending_payment(sale_service, admin_id, open_shift_id, nozzle_id, employee_id):
+    customer = sale_service.create_customer(admin_id, CustomerCreate(name="Ravi Transports"))
+    sale = sale_service.create_sale(
+        admin_id,
+        make_sale_data(shift_id=open_shift_id, nozzle_id=nozzle_id, employee_id=employee_id, payment_method=PaymentMethod.CREDIT, customer_id=customer.id),
+    )
+    payment = sale_service.get_payment_for_sale(admin_id, sale.id)
+    with pytest.raises(ConflictError):
+        sale_service.refund_payment(admin_id, payment.id, "Too soon")
+
+
+def test_list_payments_denied_without_permission(sale_service, accountant_id, admin_id, open_shift_id, nozzle_id, employee_id):
+    sale_service.create_sale(admin_id, make_sale_data(shift_id=open_shift_id, nozzle_id=nozzle_id, employee_id=employee_id))
+    payments = sale_service.list_payments(accountant_id)
+    assert len(payments) == 1
 
 
 # --------------------------------------------------------------------

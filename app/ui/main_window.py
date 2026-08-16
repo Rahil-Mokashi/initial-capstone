@@ -30,6 +30,7 @@ from app.repositories.fuel_delivery_repository import FuelDeliveryRepository
 from app.repositories.fuel_repository import FuelRepository
 from app.repositories.nozzle_assignment_repository import NozzleAssignmentRepository
 from app.repositories.nozzle_repository import NozzleRepository
+from app.repositories.payment_repository import PaymentRepository
 from app.repositories.purchase_order_repository import PurchaseOrderItemRepository, PurchaseOrderRepository
 from app.repositories.role_repository import RoleRepository
 from app.repositories.fuel_reconciliation_repository import FuelReconciliationRepository
@@ -44,6 +45,7 @@ from app.repositories.user_repository import UserRepository
 from app.repositories.user_session_repository import UserSessionRepository
 from app.services.attendance_service import AttendanceService
 from app.services.auth_service import AuthService
+from app.services.dashboard_service import DashboardService
 from app.services.employee_service import EmployeeService
 from app.services.nozzle_service import NozzleService
 from app.services.procurement_service import ProcurementService
@@ -110,6 +112,32 @@ class DashboardCard(QWidget):
         super().mousePressEvent(event)
 
 
+class StatCard(QWidget):
+    """A small at-a-glance KPI tile at the top of the dashboard (today's
+    sales, open shifts, tanks needing attention, pending purchase orders)."""
+
+    def __init__(self, value: str, label: str, tone: str = "normal", parent=None):
+        super().__init__(parent)
+        self.setObjectName("statCard")
+        self.setProperty("tone", tone)
+        self.setAttribute(Qt.WA_StyledBackground, True)
+
+        value_label = QLabel(value)
+        value_label.setObjectName("statValue")
+        value_label.setProperty("tone", tone)
+
+        caption_label = QLabel(label)
+        caption_label.setObjectName("statLabel")
+
+        layout = QVBoxLayout()
+        layout.setContentsMargins(18, 14, 18, 14)
+        layout.setSpacing(4)
+        layout.addWidget(value_label)
+        layout.addWidget(caption_label)
+        self.setLayout(layout)
+        self.setMinimumHeight(76)
+
+
 def _greeting_for_now() -> str:
     hour = datetime.now().hour
     if hour < 12:
@@ -138,6 +166,7 @@ class MainWindow(QMainWindow):
         audit_service: AuditService,
         procurement_service: ProcurementService,
         sale_service: SaleService,
+        dashboard_service: DashboardService,
         role_repo,
         fuel_repo,
         user_repo,
@@ -157,6 +186,7 @@ class MainWindow(QMainWindow):
         self._audit_service = audit_service
         self._procurement_service = procurement_service
         self._sale_service = sale_service
+        self._dashboard_service = dashboard_service
         self._role_repo = role_repo
         self._fuel_repo = fuel_repo
         self._user_repo = user_repo
@@ -249,6 +279,16 @@ class MainWindow(QMainWindow):
         body_layout.setSpacing(28)
         body_layout.addLayout(header_layout)
 
+        stat_tiles = self._build_stat_tiles(user_data["id"])
+        if stat_tiles:
+            stats_grid = QGridLayout()
+            stats_grid.setSpacing(16)
+            for column in range(len(stat_tiles)):
+                stats_grid.setColumnStretch(column, 1)
+            for column, (value, label, tone) in enumerate(stat_tiles):
+                stats_grid.addWidget(StatCard(value, label, tone), 0, column)
+            body_layout.addLayout(stats_grid)
+
         total_visible_cards = 0
         for group_label, cards in card_groups:
             visible_cards = [
@@ -300,6 +340,26 @@ class MainWindow(QMainWindow):
         self._session_timer = QTimer(self)
         self._session_timer.timeout.connect(self._check_session)
         self._session_timer.start(SESSION_CHECK_INTERVAL_MS)
+
+    def _build_stat_tiles(self, actor_user_id: str) -> list[tuple[str, str, str]]:
+        try:
+            summary = self._dashboard_service.get_summary(actor_user_id)
+        except Exception as exc:  # noqa: BLE001 - a KPI strip must never block the dashboard from loading
+            describe_unexpected_error(exc)
+            return []
+
+        tiles: list[tuple[str, str, str]] = []
+        if summary.sales_today_count is not None:
+            tiles.append((str(summary.sales_today_count), "Sales today", "normal"))
+            tiles.append((f"₹{summary.sales_today_amount:,.2f}", "Revenue today", "normal"))
+        if summary.open_shifts_count is not None:
+            tiles.append((str(summary.open_shifts_count), "Shifts open now", "normal"))
+        if summary.low_stock_tanks_count is not None:
+            tone = "warning" if summary.low_stock_tanks_count > 0 else "normal"
+            tiles.append((str(summary.low_stock_tanks_count), "Tanks running low", tone))
+        if summary.pending_purchase_orders_count is not None:
+            tiles.append((str(summary.pending_purchase_orders_count), "Purchase orders pending", "normal"))
+        return tiles
 
     def _check_session(self) -> None:
         try:
@@ -515,8 +575,10 @@ class AppController:
             audit_repo,
             self._auth_service,
         )
+        sale_repo = SaleRepository(self._db_session)
+        purchase_order_repo = PurchaseOrderRepository(self._db_session)
         self._sale_service = SaleService(
-            SaleRepository(self._db_session),
+            sale_repo,
             ShiftRepository(self._db_session),
             nozzle_repo,
             self._fuel_repo,
@@ -525,6 +587,14 @@ class AppController:
             self._tank_repo,
             self._tank_service,
             audit_repo,
+            self._auth_service,
+            PaymentRepository(self._db_session),
+        )
+        self._dashboard_service = DashboardService(
+            sale_repo,
+            ShiftRepository(self._db_session),
+            self._tank_repo,
+            purchase_order_repo,
             self._auth_service,
         )
         self._user_repo = user_repo
@@ -567,6 +637,7 @@ class AppController:
             self._audit_service,
             self._procurement_service,
             self._sale_service,
+            self._dashboard_service,
             self._role_repo,
             self._fuel_repo,
             self._user_repo,

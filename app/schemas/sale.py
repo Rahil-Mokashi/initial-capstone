@@ -18,6 +18,7 @@ class SaleCreate(BaseModel):
     quantity: Decimal
     payment_method: PaymentMethod
     customer_id: Optional[str] = None
+    reference_number: Optional[str] = None
     remarks: Optional[str] = None
 
     @field_validator("quantity")
