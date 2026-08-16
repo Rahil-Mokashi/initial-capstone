@@ -222,6 +222,12 @@ Everything below is implemented, tested, and running — not planned. Each modul
 - Customer statements show every credit sale and payment with a running balance; accounts are flagged (not accused) as overdue once their oldest unpaid sale is older than the account's due window
 - Payments received from customers are append-only, mirroring the same "a correction is a new record" rule already applied to supplier payments
 
+### Expense Management (Phase 14 — complete, reconciliation/reports deferred)
+- Expense categories are simple name+status master data, never deleted, only deactivated, the same pattern already used for Supplier
+- Every expense records amount, date, employee, shift (optional), payment method (cash/UPI/card - not credit, which doesn't map to a real expense workflow), a receipt reference, and a description
+- Approval is a stricter permission than recording one, not granted to Accountant - the same split already used for reopening a closed shift
+- An expense is never deleted or edited once approved/rejected; rejecting requires a reason, both actions audit-logged
+
 ### Dashboard redesign (2026-08-16, user-requested)
 - Dashboard cards are grouped into labeled sections ("Daily Operations", "Reports & Administration") instead of one flat grid, now that there are 12 modules
 - The top bar was decluttered to just the user's name/role and a single "Account" menu — every module is reachable from its own dashboard card, so duplicating them as top-bar buttons was redundant and was the actual cause of the button crowding a prior audit flagged
@@ -247,7 +253,7 @@ Not yet built: Payments (dedicated reconciliation reporting beyond what Sale alr
 | ORM | SQLAlchemy 2.x | in use |
 | Validation | Pydantic v2 | in use |
 | Configuration | pydantic-settings | in use |
-| Testing | pytest | in use — 369 tests |
+| Testing | pytest | in use — 386 tests |
 | Logging | Python standard `logging` | in use — console + a rotating file colocated with the database |
 | Migrations | Alembic | in use — `init_db()` runs `alembic upgrade head`, not `Base.metadata.create_all()` |
 | PDF reports | ReportLab | in use — fuel-type summary report, more reports to follow in Phase 16 |
@@ -281,7 +287,7 @@ PetrolPumpERP/
 │   ├── schemas/                 # Pydantic input-validation schemas
 │   ├── services/                # Business logic, RBAC checks, audit logging
 │   └── ui/                      # PySide6 windows/dialogs + shared stylesheet
-├── tests/                       # pytest suite (369 tests)
+├── tests/                       # pytest suite (386 tests)
 ├── docs/
 │   └── screenshots/             # Screenshots used in this README
 ├── requirements.txt
@@ -339,7 +345,7 @@ On first run this will:
 pytest
 ```
 
-All 369 tests should pass, in well under a minute. To run a single module's tests:
+All 386 tests should pass, in well under a minute. To run a single module's tests:
 
 ```bash
 pytest tests/test_auth_rbac.py -v
@@ -434,7 +440,8 @@ This offline desktop application is phase one of a two-phase plan. Once it prove
 | 11: Sales Management | ✅ Complete (sales reports deferred to Phase 16, printable receipts deferred to Phase 17) |
 | 12: Payment Management | ✅ Complete (reconciliation workflows deferred to Phase 15, payment reports deferred to Phase 16) |
 | 13: Credit Management | ✅ Complete (fuel-type-sectioned/aging credit reports deferred to Phase 16) |
-| 14–22: Expenses, Reconciliation, full Reporting System, Printing, Testing, Pilot, Release | ⬜ Not started (Packaging/Phase 20 started early, Backup/Phase 18 and parts of Reporting/Phase 16 done early too — see below) |
+| 14: Expense Management | ✅ Complete (expense reconciliation deferred to Phase 15, expense reports deferred to Phase 16) |
+| 15–22: Reconciliation, full Reporting System, Printing, Testing, Pilot, Release | ⬜ Not started (Packaging/Phase 20 started early, Backup/Phase 18 and parts of Reporting/Phase 16 done early too — see below) |
 
 See [ROADMAP.md](ROADMAP.md) for the full, granular breakdown of every phase.
 

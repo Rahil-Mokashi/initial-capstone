@@ -28,6 +28,7 @@ from app.repositories.dispenser_repository import DispenserRepository
 from app.repositories.employee_document_repository import EmployeeDocumentRepository
 from app.repositories.customer_repository import CustomerRepository
 from app.repositories.employee_repository import EmployeeRepository
+from app.repositories.expense_repository import ExpenseCategoryRepository, ExpenseRepository
 from app.repositories.fuel_delivery_repository import FuelDeliveryRepository
 from app.repositories.fuel_repository import FuelRepository
 from app.repositories.nozzle_assignment_repository import NozzleAssignmentRepository
@@ -50,6 +51,7 @@ from app.services.auth_service import AuthService
 from app.services.credit_service import CreditService
 from app.services.dashboard_service import DashboardService
 from app.services.employee_service import EmployeeService
+from app.services.expense_service import ExpenseService
 from app.services.nozzle_service import NozzleService
 from app.services.procurement_service import ProcurementService
 from app.services.report_service import ReportService
@@ -170,6 +172,7 @@ class MainWindow(QMainWindow):
         procurement_service: ProcurementService,
         sale_service: SaleService,
         credit_service: CreditService,
+        expense_service: ExpenseService,
         dashboard_service: DashboardService,
         role_repo,
         fuel_repo,
@@ -191,6 +194,7 @@ class MainWindow(QMainWindow):
         self._procurement_service = procurement_service
         self._sale_service = sale_service
         self._credit_service = credit_service
+        self._expense_service = expense_service
         self._dashboard_service = dashboard_service
         self._role_repo = role_repo
         self._fuel_repo = fuel_repo
@@ -211,6 +215,7 @@ class MainWindow(QMainWindow):
         self._procurement_window = None
         self._sales_window = None
         self._credit_window = None
+        self._expense_window = None
 
         self.setWindowTitle("Petrol Pump ERP")
         self.setMinimumSize(960, 620)
@@ -264,6 +269,7 @@ class MainWindow(QMainWindow):
                     ("🪪", "My Shift", "Your current nozzle and fuel assignment", self._open_my_shift, Permission.MY_ASSIGNMENT_VIEW),
                     ("💳", "Sales", "Record sales and manage customers", self._open_sales, Permission.SALE_VIEW),
                     ("🧾", "Credit", "Credit accounts, payments, and balances", self._open_credit, Permission.CREDIT_VIEW),
+                    ("🧮", "Expenses", "Record and approve pump expenses", self._open_expenses, Permission.EXPENSE_VIEW),
                     ("🔧", "Nozzles", "Manage dispensers and nozzles", self._open_nozzles, Permission.NOZZLE_VIEW),
                     ("🛢️", "Tanks", "Stock, transactions, reconciliation", self._open_tanks, Permission.INVENTORY_VIEW),
                     ("🚛", "Procurement", "Suppliers, orders, and deliveries", self._open_procurement, Permission.PROCUREMENT_VIEW),
@@ -455,6 +461,14 @@ class MainWindow(QMainWindow):
         self._credit_window = CreditWindow(self._credit_service, self._sale_service, self._auth_service, self._user_data["id"])
         self._credit_window.show()
 
+    def _open_expenses(self) -> None:
+        from app.ui.expense_window import ExpenseWindow
+
+        self._expense_window = ExpenseWindow(
+            self._expense_service, self._employee_service, self._shift_service, self._auth_service, self._user_data["id"]
+        )
+        self._expense_window.show()
+
     def _open_my_shift(self) -> None:
         from app.ui.my_shift_window import MyShiftWindow
 
@@ -591,6 +605,14 @@ class AppController:
         sale_repo = SaleRepository(self._db_session)
         purchase_order_repo = PurchaseOrderRepository(self._db_session)
         customer_repo = CustomerRepository(self._db_session)
+        self._expense_service = ExpenseService(
+            ExpenseRepository(self._db_session),
+            ExpenseCategoryRepository(self._db_session),
+            employee_repo,
+            ShiftRepository(self._db_session),
+            audit_repo,
+            self._auth_service,
+        )
         self._credit_service = CreditService(
             CreditAccountRepository(self._db_session),
             CustomerPaymentRepository(self._db_session),
@@ -661,6 +683,7 @@ class AppController:
             self._procurement_service,
             self._sale_service,
             self._credit_service,
+            self._expense_service,
             self._dashboard_service,
             self._role_repo,
             self._fuel_repo,

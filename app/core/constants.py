@@ -39,6 +39,9 @@ class Permission(str, Enum):
     SALE_MANAGE = "sale.manage"
     CREDIT_VIEW = "credit.view"
     CREDIT_MANAGE = "credit.manage"
+    EXPENSE_VIEW = "expense.view"
+    EXPENSE_MANAGE = "expense.manage"
+    EXPENSE_APPROVE = "expense.approve"
 
 
 class EmployeeStatus(str, Enum):
@@ -149,6 +152,14 @@ class SaleStatus(str, Enum):
     REVERSED = "reversed"
 
 
+class ExpenseStatus(str, Enum):
+    """Values stored in Expense.status (problemstatement.md #22)."""
+
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
 class PaymentStatus(str, Enum):
     """Values stored in Payment.status (problemstatement.md #17). Tracked
     separately from Sale.status: the fuel can be dispensed (a completed
@@ -207,6 +218,9 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
         Permission.SALE_MANAGE,
         Permission.CREDIT_VIEW,
         Permission.CREDIT_MANAGE,
+        Permission.EXPENSE_VIEW,
+        Permission.EXPENSE_MANAGE,
+        Permission.EXPENSE_APPROVE,
     ),
     UserRole.ACCOUNTANT: (
         Permission.INVENTORY_VIEW,
@@ -218,6 +232,8 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
         Permission.PROCUREMENT_VIEW,
         Permission.SALE_VIEW,
         Permission.CREDIT_VIEW,
+        Permission.EXPENSE_VIEW,
+        Permission.EXPENSE_MANAGE,
     ),
     UserRole.SHIFT_SUPERVISOR: (
         Permission.INVENTORY_VIEW,
