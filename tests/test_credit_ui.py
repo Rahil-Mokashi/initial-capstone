@@ -18,13 +18,13 @@ from app.models.role import Role
 from app.models.shift import Shift
 from app.models.user import User
 from app.repositories.audit_log_repository import AuditLogRepository
+from app.repositories.credit_account_repository import CreditAccountRepository
+from app.repositories.customer_payment_repository import CustomerPaymentRepository
 from app.repositories.customer_repository import CustomerRepository
 from app.repositories.employee_repository import EmployeeRepository
 from app.repositories.fuel_reconciliation_repository import FuelReconciliationRepository
 from app.repositories.fuel_repository import FuelRepository
 from app.repositories.nozzle_repository import NozzleRepository
-from app.repositories.credit_account_repository import CreditAccountRepository
-from app.repositories.customer_payment_repository import CustomerPaymentRepository
 from app.repositories.payment_repository import PaymentRepository
 from app.repositories.sale_repository import SaleRepository
 from app.repositories.shift_repository import ShiftRepository
@@ -33,12 +33,13 @@ from app.repositories.tank_repository import TankRepository
 from app.repositories.tank_transaction_repository import TankTransactionRepository
 from app.repositories.user_repository import UserRepository
 from app.repositories.user_session_repository import UserSessionRepository
+from app.schemas.credit import CreditAccountCreate
+from app.schemas.customer import CustomerCreate
+from app.schemas.sale import SaleCreate
 from app.schemas.tank import TankCreate
 from app.services.auth_service import AuthService
-from app.services.employee_service import EmployeeService
 from app.services.credit_service import CreditService
 from app.services.sale_service import SaleService
-from app.services.shift_service import ShiftService
 from app.services.tank_service import TankService
 
 
@@ -52,7 +53,7 @@ def qapp():
 
 @pytest.fixture()
 def db_session(tmp_path, monkeypatch):
-    sqlite_path = str(tmp_path / "test_sales_ui.db")
+    sqlite_path = str(tmp_path / "test_credit_ui.db")
     engine = create_engine(f"sqlite:///{sqlite_path}", connect_args={"check_same_thread": False})
     session_factory = sessionmaker(autocommit=False, autoflush=False, bind=engine, expire_on_commit=False)
     Base.metadata.create_all(bind=engine)
@@ -87,12 +88,6 @@ def admin_id(db_session):
 def attendant_id(db_session):
     seed_initial_data()
     return make_user(db_session, UserRole.ATTENDANT.value, "attendant1").id
-
-
-@pytest.fixture()
-def accountant_id(db_session):
-    seed_initial_data()
-    return make_user(db_session, UserRole.ACCOUNTANT.value, "accountant1").id
 
 
 @pytest.fixture()
@@ -156,152 +151,79 @@ def open_shift_id(db_session, admin_id):
 
 
 @pytest.fixture()
-def shift_service(db_session, auth_service):
-    from app.repositories.nozzle_assignment_repository import NozzleAssignmentRepository
-
+def credit_service(db_session, auth_service):
     audit_repo = AuditLogRepository(db_session)
-    return ShiftService(
-        ShiftRepository(db_session), NozzleAssignmentRepository(db_session), EmployeeRepository(db_session),
-        NozzleRepository(db_session), UserRepository(db_session), audit_repo, auth_service,
+    return CreditService(
+        CreditAccountRepository(db_session), CustomerPaymentRepository(db_session),
+        CustomerRepository(db_session), SaleRepository(db_session), audit_repo, auth_service,
     )
 
 
 @pytest.fixture()
-def employee_service(db_session, auth_service):
-    audit_repo = AuditLogRepository(db_session)
-    return EmployeeService(EmployeeRepository(db_session), None, UserRepository(db_session), None, audit_repo, auth_service)
-
-
-@pytest.fixture()
-def fuel_repo(db_session):
-    return FuelRepository(db_session)
-
-
-@pytest.fixture()
-def sale_service(db_session, tank_service, auth_service):
+def sale_service(db_session, tank_service, credit_service, auth_service):
     audit_repo = AuditLogRepository(db_session)
     return SaleService(
         SaleRepository(db_session), ShiftRepository(db_session), NozzleRepository(db_session),
         FuelRepository(db_session), EmployeeRepository(db_session), CustomerRepository(db_session),
         TankRepository(db_session), tank_service, audit_repo, auth_service, PaymentRepository(db_session),
-        CreditService(
-            CreditAccountRepository(db_session), CustomerPaymentRepository(db_session),
-            CustomerRepository(db_session), SaleRepository(db_session), audit_repo, auth_service,
-        ),
+        credit_service,
     )
 
 
-def test_manager_gets_full_picker_and_records_a_sale(
-    qapp, sale_service, shift_service, employee_service, fuel_repo, auth_service, admin_id, open_shift_id, nozzle_id, employee_id
+@pytest.fixture()
+def customer_id(sale_service, admin_id):
+    return sale_service.create_customer(admin_id, CustomerCreate(name="Ravi Transports")).id
+
+
+def test_credit_window_shows_account_with_outstanding_balance(
+    qapp, credit_service, sale_service, auth_service, admin_id, customer_id, open_shift_id, nozzle_id, employee_id
 ):
-    from PySide6.QtWidgets import QDialog
+    from app.ui.credit_window import CreditWindow
 
-    from app.ui.sales_window import SaleFormDialog
-
-    dialog = SaleFormDialog(sale_service, shift_service, employee_service, auth_service, admin_id)
-    assert dialog._can_pick_freely is True
-    assert dialog.shift_combo.count() == 1
-    assert dialog.nozzle_combo.count() == 1
-
-    dialog.quantity_input.setValue(5)
-    dialog._save()
-
-    assert dialog.result() == QDialog.Accepted
-    assert len(sale_service.list_sales(admin_id)) == 1
-
-
-def test_attendant_gets_self_service_assignment(
-    qapp, sale_service, shift_service, employee_service, fuel_repo, auth_service, admin_id, attendant_id, open_shift_id, nozzle_id, employee_id, db_session
-):
-    from app.models.employee import Employee as EmployeeModel
-    from app.models.nozzle_assignment import NozzleAssignment
-    from app.core.constants import AssignmentStatus
-
-    attendant_employee = EmployeeModel(
-        employee_code="EMP-0002", first_name="Att", last_name="Endant",
-        contact_number="9998887777", joining_date=date(2026, 1, 1), user_id=attendant_id,
-    )
-    db_session.add(attendant_employee)
-    db_session.commit()
-
-    assignment = NozzleAssignment(
-        employee_id=attendant_employee.id, nozzle_id=nozzle_id, shift_id=open_shift_id,
-        opening_meter=100.0, assigned_by_id=admin_id, status=AssignmentStatus.ACTIVE.value,
-    )
-    db_session.add(assignment)
-    db_session.commit()
-
-    from app.ui.sales_window import SaleFormDialog
-
-    dialog = SaleFormDialog(sale_service, shift_service, employee_service, auth_service, attendant_id)
-    assert dialog._can_pick_freely is False
-    assert dialog._self_service_assignment is not None
-
-    dialog.quantity_input.setValue(5)
-    dialog._save()
-
-    from PySide6.QtWidgets import QDialog
-    assert dialog.result() == QDialog.Accepted
-
-
-def test_attendant_without_assignment_shows_error(
-    qapp, sale_service, shift_service, employee_service, fuel_repo, auth_service, attendant_id
-):
-    from app.ui.sales_window import SaleFormDialog
-
-    dialog = SaleFormDialog(sale_service, shift_service, employee_service, auth_service, attendant_id)
-    assert dialog._self_service_assignment is None
-
-    dialog._save()
-    assert dialog.error_label.isHidden() is False
-
-
-def test_sales_window_gates_record_button_on_manage_permission(
-    qapp, sale_service, shift_service, employee_service, fuel_repo, auth_service, accountant_id
-):
-    from app.ui.sales_window import SalesWindow
-
-    window = SalesWindow(sale_service, shift_service, employee_service, auth_service, accountant_id)
-    assert window.sales_tab.add_button.isHidden() is True
-    assert window.customers_tab.add_button.isHidden() is True
-
-
-def test_sale_row_shows_payment_status(
-    qapp, sale_service, shift_service, employee_service, fuel_repo, auth_service, admin_id, open_shift_id, nozzle_id, employee_id
-):
-    from app.ui.sales_window import SalesTab
-
-    tab = SalesTab(sale_service, shift_service, employee_service, auth_service, admin_id, can_manage=True)
-    from app.schemas.sale import SaleCreate
-    from app.core.constants import PaymentMethod
-    from decimal import Decimal
-
+    credit_service.create_credit_account(admin_id, CreditAccountCreate(customer_id=customer_id, credit_limit=Decimal("5000")))
     sale_service.create_sale(
         admin_id,
-        SaleCreate(shift_id=open_shift_id, nozzle_id=nozzle_id, employee_id=employee_id, quantity=Decimal("5"), payment_method=PaymentMethod.CASH),
+        SaleCreate(shift_id=open_shift_id, nozzle_id=nozzle_id, employee_id=employee_id, quantity=Decimal("10"), payment_method=PaymentMethod.CREDIT, customer_id=customer_id),
     )
-    tab.refresh()
-    assert tab.table.item(0, 7).text() == "Success"
+
+    window = CreditWindow(credit_service, sale_service, auth_service, admin_id)
+    assert window.accounts_tab.table.rowCount() == 1
+    assert window.accounts_tab.table.item(0, 0).text() == "Ravi Transports"
+    assert window.accounts_tab.table.item(0, 2).text() == "1000.00"
 
 
-def test_manage_buttons_hidden_for_view_only_role(
-    qapp, sale_service, shift_service, employee_service, fuel_repo, auth_service, accountant_id
-):
-    from app.ui.sales_window import SalesTab
-
-    tab = SalesTab(sale_service, shift_service, employee_service, auth_service, accountant_id, can_manage=False)
-    assert tab.mark_failed_button.isHidden() is True
-    assert tab.refund_button.isHidden() is True
+@pytest.fixture()
+def accountant_id(db_session):
+    seed_initial_data()
+    return make_user(db_session, UserRole.ACCOUNTANT.value, "accountant1").id
 
 
-def test_customer_form_creates_customer(qapp, sale_service, admin_id):
+def test_manage_buttons_hidden_for_view_only_role(qapp, credit_service, sale_service, auth_service, accountant_id):
+    from app.ui.credit_window import CreditWindow
+
+    window = CreditWindow(credit_service, sale_service, auth_service, accountant_id)
+    assert window.accounts_tab.open_button.isHidden() is True
+    assert window.accounts_tab.limit_button.isHidden() is True
+    assert window.accounts_tab.payment_button.isHidden() is True
+    assert window.accounts_tab.statement_button.isHidden() is False
+
+
+def test_manage_buttons_visible_for_manager(qapp, credit_service, sale_service, auth_service, admin_id):
+    from app.ui.credit_window import CreditWindow
+
+    window = CreditWindow(credit_service, sale_service, auth_service, admin_id)
+    assert window.accounts_tab.open_button.isHidden() is False
+
+
+def test_open_account_dialog_creates_account(qapp, credit_service, sale_service, admin_id, customer_id):
     from PySide6.QtWidgets import QDialog
 
-    from app.ui.sales_window import CustomerFormDialog
+    from app.ui.credit_window import CreditAccountFormDialog
 
-    dialog = CustomerFormDialog(sale_service, admin_id)
-    dialog.name_input.setText("Ravi Transports")
+    dialog = CreditAccountFormDialog(credit_service, sale_service, admin_id)
+    dialog.limit_input.setValue(2500)
     dialog._save()
 
     assert dialog.result() == QDialog.Accepted
-    assert len(sale_service.list_customers(admin_id)) == 1
+    account = credit_service.get_credit_account(admin_id, customer_id)
+    assert account.credit_limit == Decimal("2500.00")

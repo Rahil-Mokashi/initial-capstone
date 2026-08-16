@@ -36,7 +36,7 @@ from app.schemas.tank import TankTransactionCreate
 
 
 class SaleService:
-    def __init__(self, sale_repo, shift_repo, nozzle_repo, fuel_repo, employee_repo, customer_repo, tank_repo, tank_service, audit_repo, auth_service, payment_repo):
+    def __init__(self, sale_repo, shift_repo, nozzle_repo, fuel_repo, employee_repo, customer_repo, tank_repo, tank_service, audit_repo, auth_service, payment_repo, credit_service):
         self._sale_repo = sale_repo
         self._shift_repo = shift_repo
         self._nozzle_repo = nozzle_repo
@@ -48,6 +48,7 @@ class SaleService:
         self._audit_repo = audit_repo
         self._auth_service = auth_service
         self._payment_repo = payment_repo
+        self._credit_service = credit_service
 
     @require_permission(Permission.SALE_MANAGE.value)
     def create_sale(self, actor_user_id: str, data: SaleCreate) -> Sale:
@@ -79,6 +80,9 @@ class SaleService:
 
         rate_per_liter = fuel.rate_per_liter
         amount = data.quantity * rate_per_liter
+
+        if data.payment_method == PaymentMethod.CREDIT:
+            self._credit_service.ensure_credit_available(data.customer_id, amount)
 
         receipt_number = self._sale_repo.next_receipt_number()
         sale = Sale(

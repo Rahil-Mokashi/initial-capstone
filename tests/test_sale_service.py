@@ -20,6 +20,8 @@ from app.models.role import Role
 from app.models.shift import Shift
 from app.models.user import User
 from app.repositories.audit_log_repository import AuditLogRepository
+from app.repositories.credit_account_repository import CreditAccountRepository
+from app.repositories.customer_payment_repository import CustomerPaymentRepository
 from app.repositories.customer_repository import CustomerRepository
 from app.repositories.employee_repository import EmployeeRepository
 from app.repositories.fuel_reconciliation_repository import FuelReconciliationRepository
@@ -33,10 +35,12 @@ from app.repositories.tank_repository import TankRepository
 from app.repositories.tank_transaction_repository import TankTransactionRepository
 from app.repositories.user_repository import UserRepository
 from app.repositories.user_session_repository import UserSessionRepository
+from app.schemas.credit import CreditAccountCreate
 from app.schemas.customer import CustomerCreate
 from app.schemas.sale import SaleCreate
 from app.schemas.tank import TankCreate
 from app.services.auth_service import AuthService
+from app.services.credit_service import CreditService
 from app.services.sale_service import SaleService
 from app.services.tank_service import TankService
 
@@ -142,13 +146,24 @@ def open_shift_id(db_session, admin_id):
 
 
 @pytest.fixture()
-def sale_service(db_session, tank_service):
+def credit_service(db_session):
+    audit_repo = AuditLogRepository(db_session)
+    auth_service = AuthService(UserRepository(db_session), audit_repo, UserSessionRepository(db_session))
+    return CreditService(
+        CreditAccountRepository(db_session), CustomerPaymentRepository(db_session),
+        CustomerRepository(db_session), SaleRepository(db_session), audit_repo, auth_service,
+    )
+
+
+@pytest.fixture()
+def sale_service(db_session, tank_service, credit_service):
     audit_repo = AuditLogRepository(db_session)
     auth_service = AuthService(UserRepository(db_session), audit_repo, UserSessionRepository(db_session))
     return SaleService(
         SaleRepository(db_session), ShiftRepository(db_session), NozzleRepository(db_session),
         FuelRepository(db_session), EmployeeRepository(db_session), CustomerRepository(db_session),
         TankRepository(db_session), tank_service, audit_repo, auth_service, PaymentRepository(db_session),
+        credit_service,
     )
 
 
@@ -228,14 +243,34 @@ def test_credit_sale_requires_customer(sale_service, admin_id, open_shift_id, no
         )
 
 
-def test_credit_sale_with_customer(sale_service, admin_id, open_shift_id, nozzle_id, employee_id):
+def test_credit_sale_with_customer(sale_service, credit_service, admin_id, open_shift_id, nozzle_id, employee_id):
     customer = sale_service.create_customer(admin_id, CustomerCreate(name="Ravi Transports"))
+    credit_service.create_credit_account(admin_id, CreditAccountCreate(customer_id=customer.id, credit_limit=Decimal("5000")))
     sale = sale_service.create_sale(
         admin_id,
         make_sale_data(shift_id=open_shift_id, nozzle_id=nozzle_id, employee_id=employee_id, payment_method=PaymentMethod.CREDIT, customer_id=customer.id),
     )
     assert sale.customer_id == customer.id
     assert sale.payment_method == PaymentMethod.CREDIT.value
+
+
+def test_credit_sale_without_credit_account_is_rejected(sale_service, admin_id, open_shift_id, nozzle_id, employee_id):
+    customer = sale_service.create_customer(admin_id, CustomerCreate(name="Ravi Transports"))
+    with pytest.raises(ConflictError):
+        sale_service.create_sale(
+            admin_id,
+            make_sale_data(shift_id=open_shift_id, nozzle_id=nozzle_id, employee_id=employee_id, payment_method=PaymentMethod.CREDIT, customer_id=customer.id),
+        )
+
+
+def test_credit_sale_exceeding_limit_is_rejected(sale_service, credit_service, admin_id, open_shift_id, nozzle_id, employee_id):
+    customer = sale_service.create_customer(admin_id, CustomerCreate(name="Ravi Transports"))
+    credit_service.create_credit_account(admin_id, CreditAccountCreate(customer_id=customer.id, credit_limit=Decimal("500")))
+    with pytest.raises(ConflictError):
+        sale_service.create_sale(
+            admin_id,
+            make_sale_data(shift_id=open_shift_id, nozzle_id=nozzle_id, employee_id=employee_id, quantity=Decimal("10"), payment_method=PaymentMethod.CREDIT, customer_id=customer.id),
+        )
 
 
 def test_sale_denied_without_permission(sale_service, accountant_id, open_shift_id, nozzle_id, employee_id):
@@ -288,8 +323,9 @@ def test_cash_sale_creates_a_successful_payment(sale_service, admin_id, open_shi
     assert payment.amount == sale.amount
 
 
-def test_credit_sale_creates_a_pending_payment(sale_service, admin_id, open_shift_id, nozzle_id, employee_id):
+def test_credit_sale_creates_a_pending_payment(sale_service, credit_service, admin_id, open_shift_id, nozzle_id, employee_id):
     customer = sale_service.create_customer(admin_id, CustomerCreate(name="Ravi Transports"))
+    credit_service.create_credit_account(admin_id, CreditAccountCreate(customer_id=customer.id, credit_limit=Decimal("5000")))
     sale = sale_service.create_sale(
         admin_id,
         make_sale_data(shift_id=open_shift_id, nozzle_id=nozzle_id, employee_id=employee_id, payment_method=PaymentMethod.CREDIT, customer_id=customer.id),
@@ -347,8 +383,9 @@ def test_refund_payment(sale_service, admin_id, open_shift_id, nozzle_id, employ
     assert refunded.status == PaymentStatus.REFUNDED.value
 
 
-def test_cannot_refund_a_pending_payment(sale_service, admin_id, open_shift_id, nozzle_id, employee_id):
+def test_cannot_refund_a_pending_payment(sale_service, credit_service, admin_id, open_shift_id, nozzle_id, employee_id):
     customer = sale_service.create_customer(admin_id, CustomerCreate(name="Ravi Transports"))
+    credit_service.create_credit_account(admin_id, CreditAccountCreate(customer_id=customer.id, credit_limit=Decimal("5000")))
     sale = sale_service.create_sale(
         admin_id,
         make_sale_data(shift_id=open_shift_id, nozzle_id=nozzle_id, employee_id=employee_id, payment_method=PaymentMethod.CREDIT, customer_id=customer.id),
