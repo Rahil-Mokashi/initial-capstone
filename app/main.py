@@ -5,6 +5,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.core.config import settings
 from app.core.exceptions import DatabaseInitializationError
 from app.core.logging import logger, setup_logging
+from app.core.paths import ensure_app_directories
 from app.database.connection import init_db
 from app.database.seed import seed_initial_data
 
@@ -16,6 +17,7 @@ def _initialize_database() -> None:
     try:
         init_db()
         seed_initial_data()
+        ensure_app_directories()
     except (SQLAlchemyError, OSError) as exc:
         logger.error("Database initialization failed", exc_info=True)
         raise DatabaseInitializationError(

@@ -1,0 +1,42 @@
+name: Release
+
+# Triggered by pushing a version tag (e.g. `git tag v1.0.0 && git push origin v1.0.0`).
+# Builds the standalone exe and the Inno Setup installer, then attaches both
+# to a GitHub Release for that tag - the release process the packaging
+# effort (Phase 20) was still missing: a build produced by hand on one
+# machine isn't a repeatable release.
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install build dependencies
+        run: pip install -r requirements-build.txt
+
+      - name: Build standalone executable
+        run: pyinstaller petrol_pump_erp.spec
+
+      - name: Install Inno Setup
+        run: choco install innosetup -y --no-progress
+
+      - name: Build installer
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\petrol_pump_erp.iss
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/PetrolPumpERP.exe
+            installer/output/PetrolPumpERP-Setup-*.exe
+          generate_release_notes: true

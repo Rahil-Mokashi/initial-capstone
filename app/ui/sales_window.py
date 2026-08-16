@@ -198,8 +198,10 @@ class SalesTab(QWidget):
 
         from app.services.report_export import export_sale_receipt_pdf
 
+        from app.core.paths import default_export_path
+
         default_name = f"receipt_{sale.receipt_number}.pdf"
-        file_path, _ = QFileDialog.getSaveFileName(self, "Export receipt", default_name, "PDF Files (*.pdf)")
+        file_path, _ = QFileDialog.getSaveFileName(self, "Export receipt", default_export_path(default_name), "PDF Files (*.pdf)")
         if not file_path:
             return
 

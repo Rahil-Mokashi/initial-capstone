@@ -410,7 +410,11 @@ class CustomerStatementDialog(QDialog):
         self._export(export_table_excel, "Excel Files (*.xlsx)", ".xlsx")
 
     def _export(self, export_fn, file_filter: str, default_suffix: str) -> None:
-        file_path, _ = QFileDialog.getSaveFileName(self, "Export statement", f"customer_statement{default_suffix}", file_filter)
+        from app.core.paths import default_export_path
+
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "Export statement", default_export_path(f"customer_statement{default_suffix}"), file_filter
+        )
         if not file_path:
             return
         try:

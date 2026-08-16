@@ -30,6 +30,10 @@ wheels/
 # ...except our own hand-written build config, which is checked in intentionally.
 !petrol_pump_erp.spec
 
+# Inno Setup installer output (built from installer/petrol_pump_erp.iss,
+# not checked in - same reasoning as dist/ above)
+installer/output/
+
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt

@@ -128,10 +128,10 @@ def init_db() -> None:
     # freshly created, still-empty database has nothing worth backing
     # up yet. A failure here must never block the app from starting.
     if db_has_data:
-        from app.core.constants import AUTO_BACKUP_INTERVAL_HOURS
+        from app.core.config import settings
 
         try:
-            if backup_module.should_take_scheduled_backup(db_path, AUTO_BACKUP_INTERVAL_HOURS):
+            if backup_module.should_take_scheduled_backup(db_path, settings.auto_backup_interval_hours):
                 backup_path = backup_module.create_backup(db_path, reason="scheduled")
                 logger.info("Scheduled backup created at %s", backup_path)
         except (OSError, IOError):
