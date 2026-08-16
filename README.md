@@ -249,6 +249,12 @@ Everything below is implemented, tested, and running — not planned. Each modul
 - **Customer statements**: the credit statement dialog gained Print/Export PDF/Export Excel, reusing the same generic report export code as everything else
 - Still deferred: print configuration management (default printer/paper size/margins) and the remaining document types (shift/daily/attendance/employee/purchase/inventory/management) that depend on report types Phase 16 hasn't built yet
 
+### Backup & Recovery (Phase 18 — complete except configurable location, recovery documentation, and optional encryption)
+- Manual backup, pre-migration backup, backup history, and restore already existed from the 2026-08-16 audit pass
+- New: automatic scheduled backups (taken on startup once the most recent backup is more than 24 hours old), backup verification (every backup is integrity-checked immediately after being created, not just trusted), and an on-demand "Check Integrity" button (`PRAGMA integrity_check`)
+- A failed scheduled or pre-migration backup is logged and never blocks the app from starting
+- Still deferred: a configurable backup location (needs a settings screen that doesn't exist yet), written recovery-workflow documentation, and optional backup encryption
+
 ### Dashboard redesign (2026-08-16, user-requested)
 - Dashboard cards are grouped into labeled sections ("Daily Operations", "Reports & Administration") instead of one flat grid, now that there are 12 modules
 - The top bar was decluttered to just the user's name/role and a single "Account" menu — every module is reachable from its own dashboard card, so duplicating them as top-bar buttons was redundant and was the actual cause of the button crowding a prior audit flagged
@@ -274,7 +280,7 @@ Not yet built: Payments (dedicated reconciliation reporting beyond what Sale alr
 | ORM | SQLAlchemy 2.x | in use |
 | Validation | Pydantic v2 | in use |
 | Configuration | pydantic-settings | in use |
-| Testing | pytest | in use — 423 tests |
+| Testing | pytest | in use — 434 tests |
 | Logging | Python standard `logging` | in use — console + a rotating file colocated with the database |
 | Migrations | Alembic | in use — `init_db()` runs `alembic upgrade head`, not `Base.metadata.create_all()` |
 | PDF reports | ReportLab | in use — fuel-type summary report, more reports to follow in Phase 16 |
@@ -308,7 +314,7 @@ PetrolPumpERP/
 │   ├── schemas/                 # Pydantic input-validation schemas
 │   ├── services/                # Business logic, RBAC checks, audit logging
 │   └── ui/                      # PySide6 windows/dialogs + shared stylesheet
-├── tests/                       # pytest suite (423 tests)
+├── tests/                       # pytest suite (434 tests)
 ├── docs/
 │   └── screenshots/             # Screenshots used in this README
 ├── requirements.txt
@@ -366,7 +372,7 @@ On first run this will:
 pytest
 ```
 
-All 423 tests should pass, in well under a minute. To run a single module's tests:
+All 434 tests should pass, in well under a minute. To run a single module's tests:
 
 ```bash
 pytest tests/test_auth_rbac.py -v
@@ -465,7 +471,8 @@ This offline desktop application is phase one of a two-phase plan. Once it prove
 | 15: Reconciliation Management | ✅ Complete (dedicated reconciliation reports deferred to Phase 16) |
 | 16: Reporting System | 🟡 Partial — six reports closing out every earlier phase's own "deferred to Phase 16" promise; the full problemstatement.md #25-32 enumeration (daily/HR/inventory/management reports) is not started |
 | 17: Printing System | 🟡 Complete for every report/document that exists today (print preview, CSV export, receipts, statements); print configuration management and document types tied to the still-missing Phase 16 reports are deferred |
-| 18–22: Testing, Pilot, Release | ⬜ Not started (Packaging/Phase 20 started early, Backup/Phase 18 done early too — see below) |
+| 18: Backup & Recovery | 🟡 Complete except configurable backup location, recovery-workflow documentation, and optional encryption |
+| 19–22: Testing, Pilot, Release | ⬜ Not started (Packaging/Phase 20 started early — see below) |
 
 See [ROADMAP.md](ROADMAP.md) for the full, granular breakdown of every phase.
 

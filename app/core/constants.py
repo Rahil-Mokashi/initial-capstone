@@ -309,3 +309,9 @@ DEFAULT_FUEL_TYPES = ["Petrol", "Diesel", "Power"]
 # is surfaced as needing attention. A flag, not an alarm - matches the
 # non-accusatory tone already used for reconciliation variance.
 DASHBOARD_LOW_STOCK_THRESHOLD_PERCENT = 20.0
+
+# Automatic scheduled backups (problemstatement.md #24, Phase 18): a
+# backup is taken on startup whenever the most recent one is older than
+# this many hours. 24h matches "once a day" without needing a
+# background scheduler thread in an app that isn't always running.
+AUTO_BACKUP_INTERVAL_HOURS = 24.0

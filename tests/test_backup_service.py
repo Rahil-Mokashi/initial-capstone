@@ -132,6 +132,21 @@ def test_restore_takes_a_safety_backup_of_the_pre_restore_state(backup_service, 
     assert any("pre_restore" in b.filename for b in after_restore)
 
 
+def test_check_integrity_passes_for_a_sound_database(backup_service, admin_id, db_session):
+    session, _ = db_session
+    is_ok, messages = backup_service.check_integrity(admin_id)
+
+    assert is_ok is True
+    assert messages == ["ok"]
+    events = {log.event_type for log in session.query(AuditLog).all()}
+    assert "database_integrity_checked" in events
+
+
+def test_check_integrity_denied_without_permission(backup_service, accountant_id):
+    with pytest.raises(PermissionDeniedError):
+        backup_service.check_integrity(accountant_id)
+
+
 def test_restore_actually_overwrites_the_live_database(backup_service, admin_id, db_session):
     session, sqlite_path = db_session
     info = backup_service.create_backup(admin_id)

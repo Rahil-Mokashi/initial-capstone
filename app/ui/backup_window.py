@@ -59,9 +59,14 @@ class BackupWindow(QMainWindow):
         self.restore_button.setObjectName("dangerButton")
         self.restore_button.clicked.connect(self._restore_selected)
 
+        self.check_integrity_button = QPushButton("Check Integrity")
+        self.check_integrity_button.setObjectName("secondaryButton")
+        self.check_integrity_button.clicked.connect(self._check_integrity)
+
         top_row = QHBoxLayout()
         top_row.addWidget(title)
         top_row.addStretch()
+        top_row.addWidget(self.check_integrity_button)
         top_row.addWidget(self.restore_button)
         top_row.addWidget(self.backup_now_button)
 
@@ -109,6 +114,21 @@ class BackupWindow(QMainWindow):
             return
         self.refresh()
         QMessageBox.information(self, "Backup created", "A new backup has been saved.")
+
+    def _check_integrity(self) -> None:
+        try:
+            is_ok, messages = self._backup_service.check_integrity(self._actor_user_id)
+        except AppError as exc:
+            QMessageBox.warning(self, "Could not check integrity", str(exc))
+            return
+        except Exception as exc:  # noqa: BLE001
+            QMessageBox.warning(self, "Could not check integrity", describe_unexpected_error(exc))
+            return
+
+        if is_ok:
+            QMessageBox.information(self, "Integrity check", "The database passed its integrity check.")
+        else:
+            QMessageBox.warning(self, "Integrity check", "Problems were found:\n\n" + "\n".join(messages))
 
     def _restore_selected(self) -> None:
         rows = self.table.selectionModel().selectedRows()
