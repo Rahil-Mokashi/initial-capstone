@@ -1,0 +1,218 @@
+"""Sales service layer (problemstatement.md #16, #17, Phase 11).
+
+Depends on TankService (not just TankRepository) for the exact same
+reason ProcurementService does: a sale moves fuel out of a tank through
+the normal, audited ISSUE-transaction path, never a parallel one. rate
+and amount are snapshotted from the fuel's current price at the moment
+of sale (user-confirmed requirement, 2026-08-16: prices change over
+time, so a completed sale's amount must never silently shift later).
+Sales are never deleted - cancel_sale changes status and posts a
+compensating ADJUSTMENT transaction to put the fuel back, matching the
+project's VOID/REVERSE/ADJUST-not-DELETE rule.
+"""
+
+from decimal import Decimal
+from typing import List, Optional
+
+from app.core.constants import PaymentMethod, Permission, SaleStatus, ShiftStatus, TankTransactionType
+from app.core.exceptions import ConflictError, NotFoundError
+from app.core.permissions import require_permission
+from app.database.base import StatusEnum
+from app.models.customer import Customer
+from app.models.sale import Sale
+from app.schemas.customer import CustomerCreate
+from app.schemas.sale import SaleCreate
+from app.schemas.tank import TankTransactionCreate
+
+
+class SaleService:
+    def __init__(self, sale_repo, shift_repo, nozzle_repo, fuel_repo, employee_repo, customer_repo, tank_repo, tank_service, audit_repo, auth_service):
+        self._sale_repo = sale_repo
+        self._shift_repo = shift_repo
+        self._nozzle_repo = nozzle_repo
+        self._fuel_repo = fuel_repo
+        self._employee_repo = employee_repo
+        self._customer_repo = customer_repo
+        self._tank_repo = tank_repo
+        self._tank_service = tank_service
+        self._audit_repo = audit_repo
+        self._auth_service = auth_service
+
+    @require_permission(Permission.SALE_MANAGE.value)
+    def create_sale(self, actor_user_id: str, data: SaleCreate) -> Sale:
+        shift = self._shift_repo.get_by_id(data.shift_id)
+        if not shift:
+            raise NotFoundError(f"Shift not found: {data.shift_id}")
+        if shift.status != ShiftStatus.OPEN.value:
+            raise ConflictError("Cannot record a sale against a shift that is not open")
+
+        nozzle = self._nozzle_repo.get_by_id(data.nozzle_id)
+        if not nozzle:
+            raise NotFoundError(f"Nozzle not found: {data.nozzle_id}")
+        if nozzle.status != "active":
+            raise ConflictError(f"Nozzle {nozzle.code} is not active")
+
+        if not self._employee_repo.get_by_id(data.employee_id):
+            raise NotFoundError(f"Employee not found: {data.employee_id}")
+
+        if data.payment_method == PaymentMethod.CREDIT and not data.customer_id:
+            raise ValueError("A customer is required for a credit sale")
+        if data.customer_id and not self._customer_repo.get_by_id(data.customer_id):
+            raise NotFoundError(f"Customer not found: {data.customer_id}")
+
+        fuel = self._fuel_repo.get_by_id(nozzle.fuel_id)
+        if not fuel:
+            raise NotFoundError(f"Fuel type not found: {nozzle.fuel_id}")
+
+        tank_id = self._resolve_tank_id(nozzle)
+
+        rate_per_liter = fuel.rate_per_liter
+        amount = data.quantity * rate_per_liter
+
+        receipt_number = self._sale_repo.next_receipt_number()
+        sale = Sale(
+            receipt_number=receipt_number,
+            shift_id=data.shift_id,
+            nozzle_id=data.nozzle_id,
+            fuel_id=nozzle.fuel_id,
+            employee_id=data.employee_id,
+            quantity=data.quantity,
+            rate_per_liter=rate_per_liter,
+            amount=amount,
+            payment_method=data.payment_method.value,
+            customer_id=data.customer_id,
+            status=SaleStatus.COMPLETED.value,
+            recorded_by_id=actor_user_id,
+            remarks=data.remarks,
+        )
+        sale = self._sale_repo.add(sale)
+
+        transaction = self._tank_service.record_transaction_as_related_action(
+            actor_user_id,
+            tank_id,
+            TankTransactionType.ISSUE,
+            TankTransactionCreate(quantity=data.quantity, reference=receipt_number, remarks=f"Sale {receipt_number}"),
+        )
+        sale.tank_transaction_id = transaction.id
+        sale = self._sale_repo.update(sale)
+
+        self._audit_repo.record(
+            event_type="sale_recorded",
+            actor_id=actor_user_id,
+            entity_type="Sale",
+            entity_id=sale.id,
+            description=f"Sold {data.quantity} of {fuel.fuel_type} for {amount} via {data.payment_method.value} ({receipt_number})",
+        )
+        return sale
+
+    @require_permission(Permission.SALE_VIEW.value)
+    def list_sales(self, actor_user_id: str) -> List[Sale]:
+        return self._sale_repo.list_all()
+
+    @require_permission(Permission.SALE_VIEW.value)
+    def get_sale(self, actor_user_id: str, sale_id: str) -> Sale:
+        return self._get_sale_or_raise(sale_id)
+
+    @require_permission(Permission.SALE_MANAGE.value)
+    def cancel_sale(self, actor_user_id: str, sale_id: str, reason: str) -> Sale:
+        if not reason or not reason.strip():
+            raise ValueError("A reason is required to cancel a sale")
+
+        sale = self._get_sale_or_raise(sale_id)
+        if sale.status != SaleStatus.COMPLETED.value:
+            raise ConflictError(f"Cannot cancel a sale with status {sale.status}")
+
+        tank_id = sale.tank_transaction.tank_id if sale.tank_transaction else self._resolve_tank_id(sale.nozzle)
+        reversal = self._tank_service.record_transaction_as_related_action(
+            actor_user_id,
+            tank_id,
+            TankTransactionType.ADJUSTMENT,
+            TankTransactionCreate(
+                quantity=sale.quantity,
+                reference=sale.receipt_number,
+                remarks=f"Reversal of cancelled sale {sale.receipt_number}: {reason.strip()}",
+            ),
+        )
+
+        sale.status = SaleStatus.CANCELLED.value
+        sale.cancellation_reason = reason.strip()
+        sale.reversal_transaction_id = reversal.id
+        sale = self._sale_repo.update(sale)
+
+        self._audit_repo.record(
+            event_type="sale_cancelled",
+            actor_id=actor_user_id,
+            entity_type="Sale",
+            entity_id=sale.id,
+            description=reason.strip(),
+        )
+        return sale
+
+    # ------------------------------------------------------------------
+    # Customers
+    # ------------------------------------------------------------------
+
+    @require_permission(Permission.SALE_MANAGE.value)
+    def create_customer(self, actor_user_id: str, data: CustomerCreate) -> Customer:
+        if self._customer_repo.get_by_name(data.name):
+            raise ConflictError(f"A customer named {data.name!r} already exists")
+
+        customer = Customer(
+            name=data.name, phone=data.phone, email=data.email, address=data.address, status=StatusEnum.ACTIVE.value
+        )
+        customer = self._customer_repo.add(customer)
+        self._audit_repo.record(
+            event_type="customer_created",
+            actor_id=actor_user_id,
+            entity_type="Customer",
+            entity_id=customer.id,
+            description=f"Created customer {data.name}",
+        )
+        return customer
+
+    @require_permission(Permission.SALE_VIEW.value)
+    def list_customers(self, actor_user_id: str) -> List[Customer]:
+        return self._customer_repo.list_all()
+
+    @require_permission(Permission.SALE_MANAGE.value)
+    def set_customer_status(self, actor_user_id: str, customer_id: str, status: StatusEnum, reason: str) -> Customer:
+        if not reason or not reason.strip():
+            raise ValueError("A reason is required to change a customer's status")
+
+        customer = self._customer_repo.get_by_id(customer_id)
+        if not customer:
+            raise NotFoundError(f"Customer not found: {customer_id}")
+
+        old_status = customer.status
+        customer.status = status.value
+        customer = self._customer_repo.update(customer)
+        self._audit_repo.record(
+            event_type="customer_status_changed",
+            actor_id=actor_user_id,
+            entity_type="Customer",
+            entity_id=customer.id,
+            description=reason.strip(),
+            old_value=old_status,
+            new_value=status.value,
+        )
+        return customer
+
+    def _resolve_tank_id(self, nozzle) -> str:
+        if nozzle.tank_id:
+            return nozzle.tank_id
+        active_tanks = [
+            tank for tank in self._tank_repo.list_all() if tank.fuel_id == nozzle.fuel_id and tank.status == "active"
+        ]
+        if len(active_tanks) == 1:
+            return active_tanks[0].id
+        if not active_tanks:
+            raise ConflictError("No active tank found for this nozzle's fuel type; configure the nozzle's tank")
+        raise ConflictError(
+            "More than one active tank exists for this nozzle's fuel type; configure the nozzle's tank explicitly"
+        )
+
+    def _get_sale_or_raise(self, sale_id: str) -> Sale:
+        sale = self._sale_repo.get_by_id(sale_id)
+        if not sale:
+            raise NotFoundError(f"Sale not found: {sale_id}")
+        return sale

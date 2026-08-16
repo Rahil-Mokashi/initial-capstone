@@ -106,6 +106,7 @@ def nozzle_service(db_session):
         NozzleAssignmentRepository(db_session),
         audit_repo,
         auth_service,
+        TankRepository(db_session),
     )
 
 

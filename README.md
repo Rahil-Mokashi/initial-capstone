@@ -202,6 +202,13 @@ Everything below is implemented, tested, and running — not planned. Each modul
 - A purchase order's status (partially delivered / delivered) is recomputed from its deliveries every time, not incremented — can't drift out of sync
 - Supplier invoices and payments: partial payments supported, a payment can't exceed the outstanding balance, an already-fully-paid invoice can't be paid again
 
+### Sales Management (Phase 11 — complete, sales reports/printable receipts deferred)
+- Every sale snapshots its own rate and amount at the moment of the transaction (never a live lookup against the fuel's current price) — fuel prices change over time, and a historical sale's amount must never silently shift
+- Recording a sale posts a real Tank ISSUE transaction through the same audited `TankService` path every other stock movement uses; cancelling a completed sale posts a compensating tank adjustment and requires a reason — the original sale is never deleted or overwritten
+- Supports cash, UPI, card, and credit payment methods; a credit sale requires a linked customer
+- The sale form adapts to who's using it: a Manager/Supervisor gets full shift/nozzle/employee pickers, while an Attendant gets an auto-resolved read-only view of their own active nozzle assignment — no picking something that isn't already true
+- Customer master data (name/contact/address) with the same create/deactivate-with-reason pattern used for Suppliers
+
 ### Dashboard redesign (2026-08-16, user-requested)
 - Dashboard cards are grouped into labeled sections ("Daily Operations", "Reports & Administration") instead of one flat grid, now that there are 11 modules
 - The top bar was decluttered to just the user's name/role and a single "Account" menu — every module is reachable from its own dashboard card, so duplicating them as top-bar buttons was redundant and was the actual cause of the button crowding a prior audit flagged
@@ -212,7 +219,7 @@ Everything below is implemented, tested, and running — not planned. Each modul
 - Application startup (`app/main.py`) wraps database init/seed failures into a single `DatabaseInitializationError` with a clear message and a logged traceback, instead of crashing with a raw stack trace
 - Every UI dialog's save/action handler catches its specific errors (validation, business-rule conflicts) for a precise message, then falls back to a generic "something went wrong" message for anything unexpected — logged in full, never left to crash the app or a Qt event-loop callback
 
-Not yet built: Procurement, Sales, Payments, Credit, Expenses, full Reconciliation module, full Reporting System (print/PDF/Excel export), Printing, Backup/Restore. See [ROADMAP.md](ROADMAP.md) for the full phase-by-phase plan.
+Not yet built: Payments (dedicated reconciliation reporting beyond what Sale already tracks), Credit, Expenses, full cash/UPI/card Reconciliation module, full Reporting System (dedicated reports beyond the fuel-type summary), Printing. See [ROADMAP.md](ROADMAP.md) for the full phase-by-phase plan.
 
 ---
 
@@ -226,7 +233,7 @@ Not yet built: Procurement, Sales, Payments, Credit, Expenses, full Reconciliati
 | ORM | SQLAlchemy 2.x | in use |
 | Validation | Pydantic v2 | in use |
 | Configuration | pydantic-settings | in use |
-| Testing | pytest | in use — 303 tests |
+| Testing | pytest | in use — 329 tests |
 | Logging | Python standard `logging` | in use — console + a rotating file colocated with the database |
 | Migrations | Alembic | in use — `init_db()` runs `alembic upgrade head`, not `Base.metadata.create_all()` |
 | PDF reports | ReportLab | in use — fuel-type summary report, more reports to follow in Phase 16 |
@@ -260,7 +267,7 @@ PetrolPumpERP/
 │   ├── schemas/                 # Pydantic input-validation schemas
 │   ├── services/                # Business logic, RBAC checks, audit logging
 │   └── ui/                      # PySide6 windows/dialogs + shared stylesheet
-├── tests/                       # pytest suite (303 tests)
+├── tests/                       # pytest suite (329 tests)
 ├── docs/
 │   └── screenshots/             # Screenshots used in this README
 ├── requirements.txt
@@ -318,7 +325,7 @@ On first run this will:
 pytest
 ```
 
-All 303 tests should pass, in well under a minute. To run a single module's tests:
+All 329 tests should pass, in well under a minute. To run a single module's tests:
 
 ```bash
 pytest tests/test_auth_rbac.py -v
@@ -410,7 +417,8 @@ This offline desktop application is phase one of a two-phase plan. Once it prove
 | User Management (Phase 4 extension) | ✅ Complete — logins for all 6 roles, multiple users per role, password self-service |
 | Database migrations, backup/restore, audit log viewer, report export | ✅ Complete (2026-08-16, resolving a full build audit) — see below |
 | 10: Procurement Management | ✅ Complete (dedicated procurement reports deferred to Phase 16) |
-| 11–22: Sales, Payments, Credit, Expenses, Reconciliation, full Reporting System, Printing, Testing, Pilot, Release | ⬜ Not started (Packaging/Phase 20 started early, Backup/Phase 18 and parts of Reporting/Phase 16 done early too — see below) |
+| 11: Sales Management | ✅ Complete (sales reports deferred to Phase 16, printable receipts deferred to Phase 17) |
+| 12–22: Payments, Credit, Expenses, Reconciliation, full Reporting System, Printing, Testing, Pilot, Release | ⬜ Not started (Packaging/Phase 20 started early, Backup/Phase 18 and parts of Reporting/Phase 16 done early too — see below) |
 
 See [ROADMAP.md](ROADMAP.md) for the full, granular breakdown of every phase.
 

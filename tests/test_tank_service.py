@@ -154,6 +154,28 @@ def test_attendant_cannot_create_tank(tank_service, attendant_id, fuel_id):
         make_tank(tank_service, attendant_id, fuel_id)
 
 
+def test_attendant_cannot_call_record_transaction_directly(tank_service, admin_id, attendant_id, fuel_id):
+    """record_transaction requires INVENTORY_MANAGE - an attendant (who
+    only has SALE_MANAGE) must be denied here directly."""
+    tank = make_tank(tank_service, admin_id, fuel_id)
+    with pytest.raises(PermissionDeniedError):
+        tank_service.record_transaction(
+            attendant_id, tank.id, TankTransactionType.ISSUE, TankTransactionCreate(quantity=10.0)
+        )
+
+
+def test_related_action_variant_does_not_require_inventory_manage(tank_service, admin_id, attendant_id, fuel_id):
+    """record_transaction_as_related_action is what SaleService actually
+    calls so an attendant (SALE_MANAGE only, no INVENTORY_MANAGE) can
+    record a sale - the tank movement is a side effect of an action
+    already authorized at the Sale layer, not an independent one."""
+    tank = make_tank(tank_service, admin_id, fuel_id)
+    transaction = tank_service.record_transaction_as_related_action(
+        attendant_id, tank.id, TankTransactionType.ISSUE, TankTransactionCreate(quantity=10.0)
+    )
+    assert transaction.quantity == -10.0
+
+
 def test_record_receipt_increases_stock(tank_service, admin_id, fuel_id):
     tank = make_tank(tank_service, admin_id, fuel_id)
     tank_service.record_transaction(

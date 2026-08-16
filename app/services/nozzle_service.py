@@ -19,13 +19,14 @@ from app.schemas.nozzle import DispenserCreate, NozzleCreate
 
 
 class NozzleService:
-    def __init__(self, dispenser_repo, nozzle_repo, fuel_repo, assignment_repo, audit_repo, auth_service):
+    def __init__(self, dispenser_repo, nozzle_repo, fuel_repo, assignment_repo, audit_repo, auth_service, tank_repo):
         self._dispenser_repo = dispenser_repo
         self._nozzle_repo = nozzle_repo
         self._fuel_repo = fuel_repo
         self._assignment_repo = assignment_repo
         self._audit_repo = audit_repo
         self._auth_service = auth_service
+        self._tank_repo = tank_repo
 
     @require_permission(Permission.NOZZLE_MANAGE.value)
     def create_dispenser(self, actor_user_id: str, data: DispenserCreate) -> Dispenser:
@@ -86,10 +87,18 @@ class NozzleService:
         if not self._fuel_repo.get_by_id(data.fuel_id):
             raise NotFoundError(f"Fuel type not found: {data.fuel_id}")
 
+        if data.tank_id:
+            tank = self._tank_repo.get_by_id(data.tank_id)
+            if not tank:
+                raise NotFoundError(f"Tank not found: {data.tank_id}")
+            if tank.fuel_id != data.fuel_id:
+                raise ConflictError("The selected tank does not hold this nozzle's fuel type")
+
         nozzle = Nozzle(
             code=data.code,
             dispenser_id=data.dispenser_id,
             fuel_id=data.fuel_id,
+            tank_id=data.tank_id,
             status=NozzleStatus.ACTIVE.value,
         )
         nozzle = self._nozzle_repo.add(nozzle)

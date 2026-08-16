@@ -36,10 +36,11 @@ NOZZLE_HEADERS = ["Code", "Dispenser", "Fuel Type", "Status"]
 class NozzleManagementWindow(QMainWindow):
     """Tabbed Dispensers/Nozzles master-data screen."""
 
-    def __init__(self, nozzle_service, fuel_service_repo, auth_service, actor_user_id: str):
+    def __init__(self, nozzle_service, fuel_service_repo, tank_repo, auth_service, actor_user_id: str):
         super().__init__()
         self._nozzle_service = nozzle_service
         self._fuel_repo = fuel_service_repo
+        self._tank_repo = tank_repo
         self._auth_service = auth_service
         self._actor_user_id = actor_user_id
         self._can_manage = auth_service.check_permission(actor_user_id, Permission.NOZZLE_MANAGE.value)
@@ -51,7 +52,7 @@ class NozzleManagementWindow(QMainWindow):
         title.setObjectName("title")
 
         self.dispenser_tab = DispenserTab(nozzle_service, actor_user_id, self._can_manage)
-        self.nozzle_tab = NozzleTab(nozzle_service, fuel_service_repo, actor_user_id, self._can_manage)
+        self.nozzle_tab = NozzleTab(nozzle_service, fuel_service_repo, tank_repo, actor_user_id, self._can_manage)
 
         tabs = QTabWidget()
         tabs.addTab(self.dispenser_tab, "Dispensers")
@@ -199,10 +200,11 @@ class DispenserFormDialog(QDialog):
 
 
 class NozzleTab(QWidget):
-    def __init__(self, nozzle_service, fuel_repo, actor_user_id: str, can_manage: bool):
+    def __init__(self, nozzle_service, fuel_repo, tank_repo, actor_user_id: str, can_manage: bool):
         super().__init__()
         self._nozzle_service = nozzle_service
         self._fuel_repo = fuel_repo
+        self._tank_repo = tank_repo
         self._actor_user_id = actor_user_id
         self._can_manage = can_manage
 
@@ -244,7 +246,7 @@ class NozzleTab(QWidget):
         self.table.horizontalHeader().setStretchLastSection(True)
 
     def _open_add_dialog(self) -> None:
-        dialog = NozzleFormDialog(self._nozzle_service, self._fuel_repo, self._actor_user_id, self)
+        dialog = NozzleFormDialog(self._nozzle_service, self._fuel_repo, self._tank_repo, self._actor_user_id, self)
         if dialog.exec() == QDialog.Accepted:
             self.refresh()
 
@@ -277,9 +279,10 @@ class NozzleTab(QWidget):
 
 
 class NozzleFormDialog(QDialog):
-    def __init__(self, nozzle_service, fuel_repo, actor_user_id: str, parent=None):
+    def __init__(self, nozzle_service, fuel_repo, tank_repo, actor_user_id: str, parent=None):
         super().__init__(parent)
         self._nozzle_service = nozzle_service
+        self._tank_repo = tank_repo
         self._actor_user_id = actor_user_id
 
         self.setWindowTitle("Add Nozzle")
@@ -298,10 +301,17 @@ class NozzleFormDialog(QDialog):
         for fuel in fuel_repo.list_active():
             self.fuel_combo.addItem(fuel.fuel_type, fuel.id)
 
+        self.tank_combo = QComboBox()
+        self.tank_combo.addItem("(auto - single tank for fuel type)", None)
+        for tank in tank_repo.list_all():
+            if tank.status == "active":
+                self.tank_combo.addItem(f"{tank.code} ({tank.fuel.fuel_type if tank.fuel else ''})", tank.id)
+
         form = QFormLayout()
         form.addRow("Code", self.code_input)
         form.addRow("Dispenser", self.dispenser_combo)
         form.addRow("Fuel type", self.fuel_combo)
+        form.addRow("Tank", self.tank_combo)
 
         self.error_label = QLabel("")
         self.error_label.setObjectName("errorLabel")
@@ -338,6 +348,7 @@ class NozzleFormDialog(QDialog):
                 code=self.code_input.text(),
                 dispenser_id=self.dispenser_combo.currentData(),
                 fuel_id=self.fuel_combo.currentData(),
+                tank_id=self.tank_combo.currentData(),
             )
             self._nozzle_service.create_nozzle(self._actor_user_id, data)
         except ValidationError as exc:

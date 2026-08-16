@@ -291,7 +291,7 @@ class ProcurementService:
         delivery = self._get_delivery_or_raise(delivery_id)
         self._require_delivery_status(delivery, FuelDeliveryStatus.QUALITY_VERIFIED)
 
-        reading = self._tank_service.record_reading(
+        reading = self._tank_service.record_reading_as_related_action(
             actor_user_id,
             delivery.tank_id,
             TankReadingCreate(
@@ -329,7 +329,7 @@ class ProcurementService:
 
         quantity_received = data.dip_value - delivery.pre_dip_value
 
-        reading = self._tank_service.record_reading(
+        reading = self._tank_service.record_reading_as_related_action(
             actor_user_id,
             delivery.tank_id,
             TankReadingCreate(
@@ -338,7 +338,7 @@ class ProcurementService:
                 remarks=f"Post-dip for delivery {delivery.tanker_number}",
             ),
         )
-        transaction = self._tank_service.record_transaction(
+        transaction = self._tank_service.record_transaction_as_related_action(
             actor_user_id,
             delivery.tank_id,
             TankTransactionType.RECEIPT,

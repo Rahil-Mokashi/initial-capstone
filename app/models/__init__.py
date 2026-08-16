@@ -2,6 +2,7 @@
 
 from .attendance import Attendance
 from .audit_log import AuditLog
+from .customer import Customer
 from .dispenser import Dispenser
 from .employee import Employee
 from .employee_document import EmployeeDocument
@@ -14,6 +15,7 @@ from .permission import Permission
 from .purchase_order import PurchaseOrder, PurchaseOrderItem
 from .role import Role
 from .role_permission import role_permissions
+from .sale import Sale
 from .shift import Shift
 from .supplier import Supplier
 from .supplier_invoice import SupplierInvoice, SupplierPayment
@@ -26,6 +28,7 @@ from .user_session import UserSession
 __all__ = [
     "Attendance",
     "AuditLog",
+    "Customer",
     "Dispenser",
     "Employee",
     "EmployeeDocument",
@@ -38,6 +41,7 @@ __all__ = [
     "PurchaseOrder",
     "PurchaseOrderItem",
     "Role",
+    "Sale",
     "Shift",
     "Supplier",
     "SupplierInvoice",
