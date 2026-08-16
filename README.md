@@ -195,6 +195,17 @@ Everything below is implemented, tested, and running — not planned. Each modul
 - The audit trail (written by every service action since Phase 4) now has an actual screen to read it on — filterable by event type, actor, and date range, gated on `Permission.AUDIT_VIEW`
 - The fuel-type summary report supports Print, PDF export, and Excel export, not just an on-screen view — the pattern the rest of Phase 16's reports will reuse
 
+### Procurement Management (Phase 10 — complete, dedicated reports deferred)
+- Full tanker-to-tank workflow: Supplier -> Purchase Order -> Tanker Arrival -> Document Verification -> Fuel Quality Verification -> Pre-Dip Reading -> Unloading -> Post-Dip Reading -> Inventory Update -> Invoice -> Supplier Payment
+- Deliveries create real Tank readings and a real RECEIPT transaction through the same `TankService` path every other stock movement uses — never a parallel, unaudited shortcut
+- `quantity_received` is derived from post-dip minus pre-dip, never entered directly, so it can't drift from what was actually measured
+- A purchase order's status (partially delivered / delivered) is recomputed from its deliveries every time, not incremented — can't drift out of sync
+- Supplier invoices and payments: partial payments supported, a payment can't exceed the outstanding balance, an already-fully-paid invoice can't be paid again
+
+### Dashboard redesign (2026-08-16, user-requested)
+- Dashboard cards are grouped into labeled sections ("Daily Operations", "Reports & Administration") instead of one flat grid, now that there are 11 modules
+- The top bar was decluttered to just the user's name/role and a single "Account" menu — every module is reachable from its own dashboard card, so duplicating them as top-bar buttons was redundant and was the actual cause of the button crowding a prior audit flagged
+
 ### Database integrity & exception handling (cross-cutting, hardened 2026-08-15)
 - SQLite foreign-key enforcement (`PRAGMA foreign_keys=ON`) and WAL mode (`PRAGMA journal_mode=WAL`) are enabled on every connection — every `ForeignKey()` declared in the models is actually enforced by the database, not just by application code
 - Every repository write commits through a shared `safe_commit()` helper that rolls back cleanly on failure, so a failed write can't leave a session unusable for the rest of that login
@@ -215,7 +226,7 @@ Not yet built: Procurement, Sales, Payments, Credit, Expenses, full Reconciliati
 | ORM | SQLAlchemy 2.x | in use |
 | Validation | Pydantic v2 | in use |
 | Configuration | pydantic-settings | in use |
-| Testing | pytest | in use — 265 tests |
+| Testing | pytest | in use — 303 tests |
 | Logging | Python standard `logging` | in use — console + a rotating file colocated with the database |
 | Migrations | Alembic | in use — `init_db()` runs `alembic upgrade head`, not `Base.metadata.create_all()` |
 | PDF reports | ReportLab | in use — fuel-type summary report, more reports to follow in Phase 16 |
@@ -249,7 +260,7 @@ PetrolPumpERP/
 │   ├── schemas/                 # Pydantic input-validation schemas
 │   ├── services/                # Business logic, RBAC checks, audit logging
 │   └── ui/                      # PySide6 windows/dialogs + shared stylesheet
-├── tests/                       # pytest suite (265 tests)
+├── tests/                       # pytest suite (303 tests)
 ├── docs/
 │   └── screenshots/             # Screenshots used in this README
 ├── requirements.txt
@@ -307,7 +318,7 @@ On first run this will:
 pytest
 ```
 
-All 265 tests should pass, in well under a minute. To run a single module's tests:
+All 303 tests should pass, in well under a minute. To run a single module's tests:
 
 ```bash
 pytest tests/test_auth_rbac.py -v
@@ -398,7 +409,8 @@ This offline desktop application is phase one of a two-phase plan. Once it prove
 | 9: Tank & Inventory Management | ✅ Complete (fuel-type-sectioned summary done; full tank reports deferred to Phase 16) |
 | User Management (Phase 4 extension) | ✅ Complete — logins for all 6 roles, multiple users per role, password self-service |
 | Database migrations, backup/restore, audit log viewer, report export | ✅ Complete (2026-08-16, resolving a full build audit) — see below |
-| 10–22: Procurement, Sales, Payments, Credit, Expenses, Reconciliation, full Reporting System, Printing, Testing, Pilot, Release | ⬜ Not started (Packaging/Phase 20 started early, Backup/Phase 18 and parts of Reporting/Phase 16 done early too — see below) |
+| 10: Procurement Management | ✅ Complete (dedicated procurement reports deferred to Phase 16) |
+| 11–22: Sales, Payments, Credit, Expenses, Reconciliation, full Reporting System, Printing, Testing, Pilot, Release | ⬜ Not started (Packaging/Phase 20 started early, Backup/Phase 18 and parts of Reporting/Phase 16 done early too — see below) |
 
 See [ROADMAP.md](ROADMAP.md) for the full, granular breakdown of every phase.
 

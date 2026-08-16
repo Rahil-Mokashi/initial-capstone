@@ -112,6 +112,21 @@ On 2026-08-16 the user asked for a full build audit (published as an artifact) a
 - [x] **Dashboard/top-bar layout fixed** after growing to 10 modules: the dashboard card grid never actually wrapped rows (a pre-existing bug, `cards_grid.addWidget(..., 0, column)` always used row 0), so cards silently got squeezed and their text truncated once there were more than fit in one row — now wraps at 4 cards per row. The top bar's "Change Password" and "Logout" buttons were consolidated into a single "Account" menu to reduce clutter.
 - [x] **CI**: `.github/workflows/tests.yml` runs the full suite on every push/PR via GitHub Actions (`windows-latest`, since this is a PySide6 desktop app whose tests assert on real Qt focus state — a Linux runner would need a virtual display and still behave differently for those specific assertions).
 
+## Phase 10: Procurement Management (complete)
+Full tanker-arrival-to-inventory-update workflow (problemstatement.md #12): Fuel Requirement -> Purchase -> Tanker Arrival -> Document Verification -> Fuel Quality Verification -> Pre-Dip Reading -> Fuel Unloading -> Post-Dip Reading -> Inventory Update -> Invoice -> Supplier Payment.
+- [x] Models: `Supplier`, `PurchaseOrder`/`PurchaseOrderItem`, `FuelDelivery`, `SupplierInvoice`/`SupplierPayment` (`app/models/`), migration `be4e2b8f1220`
+- [x] `ProcurementService` (`app/services/procurement_service.py`) deliberately depends on `TankService` (not just `TankRepository`) for the dip-reading and receipt-transaction steps — a delivery moves fuel into a tank through the exact same audited, capacity-checked path every other receipt does (`TankService.record_reading`/`record_transaction`), never a parallel one that could drift from it. This is exactly what PROJECT_CONTEXT.md predicted back in Phase 9: "Procurement will eventually create Tank RECEIPT transactions automatically from supplier deliveries."
+- [x] Business correctness: a delivery's tank must match one of the PO's fuel types (rejected otherwise); the post-dip reading can't be recorded before the pre-dip, and can't be less than it; `quantity_received` is *derived* (post-dip minus pre-dip), never entered directly, so it can't drift from what was actually dipped; a PO's status (`PARTIALLY_DELIVERED`/`DELIVERED`) is recomputed from scratch from its deliveries every time, never incremented, so it can't drift out of sync either — same "recompute, don't accumulate" principle used for `SupplierInvoice.status`
+- [x] `Permission.PROCUREMENT_VIEW`/`PROCUREMENT_MANAGE`, granted to Manager (full) and Accountant (view only, for the financial side)
+- [x] `app/ui/procurement_window.py`: three tabs (Suppliers, Purchase Orders, Invoices); the delivery workflow lives inside the purchase-order detail dialog, with only the action valid for the delivery's current status enabled at a time
+- [x] 30 service tests (`tests/test_procurement_service.py`) + 8 UI tests (`tests/test_procurement_ui.py`), including the full arrival-to-unload-to-tank-stock-update path end to end
+- [x] Reserved and fully specified (not yet built) Phase 13's Credit Management per explicit user requirements 2026-08-16: fuel-type-sectioned credit reporting, and every Sale must snapshot its own rate/amount at transaction time rather than a live `Fuel.rate_per_liter` lookup (fuel prices change over time) — see ROADMAP.md Phases 11/13 for the full detail, and Pending Modules below
+
+## Dashboard redesign (2026-08-16, user-requested)
+The user explicitly said they didn't like the dashboard and asked for it to be "better placed" and enhanced. Two changes:
+- Dashboard cards are now grouped into two labeled sections ("Daily Operations": Employees/Attendance/Shifts/My Shift/Nozzles/Tanks/Procurement; "Reports & Administration": Reports/Users/Backups/Audit Log) instead of one flat, ungrouped grid — gives real visual hierarchy now that there are 11 modules.
+- The top bar was decluttered down to just the username/role badge and a single "Account" menu (Change Password/Logout) — every module button that used to live there was redundant with its own dashboard card and was the direct cause of the top-bar button-crowding the build audit flagged. The dashboard is now unambiguously the one place to navigate from.
+
 - [x] PyInstaller packaging (`petrol_pump_erp.spec`, `requirements-build.txt`) — see "Deployment Status" for details and the two real bugs this surfaced (DB path under a frozen build, and a matplotlib/PySide6 hook interaction)
 
 - [x] Tank, TankReading, TankTransaction, FuelReconciliation models (problemstatement.md #13/#14). Tank is distinct from Fuel (a fuel-type lookup already used by Nozzle) — a pump can have more than one tank per fuel type, each with its own capacity/stock; `Fuel.capacity/current_stock/opening_stock` are effectively superseded by `Tank`'s own fields and are a known redundancy left alone rather than changed without a migration path (no Alembic yet)
@@ -146,8 +161,7 @@ On 2026-08-16 the user asked for a full build audit (published as an artifact) a
 - Holiday calendar / leave-balance tracking (Attendance can record LEAVE/HOLIDAY status per day, but there's no holiday calendar or leave-quota entity yet)
 - Full shift-close reconciliation (cash/UPI/card/fuel) — deferred to Phase 15, once sales/payments modules exist; Phase 7 only covers opening meter/closing meter + nozzle assignment
 - `Attendance.shift_label` is still free-text, not a real FK to `Shift` (both now exist; migrating this is still pending)
-- Procurement (Phase 10) will eventually create Tank RECEIPT transactions automatically from supplier deliveries; for now receipts are recorded manually
-- Sales, payments, credit modules
+- Sales, payments, credit modules (Phase 11-13; Phase 13's Credit Management is fully specified in ROADMAP.md per explicit user requirements 2026-08-16, not yet built — depends on Phase 11 Sales existing first)
 - Reconciliation module (full cash/UPI/card, not fuel — fuel reconciliation already exists, Phase 9)
 - Printing for reports other than the fuel-type summary
 - UI components beyond the MVP stub window
@@ -173,6 +187,7 @@ On 2026-08-16 the user asked for a full build audit (published as an artifact) a
 ## Business Rules Confirmed By The User
 - (2026-08-15) A pump has a variable ("random") number of dispensers, but **every dispenser has exactly 2 nozzles**. Enforced in `NozzleService.create_nozzle` via `MAX_NOZZLES_PER_DISPENSER` (`app/core/constants.py`); a 3rd nozzle on the same dispenser raises `ConflictError`.
 - (2026-08-15) Each nozzle dispenses exactly one fuel type, and that type is commonly **Petrol, Diesel, or Power** (a premium/branded fuel variant). These three are now seeded by default as `Fuel` rows (`DEFAULT_FUEL_TYPES` in constants.py, seeded via `_seed_fuel_types` in `app/database/seed.py`) so nozzle/tank setup has them available out of the box — seeded at `rate_per_liter=0.0` since real prices must be configured by the site, never guessed.
+- (2026-08-16) Credit customers ("crediters") need full lifecycle tracking — who they are, whether they've paid, and their activity broken down by fuel type (Petrol/Diesel/Power) in reports, reusing the fuel-type-summary reporting pattern already established for tanks/nozzles. Reserved as Phase 13 (Credit Management), fleshed out in ROADMAP.md with the full checklist — not built yet, since it depends on Sales (Phase 11) existing first (a credit sale is a sale, not a parallel record).
 
 ## Assumptions
 - Single petrol pump location
@@ -226,7 +241,7 @@ On 2026-08-16 the user asked for a full build audit (published as an artifact) a
 - [ ] Integration tests (pending)
 - [ ] The shared UI base-class refactor's own tests (n/a — refactor itself deferred, see Pending Modules)
 
-**265/265 tests passing project-wide** (up from 202 at the start of the 2026-08-16 audit-resolution session).
+**303/303 tests passing project-wide** (up from 202 at the start of the 2026-08-16 audit-resolution session; 265 after the audit, 303 after Phase 10 Procurement).
 
 ## Backup Status
 - [x] Automatic pre-migration backups (`app/database/backup.py` + `init_db()`) and on-demand manual backups via the Backups screen — both use SQLite's online backup API, not a raw file copy, so a backup taken while WAL mode has uncommitted-to-disk data is still transactionally consistent
@@ -252,4 +267,4 @@ On 2026-08-16 the user asked for a full build audit (published as an artifact) a
 - Known Qt/QSS gotcha worth remembering for future custom widgets: a plain `QWidget` subclass needs `self.setAttribute(Qt.WA_StyledBackground, True)` or its stylesheet `background-color`/`border`/`border-radius` will silently not render (see `DashboardCard` in `app/ui/main_window.py`). Built-in widgets like `QFrame`/`QPushButton`/`QDialog` don't need this.
 
 ## Next Task
-Phases 4-9 are complete end-to-end, plus the attendant self-service view, fuel-sectioned reports, User Management, and (2026-08-16) a full pass resolving every item on a build audit's recommendation list — Alembic, Decimal-safe money columns, password self-service, production logging, backup/restore, an audit log viewer, and PDF/Excel report export (265/265 tests passing). The one deferred item is the shared UI base-class refactor (Pending Modules). The app can be built into a standalone Windows executable (`pyinstaller petrol_pump_erp.spec`) to hand to the user's team for review. Waiting on the team's detailed feedback. Per the user's earlier instruction to keep building in the meantime, the next step is Phase 10 (Procurement Management) per ROADMAP.md's "Next Immediate Tasks."
+Phases 4-10 are complete end-to-end: Auth/RBAC, Employee/HR, Attendance, Shift, Nozzle, Tank & Inventory, Procurement, plus the attendant self-service view, fuel-sectioned reports, User Management, and the 2026-08-16 build-audit resolution pass (Alembic, Decimal-safe money columns, password self-service, production logging, backup/restore, an audit log viewer, PDF/Excel report export). The dashboard was also redesigned per explicit user feedback (grouped sections, decluttered top bar). 303/303 tests passing. The one deferred item is the shared UI base-class refactor (Pending Modules). Per the user's instruction (2026-08-16) to keep building autonomously, next: analyze the app end-to-end for further improvements and implement them (including where offline-capable ML/analytics genuinely add value, per explicit user request), then continue to Phase 11 (Sales Management) and beyond.

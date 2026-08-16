@@ -318,4 +318,11 @@ QLabel#dashDate {{
     font-size: 13px;
     color: {COLOR_TEXT_MUTED};
 }}
+
+QLabel#dashGroupLabel {{
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: {COLOR_TEXT_MUTED};
+}}
 """
