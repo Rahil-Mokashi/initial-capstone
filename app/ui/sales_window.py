@@ -39,7 +39,7 @@ from app.schemas.customer import CustomerCreate
 from app.schemas.sale import SaleCreate
 from app.ui.qt_utils import chain_enter_to_next_field, describe_unexpected_error
 
-SALE_HEADERS = ["Receipt #", "When", "Fuel", "Quantity", "Amount", "Payment", "Status"]
+SALE_HEADERS = ["Receipt #", "When", "Fuel", "Quantity", "Amount", "Method", "Sale Status", "Payment Status"]
 CUSTOMER_HEADERS = ["Name", "Phone", "Status"]
 
 
@@ -94,8 +94,20 @@ class SalesTab(QWidget):
         self.cancel_button.clicked.connect(self._cancel_selected)
         self.cancel_button.setVisible(can_manage)
 
+        self.mark_failed_button = QPushButton("Mark Payment Failed")
+        self.mark_failed_button.setObjectName("secondaryButton")
+        self.mark_failed_button.clicked.connect(self._mark_selected_payment_failed)
+        self.mark_failed_button.setVisible(can_manage)
+
+        self.refund_button = QPushButton("Refund Payment")
+        self.refund_button.setObjectName("secondaryButton")
+        self.refund_button.clicked.connect(self._refund_selected_payment)
+        self.refund_button.setVisible(can_manage)
+
         top_row = QHBoxLayout()
         top_row.addStretch()
+        top_row.addWidget(self.refund_button)
+        top_row.addWidget(self.mark_failed_button)
         top_row.addWidget(self.cancel_button)
         top_row.addWidget(self.add_button)
 
@@ -118,6 +130,7 @@ class SalesTab(QWidget):
         sales = self._sale_service.list_sales(self._actor_user_id)
         self.table.setRowCount(len(sales))
         for row_index, sale in enumerate(sales):
+            payment = self._sale_service.get_payment_for_sale(self._actor_user_id, sale.id)
             self.table.setItem(row_index, 0, QTableWidgetItem(sale.receipt_number))
             self.table.setItem(row_index, 1, QTableWidgetItem(sale.sale_at.strftime("%Y-%m-%d %H:%M")))
             self.table.setItem(row_index, 2, QTableWidgetItem(sale.fuel.fuel_type if sale.fuel else ""))
@@ -125,7 +138,9 @@ class SalesTab(QWidget):
             self.table.setItem(row_index, 4, QTableWidgetItem(f"{sale.amount:g}"))
             self.table.setItem(row_index, 5, QTableWidgetItem(sale.payment_method.title()))
             self.table.setItem(row_index, 6, QTableWidgetItem(sale.status.title()))
+            self.table.setItem(row_index, 7, QTableWidgetItem(payment.status.title() if payment else ""))
             self.table.item(row_index, 0).setData(Qt.UserRole, sale.id)
+            self.table.item(row_index, 7).setData(Qt.UserRole, payment.id if payment else None)
         self.table.resizeColumnsToContents()
         self.table.horizontalHeader().setStretchLastSection(True)
 
@@ -153,6 +168,37 @@ class SalesTab(QWidget):
             QMessageBox.warning(self, "Could not cancel sale", str(exc))
         except Exception as exc:  # noqa: BLE001
             QMessageBox.warning(self, "Could not cancel sale", describe_unexpected_error(exc))
+        self.refresh()
+
+    def _mark_selected_payment_failed(self) -> None:
+        self._act_on_selected_payment(
+            "Mark payment failed", "Reason:", "Could not mark payment failed", self._sale_service.mark_payment_failed
+        )
+
+    def _refund_selected_payment(self) -> None:
+        self._act_on_selected_payment(
+            "Refund payment", "Reason:", "Could not refund payment", self._sale_service.refund_payment
+        )
+
+    def _act_on_selected_payment(self, title: str, prompt: str, error_title: str, action) -> None:
+        rows = self.table.selectionModel().selectedRows()
+        if not rows:
+            QMessageBox.information(self, title, "Select a sale to act on first.")
+            return
+        payment_id = self.table.item(rows[0].row(), 7).data(Qt.UserRole)
+        if not payment_id:
+            QMessageBox.information(self, title, "This sale has no payment record.")
+            return
+
+        reason, ok = QInputDialog.getText(self, title, prompt)
+        if not ok or not reason.strip():
+            return
+        try:
+            action(self._actor_user_id, payment_id, reason.strip())
+        except (AppError, ValueError) as exc:
+            QMessageBox.warning(self, error_title, str(exc))
+        except Exception as exc:  # noqa: BLE001
+            QMessageBox.warning(self, error_title, describe_unexpected_error(exc))
         self.refresh()
 
 
@@ -215,12 +261,16 @@ class SaleFormDialog(QDialog):
                 self.customer_combo.addItem(customer.name, customer.id)
         self.customer_label = QLabel("Customer")
 
+        self.reference_input = QLineEdit()
+        self.reference_label = QLabel("UPI/Card reference")
+
         self.remarks_input = QLineEdit()
         self.remarks_input.returnPressed.connect(self._save)
 
         form.addRow("Quantity (L)", self.quantity_input)
         form.addRow("Payment method", self.payment_combo)
         form.addRow(self.customer_label, self.customer_combo)
+        form.addRow(self.reference_label, self.reference_input)
         form.addRow("Remarks", self.remarks_input)
 
         self.error_label = QLabel("")
@@ -248,9 +298,14 @@ class SaleFormDialog(QDialog):
         self._on_payment_method_changed()
 
     def _on_payment_method_changed(self) -> None:
-        is_credit = self.payment_combo.currentData() == PaymentMethod.CREDIT
+        method = self.payment_combo.currentData()
+        is_credit = method == PaymentMethod.CREDIT
         self.customer_combo.setVisible(True)
         self.customer_label.setText("Customer (required for credit)" if is_credit else "Customer")
+
+        needs_reference = method in (PaymentMethod.UPI, PaymentMethod.CARD)
+        self.reference_input.setVisible(needs_reference)
+        self.reference_label.setVisible(needs_reference)
 
     def _save(self) -> None:
         self.error_label.hide()
@@ -285,6 +340,7 @@ class SaleFormDialog(QDialog):
                 quantity=Decimal(str(self.quantity_input.value())),
                 payment_method=self.payment_combo.currentData(),
                 customer_id=self.customer_combo.currentData(),
+                reference_number=self.reference_input.text().strip() or None,
                 remarks=self.remarks_input.text().strip() or None,
             )
             self._sale_service.create_sale(self._actor_user_id, data)

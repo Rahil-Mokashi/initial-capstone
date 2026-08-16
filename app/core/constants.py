@@ -147,6 +147,20 @@ class SaleStatus(str, Enum):
     REVERSED = "reversed"
 
 
+class PaymentStatus(str, Enum):
+    """Values stored in Payment.status (problemstatement.md #17). Tracked
+    separately from Sale.status: the fuel can be dispensed (a completed
+    sale) while its settlement is still PENDING (credit) or later found to
+    have FAILED/needs to be REVERSED/REFUNDED - the two lifecycles are
+    related but not identical."""
+
+    SUCCESS = "success"
+    PENDING = "pending"
+    FAILED = "failed"
+    REVERSED = "reversed"
+    REFUNDED = "refunded"
+
+
 class VarianceClassification(str, Enum):
     """Fuel reconciliation variance classification (problemstatement.md #14).
 
@@ -240,3 +254,8 @@ MAX_NOZZLES_PER_DISPENSER = 2
 # out of the box. Rates are left at 0.0 deliberately — real prices must be
 # configured by the site, never guessed.
 DEFAULT_FUEL_TYPES = ["Petrol", "Diesel", "Power"]
+
+# Dashboard low-stock flag: a tank at or below this percent of its capacity
+# is surfaced as needing attention. A flag, not an alarm - matches the
+# non-accusatory tone already used for reconciliation variance.
+DASHBOARD_LOW_STOCK_THRESHOLD_PERCENT = 20.0

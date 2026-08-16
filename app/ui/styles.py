@@ -325,4 +325,32 @@ QLabel#dashGroupLabel {{
     letter-spacing: 1px;
     color: {COLOR_TEXT_MUTED};
 }}
+
+/* --- Dashboard KPI strip --- */
+
+QWidget#statCard {{
+    background-color: {COLOR_SURFACE};
+    border: 1px solid {COLOR_BORDER};
+    border-left: 4px solid {COLOR_PRIMARY};
+    border-radius: 12px;
+}}
+
+QWidget#statCard[tone="warning"] {{
+    border-left: 4px solid {COLOR_ACCENT};
+}}
+
+QLabel#statValue {{
+    font-size: 26px;
+    font-weight: 800;
+}}
+
+QLabel#statValue[tone="warning"] {{
+    color: {COLOR_ACCENT};
+}}
+
+QLabel#statLabel {{
+    font-size: 12px;
+    color: {COLOR_TEXT_MUTED};
+    font-weight: 600;
+}}
 """

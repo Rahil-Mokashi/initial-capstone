@@ -209,9 +209,16 @@ Everything below is implemented, tested, and running — not planned. Each modul
 - The sale form adapts to who's using it: a Manager/Supervisor gets full shift/nozzle/employee pickers, while an Attendant gets an auto-resolved read-only view of their own active nozzle assignment — no picking something that isn't already true
 - Customer master data (name/contact/address) with the same create/deactivate-with-reason pattern used for Suppliers
 
+### Payment Management (Phase 12 — complete, reconciliation/reports deferred)
+- Every sale creates its own `Payment` record, settled separately from the sale itself: fuel can be dispensed (a completed sale) while money is still owed or a transaction later found to have failed
+- Cash/UPI/card payments start SUCCESS immediately; a credit sale's payment starts PENDING, settled later once Phase 13's customer payments exist
+- UPI reference numbers and card authorization codes are captured on the sale form and stored on the payment
+- `mark_payment_failed`/`refund_payment` cover the after-the-fact correction cases (e.g. a card declines after fuel is already dispensed) — both require a reason and are audit-logged, never a silent edit; cancelling a sale automatically reverses its payment
+
 ### Dashboard redesign (2026-08-16, user-requested)
-- Dashboard cards are grouped into labeled sections ("Daily Operations", "Reports & Administration") instead of one flat grid, now that there are 11 modules
+- Dashboard cards are grouped into labeled sections ("Daily Operations", "Reports & Administration") instead of one flat grid, now that there are 12 modules
 - The top bar was decluttered to just the user's name/role and a single "Account" menu — every module is reachable from its own dashboard card, so duplicating them as top-bar buttons was redundant and was the actual cause of the button crowding a prior audit flagged
+- A live KPI strip sits above the cards — today's sale count/revenue, shifts open right now, tanks running low on stock, pending purchase orders — each figure gated on the same permission its own module already uses, so the dashboard surfaces what actually needs attention today, not just navigation tiles
 
 ### Database integrity & exception handling (cross-cutting, hardened 2026-08-15)
 - SQLite foreign-key enforcement (`PRAGMA foreign_keys=ON`) and WAL mode (`PRAGMA journal_mode=WAL`) are enabled on every connection — every `ForeignKey()` declared in the models is actually enforced by the database, not just by application code
@@ -233,7 +240,7 @@ Not yet built: Payments (dedicated reconciliation reporting beyond what Sale alr
 | ORM | SQLAlchemy 2.x | in use |
 | Validation | Pydantic v2 | in use |
 | Configuration | pydantic-settings | in use |
-| Testing | pytest | in use — 329 tests |
+| Testing | pytest | in use — 348 tests |
 | Logging | Python standard `logging` | in use — console + a rotating file colocated with the database |
 | Migrations | Alembic | in use — `init_db()` runs `alembic upgrade head`, not `Base.metadata.create_all()` |
 | PDF reports | ReportLab | in use — fuel-type summary report, more reports to follow in Phase 16 |
@@ -267,7 +274,7 @@ PetrolPumpERP/
 │   ├── schemas/                 # Pydantic input-validation schemas
 │   ├── services/                # Business logic, RBAC checks, audit logging
 │   └── ui/                      # PySide6 windows/dialogs + shared stylesheet
-├── tests/                       # pytest suite (329 tests)
+├── tests/                       # pytest suite (348 tests)
 ├── docs/
 │   └── screenshots/             # Screenshots used in this README
 ├── requirements.txt
@@ -325,7 +332,7 @@ On first run this will:
 pytest
 ```
 
-All 329 tests should pass, in well under a minute. To run a single module's tests:
+All 348 tests should pass, in well under a minute. To run a single module's tests:
 
 ```bash
 pytest tests/test_auth_rbac.py -v
@@ -418,7 +425,8 @@ This offline desktop application is phase one of a two-phase plan. Once it prove
 | Database migrations, backup/restore, audit log viewer, report export | ✅ Complete (2026-08-16, resolving a full build audit) — see below |
 | 10: Procurement Management | ✅ Complete (dedicated procurement reports deferred to Phase 16) |
 | 11: Sales Management | ✅ Complete (sales reports deferred to Phase 16, printable receipts deferred to Phase 17) |
-| 12–22: Payments, Credit, Expenses, Reconciliation, full Reporting System, Printing, Testing, Pilot, Release | ⬜ Not started (Packaging/Phase 20 started early, Backup/Phase 18 and parts of Reporting/Phase 16 done early too — see below) |
+| 12: Payment Management | ✅ Complete (reconciliation workflows deferred to Phase 15, payment reports deferred to Phase 16) |
+| 13–22: Credit, Expenses, Reconciliation, full Reporting System, Printing, Testing, Pilot, Release | ⬜ Not started (Packaging/Phase 20 started early, Backup/Phase 18 and parts of Reporting/Phase 16 done early too — see below) |
 
 See [ROADMAP.md](ROADMAP.md) for the full, granular breakdown of every phase.
 

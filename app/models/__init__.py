@@ -11,6 +11,7 @@ from .fuel_delivery import FuelDelivery
 from .fuel_reconciliation import FuelReconciliation
 from .nozzle import Nozzle
 from .nozzle_assignment import NozzleAssignment
+from .payment import Payment
 from .permission import Permission
 from .purchase_order import PurchaseOrder, PurchaseOrderItem
 from .role import Role
@@ -37,6 +38,7 @@ __all__ = [
     "FuelReconciliation",
     "Nozzle",
     "NozzleAssignment",
+    "Payment",
     "Permission",
     "PurchaseOrder",
     "PurchaseOrderItem",
