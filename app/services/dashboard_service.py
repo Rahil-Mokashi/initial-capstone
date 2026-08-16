@@ -7,7 +7,7 @@ sees numbers for what they're allowed to open.
 """
 
 from dataclasses import dataclass
-from datetime import date, datetime, time, timezone
+from datetime import date
 from decimal import Decimal
 from typing import Optional
 
@@ -18,6 +18,7 @@ from app.core.constants import (
     SaleStatus,
     ShiftStatus,
 )
+from app.core.dates import local_day_bounds_utc
 from app.repositories.purchase_order_repository import PurchaseOrderRepository
 from app.repositories.sale_repository import SaleRepository
 from app.repositories.shift_repository import ShiftRepository
@@ -36,23 +37,6 @@ class DashboardSummary:
     open_shifts_count: Optional[int] = None
     low_stock_tanks_count: Optional[int] = None
     pending_purchase_orders_count: Optional[int] = None
-
-
-def _local_day_bounds_utc(day: date) -> tuple[datetime, datetime]:
-    """Local calendar day -> naive-UTC instant bounds, matching the fix
-    already applied to TankTransactionRepository.sum_for_tank_by_type: a
-    naive local boundary compared directly against a UTC-stored timestamp
-    silently drops records recorded after local midnight whenever local
-    time runs ahead of UTC. SQLite/SQLAlchemy returns DateTime columns as
-    naive datetimes (representing UTC) on read, so the bounds are stripped
-    of tzinfo after conversion to compare cleanly against them in Python."""
-
-    local_start = datetime.combine(day, time.min).astimezone()
-    local_end = datetime.combine(day, time.max).astimezone()
-    return (
-        local_start.astimezone(timezone.utc).replace(tzinfo=None),
-        local_end.astimezone(timezone.utc).replace(tzinfo=None),
-    )
 
 
 class DashboardService:
@@ -75,7 +59,7 @@ class DashboardService:
         can = lambda permission: self._auth_service.check_permission(actor_user_id, permission.value)  # noqa: E731
 
         if can(Permission.SALE_VIEW):
-            day_start_utc, day_end_utc = _local_day_bounds_utc(date.today())
+            day_start_utc, day_end_utc = local_day_bounds_utc(date.today())
             todays_sales = [
                 sale
                 for sale in self._sale_repo.list_all()
