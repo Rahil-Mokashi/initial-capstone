@@ -7,7 +7,7 @@ its own safety backup first, so a bad restore choice is itself
 recoverable.
 """
 
-from typing import List
+from typing import List, Tuple
 
 from app.core.constants import Permission
 from app.core.permissions import require_permission
@@ -34,6 +34,17 @@ class BackupService:
     @require_permission(Permission.BACKUP_MANAGE.value)
     def list_backups(self, actor_user_id: str) -> List[backup_module.BackupInfo]:
         return backup_module.list_backups(self._db_path)
+
+    @require_permission(Permission.BACKUP_MANAGE.value)
+    def check_integrity(self, actor_user_id: str) -> Tuple[bool, List[str]]:
+        is_ok, messages = backup_module.run_integrity_check(self._db_path)
+        self._audit_repo.record(
+            event_type="database_integrity_checked",
+            actor_id=actor_user_id,
+            entity_type="Database",
+            description="ok" if is_ok else "; ".join(messages),
+        )
+        return is_ok, messages
 
     @require_permission(Permission.BACKUP_MANAGE.value)
     def restore_backup(self, actor_user_id: str, backup_path: str, reason: str) -> None:

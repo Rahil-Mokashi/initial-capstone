@@ -99,6 +99,19 @@ def test_backup_now_button_adds_a_row(qapp, backup_service, admin_id, monkeypatc
     assert window.table.rowCount() == 1
 
 
+def test_check_integrity_button_shows_a_passing_result(qapp, backup_service, admin_id, monkeypatch):
+    shown = {}
+    monkeypatch.setattr("app.ui.backup_window.QMessageBox.information", lambda self, title, text: shown.update(title=title, text=text))
+
+    from app.ui.backup_window import BackupWindow
+
+    window = BackupWindow(backup_service, admin_id)
+    window._check_integrity()
+
+    assert shown["title"] == "Integrity check"
+    assert "passed" in shown["text"]
+
+
 def test_accountant_cannot_open_backup_window(qapp, backup_service, accountant_id):
     from app.core.exceptions import PermissionDeniedError
     from app.ui.backup_window import BackupWindow

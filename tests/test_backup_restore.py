@@ -1,9 +1,17 @@
 import sqlite3
 import time
+from datetime import datetime, timedelta
 
 import pytest
 
-from app.database.backup import BackupInfo, create_backup, list_backups, restore_backup
+from app.database.backup import (
+    BackupInfo,
+    create_backup,
+    list_backups,
+    restore_backup,
+    run_integrity_check,
+    should_take_scheduled_backup,
+)
 
 
 @pytest.fixture()
@@ -97,3 +105,50 @@ def test_restore_backup_overwrites_live_database(live_db):
 def test_restore_backup_raises_for_missing_file(live_db, tmp_path):
     with pytest.raises(FileNotFoundError):
         restore_backup(str(tmp_path / "does-not-exist.db"), live_db)
+
+
+def test_run_integrity_check_passes_for_a_sound_database(live_db):
+    is_ok, messages = run_integrity_check(live_db)
+    assert is_ok is True
+    assert messages == ["ok"]
+
+
+def test_run_integrity_check_fails_for_a_corrupted_file(tmp_path):
+    corrupt_path = str(tmp_path / "corrupt.db")
+    with open(corrupt_path, "wb") as f:
+        f.write(b"this is not a valid sqlite file" * 100)
+
+    is_ok, messages = run_integrity_check(corrupt_path)
+
+    assert is_ok is False
+    assert messages != ["ok"]
+
+
+def test_create_backup_verifies_the_new_backup(live_db):
+    # A normal backup of a sound live database should pass verification
+    # and simply return the path, not raise.
+    backup_path = create_backup(live_db, reason="manual")
+    is_ok, _ = run_integrity_check(backup_path)
+    assert is_ok is True
+
+
+def test_should_take_scheduled_backup_true_when_none_exist(live_db):
+    assert should_take_scheduled_backup(live_db, interval_hours=24) is True
+
+
+def test_should_take_scheduled_backup_false_right_after_a_backup(live_db):
+    create_backup(live_db, reason="manual")
+    assert should_take_scheduled_backup(live_db, interval_hours=24) is False
+
+
+def test_should_take_scheduled_backup_true_once_the_interval_has_passed(live_db):
+    import os
+
+    backup_path = create_backup(live_db, reason="manual")
+    # Back-date the backup file's mtime (what list_backups reads its
+    # created_at from) instead of mocking datetime, so list_backups'
+    # own use of datetime.fromtimestamp is unaffected.
+    stale_time = (datetime.now() - timedelta(hours=48)).timestamp()
+    os.utime(backup_path, (stale_time, stale_time))
+
+    assert should_take_scheduled_backup(live_db, interval_hours=24) is True

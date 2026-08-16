@@ -118,10 +118,24 @@ def init_db() -> None:
         try:
             backup_path = backup_module.create_backup(db_path, reason="pre_migration")
             logger.info("Pre-migration backup created at %s", backup_path)
-        except OSError:
+        except (OSError, IOError):
             logger.warning("Could not create a pre-migration backup; proceeding anyway", exc_info=True)
 
     migrations.upgrade_to_head(db_path)
+
+    # Automatic scheduled backup (CLAUDE.md: "Implement automatic
+    # scheduled backups") - only once there's real data to protect; a
+    # freshly created, still-empty database has nothing worth backing
+    # up yet. A failure here must never block the app from starting.
+    if db_has_data:
+        from app.core.constants import AUTO_BACKUP_INTERVAL_HOURS
+
+        try:
+            if backup_module.should_take_scheduled_backup(db_path, AUTO_BACKUP_INTERVAL_HOURS):
+                backup_path = backup_module.create_backup(db_path, reason="scheduled")
+                logger.info("Scheduled backup created at %s", backup_path)
+        except (OSError, IOError):
+            logger.warning("Could not create the scheduled backup; proceeding anyway", exc_info=True)
 
 
 if __name__ == "__main__":
