@@ -36,6 +36,9 @@ class ExpenseRepository:
     def list_all(self) -> List[Expense]:
         return self._session.query(Expense).order_by(Expense.expense_date.desc()).all()
 
+    def list_by_shift(self, shift_id: str) -> List[Expense]:
+        return self._session.query(Expense).filter_by(shift_id=shift_id).all()
+
     def add(self, expense: Expense) -> Expense:
         self._session.add(expense)
         safe_commit(self._session)

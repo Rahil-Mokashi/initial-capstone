@@ -159,7 +159,7 @@ Everything below is implemented, tested, and running — not planned. Each modul
 - Closing meter readings required before an assignment can be marked complete (closing must be ≥ opening)
 - A shift cannot be closed while any nozzle assignment is still active
 - **Controlled reopening**: reopening a closed shift requires a stricter permission (not granted to `SHIFT_SUPERVISOR`) and a reason, and is audit-logged — a closed shift is never freely editable
-- Full cash/UPI/card/fuel reconciliation is intentionally deferred to Phase 15, once the sales/payments/inventory modules it depends on exist
+- Full cash/UPI/card/fuel reconciliation is now built (see Reconciliation Management, Phase 15) — it depended on the sales/payments/inventory modules existing first
 
 ### Nozzle Management (Phase 8 — complete, full reports deferred)
 - Dispenser and Nozzle master data: create, and change status (active/inactive/maintenance) with a required reason, audit-logged
@@ -228,6 +228,13 @@ Everything below is implemented, tested, and running — not planned. Each modul
 - Approval is a stricter permission than recording one, not granted to Accountant - the same split already used for reopening a closed shift
 - An expense is never deleted or edited once approved/rejected; rejecting requires a reason, both actions audit-logged
 
+### Reconciliation Management (Phase 15 — complete, dedicated reports deferred)
+- Cash, UPI, card, and expense reconciliation are folded into one per-shift reconciliation rather than four separate mechanisms, since they're all settled together from the same shift's Sale/Payment/Expense records
+- Expected totals are always computed from that data, never entered manually - an approved expense paid during the shift reduces the expected total for whichever method it was paid with; a still-pending expense doesn't count yet
+- A shift can only be reconciled once; the worst variance among cash/UPI/card decides the classification, reusing the same graduated NORMAL/WARNING/INVESTIGATION_REQUIRED/APPROVAL_REQUIRED scale already used for fuel reconciliation
+- A Shift Supervisor can perform a reconciliation, but only a Manager/Owner can approve one flagged as high-variance - matching the discrepancy workflow's supervisor-then-manager review structure
+- Fuel reconciliation (per tank, since Phase 9) stays its own separate mechanism - different unit, different cadence, not merged in
+
 ### Dashboard redesign (2026-08-16, user-requested)
 - Dashboard cards are grouped into labeled sections ("Daily Operations", "Reports & Administration") instead of one flat grid, now that there are 12 modules
 - The top bar was decluttered to just the user's name/role and a single "Account" menu — every module is reachable from its own dashboard card, so duplicating them as top-bar buttons was redundant and was the actual cause of the button crowding a prior audit flagged
@@ -253,7 +260,7 @@ Not yet built: Payments (dedicated reconciliation reporting beyond what Sale alr
 | ORM | SQLAlchemy 2.x | in use |
 | Validation | Pydantic v2 | in use |
 | Configuration | pydantic-settings | in use |
-| Testing | pytest | in use — 386 tests |
+| Testing | pytest | in use — 400 tests |
 | Logging | Python standard `logging` | in use — console + a rotating file colocated with the database |
 | Migrations | Alembic | in use — `init_db()` runs `alembic upgrade head`, not `Base.metadata.create_all()` |
 | PDF reports | ReportLab | in use — fuel-type summary report, more reports to follow in Phase 16 |
@@ -287,7 +294,7 @@ PetrolPumpERP/
 │   ├── schemas/                 # Pydantic input-validation schemas
 │   ├── services/                # Business logic, RBAC checks, audit logging
 │   └── ui/                      # PySide6 windows/dialogs + shared stylesheet
-├── tests/                       # pytest suite (386 tests)
+├── tests/                       # pytest suite (400 tests)
 ├── docs/
 │   └── screenshots/             # Screenshots used in this README
 ├── requirements.txt
@@ -345,7 +352,7 @@ On first run this will:
 pytest
 ```
 
-All 386 tests should pass, in well under a minute. To run a single module's tests:
+All 400 tests should pass, in well under a minute. To run a single module's tests:
 
 ```bash
 pytest tests/test_auth_rbac.py -v
@@ -440,8 +447,9 @@ This offline desktop application is phase one of a two-phase plan. Once it prove
 | 11: Sales Management | ✅ Complete (sales reports deferred to Phase 16, printable receipts deferred to Phase 17) |
 | 12: Payment Management | ✅ Complete (reconciliation workflows deferred to Phase 15, payment reports deferred to Phase 16) |
 | 13: Credit Management | ✅ Complete (fuel-type-sectioned/aging credit reports deferred to Phase 16) |
-| 14: Expense Management | ✅ Complete (expense reconciliation deferred to Phase 15, expense reports deferred to Phase 16) |
-| 15–22: Reconciliation, full Reporting System, Printing, Testing, Pilot, Release | ⬜ Not started (Packaging/Phase 20 started early, Backup/Phase 18 and parts of Reporting/Phase 16 done early too — see below) |
+| 14: Expense Management | ✅ Complete (expense reports deferred to Phase 16) |
+| 15: Reconciliation Management | ✅ Complete (dedicated reconciliation reports deferred to Phase 16) |
+| 16–22: full Reporting System, Printing, Testing, Pilot, Release | ⬜ Not started (Packaging/Phase 20 started early, Backup/Phase 18 and parts of Reporting/Phase 16 done early too — see below) |
 
 See [ROADMAP.md](ROADMAP.md) for the full, granular breakdown of every phase.
 

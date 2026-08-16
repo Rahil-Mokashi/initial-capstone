@@ -42,6 +42,9 @@ class Permission(str, Enum):
     EXPENSE_VIEW = "expense.view"
     EXPENSE_MANAGE = "expense.manage"
     EXPENSE_APPROVE = "expense.approve"
+    RECONCILIATION_VIEW = "reconciliation.view"
+    RECONCILIATION_MANAGE = "reconciliation.manage"
+    RECONCILIATION_APPROVE = "reconciliation.approve"
 
 
 class EmployeeStatus(str, Enum):
@@ -194,6 +197,26 @@ FUEL_VARIANCE_INVESTIGATION_THRESHOLD_PERCENT = 1.0
 FUEL_VARIANCE_APPROVAL_THRESHOLD_PERCENT = 2.0
 
 
+class ReconciliationStatus(str, Enum):
+    """Values stored in ShiftReconciliation.status (problemstatement.md
+    #20/#21). A NORMAL/WARNING classification is auto-accepted; an
+    INVESTIGATION_REQUIRED/APPROVAL_REQUIRED classification needs a
+    manager/owner to sign off via approve_shift_reconciliation."""
+
+    ACCEPTED = "accepted"
+    PENDING_APPROVAL = "pending_approval"
+    APPROVED = "approved"
+
+
+# Shift cash/UPI/card reconciliation variance thresholds, expressed as a
+# percentage of the expected total for that payment method - same
+# graduated-severity shape as the fuel reconciliation thresholds above,
+# reused rather than inventing a different scale for money vs. fuel.
+RECONCILIATION_VARIANCE_WARNING_THRESHOLD_PERCENT = 0.5
+RECONCILIATION_VARIANCE_INVESTIGATION_THRESHOLD_PERCENT = 1.0
+RECONCILIATION_VARIANCE_APPROVAL_THRESHOLD_PERCENT = 2.0
+
+
 # ADMIN and OWNER get every permission; other roles get a minimal starter set.
 # Business owners should refine this matrix as each module is implemented.
 ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
@@ -221,6 +244,9 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
         Permission.EXPENSE_VIEW,
         Permission.EXPENSE_MANAGE,
         Permission.EXPENSE_APPROVE,
+        Permission.RECONCILIATION_VIEW,
+        Permission.RECONCILIATION_MANAGE,
+        Permission.RECONCILIATION_APPROVE,
     ),
     UserRole.ACCOUNTANT: (
         Permission.INVENTORY_VIEW,
@@ -234,6 +260,7 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
         Permission.CREDIT_VIEW,
         Permission.EXPENSE_VIEW,
         Permission.EXPENSE_MANAGE,
+        Permission.RECONCILIATION_VIEW,
     ),
     UserRole.SHIFT_SUPERVISOR: (
         Permission.INVENTORY_VIEW,
@@ -245,6 +272,8 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
         Permission.NOZZLE_VIEW,
         Permission.SALE_VIEW,
         Permission.SALE_MANAGE,
+        Permission.RECONCILIATION_VIEW,
+        Permission.RECONCILIATION_MANAGE,
     ),
     UserRole.ATTENDANT: (
         Permission.MY_ASSIGNMENT_VIEW,
