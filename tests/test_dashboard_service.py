@@ -25,6 +25,8 @@ from app.repositories.employee_repository import EmployeeRepository
 from app.repositories.fuel_reconciliation_repository import FuelReconciliationRepository
 from app.repositories.fuel_repository import FuelRepository
 from app.repositories.nozzle_repository import NozzleRepository
+from app.repositories.credit_account_repository import CreditAccountRepository
+from app.repositories.customer_payment_repository import CustomerPaymentRepository
 from app.repositories.payment_repository import PaymentRepository
 from app.repositories.purchase_order_repository import PurchaseOrderRepository
 from app.repositories.sale_repository import SaleRepository
@@ -38,6 +40,7 @@ from app.schemas.sale import SaleCreate
 from app.schemas.tank import TankCreate
 from app.services.auth_service import AuthService
 from app.services.dashboard_service import DashboardService
+from app.services.credit_service import CreditService
 from app.services.sale_service import SaleService
 from app.services.tank_service import TankService
 
@@ -148,6 +151,10 @@ def sale_service(db_session, tank_service, auth_service):
         SaleRepository(db_session), ShiftRepository(db_session), NozzleRepository(db_session),
         FuelRepository(db_session), EmployeeRepository(db_session), CustomerRepository(db_session),
         TankRepository(db_session), tank_service, audit_repo, auth_service, PaymentRepository(db_session),
+        CreditService(
+            CreditAccountRepository(db_session), CustomerPaymentRepository(db_session),
+            CustomerRepository(db_session), SaleRepository(db_session), audit_repo, auth_service,
+        ),
     )
 
 

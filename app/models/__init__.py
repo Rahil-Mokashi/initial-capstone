@@ -2,7 +2,9 @@
 
 from .attendance import Attendance
 from .audit_log import AuditLog
+from .credit_account import CreditAccount
 from .customer import Customer
+from .customer_payment import CustomerPayment
 from .dispenser import Dispenser
 from .employee import Employee
 from .employee_document import EmployeeDocument
@@ -29,7 +31,9 @@ from .user_session import UserSession
 __all__ = [
     "Attendance",
     "AuditLog",
+    "CreditAccount",
     "Customer",
+    "CustomerPayment",
     "Dispenser",
     "Employee",
     "EmployeeDocument",

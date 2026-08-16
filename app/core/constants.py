@@ -37,6 +37,8 @@ class Permission(str, Enum):
     PROCUREMENT_MANAGE = "procurement.manage"
     SALE_VIEW = "sale.view"
     SALE_MANAGE = "sale.manage"
+    CREDIT_VIEW = "credit.view"
+    CREDIT_MANAGE = "credit.manage"
 
 
 class EmployeeStatus(str, Enum):
@@ -203,6 +205,8 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
         Permission.PROCUREMENT_MANAGE,
         Permission.SALE_VIEW,
         Permission.SALE_MANAGE,
+        Permission.CREDIT_VIEW,
+        Permission.CREDIT_MANAGE,
     ),
     UserRole.ACCOUNTANT: (
         Permission.INVENTORY_VIEW,
@@ -213,6 +217,7 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
         Permission.NOZZLE_VIEW,
         Permission.PROCUREMENT_VIEW,
         Permission.SALE_VIEW,
+        Permission.CREDIT_VIEW,
     ),
     UserRole.SHIFT_SUPERVISOR: (
         Permission.INVENTORY_VIEW,
