@@ -123,6 +123,19 @@ class TankService:
 
     @require_permission(Permission.INVENTORY_MANAGE.value)
     def record_reading(self, actor_user_id: str, tank_id: str, data: TankReadingCreate) -> TankReading:
+        return self._record_reading(actor_user_id, tank_id, data)
+
+    def record_reading_as_related_action(self, actor_user_id: str, tank_id: str, data: TankReadingCreate) -> TankReading:
+        """For other services (Procurement, Sales) recording a dip
+        reading as a natural step of an action they've already
+        authorized under their own permission (e.g. PROCUREMENT_MANAGE,
+        SALE_MANAGE) - the tank reading isn't a separate, independently
+        -authorized action, so it doesn't re-require INVENTORY_MANAGE
+        from the same actor. Callers are responsible for having already
+        checked their own permission before reaching this."""
+        return self._record_reading(actor_user_id, tank_id, data)
+
+    def _record_reading(self, actor_user_id: str, tank_id: str, data: TankReadingCreate) -> TankReading:
         self._get_tank_or_raise(tank_id)
         if not self._employee_repo.get_by_id(data.employee_id):
             raise NotFoundError(f"Employee not found: {data.employee_id}")
@@ -152,6 +165,20 @@ class TankService:
 
     @require_permission(Permission.INVENTORY_MANAGE.value)
     def record_transaction(
+        self, actor_user_id: str, tank_id: str, transaction_type: TankTransactionType, data: TankTransactionCreate
+    ) -> TankTransaction:
+        return self._record_transaction(actor_user_id, tank_id, transaction_type, data)
+
+    def record_transaction_as_related_action(
+        self, actor_user_id: str, tank_id: str, transaction_type: TankTransactionType, data: TankTransactionCreate
+    ) -> TankTransaction:
+        """For other services (Procurement's delivery unload, Sales'
+        fuel dispensing) recording a stock movement as a natural step of
+        an action they've already authorized under their own permission
+        - see record_reading_as_related_action for the same reasoning."""
+        return self._record_transaction(actor_user_id, tank_id, transaction_type, data)
+
+    def _record_transaction(
         self, actor_user_id: str, tank_id: str, transaction_type: TankTransactionType, data: TankTransactionCreate
     ) -> TankTransaction:
         tank = self._get_tank_or_raise(tank_id)

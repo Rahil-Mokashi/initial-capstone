@@ -20,9 +20,15 @@ class Nozzle(EntityMixin, Base):
     code = Column(String(32), unique=True, nullable=False, index=True)
     dispenser_id = Column(String(36), ForeignKey("dispensers.id"), nullable=False, index=True)
     fuel_id = Column(String(36), ForeignKey("fuels.id"), nullable=False)
+    # Which physical tank this nozzle draws from - nullable since a site
+    # with only one tank per fuel type can leave it unset (SaleService
+    # falls back to the single active tank for the nozzle's fuel type);
+    # required to be explicit once a fuel type has more than one tank.
+    tank_id = Column(String(36), ForeignKey("tanks.id"), nullable=True)
 
     dispenser = relationship("Dispenser", back_populates="nozzles")
     fuel = relationship("Fuel")
+    tank = relationship("Tank")
 
     def __repr__(self) -> str:
         return f"<Nozzle(code={self.code!r}, status={self.status!r})>"

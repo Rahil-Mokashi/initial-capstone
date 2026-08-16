@@ -35,6 +35,8 @@ class Permission(str, Enum):
     BACKUP_MANAGE = "backup.manage"
     PROCUREMENT_VIEW = "procurement.view"
     PROCUREMENT_MANAGE = "procurement.manage"
+    SALE_VIEW = "sale.view"
+    SALE_MANAGE = "sale.manage"
 
 
 class EmployeeStatus(str, Enum):
@@ -127,6 +129,24 @@ class SupplierInvoiceStatus(str, Enum):
     PAID = "paid"
 
 
+class PaymentMethod(str, Enum):
+    """Values stored in Sale.payment_method (problemstatement.md #16/#17)."""
+
+    CASH = "cash"
+    UPI = "upi"
+    CARD = "card"
+    CREDIT = "credit"
+
+
+class SaleStatus(str, Enum):
+    """Values stored in Sale.status (problemstatement.md #16: "Completed
+    sales should not be deleted... use cancellation/reversal mechanisms")."""
+
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+    REVERSED = "reversed"
+
+
 class VarianceClassification(str, Enum):
     """Fuel reconciliation variance classification (problemstatement.md #14).
 
@@ -167,6 +187,8 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
         Permission.NOZZLE_MANAGE,
         Permission.PROCUREMENT_VIEW,
         Permission.PROCUREMENT_MANAGE,
+        Permission.SALE_VIEW,
+        Permission.SALE_MANAGE,
     ),
     UserRole.ACCOUNTANT: (
         Permission.INVENTORY_VIEW,
@@ -176,6 +198,7 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
         Permission.SHIFT_VIEW,
         Permission.NOZZLE_VIEW,
         Permission.PROCUREMENT_VIEW,
+        Permission.SALE_VIEW,
     ),
     UserRole.SHIFT_SUPERVISOR: (
         Permission.INVENTORY_VIEW,
@@ -185,8 +208,14 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
         Permission.SHIFT_VIEW,
         Permission.SHIFT_MANAGE,
         Permission.NOZZLE_VIEW,
+        Permission.SALE_VIEW,
+        Permission.SALE_MANAGE,
     ),
-    UserRole.ATTENDANT: (Permission.MY_ASSIGNMENT_VIEW,),
+    UserRole.ATTENDANT: (
+        Permission.MY_ASSIGNMENT_VIEW,
+        Permission.SALE_VIEW,
+        Permission.SALE_MANAGE,
+    ),
 }
 
 # Password policy (problemstatement.md #39: "Implement password policy")

@@ -15,6 +15,7 @@ from app.repositories.dispenser_repository import DispenserRepository
 from app.repositories.fuel_repository import FuelRepository
 from app.repositories.nozzle_assignment_repository import NozzleAssignmentRepository
 from app.repositories.nozzle_repository import NozzleRepository
+from app.repositories.tank_repository import TankRepository
 from app.repositories.user_repository import UserRepository
 from app.repositories.user_session_repository import UserSessionRepository
 from app.schemas.nozzle import DispenserCreate, NozzleCreate
@@ -78,6 +79,11 @@ def fuel_repo(db_session):
 
 
 @pytest.fixture()
+def tank_repo(db_session):
+    return TankRepository(db_session)
+
+
+@pytest.fixture()
 def fuel_id(db_session):
     fuel = Fuel(fuel_type="Petrol", rate_per_liter=100.0)
     db_session.add(fuel)
@@ -96,6 +102,7 @@ def nozzle_service(db_session):
         NozzleAssignmentRepository(db_session),
         audit_repo,
         auth_service,
+        TankRepository(db_session),
     ), auth_service
 
 
@@ -148,14 +155,14 @@ def test_dispenser_tab_shows_created_dispensers(qapp, nozzle_service, admin_id):
     assert tab.table.rowCount() == 2
 
 
-def test_nozzle_form_saves_valid_nozzle(qapp, nozzle_service, fuel_repo, admin_id, fuel_id):
+def test_nozzle_form_saves_valid_nozzle(qapp, nozzle_service, fuel_repo, tank_repo, admin_id, fuel_id):
     from app.ui.nozzle_window import NozzleFormDialog
     from PySide6.QtWidgets import QDialog
 
     service, _ = nozzle_service
     service.create_dispenser(admin_id, DispenserCreate(code="D1"))
 
-    dialog = NozzleFormDialog(service, fuel_repo, admin_id)
+    dialog = NozzleFormDialog(service, fuel_repo, tank_repo, admin_id)
     dialog.code_input.setText("N1")
     dialog._save()
 
@@ -163,39 +170,39 @@ def test_nozzle_form_saves_valid_nozzle(qapp, nozzle_service, fuel_repo, admin_i
     assert len(service.list_nozzles(admin_id)) == 1
 
 
-def test_nozzle_form_shows_error_when_no_active_dispensers(qapp, nozzle_service, fuel_repo, admin_id, fuel_id):
+def test_nozzle_form_shows_error_when_no_active_dispensers(qapp, nozzle_service, fuel_repo, tank_repo, admin_id, fuel_id):
     from app.ui.nozzle_window import NozzleFormDialog
 
     service, _ = nozzle_service
-    dialog = NozzleFormDialog(service, fuel_repo, admin_id)
+    dialog = NozzleFormDialog(service, fuel_repo, tank_repo, admin_id)
     dialog.code_input.setText("N1")
     dialog._save()
 
     assert dialog.error_label.isHidden() is False
 
 
-def test_nozzle_tab_shows_dispenser_and_fuel_columns(qapp, nozzle_service, fuel_repo, admin_id, fuel_id):
+def test_nozzle_tab_shows_dispenser_and_fuel_columns(qapp, nozzle_service, fuel_repo, tank_repo, admin_id, fuel_id):
     from app.ui.nozzle_window import NozzleTab
 
     service, _ = nozzle_service
     dispenser = service.create_dispenser(admin_id, DispenserCreate(code="D1"))
     service.create_nozzle(admin_id, NozzleCreate(code="N1", dispenser_id=dispenser.id, fuel_id=fuel_id))
 
-    tab = NozzleTab(service, fuel_repo, admin_id, can_manage=True)
+    tab = NozzleTab(service, fuel_repo, tank_repo, admin_id, can_manage=True)
     assert tab.table.rowCount() == 1
     assert tab.table.item(0, 1).text() == "D1"
     assert tab.table.item(0, 2).text() == "Petrol"
 
 
-def test_management_window_tabs_gated_on_manage_permission(qapp, nozzle_service, fuel_repo, admin_id, accountant_id):
+def test_management_window_tabs_gated_on_manage_permission(qapp, nozzle_service, fuel_repo, tank_repo, admin_id, accountant_id):
     from app.ui.nozzle_window import NozzleManagementWindow
 
     service, auth_service = nozzle_service
 
-    admin_window = NozzleManagementWindow(service, fuel_repo, auth_service, admin_id)
+    admin_window = NozzleManagementWindow(service, fuel_repo, tank_repo, auth_service, admin_id)
     assert admin_window.dispenser_tab.add_button.isHidden() is False
     assert admin_window.nozzle_tab.add_button.isHidden() is False
 
-    accountant_window = NozzleManagementWindow(service, fuel_repo, auth_service, accountant_id)
+    accountant_window = NozzleManagementWindow(service, fuel_repo, tank_repo, auth_service, accountant_id)
     assert accountant_window.dispenser_tab.add_button.isHidden() is True
     assert accountant_window.nozzle_tab.add_button.isHidden() is True

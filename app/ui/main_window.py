@@ -24,6 +24,7 @@ from app.repositories.attendance_repository import AttendanceRepository
 from app.repositories.audit_log_repository import AuditLogRepository
 from app.repositories.dispenser_repository import DispenserRepository
 from app.repositories.employee_document_repository import EmployeeDocumentRepository
+from app.repositories.customer_repository import CustomerRepository
 from app.repositories.employee_repository import EmployeeRepository
 from app.repositories.fuel_delivery_repository import FuelDeliveryRepository
 from app.repositories.fuel_repository import FuelRepository
@@ -32,6 +33,7 @@ from app.repositories.nozzle_repository import NozzleRepository
 from app.repositories.purchase_order_repository import PurchaseOrderItemRepository, PurchaseOrderRepository
 from app.repositories.role_repository import RoleRepository
 from app.repositories.fuel_reconciliation_repository import FuelReconciliationRepository
+from app.repositories.sale_repository import SaleRepository
 from app.repositories.shift_repository import ShiftRepository
 from app.repositories.supplier_invoice_repository import SupplierInvoiceRepository, SupplierPaymentRepository
 from app.repositories.supplier_repository import SupplierRepository
@@ -46,6 +48,7 @@ from app.services.employee_service import EmployeeService
 from app.services.nozzle_service import NozzleService
 from app.services.procurement_service import ProcurementService
 from app.services.report_service import ReportService
+from app.services.sale_service import SaleService
 from app.services.shift_service import ShiftService
 from app.services.audit_service import AuditService
 from app.services.backup_service import BackupService
@@ -134,9 +137,11 @@ class MainWindow(QMainWindow):
         backup_service: BackupService,
         audit_service: AuditService,
         procurement_service: ProcurementService,
+        sale_service: SaleService,
         role_repo,
         fuel_repo,
         user_repo,
+        tank_repo,
         user_data: dict,
     ):
         super().__init__()
@@ -151,9 +156,11 @@ class MainWindow(QMainWindow):
         self._backup_service = backup_service
         self._audit_service = audit_service
         self._procurement_service = procurement_service
+        self._sale_service = sale_service
         self._role_repo = role_repo
         self._fuel_repo = fuel_repo
         self._user_repo = user_repo
+        self._tank_repo = tank_repo
         self._user_data = user_data
         self._session_token = user_data["session_token"]
         self._employee_window = None
@@ -167,6 +174,7 @@ class MainWindow(QMainWindow):
         self._backup_window = None
         self._audit_window = None
         self._procurement_window = None
+        self._sales_window = None
 
         self.setWindowTitle("Petrol Pump ERP")
         self.setMinimumSize(960, 620)
@@ -218,6 +226,7 @@ class MainWindow(QMainWindow):
                     ("🕒", "Attendance", "Mark and review attendance", self._open_attendance, Permission.ATTENDANCE_VIEW),
                     ("⛽", "Shifts", "Open/close shifts, assign nozzles", self._open_shifts, Permission.SHIFT_VIEW),
                     ("🪪", "My Shift", "Your current nozzle and fuel assignment", self._open_my_shift, Permission.MY_ASSIGNMENT_VIEW),
+                    ("💳", "Sales", "Record sales and manage customers", self._open_sales, Permission.SALE_VIEW),
                     ("🔧", "Nozzles", "Manage dispensers and nozzles", self._open_nozzles, Permission.NOZZLE_VIEW),
                     ("🛢️", "Tanks", "Stock, transactions, reconciliation", self._open_tanks, Permission.INVENTORY_VIEW),
                     ("🚛", "Procurement", "Suppliers, orders, and deliveries", self._open_procurement, Permission.PROCUREMENT_VIEW),
@@ -336,7 +345,7 @@ class MainWindow(QMainWindow):
         from app.ui.nozzle_window import NozzleManagementWindow
 
         self._nozzle_window = NozzleManagementWindow(
-            self._nozzle_service, self._fuel_repo, self._auth_service, self._user_data["id"]
+            self._nozzle_service, self._fuel_repo, self._tank_repo, self._auth_service, self._user_data["id"]
         )
         self._nozzle_window.show()
 
@@ -360,6 +369,18 @@ class MainWindow(QMainWindow):
             self._user_data["id"],
         )
         self._procurement_window.show()
+
+    def _open_sales(self) -> None:
+        from app.ui.sales_window import SalesWindow
+
+        self._sales_window = SalesWindow(
+            self._sale_service,
+            self._shift_service,
+            self._employee_service,
+            self._auth_service,
+            self._user_data["id"],
+        )
+        self._sales_window.show()
 
     def _open_my_shift(self) -> None:
         from app.ui.my_shift_window import MyShiftWindow
@@ -446,6 +467,8 @@ class AppController:
             self._auth_service,
         )
         self._fuel_repo = FuelRepository(self._db_session)
+        self._tank_repo = TankRepository(self._db_session)
+        tank_repo = self._tank_repo
         self._nozzle_service = NozzleService(
             DispenserRepository(self._db_session),
             nozzle_repo,
@@ -453,8 +476,8 @@ class AppController:
             nozzle_assignment_repo,
             audit_repo,
             self._auth_service,
+            tank_repo,
         )
-        tank_repo = TankRepository(self._db_session)
         reconciliation_repo = FuelReconciliationRepository(self._db_session)
         self._tank_service = TankService(
             tank_repo,
@@ -488,6 +511,18 @@ class AppController:
             SupplierPaymentRepository(self._db_session),
             self._fuel_repo,
             employee_repo,
+            self._tank_service,
+            audit_repo,
+            self._auth_service,
+        )
+        self._sale_service = SaleService(
+            SaleRepository(self._db_session),
+            ShiftRepository(self._db_session),
+            nozzle_repo,
+            self._fuel_repo,
+            employee_repo,
+            CustomerRepository(self._db_session),
+            self._tank_repo,
             self._tank_service,
             audit_repo,
             self._auth_service,
@@ -531,9 +566,11 @@ class AppController:
             self._backup_service,
             self._audit_service,
             self._procurement_service,
+            self._sale_service,
             self._role_repo,
             self._fuel_repo,
             self._user_repo,
+            self._tank_repo,
             user_data,
         )
         self.main_window.logout_requested.connect(self._on_logout)

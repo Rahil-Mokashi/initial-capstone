@@ -12,12 +12,14 @@ from app.database.seed import seed_initial_data
 from app.models.audit_log import AuditLog
 from app.models.fuel import Fuel
 from app.models.role import Role
+from app.models.tank import Tank
 from app.models.user import User
 from app.repositories.audit_log_repository import AuditLogRepository
 from app.repositories.dispenser_repository import DispenserRepository
 from app.repositories.fuel_repository import FuelRepository
 from app.repositories.nozzle_assignment_repository import NozzleAssignmentRepository
 from app.repositories.nozzle_repository import NozzleRepository
+from app.repositories.tank_repository import TankRepository
 from app.repositories.user_repository import UserRepository
 from app.repositories.user_session_repository import UserSessionRepository
 from app.schemas.nozzle import DispenserCreate, NozzleCreate
@@ -82,6 +84,22 @@ def fuel_id(db_session):
 
 
 @pytest.fixture()
+def other_fuel_id(db_session):
+    fuel = Fuel(fuel_type="Diesel", rate_per_liter=90.0)
+    db_session.add(fuel)
+    db_session.commit()
+    return fuel.id
+
+
+@pytest.fixture()
+def tank_id(db_session, fuel_id):
+    tank = Tank(code="T1", fuel_id=fuel_id, capacity=10000.0, current_stock=5000.0, opening_stock=5000.0, status="active")
+    db_session.add(tank)
+    db_session.commit()
+    return tank.id
+
+
+@pytest.fixture()
 def nozzle_service(db_session):
     audit_repo = AuditLogRepository(db_session)
     auth_service = AuthService(UserRepository(db_session), audit_repo, UserSessionRepository(db_session))
@@ -92,6 +110,7 @@ def nozzle_service(db_session):
         NozzleAssignmentRepository(db_session),
         audit_repo,
         auth_service,
+        TankRepository(db_session),
     )
 
 
@@ -128,6 +147,30 @@ def test_create_nozzle(nozzle_service, admin_id, fuel_id):
     nozzle = nozzle_service.create_nozzle(admin_id, NozzleCreate(code="N1", dispenser_id=dispenser.id, fuel_id=fuel_id))
     assert nozzle.code == "N1"
     assert nozzle.status == NozzleStatus.ACTIVE.value
+
+
+def test_create_nozzle_with_matching_tank(nozzle_service, admin_id, fuel_id, tank_id):
+    dispenser = nozzle_service.create_dispenser(admin_id, DispenserCreate(code="D1"))
+    nozzle = nozzle_service.create_nozzle(
+        admin_id, NozzleCreate(code="N1", dispenser_id=dispenser.id, fuel_id=fuel_id, tank_id=tank_id)
+    )
+    assert nozzle.tank_id == tank_id
+
+
+def test_create_nozzle_rejects_tank_with_different_fuel_type(nozzle_service, admin_id, fuel_id, other_fuel_id, tank_id):
+    dispenser = nozzle_service.create_dispenser(admin_id, DispenserCreate(code="D1"))
+    with pytest.raises(ConflictError):
+        nozzle_service.create_nozzle(
+            admin_id, NozzleCreate(code="N1", dispenser_id=dispenser.id, fuel_id=other_fuel_id, tank_id=tank_id)
+        )
+
+
+def test_create_nozzle_rejects_unknown_tank(nozzle_service, admin_id, fuel_id):
+    dispenser = nozzle_service.create_dispenser(admin_id, DispenserCreate(code="D1"))
+    with pytest.raises(NotFoundError):
+        nozzle_service.create_nozzle(
+            admin_id, NozzleCreate(code="N1", dispenser_id=dispenser.id, fuel_id=fuel_id, tank_id="does-not-exist")
+        )
 
 
 def test_duplicate_nozzle_code_raises_conflict(nozzle_service, admin_id, fuel_id):
