@@ -33,7 +33,7 @@ from PySide6.QtWidgets import (
 from app.core.constants import EmployeeStatus, Permission
 from app.core.exceptions import AppError
 from app.schemas.employee import EmployeeCreate, EmployeeUpdate
-from app.ui.qt_utils import describe_unexpected_error, qdate_to_date
+from app.ui.qt_utils import chain_enter_to_next_field, describe_unexpected_error, qdate_to_date
 
 TABLE_HEADERS = ["Code", "Name", "Designation", "Department", "Status", "Joining Date"]
 
@@ -153,6 +153,20 @@ class EmployeeFormDialog(QDialog):
         self.joining_date_input.setCalendarPopup(True)
         self.emergency_name_input = QLineEdit()
         self.emergency_phone_input = QLineEdit()
+        self.emergency_phone_input.returnPressed.connect(self._save)
+
+        chain_enter_to_next_field(
+            self.first_name_input,
+            self.last_name_input,
+            self.contact_input,
+            self.email_input,
+            self.designation_input,
+            self.department_input,
+            self.outlet_input,
+            self.joining_date_input,
+            self.emergency_name_input,
+            self.emergency_phone_input,
+        )
 
         form = QFormLayout()
         form.addRow("First name", self.first_name_input)
@@ -257,6 +271,9 @@ class EmployeeDetailDialog(QDialog):
         self.designation_input = QLineEdit(e.designation or "")
         self.department_input = QLineEdit(e.department or "")
         self.contact_input = QLineEdit(e.contact_number or "")
+        self.department_input.returnPressed.connect(self._save_profile)
+
+        chain_enter_to_next_field(self.contact_input, self.designation_input, self.department_input)
 
         form = QFormLayout()
         form.addRow("Contact number", self.contact_input)

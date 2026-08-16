@@ -150,6 +150,7 @@ class DispenserFormDialog(QDialog):
 
         self.code_input = QLineEdit()
         self.code_input.setPlaceholderText("e.g. D1")
+        self.code_input.returnPressed.connect(self._save)
 
         form = QFormLayout()
         form.addRow("Code", self.code_input)
@@ -286,6 +287,7 @@ class NozzleFormDialog(QDialog):
 
         self.code_input = QLineEdit()
         self.code_input.setPlaceholderText("e.g. N1")
+        self.code_input.returnPressed.connect(self._save)
 
         self.dispenser_combo = QComboBox()
         for dispenser in nozzle_service.list_dispensers(actor_user_id):

@@ -125,6 +125,7 @@ class ShiftOpenDialog(QDialog):
         self.label_input.addItems(["Morning", "Afternoon", "Evening", "Night"])
 
         self.notes_input = QLineEdit()
+        self.notes_input.returnPressed.connect(self._save)
 
         form = QFormLayout()
         form.addRow("Date", self.date_input)

@@ -3,11 +3,14 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
+    """Database location is deliberately not here - it has one real
+    resolution path (app/database/connection.py's get_database_path(),
+    which handles the frozen-build/dev/PETROL_PUMP_DB_PATH-override
+    cases) rather than two competing ones."""
+
     environment: str = "development"
-    database_url: str = "sqlite:///./petrol_pump.db"
     session_timeout_hours: int = 8
     log_level: str = "INFO"
-    secret_key: str = "change-me"
 
     model_config = ConfigDict(env_file=".env", env_file_encoding="utf-8")
 

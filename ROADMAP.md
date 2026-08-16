@@ -93,7 +93,7 @@
 - [x] Track opening/closing meter readings (NozzleAssignment.opening_meter/closing_meter, closing validated >= opening)
 - [x] Prevent duplicate nozzle assignments (enforced in ShiftService.assign_nozzle — see Phase 7)
 - [x] Attendant self-service assignment view (user-raised gap, 2026-08-15): new `Permission.MY_ASSIGNMENT_VIEW` granted to `UserRole.ATTENDANT`; `ShiftService.get_my_active_assignment` + `app/ui/my_shift_window.py` let a logged-in attendant see their own current nozzle/fuel/dispenser assignment (previously an empty dashboard)
-- [~] Nozzle reports: fuel-type-sectioned summary (active nozzle counts per Petrol/Diesel/Power) done via `ReportService.get_fuel_type_summary` + `app/ui/report_window.py`; assignment-history/print/export reports still deferred to Phase 16
+- [~] Nozzle reports: fuel-type-sectioned summary (active nozzle counts per Petrol/Diesel/Power) done via `ReportService.get_fuel_type_summary` + `app/ui/report_window.py`, with Print/PDF/Excel export (`app/services/report_export.py`, 2026-08-16); a dedicated assignment-history report is still deferred to Phase 16
 - [x] Full Dispenser/Nozzle master-data UI (app/ui/nozzle_window.py: tabbed Dispensers/Nozzles, add forms, status-change with reason; deactivating a nozzle currently assigned in an open shift is blocked)
 
 ## Phase 9: Tank & Inventory Management (Complete except reports, deferred to Phase 16)
@@ -104,7 +104,7 @@
 - [x] Track current stock levels (Tank.current_stock, moved only by recorded transactions)
 - [x] Record tank transactions (receipts, issues, adjustments — TankTransactionType; receipts/issues validated against capacity/negative stock, adjustments require a reason)
 - [x] Implement fuel reconciliation (FuelReconciliation: Expected = Opening + Received - Sold, compared against a physical reading, variance classified via configurable thresholds — NORMAL/WARNING/INVESTIGATION_REQUIRED/APPROVAL_REQUIRED, never assumed to be theft; accepted reconciliation becomes the new baseline for the next period)
-- [~] Tank inventory reports: fuel-type-sectioned summary (tank count/capacity/current stock and worst reconciliation variance per Petrol/Diesel/Power) done via `ReportService.get_fuel_type_summary` + `app/ui/report_window.py`; transaction-history/print/PDF/Excel export reports still deferred to Phase 16
+- [~] Tank inventory reports: fuel-type-sectioned summary (tank count/capacity/current stock and worst reconciliation variance per Petrol/Diesel/Power) done via `ReportService.get_fuel_type_summary` + `app/ui/report_window.py`, with Print/PDF/Excel export (`app/services/report_export.py`, 2026-08-16); a dedicated transaction-history report is still deferred to Phase 16
 
 ## Phase 10: Procurement Management
 - [ ] Create supplier master data
@@ -277,14 +277,17 @@ A feature is complete only when:
 - [ ] GitHub issue updated
 
 ## Current Focus
-Phase 9 (Tank & Inventory Management) is complete end to end — service layer and UI, tested. On top of that, three more user-requested features are also done end-to-end: the attendant self-service "My Shift" view, fuel-type-sectioned (Petrol/Diesel/Power) tank & nozzle reports, and full User Management (create logins for any of the six roles, multiple users per role). 202/202 tests passing project-wide. Per the user's instruction to keep building while the team's feedback is pending, work has moved on to Phase 10 (Procurement Management).
+Phase 9 (Tank & Inventory Management) is complete end to end — service layer and UI, tested. On top of that, three more user-requested features are also done end-to-end: the attendant self-service "My Shift" view, fuel-type-sectioned (Petrol/Diesel/Power) tank & nozzle reports, and full User Management (create logins for any of the six roles, multiple users per role).
+
+On 2026-08-16 the user asked for a full build audit and then to resolve everything on its priority-ranked list. Done: Alembic migrations (replacing `create_all()`), Float→Numeric/Decimal for every money/volume column, removing the dead `InventoryService`/redundant `Fuel` stock fields, password self-service + forced rotation, production file logging (plus a real Alembic-logger bug this surfaced and fixed), backup/restore with RBAC and audit logging, an audit log viewer, and PDF/Excel export + Print for the fuel-type report. Also fixed along the way: a real reconciliation bug (local/UTC day-boundary mismatch dropping same-day transactions), a user-reported Enter-key navigation gap, and a dashboard grid-wrap bug. Deferred: the shared UI base-class refactor (see PROJECT_CONTEXT.md's Pending Modules — a deliberate call to not risk a broad refactor at the end of an already large session). 265/265 tests passing project-wide, CI now runs them on every push. Per the user's earlier instruction to keep building while the team's feedback is pending, work moves on to Phase 10 (Procurement Management) next.
 
 ## Next Immediate Tasks
 1. Begin Phase 10 (Procurement Management) — Procurement will eventually create Tank RECEIPT transactions automatically from supplier deliveries.
-2. Migrate `Attendance.shift_label` (free text) to a real foreign key against the now-existing `Shift` model
-3. Expand the `ROLE_PERMISSIONS` matrix in app/core/constants.py as each new module is implemented
-4. Consider revisiting `Fuel`/`Tank`'s `Float` fields for money/quantity before real financial data is stored
-5. PDF/Excel export and Print/Preview for reports, per CLAUDE.md's Reporting Rules — not yet implemented for any report (`ReportService.get_fuel_type_summary` currently only feeds the on-screen UI)
+2. The shared UI base-class refactor (list-window/form-dialog boilerplate), as its own focused pass
+3. Migrate `Attendance.shift_label` (free text) to a real foreign key against the now-existing `Shift` model
+4. Expand the `ROLE_PERMISSIONS` matrix in app/core/constants.py as each new module is implemented
+5. Decide whether `ADMIN` and `OWNER` should keep identical permissions or diverge (flagged in the 2026-08-16 audit)
+6. Extend PDF/Excel export to the rest of Phase 16's reports, reusing `app/services/report_export.py`'s pattern
 
 ## Long-term Considerations (Not for Initial Release)
 While building for offline-only operation, the architecture should not prevent future expansion:

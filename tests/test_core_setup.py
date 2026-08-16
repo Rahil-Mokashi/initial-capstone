@@ -66,3 +66,37 @@ def test_main_wraps_database_errors_in_a_clean_exception(monkeypatch):
 
     with pytest.raises(DatabaseInitializationError):
         main(run_ui=False)
+
+
+def test_setup_logging_writes_a_file_next_to_the_database(monkeypatch, tmp_path):
+    """Packaged builds run with console=False (petrol_pump_erp.spec), so a
+    console-only logger leaves no record at all on a client's machine.
+    setup_logging() must also attach a rotating file handler colocated
+    with the database."""
+    import logging as logging_module
+
+    from app.core.logging import LOG_FILENAME, logger, setup_logging
+
+    monkeypatch.setenv("PETROL_PUMP_DB_PATH", str(tmp_path / "petrol_pump.db"))
+
+    setup_logging()
+    try:
+        logger.info("regression test log line")
+        for handler in logging_module.getLogger().handlers:
+            handler.flush()
+
+        log_path = tmp_path / LOG_FILENAME
+        assert log_path.exists()
+        assert "regression test log line" in log_path.read_text(encoding="utf-8")
+    finally:
+        logging_module.getLogger().handlers.clear()
+
+
+def test_setup_logging_does_not_crash_when_the_log_directory_is_unwritable(monkeypatch, tmp_path):
+    unwritable_db_path = str(tmp_path / "does-not-exist" / "petrol_pump.db")
+    monkeypatch.setattr("app.database.connection.DB_PATH", unwritable_db_path)
+    monkeypatch.setattr("os.makedirs", lambda *a, **k: (_ for _ in ()).throw(OSError("permission denied")))
+
+    from app.core.logging import setup_logging
+
+    setup_logging()  # must not raise

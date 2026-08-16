@@ -57,6 +57,15 @@ def test_login_window_shown_on_start(controller):
     assert controller.main_window is None
 
 
+def test_enter_in_username_moves_focus_to_password_instead_of_submitting(controller):
+    login_window = controller.login_window
+    login_window.username_input.setText("admin")
+    login_window.username_input.returnPressed.emit()
+
+    assert controller.main_window is None
+    assert login_window.password_input.hasFocus() is True
+
+
 def test_wrong_password_shows_generic_error_and_stays_on_login(controller):
     controller.login_window.username_input.setText("admin")
     controller.login_window.password_input.setText("wrong-password")

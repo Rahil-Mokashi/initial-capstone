@@ -13,7 +13,13 @@ from app.database.connection import get_database_path
 config = context.config
 
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    # disable_existing_loggers defaults to True, which silently disables
+    # every logger that already exists and isn't named in alembic.ini's
+    # own [loggers] section - including the app's own "petrol_pump_erp"
+    # logger (app/core/logging.py), for the rest of the process. Since
+    # init_db() runs migrations on every startup, that would kill all
+    # application logging right after the first launch.
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 # app/database/migrations.py sets sqlalchemy.url explicitly before
 # running migrations programmatically (so it targets whatever exact

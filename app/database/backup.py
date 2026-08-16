@@ -25,7 +25,10 @@ def _backups_dir(db_path: str) -> str:
 
 
 def _backup_filename(reason: str) -> str:
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    # Microsecond resolution: two backups (e.g. a manual one right before
+    # a restore's own safety backup) can otherwise land in the same
+    # second and silently overwrite each other on disk.
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
     safe_reason = re.sub(r"[^a-z0-9_]+", "_", reason.lower()).strip("_") or "manual"
     return f"petrol_pump_{timestamp}_{safe_reason}.db"
 

@@ -20,11 +20,21 @@ each PC gets its own fresh, persistent database on first run.
 # cheaper than a build that silently fails to launch.
 EXCLUDED_MODULES = []
 
+# init_db() runs real Alembic migrations at startup (app/database/
+# migrations.py), which needs alembic.ini and the alembic/ directory
+# (env.py, script.py.mako, every versions/*.py) on disk at runtime, not
+# just importable Python modules - PyInstaller's import analysis alone
+# won't pick these up since they're read as files, not imported.
+DATA_FILES = [
+    ("alembic.ini", "."),
+    ("alembic", "alembic"),
+]
+
 a = Analysis(
     ["app/main.py"],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=DATA_FILES,
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

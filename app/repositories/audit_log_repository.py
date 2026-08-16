@@ -1,4 +1,5 @@
-from typing import Optional
+from datetime import date, datetime, time, timezone
+from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
@@ -49,3 +50,31 @@ class AuditLogRepository:
             .order_by(AuditLog.created_at.desc())
             .all()
         )
+
+    def search(
+        self,
+        event_type: Optional[str] = None,
+        actor_id: Optional[str] = None,
+        date_from: Optional[date] = None,
+        date_to: Optional[date] = None,
+        limit: int = 500,
+    ) -> List[AuditLog]:
+        """date_from/date_to are local calendar dates, widened to the full
+        local day and converted to UTC before comparing against
+        created_at (stored UTC-aware) - see
+        TankTransactionRepository.sum_for_tank_by_type for why a naive
+        local-midnight boundary compared directly against a UTC
+        timestamp silently drops rows whenever local time runs ahead of
+        UTC."""
+        query = self._session.query(AuditLog)
+        if event_type:
+            query = query.filter(AuditLog.event_type.ilike(f"%{event_type}%"))
+        if actor_id:
+            query = query.filter_by(actor_id=actor_id)
+        if date_from:
+            start_of_day = datetime.combine(date_from, time.min).astimezone(timezone.utc)
+            query = query.filter(AuditLog.created_at >= start_of_day)
+        if date_to:
+            end_of_day = datetime.combine(date_to, time.max).astimezone(timezone.utc)
+            query = query.filter(AuditLog.created_at <= end_of_day)
+        return query.order_by(AuditLog.created_at.desc()).limit(limit).all()
