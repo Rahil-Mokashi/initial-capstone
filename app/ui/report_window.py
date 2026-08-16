@@ -224,11 +224,12 @@ class ReportsHubWindow(QMainWindow):
     acting user can open, gated per-report on that report's own
     permission."""
 
-    def __init__(self, report_service, auth_service, actor_user_id: str):
+    def __init__(self, report_service, auth_service, actor_user_id: str, analytics_service):
         super().__init__()
         self._report_service = report_service
         self._auth_service = auth_service
         self._actor_user_id = actor_user_id
+        self._analytics_service = analytics_service
         self._open_windows = []
 
         self.setWindowTitle("Reports")
@@ -257,6 +258,7 @@ class ReportsHubWindow(QMainWindow):
                 self._report_service.get_customer_outstanding_report, "customer_outstanding_report")),
             ("Shift Reconciliation Report", Permission.RECONCILIATION_VIEW, lambda: self._open_table_report(
                 self._report_service.get_reconciliation_report, "reconciliation_report", supports_date_filter=True)),
+            ("Business Insights (Performance & Forecast)", Permission.ANALYTICS_VIEW, self._open_analytics),
         ]
 
         any_visible = False
@@ -296,5 +298,12 @@ class ReportsHubWindow(QMainWindow):
         from app.ui.table_report_window import TableReportWindow
 
         window = TableReportWindow(self._actor_user_id, fetch_report, filename_stem, supports_date_filter)
+        self._open_windows.append(window)
+        window.show()
+
+    def _open_analytics(self) -> None:
+        from app.ui.analytics_window import AnalyticsWindow
+
+        window = AnalyticsWindow(self._analytics_service, self._actor_user_id)
         self._open_windows.append(window)
         window.show()

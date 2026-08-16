@@ -255,6 +255,12 @@ Everything below is implemented, tested, and running — not planned. Each modul
 - A failed scheduled or pre-migration backup is logged and never blocks the app from starting
 - Still deferred: a configurable backup location (needs a settings screen that doesn't exist yet), written recovery-workflow documentation, and optional backup encryption
 
+### Business Insights: performance & sales forecast (2026-08-16, user-requested)
+- Period performance reports (daily/weekly/monthly/quarterly/yearly) show revenue, quantity, and estimated profit per fuel type
+- Profit uses the Weighted Average Cost method against actual purchase data - shown as "N/A" rather than guessed when no purchase history exists yet for a fuel
+- A sales forecast projects next week's sales per fuel type from recent weekly trends (simple, explainable linear regression - no black-box ML, no new heavy dependencies) and classifies it as a likely hike, a possible dip, or stable, with the reasoning spelled out; shows "not enough data yet" rather than a fake-confident guess when history is too short
+- Both views support Print, Print Preview, PDF, and Excel export, reached from the Reports hub as "Business Insights"
+
 ### Dashboard redesign (2026-08-16, user-requested)
 - Dashboard cards are grouped into labeled sections ("Daily Operations", "Reports & Administration") instead of one flat grid, now that there are 12 modules
 - The top bar was decluttered to just the user's name/role and a single "Account" menu — every module is reachable from its own dashboard card, so duplicating them as top-bar buttons was redundant and was the actual cause of the button crowding a prior audit flagged
@@ -280,7 +286,7 @@ Not yet built: Payments (dedicated reconciliation reporting beyond what Sale alr
 | ORM | SQLAlchemy 2.x | in use |
 | Validation | Pydantic v2 | in use |
 | Configuration | pydantic-settings | in use |
-| Testing | pytest | in use — 435 tests |
+| Testing | pytest | in use — 449 tests |
 | Logging | Python standard `logging` | in use — console + a rotating file colocated with the database |
 | Migrations | Alembic | in use — `init_db()` runs `alembic upgrade head`, not `Base.metadata.create_all()` |
 | PDF reports | ReportLab | in use — fuel-type summary report, more reports to follow in Phase 16 |
@@ -314,7 +320,7 @@ PetrolPumpERP/
 │   ├── schemas/                 # Pydantic input-validation schemas
 │   ├── services/                # Business logic, RBAC checks, audit logging
 │   └── ui/                      # PySide6 windows/dialogs + shared stylesheet
-├── tests/                       # pytest suite (435 tests)
+├── tests/                       # pytest suite (449 tests)
 ├── docs/
 │   └── screenshots/             # Screenshots used in this README
 ├── requirements.txt
@@ -372,7 +378,7 @@ On first run this will:
 pytest
 ```
 
-All 435 tests should pass, in well under a minute. To run a single module's tests:
+All 449 tests should pass, in well under a minute. To run a single module's tests:
 
 ```bash
 pytest tests/test_auth_rbac.py -v

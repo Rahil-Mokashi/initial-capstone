@@ -27,8 +27,8 @@ from app.repositories.fuel_reconciliation_repository import FuelReconciliationRe
 from app.repositories.fuel_repository import FuelRepository
 from app.repositories.nozzle_repository import NozzleRepository
 from app.repositories.payment_repository import PaymentRepository
+from app.repositories.purchase_order_repository import PurchaseOrderItemRepository
 from app.repositories.sale_repository import SaleRepository
-from app.repositories.shift_reconciliation_repository import ShiftReconciliationRepository
 from app.repositories.shift_repository import ShiftRepository
 from app.repositories.tank_reading_repository import TankReadingRepository
 from app.repositories.tank_repository import TankRepository
@@ -37,9 +37,9 @@ from app.repositories.user_repository import UserRepository
 from app.repositories.user_session_repository import UserSessionRepository
 from app.schemas.sale import SaleCreate
 from app.schemas.tank import TankCreate
+from app.services.analytics_service import AnalyticsService
 from app.services.auth_service import AuthService
 from app.services.credit_service import CreditService
-from app.services.report_service import ReportService
 from app.services.sale_service import SaleService
 from app.services.tank_service import TankService
 
@@ -54,7 +54,7 @@ def qapp():
 
 @pytest.fixture()
 def db_session(tmp_path, monkeypatch):
-    sqlite_path = str(tmp_path / "test_reports_hub_ui.db")
+    sqlite_path = str(tmp_path / "test_analytics_ui.db")
     engine = create_engine(f"sqlite:///{sqlite_path}", connect_args={"check_same_thread": False})
     session_factory = sessionmaker(autocommit=False, autoflush=False, bind=engine, expire_on_commit=False)
     Base.metadata.create_all(bind=engine)
@@ -83,12 +83,6 @@ def make_user(db_session, role_name: str, username: str) -> User:
 def admin_id(db_session):
     seed_initial_data()
     return db_session.query(User).filter_by(username="admin").first().id
-
-
-@pytest.fixture()
-def attendant_id(db_session):
-    seed_initial_data()
-    return make_user(db_session, UserRole.ATTENDANT.value, "attendant1").id
 
 
 @pytest.fixture()
@@ -172,54 +166,35 @@ def sale_service(db_session, tank_service, credit_service, auth_service):
 
 
 @pytest.fixture()
-def report_service(db_session, auth_service):
-    return ReportService(
-        FuelRepository(db_session), TankRepository(db_session), NozzleRepository(db_session),
-        FuelReconciliationRepository(db_session), auth_service,
-        SaleRepository(db_session), PaymentRepository(db_session), ExpenseRepository(db_session),
-        CreditAccountRepository(db_session), CustomerPaymentRepository(db_session),
-        CustomerRepository(db_session), ShiftReconciliationRepository(db_session),
-    )
-
-
-@pytest.fixture()
 def analytics_service(db_session, auth_service):
-    from app.repositories.expense_repository import ExpenseRepository
-    from app.repositories.purchase_order_repository import PurchaseOrderItemRepository
-    from app.services.analytics_service import AnalyticsService
-
     return AnalyticsService(
         SaleRepository(db_session), ExpenseRepository(db_session),
         PurchaseOrderItemRepository(db_session), FuelRepository(db_session), auth_service,
     )
 
 
-def test_reports_hub_shows_every_report_for_admin(qapp, report_service, analytics_service, auth_service, admin_id):
-    from app.ui.report_window import ReportsHubWindow
-
-    window = ReportsHubWindow(report_service, auth_service, admin_id, analytics_service)
-    # 8 reports: fuel summary, sales, payment summary, expense summary, credit x2, reconciliation, analytics
-    assert window.centralWidget() is not None
-
-
-def test_reports_hub_hides_reports_attendant_cannot_view(qapp, report_service, analytics_service, auth_service, attendant_id):
-    from app.ui.report_window import ReportsHubWindow
-
-    window = ReportsHubWindow(report_service, auth_service, attendant_id, analytics_service)
-    buttons = [w for w in window.findChildren(object) if hasattr(w, "text") and callable(getattr(w, "text"))]
-    labels = {b.text() for b in buttons if hasattr(b, "text")}
-    assert "Sales Report" in labels
-    assert "Expense Summary Report" not in labels
-    assert "Credit Report by Fuel Type" not in labels
-
-
-def test_table_report_window_shows_sales_data(qapp, report_service, sale_service, admin_id, open_shift_id, nozzle_id, employee_id):
-    from app.ui.table_report_window import TableReportWindow
+def test_performance_tab_shows_todays_sale(qapp, analytics_service, sale_service, admin_id, open_shift_id, nozzle_id, employee_id):
+    from app.ui.analytics_window import PerformanceTab
 
     sale_service.create_sale(
         admin_id,
         SaleCreate(shift_id=open_shift_id, nozzle_id=nozzle_id, employee_id=employee_id, quantity=Decimal("10"), payment_method=PaymentMethod.CASH),
     )
-    window = TableReportWindow(admin_id, report_service.get_sales_report, "sales_report", supports_date_filter=True)
-    assert window.table.rowCount() == 2  # one fuel-type row + a total row
-    assert window.windowTitle() == "Sales Report"
+    tab = PerformanceTab(analytics_service, admin_id)
+    assert tab.table.rowCount() > 0
+    assert tab.table.item(0, 0).text() == "Petrol"
+
+
+def test_forecast_tab_shows_insufficient_data_message(qapp, analytics_service, admin_id, fuel_id):
+    from app.ui.analytics_window import ForecastTab
+
+    tab = ForecastTab(analytics_service, admin_id)
+    assert "Not enough" in tab.explanations_label.text()
+
+
+def test_analytics_window_has_both_tabs(qapp, analytics_service, admin_id):
+    from app.ui.analytics_window import AnalyticsWindow
+
+    window = AnalyticsWindow(analytics_service, admin_id)
+    assert window.performance_tab is not None
+    assert window.forecast_tab is not None
