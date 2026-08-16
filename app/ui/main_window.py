@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.core.config import settings
 from app.core.constants import Permission
 from app.core.exceptions import SessionExpiredError
 from app.database import connection as db_connection
@@ -614,6 +615,7 @@ class AppController:
             user_repo,
             audit_repo,
             UserSessionRepository(self._db_session),
+            session_timeout_hours=settings.session_timeout_hours,
         )
         self._user_service = UserService(
             user_repo,

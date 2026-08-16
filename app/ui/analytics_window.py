@@ -230,7 +230,11 @@ class PerformanceTab(QWidget):
     def _export(self, export_fn, file_filter: str, default_suffix: str) -> None:
         if self._report is None:
             return
-        file_path, _ = QFileDialog.getSaveFileName(self, "Export report", f"business_performance{default_suffix}", file_filter)
+        from app.core.paths import default_export_path
+
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "Export report", default_export_path(f"business_performance{default_suffix}"), file_filter
+        )
         if not file_path:
             return
         try:
@@ -328,7 +332,11 @@ class ForecastTab(QWidget):
     def _export(self, export_fn, file_filter: str, default_suffix: str) -> None:
         if self._report is None:
             return
-        file_path, _ = QFileDialog.getSaveFileName(self, "Export forecast", f"sales_forecast{default_suffix}", file_filter)
+        from app.core.paths import default_export_path
+
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "Export forecast", default_export_path(f"sales_forecast{default_suffix}"), file_filter
+        )
         if not file_path:
             return
         try:

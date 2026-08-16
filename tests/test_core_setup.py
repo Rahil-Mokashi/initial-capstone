@@ -57,6 +57,26 @@ def test_main_runs_without_error(monkeypatch, tmp_path):
     main(run_ui=False)
 
 
+def test_main_creates_backups_and_reports_directories_on_startup(monkeypatch, tmp_path):
+    sqlite_path = str(tmp_path / "petrol_pump.db")
+    engine = create_engine(
+        f"sqlite:///{sqlite_path}",
+        connect_args={"check_same_thread": False},
+    )
+    monkeypatch.setattr("app.database.connection.DB_PATH", sqlite_path)
+    monkeypatch.setattr("app.database.connection.engine", engine)
+    monkeypatch.setattr(
+        "app.database.connection.SessionLocal",
+        sessionmaker(autocommit=False, autoflush=False, bind=engine, expire_on_commit=False),
+    )
+    monkeypatch.setattr("app.core.logging.setup_logging", lambda: None)
+
+    main(run_ui=False)
+
+    assert os.path.isdir(tmp_path / "backups")
+    assert os.path.isdir(tmp_path / "reports")
+
+
 def test_init_db_takes_a_scheduled_backup_when_data_exists_and_none_is_recent(monkeypatch, tmp_path):
     from app.database.backup import list_backups
     from app.database.connection import init_db
@@ -95,6 +115,29 @@ def test_init_db_does_not_take_a_second_scheduled_backup_right_away(monkeypatch,
     init_db()
     init_db()  # takes the first scheduled backup
     init_db()  # too soon for another one
+
+    assert len(list_backups(sqlite_path)) == 1
+
+
+def test_init_db_respects_configured_auto_backup_interval(monkeypatch, tmp_path):
+    """AUTO_BACKUP_INTERVAL_HOURS used to be a hardcoded constant with no
+    way to change it short of a rebuild - init_db() must read the
+    configurable Settings.auto_backup_interval_hours instead."""
+    from app.database.backup import list_backups
+    from app.database.connection import init_db
+
+    sqlite_path = str(tmp_path / "petrol_pump.db")
+    engine = create_engine(f"sqlite:///{sqlite_path}", connect_args={"check_same_thread": False})
+    monkeypatch.setattr("app.database.connection.DB_PATH", sqlite_path)
+    monkeypatch.setattr("app.database.connection.engine", engine)
+    monkeypatch.setattr(
+        "app.database.connection.SessionLocal",
+        sessionmaker(autocommit=False, autoflush=False, bind=engine, expire_on_commit=False),
+    )
+    monkeypatch.setattr("app.core.config.settings.auto_backup_interval_hours", 0.0)
+
+    init_db()  # first run: creates the schema, no backup expected yet
+    init_db()  # second run: data exists, and a 0-hour interval means "always due"
 
     assert len(list_backups(sqlite_path)) == 1
 

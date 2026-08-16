@@ -171,8 +171,10 @@ class TableReportWindow(QMainWindow):
         if report is None:
             return
 
+        from app.core.paths import default_export_path
+
         default_name = f"{self._filename_stem}{default_suffix}"
-        file_path, _ = QFileDialog.getSaveFileName(self, "Export report", default_name, file_filter)
+        file_path, _ = QFileDialog.getSaveFileName(self, "Export report", default_export_path(default_name), file_filter)
         if not file_path:
             return
 

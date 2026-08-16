@@ -329,4 +329,5 @@ DASHBOARD_LOW_STOCK_THRESHOLD_PERCENT = 20.0
 # backup is taken on startup whenever the most recent one is older than
 # this many hours. 24h matches "once a day" without needing a
 # background scheduler thread in an app that isn't always running.
-AUTO_BACKUP_INTERVAL_HOURS = 24.0
+# Configurable via Settings.auto_backup_interval_hours (app/core/config.py)
+# without a rebuild - see app.database.connection.init_db.

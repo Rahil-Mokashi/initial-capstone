@@ -57,6 +57,12 @@ def test_login_window_shown_on_start(controller):
     assert controller.main_window is None
 
 
+def test_auth_service_session_timeout_comes_from_settings_not_a_hardcoded_default(controller):
+    from app.core.config import settings
+
+    assert controller._auth_service._session_timeout == timedelta(hours=settings.session_timeout_hours)
+
+
 def test_enter_in_username_moves_focus_to_password_instead_of_submitting(controller, qapp):
     login_window = controller.login_window
     # hasFocus() reflects OS-level window activation, not just Qt's
