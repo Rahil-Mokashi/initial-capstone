@@ -1,6 +1,9 @@
-"""Reporting UI (Phase 16, first slice). Shows an inventory summary
-sectioned by fuel type, per the user's explicit request. Pure
-presentation — the aggregation lives in ReportService.
+"""Reporting UI (Phase 16). ReportsHubWindow is the single "Reports"
+dashboard entry point - it lists every available report (gated per
+report on the same permission its own module already uses) rather than
+giving each report its own dashboard card, keeping the dashboard from
+growing a card per report the way it would if every report were a
+top-level module.
 """
 
 from PySide6.QtCore import Qt
@@ -16,6 +19,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.core.constants import Permission
 from app.services.report_export import export_fuel_summary_excel, export_fuel_summary_pdf
 from app.ui.qt_utils import describe_unexpected_error
 
@@ -221,3 +225,84 @@ def _build_report_html(summaries) -> str:
     {''.join(rows)}
     </table>
     """
+
+
+class ReportsHubWindow(QMainWindow):
+    """Landing screen for the Reports module: a list of every report the
+    acting user can open, gated per-report on that report's own
+    permission."""
+
+    def __init__(self, report_service, auth_service, actor_user_id: str):
+        super().__init__()
+        self._report_service = report_service
+        self._auth_service = auth_service
+        self._actor_user_id = actor_user_id
+        self._open_windows = []
+
+        self.setWindowTitle("Reports")
+        self.setMinimumSize(420, 480)
+
+        title = QLabel("Reports")
+        title.setObjectName("title")
+
+        subtitle = QLabel("Choose a report to view, print, or export.")
+        subtitle.setObjectName("subtitle")
+
+        buttons_layout = QVBoxLayout()
+        buttons_layout.setSpacing(10)
+
+        report_definitions = [
+            ("Fuel Type Summary", Permission.INVENTORY_VIEW, self._open_fuel_summary),
+            ("Sales Report", Permission.SALE_VIEW, lambda: self._open_table_report(
+                self._report_service.get_sales_report, "sales_report", supports_date_filter=True)),
+            ("Payment Summary Report", Permission.SALE_VIEW, lambda: self._open_table_report(
+                self._report_service.get_payment_summary_report, "payment_summary_report", supports_date_filter=True)),
+            ("Expense Summary Report", Permission.EXPENSE_VIEW, lambda: self._open_table_report(
+                self._report_service.get_expense_summary_report, "expense_summary_report", supports_date_filter=True)),
+            ("Credit Report by Fuel Type", Permission.CREDIT_VIEW, lambda: self._open_table_report(
+                self._report_service.get_credit_fuel_type_report, "credit_fuel_type_report")),
+            ("Customer Outstanding Report", Permission.CREDIT_VIEW, lambda: self._open_table_report(
+                self._report_service.get_customer_outstanding_report, "customer_outstanding_report")),
+            ("Shift Reconciliation Report", Permission.RECONCILIATION_VIEW, lambda: self._open_table_report(
+                self._report_service.get_reconciliation_report, "reconciliation_report", supports_date_filter=True)),
+        ]
+
+        any_visible = False
+        for label, permission, handler in report_definitions:
+            if not self._auth_service.check_permission(actor_user_id, permission.value):
+                continue
+            any_visible = True
+            button = QPushButton(label)
+            button.setObjectName("secondaryButton")
+            button.setCursor(Qt.PointingHandCursor)
+            button.clicked.connect(handler)
+            buttons_layout.addWidget(button)
+
+        layout = QVBoxLayout()
+        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setSpacing(16)
+        layout.addWidget(title)
+        layout.addWidget(subtitle)
+        if not any_visible:
+            empty = QLabel("No reports available for your role yet.")
+            empty.setObjectName("subtitle")
+            layout.addWidget(empty)
+        layout.addLayout(buttons_layout)
+        layout.addStretch()
+
+        container = QWidget()
+        container.setObjectName("background")
+        container.setLayout(layout)
+        self.setCentralWidget(container)
+
+    def _open_fuel_summary(self) -> None:
+        window = FuelTypeSummaryReportWindow(self._report_service, self._auth_service, self._actor_user_id)
+        self._open_windows.append(window)
+        window.show()
+
+    def _open_table_report(self, fetch_report, filename_stem: str, supports_date_filter: bool = False) -> None:
+        from app.ui.table_report_window import TableReportWindow
+
+        window = TableReportWindow(self._actor_user_id, fetch_report, filename_stem, supports_date_filter)
+        self._open_windows.append(window)
+        window.show()

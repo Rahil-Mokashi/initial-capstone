@@ -174,9 +174,9 @@ Everything below is implemented, tested, and running — not planned. Each modul
 - Transactions: receipt, issue, adjustment — rejects overflow past capacity, negative stock, or an adjustment with no reason
 - Fuel reconciliation: expected closing stock (opening + received − sold) compared against a physical reading, variance classified against configurable thresholds (normal/warning/investigation-required/approval-required) — never assumed to be theft; an accepted reconciliation becomes the new baseline
 
-### Reports (fuel-type-sectioned, full reporting module deferred to Phase 16)
-- A dedicated Reports screen, sectioned by fuel type (Petrol / Diesel / Power), showing tank count, total capacity, current stock, nozzle/active-nozzle counts, and the latest reconciliation variance per fuel type
-- Print/Preview/PDF/Excel export are not yet implemented for any report (required by the project's reporting rules, tracked as pending work)
+### Fuel Type Summary (Phase 9/16 — complete)
+- A fuel-type-sectioned inventory report (Petrol / Diesel / Power), showing tank count, total capacity, current stock, nozzle/active-nozzle counts, and the latest reconciliation variance per fuel type
+- Supports Print, Print Preview, PDF export, and Excel export, per the project's reporting rules — see Reporting System below for the rest of Phase 16
 
 ### User Management (Phase 4 extension — complete)
 - Admins/owners can create login accounts for any of the six roles, with multiple users allowed per role (several attendants, several accountants, etc.)
@@ -235,6 +235,13 @@ Everything below is implemented, tested, and running — not planned. Each modul
 - A Shift Supervisor can perform a reconciliation, but only a Manager/Owner can approve one flagged as high-variance - matching the discrepancy workflow's supervisor-then-manager review structure
 - Fuel reconciliation (per tank, since Phase 9) stays its own separate mechanism - different unit, different cadence, not merged in
 
+### Reporting System (Phase 16 — partial: the reports every earlier phase promised are done, the full problemstatement.md enumeration isn't)
+- Six new reports, all sharing one generic table-report window and one Print/PDF/Excel export implementation: Sales, Payment Summary, Expense Summary, Credit by Fuel Type, Customer Outstanding, Shift Reconciliation
+- The Credit by Fuel Type report is honest about what the data supports: "extended" is attributable per fuel type via each sale's own nozzle link, but "collected"/"outstanding" are only shown at the portfolio level since customer payments aren't allocated to individual sales - no invented per-fuel figure
+- A single "Reports" screen lists every report the acting user can open, each gated on that report's own permission, rather than growing the dashboard by a card per report
+- Sales, Payments, Expenses, and Reconciliation reports support optional date-range filtering
+- Still deferred: the much larger set of daily/shift/attendant/HR/inventory/management reports listed in problemstatement.md #25-32
+
 ### Dashboard redesign (2026-08-16, user-requested)
 - Dashboard cards are grouped into labeled sections ("Daily Operations", "Reports & Administration") instead of one flat grid, now that there are 12 modules
 - The top bar was decluttered to just the user's name/role and a single "Account" menu — every module is reachable from its own dashboard card, so duplicating them as top-bar buttons was redundant and was the actual cause of the button crowding a prior audit flagged
@@ -260,7 +267,7 @@ Not yet built: Payments (dedicated reconciliation reporting beyond what Sale alr
 | ORM | SQLAlchemy 2.x | in use |
 | Validation | Pydantic v2 | in use |
 | Configuration | pydantic-settings | in use |
-| Testing | pytest | in use — 400 tests |
+| Testing | pytest | in use — 413 tests |
 | Logging | Python standard `logging` | in use — console + a rotating file colocated with the database |
 | Migrations | Alembic | in use — `init_db()` runs `alembic upgrade head`, not `Base.metadata.create_all()` |
 | PDF reports | ReportLab | in use — fuel-type summary report, more reports to follow in Phase 16 |
@@ -294,7 +301,7 @@ PetrolPumpERP/
 │   ├── schemas/                 # Pydantic input-validation schemas
 │   ├── services/                # Business logic, RBAC checks, audit logging
 │   └── ui/                      # PySide6 windows/dialogs + shared stylesheet
-├── tests/                       # pytest suite (400 tests)
+├── tests/                       # pytest suite (413 tests)
 ├── docs/
 │   └── screenshots/             # Screenshots used in this README
 ├── requirements.txt
@@ -352,7 +359,7 @@ On first run this will:
 pytest
 ```
 
-All 400 tests should pass, in well under a minute. To run a single module's tests:
+All 413 tests should pass, in well under a minute. To run a single module's tests:
 
 ```bash
 pytest tests/test_auth_rbac.py -v
@@ -449,7 +456,8 @@ This offline desktop application is phase one of a two-phase plan. Once it prove
 | 13: Credit Management | ✅ Complete (fuel-type-sectioned/aging credit reports deferred to Phase 16) |
 | 14: Expense Management | ✅ Complete (expense reports deferred to Phase 16) |
 | 15: Reconciliation Management | ✅ Complete (dedicated reconciliation reports deferred to Phase 16) |
-| 16–22: full Reporting System, Printing, Testing, Pilot, Release | ⬜ Not started (Packaging/Phase 20 started early, Backup/Phase 18 and parts of Reporting/Phase 16 done early too — see below) |
+| 16: Reporting System | 🟡 Partial — six reports closing out every earlier phase's own "deferred to Phase 16" promise; the full problemstatement.md #25-32 enumeration (daily/HR/inventory/management reports) is not started |
+| 17–22: Printing, Testing, Pilot, Release | ⬜ Not started (Packaging/Phase 20 started early, Backup/Phase 18 done early too — see below) |
 
 See [ROADMAP.md](ROADMAP.md) for the full, granular breakdown of every phase.
 

@@ -284,7 +284,11 @@ class MainWindow(QMainWindow):
             (
                 "REPORTS & ADMINISTRATION",
                 [
-                    ("📊", "Reports", "Fuel stock and reconciliation by fuel type", self._open_reports, Permission.INVENTORY_VIEW),
+                    (
+                        "📊", "Reports", "Sales, payments, credit, expenses, and inventory",
+                        self._open_reports,
+                        (Permission.INVENTORY_VIEW, Permission.SALE_VIEW, Permission.EXPENSE_VIEW, Permission.CREDIT_VIEW, Permission.RECONCILIATION_VIEW),
+                    ),
                     ("🔐", "Users", "Create logins and manage roles", self._open_users, Permission.USER_MANAGE),
                     ("🗄️", "Backups", "Back up or restore the database", self._open_backups, Permission.BACKUP_MANAGE),
                     ("📜", "Audit Log", "Review every recorded change", self._open_audit_log, Permission.AUDIT_VIEW),
@@ -308,12 +312,16 @@ class MainWindow(QMainWindow):
                 stats_grid.addWidget(StatCard(value, label, tone), 0, column)
             body_layout.addLayout(stats_grid)
 
+        def _card_visible(permission) -> bool:
+            permissions = permission if isinstance(permission, tuple) else (permission,)
+            return any(self._auth_service.check_permission(user_data["id"], p.value) for p in permissions)
+
         total_visible_cards = 0
         for group_label, cards in card_groups:
             visible_cards = [
                 (icon, title, subtitle, handler)
                 for icon, title, subtitle, handler, permission in cards
-                if self._auth_service.check_permission(user_data["id"], permission.value)
+                if _card_visible(permission)
             ]
             if not visible_cards:
                 continue
@@ -490,9 +498,9 @@ class MainWindow(QMainWindow):
         self._my_shift_window.show()
 
     def _open_reports(self) -> None:
-        from app.ui.report_window import FuelTypeSummaryReportWindow
+        from app.ui.report_window import ReportsHubWindow
 
-        self._report_window = FuelTypeSummaryReportWindow(
+        self._report_window = ReportsHubWindow(
             self._report_service, self._auth_service, self._user_data["id"]
         )
         self._report_window.show()
@@ -590,13 +598,6 @@ class AppController:
             audit_repo,
             self._auth_service,
         )
-        self._report_service = ReportService(
-            self._fuel_repo,
-            tank_repo,
-            nozzle_repo,
-            reconciliation_repo,
-            self._auth_service,
-        )
         self._backup_service = BackupService(
             db_connection.DB_PATH,
             audit_repo,
@@ -627,22 +628,27 @@ class AppController:
             audit_repo,
             self._auth_service,
         )
+        expense_repo = ExpenseRepository(self._db_session)
+        shift_reconciliation_repo = ShiftReconciliationRepository(self._db_session)
         self._reconciliation_service = ReconciliationService(
-            ShiftReconciliationRepository(self._db_session),
+            shift_reconciliation_repo,
             ShiftRepository(self._db_session),
             sale_repo,
-            ExpenseRepository(self._db_session),
+            expense_repo,
             audit_repo,
             self._auth_service,
         )
+        credit_account_repo = CreditAccountRepository(self._db_session)
+        customer_payment_repo = CustomerPaymentRepository(self._db_session)
         self._credit_service = CreditService(
-            CreditAccountRepository(self._db_session),
-            CustomerPaymentRepository(self._db_session),
+            credit_account_repo,
+            customer_payment_repo,
             customer_repo,
             sale_repo,
             audit_repo,
             self._auth_service,
         )
+        payment_repo = PaymentRepository(self._db_session)
         self._sale_service = SaleService(
             sale_repo,
             ShiftRepository(self._db_session),
@@ -654,7 +660,7 @@ class AppController:
             self._tank_service,
             audit_repo,
             self._auth_service,
-            PaymentRepository(self._db_session),
+            payment_repo,
             self._credit_service,
         )
         self._dashboard_service = DashboardService(
@@ -663,6 +669,20 @@ class AppController:
             self._tank_repo,
             purchase_order_repo,
             self._auth_service,
+        )
+        self._report_service = ReportService(
+            self._fuel_repo,
+            tank_repo,
+            nozzle_repo,
+            reconciliation_repo,
+            self._auth_service,
+            sale_repo,
+            payment_repo,
+            expense_repo,
+            credit_account_repo,
+            customer_payment_repo,
+            customer_repo,
+            shift_reconciliation_repo,
         )
         self._user_repo = user_repo
         self.login_window = None

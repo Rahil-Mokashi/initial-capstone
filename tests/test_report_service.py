@@ -17,6 +17,13 @@ from app.repositories.dispenser_repository import DispenserRepository
 from app.repositories.employee_repository import EmployeeRepository
 from app.repositories.fuel_reconciliation_repository import FuelReconciliationRepository
 from app.repositories.fuel_repository import FuelRepository
+from app.repositories.credit_account_repository import CreditAccountRepository
+from app.repositories.customer_payment_repository import CustomerPaymentRepository
+from app.repositories.customer_repository import CustomerRepository
+from app.repositories.expense_repository import ExpenseRepository
+from app.repositories.payment_repository import PaymentRepository
+from app.repositories.sale_repository import SaleRepository
+from app.repositories.shift_reconciliation_repository import ShiftReconciliationRepository
 from app.repositories.nozzle_assignment_repository import NozzleAssignmentRepository
 from app.repositories.nozzle_repository import NozzleRepository
 from app.repositories.tank_reading_repository import TankReadingRepository
@@ -120,6 +127,13 @@ def report_service(db_session):
         NozzleRepository(db_session),
         FuelReconciliationRepository(db_session),
         auth_service,
+        SaleRepository(db_session),
+        PaymentRepository(db_session),
+        ExpenseRepository(db_session),
+        CreditAccountRepository(db_session),
+        CustomerPaymentRepository(db_session),
+        CustomerRepository(db_session),
+        ShiftReconciliationRepository(db_session),
     )
 
 
