@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
     QDoubleSpinBox,
+    QFileDialog,
     QFormLayout,
     QHBoxLayout,
     QInputDialog,
@@ -104,8 +105,18 @@ class SalesTab(QWidget):
         self.refund_button.clicked.connect(self._refund_selected_payment)
         self.refund_button.setVisible(can_manage)
 
+        self.print_receipt_button = QPushButton("Print Receipt")
+        self.print_receipt_button.setObjectName("secondaryButton")
+        self.print_receipt_button.clicked.connect(self._print_selected_receipt)
+
+        self.export_receipt_button = QPushButton("Export Receipt PDF")
+        self.export_receipt_button.setObjectName("secondaryButton")
+        self.export_receipt_button.clicked.connect(self._export_selected_receipt)
+
         top_row = QHBoxLayout()
         top_row.addStretch()
+        top_row.addWidget(self.export_receipt_button)
+        top_row.addWidget(self.print_receipt_button)
         top_row.addWidget(self.refund_button)
         top_row.addWidget(self.mark_failed_button)
         top_row.addWidget(self.cancel_button)
@@ -169,6 +180,55 @@ class SalesTab(QWidget):
         except Exception as exc:  # noqa: BLE001
             QMessageBox.warning(self, "Could not cancel sale", describe_unexpected_error(exc))
         self.refresh()
+
+    def _print_selected_receipt(self) -> None:
+        sale, payment = self._get_selected_sale_and_payment("Print receipt")
+        if sale is None:
+            return
+
+        from app.services.report_export import build_sale_receipt_html
+        from app.ui.print_utils import show_print_preview
+
+        show_print_preview(build_sale_receipt_html(sale, payment), self)
+
+    def _export_selected_receipt(self) -> None:
+        sale, payment = self._get_selected_sale_and_payment("Export receipt")
+        if sale is None:
+            return
+
+        from app.services.report_export import export_sale_receipt_pdf
+
+        default_name = f"receipt_{sale.receipt_number}.pdf"
+        file_path, _ = QFileDialog.getSaveFileName(self, "Export receipt", default_name, "PDF Files (*.pdf)")
+        if not file_path:
+            return
+
+        try:
+            export_sale_receipt_pdf(sale, payment, file_path)
+        except Exception as exc:  # noqa: BLE001
+            QMessageBox.warning(self, "Could not export receipt", describe_unexpected_error(exc))
+            return
+
+        QMessageBox.information(self, "Export complete", f"Receipt saved to {file_path}")
+
+    def _get_selected_sale_and_payment(self, title: str):
+        rows = self.table.selectionModel().selectedRows()
+        if not rows:
+            QMessageBox.information(self, title, "Select a sale first.")
+            return None, None
+        sale_id = self.table.item(rows[0].row(), 0).data(Qt.UserRole)
+
+        try:
+            sale = self._sale_service.get_sale(self._actor_user_id, sale_id)
+            payment = self._sale_service.get_payment_for_sale(self._actor_user_id, sale_id)
+        except (AppError, ValueError) as exc:
+            QMessageBox.warning(self, title, str(exc))
+            return None, None
+        except Exception as exc:  # noqa: BLE001
+            QMessageBox.warning(self, title, describe_unexpected_error(exc))
+            return None, None
+
+        return sale, payment
 
     def _mark_selected_payment_failed(self) -> None:
         self._act_on_selected_payment(

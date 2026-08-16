@@ -1,10 +1,11 @@
-"""PDF/Excel export for reports (CLAUDE.md Reporting Rules: every
+"""PDF/Excel/CSV export for reports (CLAUDE.md Reporting Rules: every
 important report must support Print, Print Preview, PDF export, and
 Excel export). Pure formatting functions - the caller fetches data
 through a permission-checked service method first; nothing here
 touches the database or checks permissions.
 """
 
+import csv
 from datetime import datetime
 from typing import List, Sequence
 
@@ -68,6 +69,84 @@ def export_table_excel(report: TableReport, file_path: str) -> None:
         sheet.column_dimensions[column_cells[0].column_letter].width = longest + 4
 
     workbook.save(file_path)
+
+
+def export_table_csv(report: TableReport, file_path: str) -> None:
+    with open(file_path, "w", newline="", encoding="utf-8-sig") as f:
+        writer = csv.writer(f)
+        writer.writerow(report.headers)
+        writer.writerows(report.rows)
+
+
+def export_sale_receipt_pdf(sale, payment, file_path: str) -> None:
+    """A printable customer receipt for one Sale (problemstatement.md
+    #16 - "Generate sales receipts", noted as deferred to Phase 17 when
+    Phase 11 Sales was built). Deliberately a compact, receipt-shaped
+    layout, not the tabular TableReport shape every other export in
+    this module produces."""
+
+    doc = SimpleDocTemplate(file_path, pagesize=A4, topMargin=36, bottomMargin=36)
+    styles = getSampleStyleSheet()
+    elements = [
+        Paragraph("Petrol Pump ERP", styles["Title"]),
+        Paragraph(f"Receipt {sale.receipt_number}", styles["Heading2"]),
+        Paragraph(sale.sale_at.strftime("%Y-%m-%d %H:%M"), styles["Normal"]),
+        Spacer(1, 12),
+    ]
+
+    rows = [
+        ["Fuel Type", sale.fuel.fuel_type if sale.fuel else ""],
+        ["Nozzle", sale.nozzle.code if sale.nozzle else ""],
+        ["Quantity (L)", f"{sale.quantity:.2f}"],
+        ["Rate / Litre", f"{sale.rate_per_liter:.2f}"],
+        ["Amount", f"{sale.amount:.2f}"],
+        ["Payment Method", sale.payment_method.title()],
+    ]
+    if sale.customer:
+        rows.append(["Customer", sale.customer.name])
+    if payment and payment.reference_number:
+        rows.append(["Reference", payment.reference_number])
+
+    table = Table(rows, hAlign="LEFT", colWidths=[140, 260])
+    table.setStyle(
+        TableStyle(
+            [
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#DDD5C0")),
+                ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, -1), 10),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                ("TOPPADDING", (0, 0), (-1, -1), 6),
+            ]
+        )
+    )
+    elements.append(table)
+    elements.append(Spacer(1, 20))
+    elements.append(Paragraph("Thank you for your business.", styles["Normal"]))
+    doc.build(elements)
+
+
+def build_sale_receipt_html(sale, payment) -> str:
+    rows = [
+        ("Fuel Type", sale.fuel.fuel_type if sale.fuel else ""),
+        ("Nozzle", sale.nozzle.code if sale.nozzle else ""),
+        ("Quantity (L)", f"{sale.quantity:.2f}"),
+        ("Rate / Litre", f"{sale.rate_per_liter:.2f}"),
+        ("Amount", f"{sale.amount:.2f}"),
+        ("Payment Method", sale.payment_method.title()),
+    ]
+    if sale.customer:
+        rows.append(("Customer", sale.customer.name))
+    if payment and payment.reference_number:
+        rows.append(("Reference", payment.reference_number))
+
+    row_html = "".join(f"<tr><td><b>{label}</b></td><td>{value}</td></tr>" for label, value in rows)
+    return f"""
+    <h2>Petrol Pump ERP</h2>
+    <h3>Receipt {sale.receipt_number}</h3>
+    <p>{sale.sale_at.strftime('%Y-%m-%d %H:%M')}</p>
+    <table border="1" cellspacing="0" cellpadding="6" width="100%">{row_html}</table>
+    <p>Thank you for your business.</p>
+    """
 
 
 def build_table_report_html(report: TableReport) -> str:

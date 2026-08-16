@@ -227,3 +227,26 @@ def test_open_account_dialog_creates_account(qapp, credit_service, sale_service,
     assert dialog.result() == QDialog.Accepted
     account = credit_service.get_credit_account(admin_id, customer_id)
     assert account.credit_limit == Decimal("2500.00")
+
+
+def test_customer_statement_export_writes_a_pdf_file(
+    qapp, credit_service, sale_service, admin_id, customer_id, open_shift_id, nozzle_id, employee_id, tmp_path, monkeypatch
+):
+    from app.ui.credit_window import CustomerStatementDialog
+
+    credit_service.create_credit_account(admin_id, CreditAccountCreate(customer_id=customer_id, credit_limit=Decimal("5000")))
+    sale_service.create_sale(
+        admin_id,
+        SaleCreate(shift_id=open_shift_id, nozzle_id=nozzle_id, employee_id=employee_id, quantity=Decimal("10"), payment_method=PaymentMethod.CREDIT, customer_id=customer_id),
+    )
+
+    dialog = CustomerStatementDialog(credit_service, customer_id, admin_id, "Ravi Transports")
+    assert dialog._report.title == "Customer Statement - Ravi Transports"
+
+    target = tmp_path / "statement.pdf"
+    monkeypatch.setattr("app.ui.credit_window.QFileDialog.getSaveFileName", lambda *a, **k: (str(target), "PDF Files (*.pdf)"))
+    monkeypatch.setattr("app.ui.credit_window.QMessageBox.information", lambda *a, **k: None)
+
+    dialog._export_pdf()
+
+    assert target.exists()

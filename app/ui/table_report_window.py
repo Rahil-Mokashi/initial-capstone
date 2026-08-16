@@ -22,7 +22,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from app.services.report_export import build_table_report_html, export_table_excel, export_table_pdf
+from app.services.report_export import build_table_report_html, export_table_csv, export_table_excel, export_table_pdf
+from app.ui.print_utils import show_print_preview
 from app.ui.qt_utils import describe_unexpected_error
 
 
@@ -59,6 +60,11 @@ class TableReportWindow(QMainWindow):
         self.export_excel_button.setCursor(Qt.PointingHandCursor)
         self.export_excel_button.clicked.connect(self._export_excel)
 
+        self.export_csv_button = QPushButton("Export CSV")
+        self.export_csv_button.setObjectName("secondaryButton")
+        self.export_csv_button.setCursor(Qt.PointingHandCursor)
+        self.export_csv_button.clicked.connect(self._export_csv)
+
         self.print_button = QPushButton("Print")
         self.print_button.setObjectName("secondaryButton")
         self.print_button.setCursor(Qt.PointingHandCursor)
@@ -86,6 +92,7 @@ class TableReportWindow(QMainWindow):
         actions_row.addWidget(self.refresh_button)
         actions_row.addStretch()
         actions_row.addWidget(self.print_button)
+        actions_row.addWidget(self.export_csv_button)
         actions_row.addWidget(self.export_excel_button)
         actions_row.addWidget(self.export_pdf_button)
 
@@ -156,6 +163,9 @@ class TableReportWindow(QMainWindow):
     def _export_excel(self) -> None:
         self._export(export_table_excel, "Excel Files (*.xlsx)", ".xlsx")
 
+    def _export_csv(self) -> None:
+        self._export(export_table_csv, "CSV Files (*.csv)", ".csv")
+
     def _export(self, export_fn, file_filter: str, default_suffix: str) -> None:
         report = self._get_report()
         if report is None:
@@ -175,17 +185,7 @@ class TableReportWindow(QMainWindow):
         QMessageBox.information(self, "Export complete", f"Report saved to {file_path}")
 
     def _print(self) -> None:
-        from PySide6.QtGui import QTextDocument
-        from PySide6.QtPrintSupport import QPrintDialog, QPrinter
-
         report = self._get_report()
         if report is None:
             return
-
-        document = QTextDocument()
-        document.setHtml(build_table_report_html(report))
-
-        printer = QPrinter(QPrinter.HighResolution)
-        dialog = QPrintDialog(printer, self)
-        if dialog.exec() == QPrintDialog.Accepted:
-            document.print_(printer)
+        show_print_preview(build_table_report_html(report), self)
