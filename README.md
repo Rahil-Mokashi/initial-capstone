@@ -328,7 +328,7 @@ PetrolPumpERP/
 ├── PROJECT_CONTEXT.md            # Living project memory: what's done, pending, known issues
 ├── ARCHITECTURE.md               # Layered architecture, module responsibilities, diagrams
 ├── ROADMAP.md                    # Phase-by-phase plan with granular checklists
-└── CLAUDE.md                     # Instructions for AI coding agents working on this repo
+└── CLAUDE.md                     # Development guidelines and architecture rules for this repo
 ```
 
 ---
@@ -453,7 +453,7 @@ This offline desktop application is phase one of a two-phase plan. Once it prove
 | [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md) | Living project memory — completed modules, known bugs (fixed), known limitations, assumptions, next task. Read this first if you're picking the project back up. |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Layered architecture, module responsibilities, design principles, diagrams |
 | [ROADMAP.md](ROADMAP.md) | Phase-by-phase plan (22 phases) with granular, checked-off task lists |
-| [CLAUDE.md](CLAUDE.md) | Instructions for AI coding agents working on this codebase |
+| [CLAUDE.md](CLAUDE.md) | Development guidelines and architecture rules for this codebase |
 | [problemstatement.md](problemstatement.md) | The original, complete project requirements |
 
 ## Roadmap status
@@ -480,7 +480,7 @@ This offline desktop application is phase one of a two-phase plan. Once it prove
 | 18: Backup & Recovery | 🟡 Complete except configurable backup location, recovery-workflow documentation, and optional encryption |
 | 19: Testing | 🟡 Largely already satisfied by each module's own tests; added the one real gap (a cross-service integration test) |
 | 20: Packaging & Deployment | 🟡 Started early (standalone .exe works end-to-end) — installer, config system, and packaged docs still open |
-| 21: Pilot Deployment & Feedback | ⬜ Requires the user's real-world deployment/feedback — not something an agent can complete |
+| 21: Pilot Deployment & Feedback | ⬜ Requires real-world deployment and feedback from actual pump operations |
 | 22: Final Release | ⬜ Depends on Phase 21 |
 
 See [ROADMAP.md](ROADMAP.md) for the full, granular breakdown of every phase.

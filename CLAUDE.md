@@ -1,4 +1,4 @@
-# Petrol Pump ERP - Claude Code Instructions
+# Petrol Pump ERP - Development Guidelines
 
 ## Read First
 Always read PROJECT_CONTEXT.md before starting any implementation task.
