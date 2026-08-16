@@ -8,6 +8,7 @@ from .customer_payment import CustomerPayment
 from .dispenser import Dispenser
 from .employee import Employee
 from .employee_document import EmployeeDocument
+from .expense import Expense, ExpenseCategory
 from .fuel import Fuel
 from .fuel_delivery import FuelDelivery
 from .fuel_reconciliation import FuelReconciliation
@@ -37,6 +38,8 @@ __all__ = [
     "Dispenser",
     "Employee",
     "EmployeeDocument",
+    "Expense",
+    "ExpenseCategory",
     "Fuel",
     "FuelDelivery",
     "FuelReconciliation",
