@@ -39,6 +39,7 @@ from app.repositories.role_repository import RoleRepository
 from app.repositories.fuel_reconciliation_repository import FuelReconciliationRepository
 from app.repositories.sale_repository import SaleRepository
 from app.repositories.shift_repository import ShiftRepository
+from app.repositories.shift_reconciliation_repository import ShiftReconciliationRepository
 from app.repositories.supplier_invoice_repository import SupplierInvoiceRepository, SupplierPaymentRepository
 from app.repositories.supplier_repository import SupplierRepository
 from app.repositories.tank_reading_repository import TankReadingRepository
@@ -54,6 +55,7 @@ from app.services.employee_service import EmployeeService
 from app.services.expense_service import ExpenseService
 from app.services.nozzle_service import NozzleService
 from app.services.procurement_service import ProcurementService
+from app.services.reconciliation_service import ReconciliationService
 from app.services.report_service import ReportService
 from app.services.sale_service import SaleService
 from app.services.shift_service import ShiftService
@@ -173,6 +175,7 @@ class MainWindow(QMainWindow):
         sale_service: SaleService,
         credit_service: CreditService,
         expense_service: ExpenseService,
+        reconciliation_service: ReconciliationService,
         dashboard_service: DashboardService,
         role_repo,
         fuel_repo,
@@ -195,6 +198,7 @@ class MainWindow(QMainWindow):
         self._sale_service = sale_service
         self._credit_service = credit_service
         self._expense_service = expense_service
+        self._reconciliation_service = reconciliation_service
         self._dashboard_service = dashboard_service
         self._role_repo = role_repo
         self._fuel_repo = fuel_repo
@@ -216,6 +220,7 @@ class MainWindow(QMainWindow):
         self._sales_window = None
         self._credit_window = None
         self._expense_window = None
+        self._reconciliation_window = None
 
         self.setWindowTitle("Petrol Pump ERP")
         self.setMinimumSize(960, 620)
@@ -270,6 +275,7 @@ class MainWindow(QMainWindow):
                     ("💳", "Sales", "Record sales and manage customers", self._open_sales, Permission.SALE_VIEW),
                     ("🧾", "Credit", "Credit accounts, payments, and balances", self._open_credit, Permission.CREDIT_VIEW),
                     ("🧮", "Expenses", "Record and approve pump expenses", self._open_expenses, Permission.EXPENSE_VIEW),
+                    ("⚖️", "Reconciliation", "Reconcile cash, UPI, and card per shift", self._open_reconciliation, Permission.RECONCILIATION_VIEW),
                     ("🔧", "Nozzles", "Manage dispensers and nozzles", self._open_nozzles, Permission.NOZZLE_VIEW),
                     ("🛢️", "Tanks", "Stock, transactions, reconciliation", self._open_tanks, Permission.INVENTORY_VIEW),
                     ("🚛", "Procurement", "Suppliers, orders, and deliveries", self._open_procurement, Permission.PROCUREMENT_VIEW),
@@ -469,6 +475,14 @@ class MainWindow(QMainWindow):
         )
         self._expense_window.show()
 
+    def _open_reconciliation(self) -> None:
+        from app.ui.reconciliation_window import ReconciliationWindow
+
+        self._reconciliation_window = ReconciliationWindow(
+            self._reconciliation_service, self._shift_service, self._auth_service, self._user_data["id"]
+        )
+        self._reconciliation_window.show()
+
     def _open_my_shift(self) -> None:
         from app.ui.my_shift_window import MyShiftWindow
 
@@ -613,6 +627,14 @@ class AppController:
             audit_repo,
             self._auth_service,
         )
+        self._reconciliation_service = ReconciliationService(
+            ShiftReconciliationRepository(self._db_session),
+            ShiftRepository(self._db_session),
+            sale_repo,
+            ExpenseRepository(self._db_session),
+            audit_repo,
+            self._auth_service,
+        )
         self._credit_service = CreditService(
             CreditAccountRepository(self._db_session),
             CustomerPaymentRepository(self._db_session),
@@ -684,6 +706,7 @@ class AppController:
             self._sale_service,
             self._credit_service,
             self._expense_service,
+            self._reconciliation_service,
             self._dashboard_service,
             self._role_repo,
             self._fuel_repo,
