@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
     QDoubleSpinBox,
+    QFileDialog,
     QFormLayout,
     QHBoxLayout,
     QInputDialog,
@@ -26,6 +27,7 @@ from PySide6.QtWidgets import (
 
 from app.core.constants import PaymentMethod, Permission
 from app.core.exceptions import AppError
+from app.services.report_export import export_table_excel, export_table_pdf
 from app.schemas.credit import CreditAccountCreate, CustomerPaymentCreate
 from app.ui.qt_utils import describe_unexpected_error
 
@@ -161,11 +163,13 @@ class CreditAccountsTab(QWidget):
             self.refresh()
 
     def _view_selected_statement(self) -> None:
-        customer_id = self._selected_customer_id()
-        if not customer_id:
+        rows = self.table.selectionModel().selectedRows()
+        if not rows:
             QMessageBox.information(self, "View statement", "Select a credit account first.")
             return
-        dialog = CustomerStatementDialog(self._credit_service, customer_id, self._actor_user_id, self)
+        customer_id = self.table.item(rows[0].row(), 0).data(Qt.UserRole)
+        customer_name = self.table.item(rows[0].row(), 0).text()
+        dialog = CustomerStatementDialog(self._credit_service, customer_id, self._actor_user_id, customer_name, self)
         dialog.exec()
 
 
@@ -328,12 +332,13 @@ class CustomerPaymentFormDialog(QDialog):
 
 
 class CustomerStatementDialog(QDialog):
-    def __init__(self, credit_service, customer_id: str, actor_user_id: str, parent=None):
+    def __init__(self, credit_service, customer_id: str, actor_user_id: str, customer_name: str = "", parent=None):
         super().__init__(parent)
         self.setWindowTitle("Customer Statement")
-        self.setMinimumSize(520, 420)
+        self.setMinimumSize(560, 460)
 
         entries = credit_service.get_customer_statement(actor_user_id, customer_id)
+        self._report = self._build_report(customer_name, entries)
 
         table = QTableWidget(len(entries), 4)
         table.setHorizontalHeaderLabels(["Date", "Description", "Debit", "Credit"])
@@ -351,10 +356,25 @@ class CustomerStatementDialog(QDialog):
         balance_label = QLabel(f"Running balance: {running_balance:g}")
         balance_label.setObjectName("subtitle")
 
+        print_button = QPushButton("Print")
+        print_button.setObjectName("secondaryButton")
+        print_button.clicked.connect(self._print)
+
+        export_excel_button = QPushButton("Export Excel")
+        export_excel_button.setObjectName("secondaryButton")
+        export_excel_button.clicked.connect(self._export_excel)
+
+        export_pdf_button = QPushButton("Export PDF")
+        export_pdf_button.setObjectName("secondaryButton")
+        export_pdf_button.clicked.connect(self._export_pdf)
+
         close_button = QPushButton("Close")
         close_button.clicked.connect(self.accept)
 
         button_row = QHBoxLayout()
+        button_row.addWidget(print_button)
+        button_row.addWidget(export_excel_button)
+        button_row.addWidget(export_pdf_button)
         button_row.addStretch()
         button_row.addWidget(close_button)
 
@@ -363,3 +383,39 @@ class CustomerStatementDialog(QDialog):
         layout.addWidget(balance_label)
         layout.addLayout(button_row)
         self.setLayout(layout)
+
+    @staticmethod
+    def _build_report(customer_name: str, entries):
+        from app.services.report_service import TableReport
+
+        rows = [
+            [entry.entry_date.strftime("%Y-%m-%d"), entry.description, f"{entry.debit:.2f}" if entry.debit else "", f"{entry.credit:.2f}" if entry.credit else ""]
+            for entry in entries
+        ]
+        running_balance = entries[-1].running_balance if entries else Decimal("0")
+        rows.append(["", "Running Balance", "", f"{running_balance:.2f}"])
+        title = f"Customer Statement - {customer_name}" if customer_name else "Customer Statement"
+        return TableReport(title=title, headers=["Date", "Description", "Debit", "Credit"], rows=rows)
+
+    def _print(self) -> None:
+        from app.services.report_export import build_table_report_html
+        from app.ui.print_utils import show_print_preview
+
+        show_print_preview(build_table_report_html(self._report), self)
+
+    def _export_pdf(self) -> None:
+        self._export(export_table_pdf, "PDF Files (*.pdf)", ".pdf")
+
+    def _export_excel(self) -> None:
+        self._export(export_table_excel, "Excel Files (*.xlsx)", ".xlsx")
+
+    def _export(self, export_fn, file_filter: str, default_suffix: str) -> None:
+        file_path, _ = QFileDialog.getSaveFileName(self, "Export statement", f"customer_statement{default_suffix}", file_filter)
+        if not file_path:
+            return
+        try:
+            export_fn(self._report, file_path)
+        except Exception as exc:  # noqa: BLE001
+            QMessageBox.warning(self, "Could not export", describe_unexpected_error(exc))
+            return
+        QMessageBox.information(self, "Export complete", f"Statement saved to {file_path}")

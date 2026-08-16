@@ -294,6 +294,40 @@ def test_manage_buttons_hidden_for_view_only_role(
     assert tab.refund_button.isHidden() is True
 
 
+def test_export_receipt_writes_a_pdf_file(
+    qapp, sale_service, shift_service, employee_service, fuel_repo, auth_service, admin_id, open_shift_id, nozzle_id, employee_id, tmp_path, monkeypatch
+):
+    from app.schemas.sale import SaleCreate
+    from app.ui.sales_window import SalesTab
+
+    sale_service.create_sale(
+        admin_id,
+        SaleCreate(shift_id=open_shift_id, nozzle_id=nozzle_id, employee_id=employee_id, quantity=Decimal("5"), payment_method=PaymentMethod.CASH),
+    )
+    tab = SalesTab(sale_service, shift_service, employee_service, auth_service, admin_id, can_manage=True)
+    tab.table.selectRow(0)
+
+    target = tmp_path / "receipt.pdf"
+    monkeypatch.setattr("app.ui.sales_window.QFileDialog.getSaveFileName", lambda *a, **k: (str(target), "PDF Files (*.pdf)"))
+    monkeypatch.setattr("app.ui.sales_window.QMessageBox.information", lambda *a, **k: None)
+
+    tab._export_selected_receipt()
+
+    assert target.exists()
+
+
+def test_print_receipt_without_selection_shows_info(qapp, sale_service, shift_service, employee_service, fuel_repo, auth_service, admin_id, monkeypatch):
+    from app.ui.sales_window import SalesTab
+
+    tab = SalesTab(sale_service, shift_service, employee_service, auth_service, admin_id, can_manage=True)
+
+    called = {}
+    monkeypatch.setattr("app.ui.sales_window.QMessageBox.information", lambda *a, **k: called.setdefault("shown", True))
+
+    tab._print_selected_receipt()
+    assert called.get("shown") is True
+
+
 def test_customer_form_creates_customer(qapp, sale_service, admin_id):
     from PySide6.QtWidgets import QDialog
 

@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
 
 from app.core.constants import Permission
 from app.services.report_export import export_fuel_summary_excel, export_fuel_summary_pdf
+from app.ui.print_utils import show_print_preview
 from app.ui.qt_utils import describe_unexpected_error
 
 
@@ -178,22 +179,13 @@ class FuelTypeSummaryReportWindow(QMainWindow):
         QMessageBox.information(self, "Export complete", f"Report saved to {file_path}")
 
     def _print(self) -> None:
-        from PySide6.QtGui import QTextDocument
-        from PySide6.QtPrintSupport import QPrintDialog, QPrinter
-
         try:
             summaries = self._report_service.get_fuel_type_summary(self._actor_user_id)
         except Exception as exc:  # noqa: BLE001
             QMessageBox.warning(self, "Could not print", describe_unexpected_error(exc))
             return
 
-        document = QTextDocument()
-        document.setHtml(_build_report_html(summaries))
-
-        printer = QPrinter(QPrinter.HighResolution)
-        dialog = QPrintDialog(printer, self)
-        if dialog.exec() == QPrintDialog.Accepted:
-            document.print_(printer)
+        show_print_preview(_build_report_html(summaries), self)
 
 
 def _build_report_html(summaries) -> str:
