@@ -10,7 +10,8 @@ column by a local calendar date should go through this helper rather
 than re-deriving the conversion.
 """
 
-from datetime import date, datetime, time, timezone
+from datetime import date, datetime, time, timedelta, timezone
+from enum import Enum
 
 
 def local_day_bounds_utc(day: date) -> tuple[datetime, datetime]:
@@ -25,3 +26,55 @@ def local_day_bounds_utc(day: date) -> tuple[datetime, datetime]:
         local_start.astimezone(timezone.utc).replace(tzinfo=None),
         local_end.astimezone(timezone.utc).replace(tzinfo=None),
     )
+
+
+class PeriodType(str, Enum):
+    """Reporting period granularity (business performance reports)."""
+
+    DAY = "day"
+    WEEK = "week"
+    MONTH = "month"
+    QUARTER = "quarter"
+    YEAR = "year"
+
+
+def period_bounds(period_type: PeriodType, reference_date: date) -> tuple[date, date]:
+    """The local calendar date range a period covers, inclusive on both
+    ends. WEEK is Monday-Sunday (ISO week) containing reference_date."""
+
+    if period_type == PeriodType.DAY:
+        return reference_date, reference_date
+
+    if period_type == PeriodType.WEEK:
+        start = reference_date - timedelta(days=reference_date.weekday())
+        return start, start + timedelta(days=6)
+
+    if period_type == PeriodType.MONTH:
+        start = reference_date.replace(day=1)
+        if start.month == 12:
+            next_month_start = start.replace(year=start.year + 1, month=1)
+        else:
+            next_month_start = start.replace(month=start.month + 1)
+        return start, next_month_start - timedelta(days=1)
+
+    if period_type == PeriodType.QUARTER:
+        quarter_index = (reference_date.month - 1) // 3
+        start_month = quarter_index * 3 + 1
+        start = reference_date.replace(month=start_month, day=1)
+        if start_month == 10:
+            next_quarter_start = start.replace(year=start.year + 1, month=1)
+        else:
+            next_quarter_start = start.replace(month=start_month + 3)
+        return start, next_quarter_start - timedelta(days=1)
+
+    if period_type == PeriodType.YEAR:
+        return reference_date.replace(month=1, day=1), reference_date.replace(month=12, day=31)
+
+    raise ValueError(f"Unknown period type: {period_type}")
+
+
+def period_bounds_utc(period_type: PeriodType, reference_date: date) -> tuple[datetime, datetime]:
+    """period_bounds, converted to naive-UTC instants via local_day_bounds_utc."""
+
+    start_date, end_date = period_bounds(period_type, reference_date)
+    return local_day_bounds_utc(start_date)[0], local_day_bounds_utc(end_date)[1]

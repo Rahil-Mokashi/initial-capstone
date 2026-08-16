@@ -47,6 +47,7 @@ from app.repositories.tank_repository import TankRepository
 from app.repositories.tank_transaction_repository import TankTransactionRepository
 from app.repositories.user_repository import UserRepository
 from app.repositories.user_session_repository import UserSessionRepository
+from app.services.analytics_service import AnalyticsService
 from app.services.attendance_service import AttendanceService
 from app.services.auth_service import AuthService
 from app.services.credit_service import CreditService
@@ -176,6 +177,7 @@ class MainWindow(QMainWindow):
         credit_service: CreditService,
         expense_service: ExpenseService,
         reconciliation_service: ReconciliationService,
+        analytics_service: AnalyticsService,
         dashboard_service: DashboardService,
         role_repo,
         fuel_repo,
@@ -199,6 +201,7 @@ class MainWindow(QMainWindow):
         self._credit_service = credit_service
         self._expense_service = expense_service
         self._reconciliation_service = reconciliation_service
+        self._analytics_service = analytics_service
         self._dashboard_service = dashboard_service
         self._role_repo = role_repo
         self._fuel_repo = fuel_repo
@@ -287,7 +290,7 @@ class MainWindow(QMainWindow):
                     (
                         "📊", "Reports", "Sales, payments, credit, expenses, and inventory",
                         self._open_reports,
-                        (Permission.INVENTORY_VIEW, Permission.SALE_VIEW, Permission.EXPENSE_VIEW, Permission.CREDIT_VIEW, Permission.RECONCILIATION_VIEW),
+                        (Permission.INVENTORY_VIEW, Permission.SALE_VIEW, Permission.EXPENSE_VIEW, Permission.CREDIT_VIEW, Permission.RECONCILIATION_VIEW, Permission.ANALYTICS_VIEW),
                     ),
                     ("🔐", "Users", "Create logins and manage roles", self._open_users, Permission.USER_MANAGE),
                     ("🗄️", "Backups", "Back up or restore the database", self._open_backups, Permission.BACKUP_MANAGE),
@@ -501,7 +504,7 @@ class MainWindow(QMainWindow):
         from app.ui.report_window import ReportsHubWindow
 
         self._report_window = ReportsHubWindow(
-            self._report_service, self._auth_service, self._user_data["id"]
+            self._report_service, self._auth_service, self._user_data["id"], self._analytics_service
         )
         self._report_window.show()
 
@@ -684,6 +687,13 @@ class AppController:
             customer_repo,
             shift_reconciliation_repo,
         )
+        self._analytics_service = AnalyticsService(
+            sale_repo,
+            expense_repo,
+            PurchaseOrderItemRepository(self._db_session),
+            self._fuel_repo,
+            self._auth_service,
+        )
         self._user_repo = user_repo
         self.login_window = None
         self.main_window = None
@@ -727,6 +737,7 @@ class AppController:
             self._credit_service,
             self._expense_service,
             self._reconciliation_service,
+            self._analytics_service,
             self._dashboard_service,
             self._role_repo,
             self._fuel_repo,

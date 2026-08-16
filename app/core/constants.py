@@ -44,6 +44,7 @@ class Permission(str, Enum):
     EXPENSE_APPROVE = "expense.approve"
     RECONCILIATION_VIEW = "reconciliation.view"
     RECONCILIATION_MANAGE = "reconciliation.manage"
+    ANALYTICS_VIEW = "analytics.view"
     RECONCILIATION_APPROVE = "reconciliation.approve"
 
 
@@ -216,6 +217,18 @@ RECONCILIATION_VARIANCE_WARNING_THRESHOLD_PERCENT = 0.5
 RECONCILIATION_VARIANCE_INVESTIGATION_THRESHOLD_PERCENT = 1.0
 RECONCILIATION_VARIANCE_APPROVAL_THRESHOLD_PERCENT = 2.0
 
+# Sales forecast (app/services/analytics_service.py): a week-over-week
+# projected change beyond this magnitude is called out as a likely
+# hike/dip rather than "stable" - a plain percentage band, not a
+# statistical confidence interval, since the forecast itself is a
+# simple linear trend, not a claim of certainty.
+FORECAST_TREND_THRESHOLD_PERCENT = 5.0
+
+# A forecast needs at least this many weeks of sales history for a fuel
+# type before a trend projection is shown at all - fewer than this and
+# a "trend" is just noise dressed up as a prediction.
+FORECAST_MIN_WEEKS_OF_HISTORY = 3
+
 
 # ADMIN and OWNER get every permission; other roles get a minimal starter set.
 # Business owners should refine this matrix as each module is implemented.
@@ -247,6 +260,7 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
         Permission.RECONCILIATION_VIEW,
         Permission.RECONCILIATION_MANAGE,
         Permission.RECONCILIATION_APPROVE,
+        Permission.ANALYTICS_VIEW,
     ),
     UserRole.ACCOUNTANT: (
         Permission.INVENTORY_VIEW,
@@ -261,6 +275,7 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
         Permission.EXPENSE_VIEW,
         Permission.EXPENSE_MANAGE,
         Permission.RECONCILIATION_VIEW,
+        Permission.ANALYTICS_VIEW,
     ),
     UserRole.SHIFT_SUPERVISOR: (
         Permission.INVENTORY_VIEW,

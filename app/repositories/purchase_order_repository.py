@@ -53,6 +53,9 @@ class PurchaseOrderItemRepository:
     def list_for_order(self, purchase_order_id: str) -> List[PurchaseOrderItem]:
         return self._session.query(PurchaseOrderItem).filter_by(purchase_order_id=purchase_order_id).all()
 
+    def list_all(self) -> List[PurchaseOrderItem]:
+        return self._session.query(PurchaseOrderItem).all()
+
     def add(self, item: PurchaseOrderItem) -> PurchaseOrderItem:
         self._session.add(item)
         safe_commit(self._session)
