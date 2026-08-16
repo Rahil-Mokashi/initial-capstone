@@ -123,6 +123,26 @@ def test_form_dialog_creates_user_for_selected_role(qapp, user_service_and_auth,
     assert any(user.username == "new.attendant" and user.role_id == attendant_role_id for user in users)
 
 
+def test_enter_key_advances_through_form_fields_instead_of_submitting_early(qapp, user_service_and_auth, role_repo, admin_id):
+    from PySide6.QtWidgets import QDialog
+
+    from app.ui.user_management_window import UserFormDialog
+
+    service, _ = user_service_and_auth
+    dialog = UserFormDialog(service, role_repo, admin_id)
+    dialog.show()
+    qapp.processEvents()
+
+    dialog.username_input.setText("new.attendant")
+    dialog.username_input.returnPressed.emit()
+    assert dialog.email_input.hasFocus() is True
+    assert dialog.result() != QDialog.Accepted
+
+    dialog.email_input.setText("new.attendant@example.com")
+    dialog.email_input.returnPressed.emit()
+    assert dialog.first_name_input.hasFocus() is True
+
+
 def test_form_dialog_shows_error_for_weak_password(qapp, user_service_and_auth, role_repo, admin_id, attendant_role_id):
     from app.ui.user_management_window import UserFormDialog
 

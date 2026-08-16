@@ -183,6 +183,17 @@ Everything below is implemented, tested, and running — not planned. Each modul
 - Password strength is validated on every new account (the existing policy, now actually wired in for the first time)
 - Activate/deactivate, unlock a locked account, and change a user's role — every action requires a non-blank reason and is audit-logged; accounts are never deleted
 - The "Users" button/dashboard card is only visible to roles holding `Permission.USER_MANAGE` (ADMIN/OWNER), following the same permission-gated visibility pattern used by every module — a logged-in user only ever sees the buttons and pages their role actually grants them
+- Self-service password change, plus a forced, un-skippable rotation right after login whenever an admin just set the account's password (new account or an explicit reset) — closes the "the temp password stays permanent" and "a forgotten password has no recovery path" gaps
+
+### Real database migrations, backup & restore (hardened 2026-08-16)
+- Schema changes go through Alembic (`app/database/migrations.py`), not a blunt `create_all()` — `init_db()` runs `alembic upgrade head` on every launch, including the very first one
+- A backup is taken automatically before any migration that's actually about to change an existing database, and can also be triggered manually from the Backups screen — both use SQLite's own online backup API so a backup taken mid-write (WAL mode) is still transactionally consistent, not a torn file copy
+- Restoring from a backup takes its own safety backup first, requires a reason, and is audit-logged, so a bad restore choice is itself recoverable
+- Every money/volume figure (fuel price, tank capacity/stock, meter readings, reconciliation numbers) is stored as `Numeric`/`Decimal`, not `Float`, so business-logic arithmetic can't silently accumulate binary-float rounding drift
+
+### Audit log viewer & report export (2026-08-16)
+- The audit trail (written by every service action since Phase 4) now has an actual screen to read it on — filterable by event type, actor, and date range, gated on `Permission.AUDIT_VIEW`
+- The fuel-type summary report supports Print, PDF export, and Excel export, not just an on-screen view — the pattern the rest of Phase 16's reports will reuse
 
 ### Database integrity & exception handling (cross-cutting, hardened 2026-08-15)
 - SQLite foreign-key enforcement (`PRAGMA foreign_keys=ON`) and WAL mode (`PRAGMA journal_mode=WAL`) are enabled on every connection — every `ForeignKey()` declared in the models is actually enforced by the database, not just by application code
@@ -204,12 +215,13 @@ Not yet built: Procurement, Sales, Payments, Credit, Expenses, full Reconciliati
 | ORM | SQLAlchemy 2.x | in use |
 | Validation | Pydantic v2 | in use |
 | Configuration | pydantic-settings | in use |
-| Testing | pytest | in use — 202 tests |
-| Logging | Python standard `logging` | in use |
-| Migrations | Alembic | **planned, not yet integrated** — schema changes currently go through `Base.metadata.create_all()` |
-| PDF reports | ReportLab | **planned** — Phase 16/17 |
-| Excel reports | openpyxl | **planned** — Phase 16/17 |
+| Testing | pytest | in use — 265 tests |
+| Logging | Python standard `logging` | in use — console + a rotating file colocated with the database |
+| Migrations | Alembic | in use — `init_db()` runs `alembic upgrade head`, not `Base.metadata.create_all()` |
+| PDF reports | ReportLab | in use — fuel-type summary report, more reports to follow in Phase 16 |
+| Excel reports | openpyxl | in use — fuel-type summary report, more reports to follow in Phase 16 |
 | Packaging | PyInstaller | in use — see [Building a standalone Windows executable](#building-a-standalone-windows-executable) |
+| CI | GitHub Actions | in use — `.github/workflows/tests.yml` runs the full suite on every push/PR |
 
 This table is deliberately honest about what's a real dependency today (see `requirements.txt`) versus what's still on the roadmap.
 
@@ -237,7 +249,7 @@ PetrolPumpERP/
 │   ├── schemas/                 # Pydantic input-validation schemas
 │   ├── services/                # Business logic, RBAC checks, audit logging
 │   └── ui/                      # PySide6 windows/dialogs + shared stylesheet
-├── tests/                       # pytest suite (202 tests)
+├── tests/                       # pytest suite (265 tests)
 ├── docs/
 │   └── screenshots/             # Screenshots used in this README
 ├── requirements.txt
@@ -295,7 +307,7 @@ On first run this will:
 pytest
 ```
 
-All 202 tests should pass, in well under a minute. To run a single module's tests:
+All 265 tests should pass, in well under a minute. To run a single module's tests:
 
 ```bash
 pytest tests/test_auth_rbac.py -v
@@ -384,8 +396,9 @@ This offline desktop application is phase one of a two-phase plan. Once it prove
 | 7: Shift Management | ✅ Complete (full reconciliation deferred to Phase 15) |
 | 8: Nozzle Management | ✅ Complete (fuel-type-sectioned summary done; full nozzle reports deferred to Phase 16) |
 | 9: Tank & Inventory Management | ✅ Complete (fuel-type-sectioned summary done; full tank reports deferred to Phase 16) |
-| User Management (Phase 4 extension) | ✅ Complete — logins for all 6 roles, multiple users per role |
-| 10–22: Procurement, Sales, Payments, Credit, Expenses, Reconciliation, full Reporting System, Printing, Backup, Testing, Packaging, Pilot, Release | ⬜ Not started (Packaging/Phase 20 started early — see below) |
+| User Management (Phase 4 extension) | ✅ Complete — logins for all 6 roles, multiple users per role, password self-service |
+| Database migrations, backup/restore, audit log viewer, report export | ✅ Complete (2026-08-16, resolving a full build audit) — see below |
+| 10–22: Procurement, Sales, Payments, Credit, Expenses, Reconciliation, full Reporting System, Printing, Testing, Pilot, Release | ⬜ Not started (Packaging/Phase 20 started early, Backup/Phase 18 and parts of Reporting/Phase 16 done early too — see below) |
 
 See [ROADMAP.md](ROADMAP.md) for the full, granular breakdown of every phase.
 

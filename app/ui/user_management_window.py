@@ -25,7 +25,7 @@ from PySide6.QtWidgets import (
 
 from app.core.exceptions import AppError
 from app.schemas.user import UserCreate
-from app.ui.qt_utils import describe_unexpected_error
+from app.ui.qt_utils import chain_enter_to_next_field, describe_unexpected_error
 
 USER_HEADERS = ["Username", "Email", "Role", "Status"]
 
@@ -124,6 +124,15 @@ class UserFormDialog(QDialog):
         self.password_input = QLineEdit()
         self.password_input.setEchoMode(QLineEdit.Password)
         self.password_input.setPlaceholderText("At least 8 chars, upper/lower/digit")
+        self.password_input.returnPressed.connect(self._save)
+
+        chain_enter_to_next_field(
+            self.username_input,
+            self.email_input,
+            self.first_name_input,
+            self.last_name_input,
+            self.password_input,
+        )
 
         self.role_combo = QComboBox()
         for role in role_repo.list_all() if hasattr(role_repo, "list_all") else []:

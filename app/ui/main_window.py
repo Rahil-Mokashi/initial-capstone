@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
     QGridLayout,
     QHBoxLayout,
     QLabel,
+    QMenu,
     QMessageBox,
     QMainWindow,
     QPushButton,
@@ -41,6 +42,8 @@ from app.services.employee_service import EmployeeService
 from app.services.nozzle_service import NozzleService
 from app.services.report_service import ReportService
 from app.services.shift_service import ShiftService
+from app.services.audit_service import AuditService
+from app.services.backup_service import BackupService
 from app.services.tank_service import TankService
 from app.services.user_service import UserService
 from app.ui.qt_utils import describe_unexpected_error
@@ -123,8 +126,11 @@ class MainWindow(QMainWindow):
         tank_service: TankService,
         report_service: ReportService,
         user_service: UserService,
+        backup_service: BackupService,
+        audit_service: AuditService,
         role_repo,
         fuel_repo,
+        user_repo,
         user_data: dict,
     ):
         super().__init__()
@@ -136,8 +142,11 @@ class MainWindow(QMainWindow):
         self._tank_service = tank_service
         self._report_service = report_service
         self._user_service = user_service
+        self._backup_service = backup_service
+        self._audit_service = audit_service
         self._role_repo = role_repo
         self._fuel_repo = fuel_repo
+        self._user_repo = user_repo
         self._user_data = user_data
         self._session_token = user_data["session_token"]
         self._employee_window = None
@@ -148,9 +157,11 @@ class MainWindow(QMainWindow):
         self._my_shift_window = None
         self._report_window = None
         self._user_window = None
+        self._backup_window = None
+        self._audit_window = None
 
         self.setWindowTitle("Petrol Pump ERP")
-        self.setMinimumSize(720, 520)
+        self.setMinimumSize(960, 620)
 
         top_bar = QWidget()
         top_bar.setObjectName("topBar")
@@ -217,15 +228,26 @@ class MainWindow(QMainWindow):
         users_button.clicked.connect(self._open_users)
         users_button.setVisible(self._auth_service.check_permission(user_data["id"], Permission.USER_MANAGE.value))
 
-        change_password_button = QPushButton("Change Password")
-        change_password_button.setObjectName("secondaryButton")
-        change_password_button.setCursor(Qt.PointingHandCursor)
-        change_password_button.clicked.connect(self._open_change_password)
+        backups_button = QPushButton("Backups")
+        backups_button.setObjectName("secondaryButton")
+        backups_button.setCursor(Qt.PointingHandCursor)
+        backups_button.clicked.connect(self._open_backups)
+        backups_button.setVisible(self._auth_service.check_permission(user_data["id"], Permission.BACKUP_MANAGE.value))
 
-        logout_button = QPushButton("Logout")
-        logout_button.setObjectName("secondaryButton")
-        logout_button.setCursor(Qt.PointingHandCursor)
-        logout_button.clicked.connect(self._logout)
+        audit_log_button = QPushButton("Audit Log")
+        audit_log_button.setObjectName("secondaryButton")
+        audit_log_button.setCursor(Qt.PointingHandCursor)
+        audit_log_button.clicked.connect(self._open_audit_log)
+        audit_log_button.setVisible(self._auth_service.check_permission(user_data["id"], Permission.AUDIT_VIEW.value))
+
+        account_button = QPushButton("Account")
+        account_button.setObjectName("secondaryButton")
+        account_button.setCursor(Qt.PointingHandCursor)
+        account_menu = QMenu(account_button)
+        account_menu.addAction("Change Password", self._open_change_password)
+        account_menu.addSeparator()
+        account_menu.addAction("Logout", self._logout)
+        account_button.setMenu(account_menu)
 
         top_bar_layout.addWidget(user_label)
         top_bar_layout.addSpacing(8)
@@ -239,8 +261,9 @@ class MainWindow(QMainWindow):
         top_bar_layout.addWidget(my_shift_button)
         top_bar_layout.addWidget(reports_button)
         top_bar_layout.addWidget(users_button)
-        top_bar_layout.addWidget(change_password_button)
-        top_bar_layout.addWidget(logout_button)
+        top_bar_layout.addWidget(backups_button)
+        top_bar_layout.addWidget(audit_log_button)
+        top_bar_layout.addWidget(account_button)
         top_bar.setLayout(top_bar_layout)
 
         display_name = user_data.get("first_name") or user_data["username"]
@@ -264,17 +287,23 @@ class MainWindow(QMainWindow):
             ("🪪", "My Shift", "Your current nozzle and fuel assignment", self._open_my_shift, Permission.MY_ASSIGNMENT_VIEW),
             ("📊", "Reports", "Fuel stock and reconciliation by fuel type", self._open_reports, Permission.INVENTORY_VIEW),
             ("🔐", "Users", "Create logins and manage roles", self._open_users, Permission.USER_MANAGE),
+            ("🗄️", "Backups", "Back up or restore the database", self._open_backups, Permission.BACKUP_MANAGE),
+            ("📜", "Audit Log", "Review every recorded change", self._open_audit_log, Permission.AUDIT_VIEW),
         ]
 
+        CARDS_PER_ROW = 4
         cards_grid = QGridLayout()
         cards_grid.setSpacing(16)
-        column = 0
+        for column in range(CARDS_PER_ROW):
+            cards_grid.setColumnStretch(column, 1)
+
+        visible_card_count = 0
         for icon, title, subtitle, handler, permission in cards:
             if not self._auth_service.check_permission(user_data["id"], permission.value):
                 continue
-            cards_grid.addWidget(DashboardCard(icon, title, subtitle, handler), 0, column)
-            cards_grid.setColumnStretch(column, 1)
-            column += 1
+            row, column = divmod(visible_card_count, CARDS_PER_ROW)
+            cards_grid.addWidget(DashboardCard(icon, title, subtitle, handler), row, column)
+            visible_card_count += 1
 
         empty_state = QLabel("Nothing to show yet — ask an administrator for access to a module.")
         empty_state.setObjectName("subtitle")
@@ -283,7 +312,7 @@ class MainWindow(QMainWindow):
         body_layout.setContentsMargins(32, 32, 32, 32)
         body_layout.setSpacing(24)
         body_layout.addLayout(header_layout)
-        if column > 0:
+        if visible_card_count > 0:
             body_layout.addLayout(cards_grid)
         else:
             body_layout.addWidget(empty_state)
@@ -383,6 +412,18 @@ class MainWindow(QMainWindow):
         self._user_window = UserListWindow(self._user_service, self._role_repo, self._user_data["id"])
         self._user_window.show()
 
+    def _open_backups(self) -> None:
+        from app.ui.backup_window import BackupWindow
+
+        self._backup_window = BackupWindow(self._backup_service, self._user_data["id"])
+        self._backup_window.show()
+
+    def _open_audit_log(self) -> None:
+        from app.ui.audit_log_window import AuditLogWindow
+
+        self._audit_window = AuditLogWindow(self._audit_service, self._user_repo, self._user_data["id"])
+        self._audit_window.show()
+
     def _open_change_password(self) -> None:
         from app.ui.change_password_dialog import ChangePasswordDialog
 
@@ -463,6 +504,13 @@ class AppController:
             reconciliation_repo,
             self._auth_service,
         )
+        self._backup_service = BackupService(
+            db_connection.DB_PATH,
+            audit_repo,
+            self._auth_service,
+        )
+        self._audit_service = AuditService(audit_repo, self._auth_service)
+        self._user_repo = user_repo
         self.login_window = None
         self.main_window = None
 
@@ -498,8 +546,11 @@ class AppController:
             self._tank_service,
             self._report_service,
             self._user_service,
+            self._backup_service,
+            self._audit_service,
             self._role_repo,
             self._fuel_repo,
+            self._user_repo,
             user_data,
         )
         self.main_window.logout_requested.connect(self._on_logout)

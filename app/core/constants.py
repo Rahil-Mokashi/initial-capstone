@@ -32,6 +32,7 @@ class Permission(str, Enum):
     NOZZLE_VIEW = "nozzle.view"
     NOZZLE_MANAGE = "nozzle.manage"
     MY_ASSIGNMENT_VIEW = "my_assignment.view"
+    BACKUP_MANAGE = "backup.manage"
 
 
 class EmployeeStatus(str, Enum):

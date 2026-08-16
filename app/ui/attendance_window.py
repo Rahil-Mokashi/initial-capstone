@@ -150,6 +150,7 @@ class AttendanceMarkDialog(QDialog):
 
         self.shift_input = QLineEdit()
         self.shift_input.setPlaceholderText("e.g. Morning")
+        self.shift_input.returnPressed.connect(self._save)
 
         self.overtime_input = QSpinBox()
         self.overtime_input.setRange(0, 1440)

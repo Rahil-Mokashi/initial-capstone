@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.core.exceptions import AppError
-from app.ui.qt_utils import describe_unexpected_error
+from app.ui.qt_utils import chain_enter_to_next_field, describe_unexpected_error
 
 
 class ChangePasswordDialog(QDialog):
@@ -48,6 +48,11 @@ class ChangePasswordDialog(QDialog):
         self.new_password_input.setPlaceholderText("At least 8 chars, upper/lower/digit")
         self.confirm_password_input = QLineEdit()
         self.confirm_password_input.setEchoMode(QLineEdit.Password)
+        self.confirm_password_input.returnPressed.connect(self._save)
+
+        chain_enter_to_next_field(
+            self.current_password_input, self.new_password_input, self.confirm_password_input
+        )
 
         form = QFormLayout()
         form.addRow("Current password", self.current_password_input)

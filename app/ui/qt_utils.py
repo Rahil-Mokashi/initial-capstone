@@ -16,6 +16,30 @@ def date_to_qdate(value: date) -> QDate:
     return QDate(value.year, value.month, value.day)
 
 
+def chain_enter_to_next_field(*fields) -> None:
+    """Make pressing Enter/Return in each QLineEdit move focus to the
+    next field in sequence, instead of Qt's default behavior of
+    immediately triggering the dialog's default button - so filling in
+    a multi-field form with the keyboard alone (username -> password,
+    or any other field-after-field entry) advances one field at a time
+    rather than submitting early on the first Enter press.
+
+    Pass the form's fields in visual order, including non-QLineEdit
+    widgets (QDateEdit, QComboBox, ...) that sit between text fields -
+    only fields with a returnPressed signal act as a source (Qt doesn't
+    give every widget one), but any widget can be a target, since
+    setFocus() is universal.
+
+    The caller is responsible for connecting the *last* QLineEdit's own
+    returnPressed signal to whatever should actually submit the form -
+    this only chains the fields before it.
+    """
+    for current_field, next_field in zip(fields, fields[1:]):
+        return_pressed = getattr(current_field, "returnPressed", None)
+        if return_pressed is not None:
+            return_pressed.connect(next_field.setFocus)
+
+
 GENERIC_ERROR_MESSAGE = "Something went wrong. Please try again, and contact support if this keeps happening."
 
 

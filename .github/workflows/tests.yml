@@ -1,0 +1,29 @@
+name: Tests
+
+on:
+  push:
+    branches: [main, "feature/**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    # windows-latest, not ubuntu: this app targets Windows (PyInstaller
+    # build, PySide6 desktop app) and its GitHub-hosted runner has a
+    # real display session, unlike Linux runners which need a virtual
+    # one (Xvfb) - some of this suite's tests assert on real Qt focus
+    # state (e.g. tests/test_login_ui.py's Enter-key navigation test),
+    # which only behaves correctly with a genuine window session.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run tests
+        run: python -m pytest tests/ -q

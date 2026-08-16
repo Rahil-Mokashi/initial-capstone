@@ -27,7 +27,7 @@ from PySide6.QtWidgets import (
 from app.core.constants import Permission, TankStatus, TankTransactionType
 from app.core.exceptions import AppError
 from app.schemas.tank import ReconciliationPerform, TankCreate, TankReadingCreate, TankTransactionCreate
-from app.ui.qt_utils import describe_unexpected_error, qdate_to_date
+from app.ui.qt_utils import chain_enter_to_next_field, describe_unexpected_error, qdate_to_date
 
 TANK_HEADERS = ["Code", "Fuel", "Capacity", "Current Stock", "Status"]
 TRANSACTION_HEADERS = ["Date", "Type", "Quantity", "Reference", "Recorded By"]
@@ -139,6 +139,15 @@ class TankFormDialog(QDialog):
 
         self.calibration_input = QLineEdit()
         self.calibration_input.setPlaceholderText("Optional calibration reference")
+        self.calibration_input.returnPressed.connect(self._save)
+
+        chain_enter_to_next_field(
+            self.code_input,
+            self.fuel_combo,
+            self.capacity_input,
+            self.opening_stock_input,
+            self.calibration_input,
+        )
 
         form = QFormLayout()
         form.addRow("Code", self.code_input)
@@ -371,6 +380,9 @@ class TankTransactionDialog(QDialog):
         self.remarks_input = QLineEdit()
         if transaction_type == TankTransactionType.ADJUSTMENT:
             self.remarks_input.setPlaceholderText("Reason (required)")
+        self.remarks_input.returnPressed.connect(self._save)
+
+        chain_enter_to_next_field(self.quantity_input, self.reference_input, self.remarks_input)
 
         form = QFormLayout()
         form.addRow("Quantity", self.quantity_input)
@@ -448,6 +460,7 @@ class TankReadingDialog(QDialog):
         self.dip_value_input.setDecimals(2)
 
         self.remarks_input = QLineEdit()
+        self.remarks_input.returnPressed.connect(self._save)
 
         form = QFormLayout()
         form.addRow("Employee", self.employee_combo)
@@ -525,6 +538,7 @@ class ReconciliationDialog(QDialog):
         self.physical_stock_input.setDecimals(2)
 
         self.remarks_input = QLineEdit()
+        self.remarks_input.returnPressed.connect(self._save)
 
         form = QFormLayout()
         form.addRow("Date", self.date_input)

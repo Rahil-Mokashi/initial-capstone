@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import QColor
 
 from app.services.auth_service import AuthService
-from app.ui.qt_utils import describe_unexpected_error
+from app.ui.qt_utils import chain_enter_to_next_field, describe_unexpected_error
 
 HERO_BULLETS = [
     "Works fully offline",
@@ -121,6 +121,8 @@ class LoginWindow(QMainWindow):
         self.password_input.setPlaceholderText("Password")
         self.password_input.setEchoMode(QLineEdit.Password)
         self.password_input.returnPressed.connect(self._attempt_login)
+
+        chain_enter_to_next_field(self.username_input, self.password_input)
 
         self.login_button = QPushButton("Login")
         self.login_button.setCursor(Qt.PointingHandCursor)
