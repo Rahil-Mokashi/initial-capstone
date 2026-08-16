@@ -124,9 +124,9 @@ class AnalyticsService:
 
             cost_of_goods = gross_profit = margin_percent = None
             if avg_cost is not None:
-                cost_of_goods = avg_cost * quantity
-                gross_profit = revenue - cost_of_goods
-                margin_percent = (gross_profit / revenue * 100) if revenue else Decimal("0")
+                cost_of_goods = (avg_cost * quantity).quantize(Decimal("0.01"))
+                gross_profit = (revenue - cost_of_goods).quantize(Decimal("0.01"))
+                margin_percent = ((gross_profit / revenue * 100) if revenue else Decimal("0")).quantize(Decimal("0.01"))
 
             breakdown.append(
                 FuelPeriodPerformance(
@@ -167,7 +167,7 @@ class AnalyticsService:
         if total_quantity == 0:
             return None
         total_cost = sum((item.quantity_ordered * item.rate_per_liter for item in items), Decimal("0"))
-        return total_cost / total_quantity
+        return (total_cost / total_quantity).quantize(Decimal("0.01"))
 
     @require_permission(Permission.ANALYTICS_VIEW.value)
     def get_sales_forecast(self, actor_user_id: str, weeks_of_history: int = 8) -> List[FuelSalesForecast]:

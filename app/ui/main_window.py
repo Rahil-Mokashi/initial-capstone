@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QMainWindow,
     QPushButton,
+    QScrollArea,
     QSizePolicy,
     QVBoxLayout,
     QWidget,
@@ -69,6 +70,19 @@ from app.ui.styles import STYLESHEET
 
 SESSION_CHECK_INTERVAL_MS = 60_000
 
+# Shared page margin used by both the top bar and the dashboard body so
+# their content lines up on the same left/right edge - previously the
+# top bar used 20px and the body used 32px, which made the two feel
+# misaligned and unbalanced against each other.
+DASHBOARD_PAGE_MARGIN = 24
+
+# Used to compute how many dashboard-card columns fit the current
+# window width (see MainWindow._compute_card_columns), so the grid
+# actually reflows on resize instead of staying pinned at 4 columns
+# regardless of how narrow or wide the window is.
+DASHBOARD_CARD_TARGET_WIDTH = 240
+DASHBOARD_MAX_CARD_COLUMNS = 4
+
 
 class DashboardCard(QWidget):
     """A clickable quick-access tile on the landing dashboard."""
@@ -99,7 +113,7 @@ class DashboardCard(QWidget):
         text_layout.addWidget(subtitle_label)
 
         layout = QHBoxLayout()
-        layout.setContentsMargins(18, 18, 18, 18)
+        layout.setContentsMargins(18, 16, 18, 16)
         layout.setSpacing(14)
         layout.addWidget(icon_label)
         layout.addLayout(text_layout, stretch=1)
@@ -138,12 +152,23 @@ class StatCard(QWidget):
         caption_label.setObjectName("statLabel")
 
         layout = QVBoxLayout()
-        layout.setContentsMargins(18, 14, 18, 14)
+        layout.setContentsMargins(18, 16, 18, 16)
         layout.setSpacing(4)
         layout.addWidget(value_label)
         layout.addWidget(caption_label)
         self.setLayout(layout)
-        self.setMinimumHeight(76)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.setMinimumHeight(80)
+
+
+def compute_dashboard_columns(window_width: int) -> int:
+    """How many dashboard-card columns fit a window this wide - a pure
+    function (no Qt state) so it's testable without constructing a full
+    MainWindow, which needs its entire service graph wired up."""
+
+    available_width = window_width - 2 * DASHBOARD_PAGE_MARGIN
+    columns = available_width // DASHBOARD_CARD_TARGET_WIDTH
+    return max(1, min(DASHBOARD_MAX_CARD_COLUMNS, columns))
 
 
 def _greeting_for_now() -> str:
@@ -231,7 +256,7 @@ class MainWindow(QMainWindow):
         top_bar = QWidget()
         top_bar.setObjectName("topBar")
         top_bar_layout = QHBoxLayout()
-        top_bar_layout.setContentsMargins(20, 14, 20, 14)
+        top_bar_layout.setContentsMargins(DASHBOARD_PAGE_MARGIN, 14, DASHBOARD_PAGE_MARGIN, 14)
 
         user_label = QLabel(user_data["username"])
         user_label.setObjectName("userLabel")
@@ -267,7 +292,7 @@ class MainWindow(QMainWindow):
         header_layout.addWidget(greeting)
         header_layout.addWidget(today_label)
 
-        card_groups = [
+        self._card_groups = [
             (
                 "DAILY OPERATIONS",
                 [
@@ -298,29 +323,92 @@ class MainWindow(QMainWindow):
                 ],
             ),
         ]
+        self._stat_tiles = self._build_stat_tiles(user_data["id"])
+        self._dashboard_columns = 0  # forces the first _populate_dashboard call to actually build
 
-        CARDS_PER_ROW = 4
+        self._dynamic_dashboard_layout = QVBoxLayout()
+        self._dynamic_dashboard_layout.setSpacing(28)
+
         body_layout = QVBoxLayout()
-        body_layout.setContentsMargins(32, 32, 32, 32)
+        body_layout.setContentsMargins(DASHBOARD_PAGE_MARGIN, DASHBOARD_PAGE_MARGIN, DASHBOARD_PAGE_MARGIN, DASHBOARD_PAGE_MARGIN)
         body_layout.setSpacing(28)
         body_layout.addLayout(header_layout)
+        body_layout.addLayout(self._dynamic_dashboard_layout)
+        body_layout.addStretch()
 
-        stat_tiles = self._build_stat_tiles(user_data["id"])
-        if stat_tiles:
+        body = QWidget()
+        body.setObjectName("background")
+        body.setLayout(body_layout)
+
+        # A QScrollArea, not a bare widget, so the dashboard stays usable
+        # (scrolls instead of clipping) on a small window or a role with
+        # enough visible cards to overflow a short screen - part of
+        # making the dashboard genuinely responsive, not just the card
+        # grid's column count.
+        scroll = QScrollArea()
+        scroll.setObjectName("background")
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QScrollArea.NoFrame)
+        scroll.setWidget(body)
+
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        layout.addWidget(top_bar)
+        layout.addWidget(scroll, stretch=1)
+
+        container = QWidget()
+        container.setLayout(layout)
+        self.setCentralWidget(container)
+
+        self._populate_dashboard(self._compute_card_columns())
+
+        self._session_timer = QTimer(self)
+        self._session_timer.timeout.connect(self._check_session)
+        self._session_timer.start(SESSION_CHECK_INTERVAL_MS)
+
+    def resizeEvent(self, event) -> None:  # noqa: N802 - Qt override
+        super().resizeEvent(event)
+        columns = self._compute_card_columns()
+        if columns != self._dashboard_columns:
+            self._populate_dashboard(columns)
+
+    def _compute_card_columns(self) -> int:
+        return compute_dashboard_columns(self.width())
+
+    @staticmethod
+    def _clear_layout(layout) -> None:
+        while layout.count():
+            item = layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()
+                continue
+            child_layout = item.layout()
+            if child_layout is not None:
+                MainWindow._clear_layout(child_layout)
+
+    def _populate_dashboard(self, columns: int) -> None:
+        self._dashboard_columns = columns
+        self._clear_layout(self._dynamic_dashboard_layout)
+
+        if self._stat_tiles:
+            stat_columns = min(len(self._stat_tiles), max(columns, 1))
             stats_grid = QGridLayout()
             stats_grid.setSpacing(16)
-            for column in range(len(stat_tiles)):
+            for column in range(stat_columns):
                 stats_grid.setColumnStretch(column, 1)
-            for column, (value, label, tone) in enumerate(stat_tiles):
-                stats_grid.addWidget(StatCard(value, label, tone), 0, column)
-            body_layout.addLayout(stats_grid)
+            for index, (value, label, tone) in enumerate(self._stat_tiles):
+                row, column = divmod(index, stat_columns)
+                stats_grid.addWidget(StatCard(value, label, tone), row, column)
+            self._dynamic_dashboard_layout.addLayout(stats_grid)
 
         def _card_visible(permission) -> bool:
             permissions = permission if isinstance(permission, tuple) else (permission,)
-            return any(self._auth_service.check_permission(user_data["id"], p.value) for p in permissions)
+            return any(self._auth_service.check_permission(self._user_data["id"], p.value) for p in permissions)
 
         total_visible_cards = 0
-        for group_label, cards in card_groups:
+        for group_label, cards in self._card_groups:
             visible_cards = [
                 (icon, title, subtitle, handler)
                 for icon, title, subtitle, handler, permission in cards
@@ -335,41 +423,22 @@ class MainWindow(QMainWindow):
 
             group_grid = QGridLayout()
             group_grid.setSpacing(16)
-            for column in range(CARDS_PER_ROW):
+            for column in range(columns):
                 group_grid.setColumnStretch(column, 1)
             for index, (icon, title, subtitle, handler) in enumerate(visible_cards):
-                row, column = divmod(index, CARDS_PER_ROW)
+                row, column = divmod(index, columns)
                 group_grid.addWidget(DashboardCard(icon, title, subtitle, handler), row, column)
 
             group_layout = QVBoxLayout()
             group_layout.setSpacing(10)
             group_layout.addWidget(group_label_widget)
             group_layout.addLayout(group_grid)
-            body_layout.addLayout(group_layout)
+            self._dynamic_dashboard_layout.addLayout(group_layout)
 
         if total_visible_cards == 0:
             empty_state = QLabel("Nothing to show yet — ask an administrator for access to a module.")
             empty_state.setObjectName("subtitle")
-            body_layout.addWidget(empty_state)
-        body_layout.addStretch()
-
-        body = QWidget()
-        body.setObjectName("background")
-        body.setLayout(body_layout)
-
-        layout = QVBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-        layout.addWidget(top_bar)
-        layout.addWidget(body, stretch=1)
-
-        container = QWidget()
-        container.setLayout(layout)
-        self.setCentralWidget(container)
-
-        self._session_timer = QTimer(self)
-        self._session_timer.timeout.connect(self._check_session)
-        self._session_timer.start(SESSION_CHECK_INTERVAL_MS)
+            self._dynamic_dashboard_layout.addWidget(empty_state)
 
     def _build_stat_tiles(self, actor_user_id: str) -> list[tuple[str, str, str]]:
         try:
