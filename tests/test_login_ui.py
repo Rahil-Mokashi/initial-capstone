@@ -57,10 +57,19 @@ def test_login_window_shown_on_start(controller):
     assert controller.main_window is None
 
 
-def test_enter_in_username_moves_focus_to_password_instead_of_submitting(controller):
+def test_enter_in_username_moves_focus_to_password_instead_of_submitting(controller, qapp):
     login_window = controller.login_window
+    # hasFocus() reflects OS-level window activation, not just Qt's
+    # internal focus widget - without this a window that isn't the
+    # foreground OS window can report hasFocus() False even after
+    # setFocus() actually ran, unrelated to whether the code is correct.
+    login_window.activateWindow()
+    login_window.raise_()
+    qapp.processEvents()
+
     login_window.username_input.setText("admin")
     login_window.username_input.returnPressed.emit()
+    qapp.processEvents()
 
     assert controller.main_window is None
     assert login_window.password_input.hasFocus() is True

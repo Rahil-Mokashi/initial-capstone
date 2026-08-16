@@ -106,22 +106,23 @@
 - [x] Implement fuel reconciliation (FuelReconciliation: Expected = Opening + Received - Sold, compared against a physical reading, variance classified via configurable thresholds — NORMAL/WARNING/INVESTIGATION_REQUIRED/APPROVAL_REQUIRED, never assumed to be theft; accepted reconciliation becomes the new baseline for the next period)
 - [~] Tank inventory reports: fuel-type-sectioned summary (tank count/capacity/current stock and worst reconciliation variance per Petrol/Diesel/Power) done via `ReportService.get_fuel_type_summary` + `app/ui/report_window.py`, with Print/PDF/Excel export (`app/services/report_export.py`, 2026-08-16); a dedicated transaction-history report is still deferred to Phase 16
 
-## Phase 10: Procurement Management
-- [ ] Create supplier master data
-- [ ] Implement purchase order creation
-- [ ] Track fuel delivery process
-- [ ] Implement delivery verification
-- [ ] Create fuel quality verification tracking
-- [ ] Record pre-dip and post-dip readings
-- [ ] Update inventory on delivery
-- [ ] Create supplier invoice management
-- [ ] Implement supplier payment tracking
-- [ ] Create procurement reports
+## Phase 10: Procurement Management (Complete except dedicated procurement reports, deferred to Phase 16)
+- [x] Create supplier master data (`Supplier` model, `ProcurementService.create_supplier`, never hard-deleted - deactivated with a reason instead)
+- [x] Implement purchase order creation (`PurchaseOrder`/`PurchaseOrderItem`, sequential `PO-0001` numbering, multi-fuel-type line items, rejects inactive suppliers/unknown fuel types)
+- [x] Track fuel delivery process (`FuelDelivery`: Tanker Arrival -> Document Verification -> Fuel Quality Verification -> Pre-Dip -> Unloading -> Post-Dip -> Inventory Update, each a real status transition, audit-logged)
+- [x] Implement delivery verification (document verification and quality verification are separate, ordered steps - can't skip ahead)
+- [x] Create fuel quality verification tracking (`quality_verified_by_id`/`quality_verified_at`/`quality_notes`, plus a `reject_delivery` path with a required reason for a failed check)
+- [x] Record pre-dip and post-dip readings (both create real `TankReading` rows via `TankService.record_reading` - not a parallel/duplicate reading mechanism)
+- [x] Update inventory on delivery (`quantity_received` is *derived* from post-dip minus pre-dip, then creates a real Tank RECEIPT `TankTransaction` via `TankService.record_transaction` - the same capacity-checked, audited path every other receipt uses)
+- [x] Create supplier invoice management (`SupplierInvoice`, status derived from payments - never set directly)
+- [x] Implement supplier payment tracking (`SupplierPayment`, partial payments supported, rejects payment beyond the outstanding balance, rejects paying an already-fully-paid invoice)
+- [ ] Create procurement reports (deferred to Phase 16, matching every other module's reports)
 
 ## Phase 11: Sales Management
+User requirement confirmed 2026-08-16: fuel prices change over time (Petrol/Diesel/Power each priced independently, per the confirmed nozzle/fuel-type business rules), so every Sale must snapshot its own `rate_per_liter` and `amount` at the moment of the transaction, never a live reference to `Fuel.rate_per_liter`. This is the same pattern already established for `PurchaseOrderItem.rate_per_liter` in Phase 10 (locked in at order time, not looked up live) - reuse it rather than re-deciding it. Without this, a credit customer's amount owed would silently change every time the pump's fuel prices change, which is a real data-integrity bug, not just a cosmetic one - it's the whole reason Phase 13's credit tracking needs this to already be correct in Sale before it can trust it.
 - [ ] Create sale recording functionality
 - [ ] Track sale details (date, time, shift, attendant, nozzle, fuel type)
-- [ ] Record quantity, rate, and amount
+- [ ] Record quantity, rate, and amount - **rate/amount are a snapshot at sale time, not a live lookup** (see note above)
 - [ ] Support multiple payment methods (cash, UPI, card, credit)
 - [ ] Prevent duplicate sales
 - [ ] Implement sale cancellation/reversal workflow
@@ -140,16 +141,18 @@
 - [ ] Create payment reports
 
 ## Phase 13: Credit Management
-- [ ] Create customer master data
-- [ ] Implement credit account management
-- [ ] Set credit limits
-- [ ] Track credit sales and invoices
-- [ ] Record customer payments
-- [ ] Calculate outstanding balances
-- [ ] Implement credit blocking when limit exceeded
-- [ ] Generate customer statements
-- [ ] Track overdue amounts
-- [ ] Create credit reports
+User requirement confirmed 2026-08-16: full lifecycle tracking for credit customers ("crediters") - who they are, whether they've paid, and their activity broken down by fuel type (Petrol/Diesel/Power), matching the same per-fuel-type reporting pattern already established for tanks/nozzles (`ReportService.get_fuel_type_summary`). A credit sale is a Sale (Phase 11) with payment_method=CREDIT, so its fuel type comes for free from the sale's own nozzle->fuel link - Phase 13 doesn't need a separate fuel-tracking mechanism, just a report that groups CreditSale/CustomerPayment data by that existing link, the same way Phase 16's reports will.
+- [ ] Create customer master data (Customer model - name, contact, address; distinct from Employee/User, same pattern as Supplier)
+- [ ] Implement credit account management (CreditAccount: one per customer, tracks credit_limit and running outstanding balance)
+- [ ] Set credit limits (per customer, changeable with a reason + audit log, same pattern as every other status/limit change in this app)
+- [ ] Track credit sales and invoices (CreditSale rows reference a Sale from Phase 11 - never a parallel/duplicate sale record)
+- [ ] Record customer payments (CustomerPayment, partial payments supported, never overwrites - a correction is a new record)
+- [ ] Calculate outstanding balances (derived from credit_sales total minus customer_payments total, recomputed not incrementally tracked - same "recompute from scratch, never let it drift" approach used for SupplierInvoice.status and PurchaseOrder.status in Phase 10). Each credit sale's amount comes from the Sale's own snapshotted rate/amount (see Phase 11's note) - never recalculated against today's fuel price, or a customer's balance would silently shift every time prices change
+- [ ] Implement credit blocking when limit exceeded (a new credit sale is rejected, not silently allowed, once outstanding + this sale would exceed credit_limit)
+- [ ] Generate customer statements (transaction history: every credit sale and payment, running balance)
+- [ ] Track overdue amounts (due dates per sale/invoice, a status derived from today's date vs due date - never assume non-payment means anything beyond "overdue," matching the "don't assume variance means theft" principle already applied to fuel reconciliation)
+- [ ] **Fuel-type-sectioned credit reports** (explicit user requirement, 2026-08-16): total credit extended, collected, and outstanding per fuel type (Petrol/Diesel/Power), plus per-customer and overall - reuses the fuel-type-summary report pattern and UI (`app/ui/report_window.py`) rather than inventing a new one
+- [ ] Create the rest of the credit reports listed in problemstatement.md #18/#31 (aging, top debtors, etc.)
 
 ## Phase 14: Expense Management
 - [ ] Create expense category management
@@ -279,7 +282,7 @@ A feature is complete only when:
 ## Current Focus
 Phase 9 (Tank & Inventory Management) is complete end to end — service layer and UI, tested. On top of that, three more user-requested features are also done end-to-end: the attendant self-service "My Shift" view, fuel-type-sectioned (Petrol/Diesel/Power) tank & nozzle reports, and full User Management (create logins for any of the six roles, multiple users per role).
 
-On 2026-08-16 the user asked for a full build audit and then to resolve everything on its priority-ranked list. Done: Alembic migrations (replacing `create_all()`), Float→Numeric/Decimal for every money/volume column, removing the dead `InventoryService`/redundant `Fuel` stock fields, password self-service + forced rotation, production file logging (plus a real Alembic-logger bug this surfaced and fixed), backup/restore with RBAC and audit logging, an audit log viewer, and PDF/Excel export + Print for the fuel-type report. Also fixed along the way: a real reconciliation bug (local/UTC day-boundary mismatch dropping same-day transactions), a user-reported Enter-key navigation gap, and a dashboard grid-wrap bug. Deferred: the shared UI base-class refactor (see PROJECT_CONTEXT.md's Pending Modules — a deliberate call to not risk a broad refactor at the end of an already large session). 265/265 tests passing project-wide, CI now runs them on every push. Per the user's earlier instruction to keep building while the team's feedback is pending, work moves on to Phase 10 (Procurement Management) next.
+On 2026-08-16 the user asked for a full build audit and then to resolve everything on its priority-ranked list. Done: Alembic migrations (replacing `create_all()`), Float→Numeric/Decimal for every money/volume column, removing the dead `InventoryService`/redundant `Fuel` stock fields, password self-service + forced rotation, production file logging (plus a real Alembic-logger bug this surfaced and fixed), backup/restore with RBAC and audit logging, an audit log viewer, and PDF/Excel export + Print for the fuel-type report. Also fixed along the way: a real reconciliation bug (local/UTC day-boundary mismatch dropping same-day transactions), a user-reported Enter-key navigation gap, and a dashboard grid-wrap bug. Deferred: the shared UI base-class refactor (see PROJECT_CONTEXT.md's Pending Modules — a deliberate call to not risk a broad refactor at the end of an already large session). 265/265 tests passing project-wide, CI now runs them on every push. Phase 10 (Procurement Management) is now also complete end to end - full Supplier/Purchase Order/Fuel Delivery/Invoice/Payment workflow, integrated with TankService so deliveries create real Tank RECEIPT transactions through the same audited path as every other receipt (303/303 tests passing). The dashboard was redesigned per explicit user feedback (grouped sections, decluttered top bar - see PROJECT_CONTEXT.md). Phase 13 (Credit Management) has been fully specified per additional user requirements (fuel-type-sectioned credit reporting, snapshot pricing) but not yet built - it depends on Phase 11 Sales existing first. Per the user's instruction (2026-08-16) to keep building autonomously: self-review the whole app for further improvements (including offline-capable ML/analytics where it genuinely helps), then continue to Phase 11 (Sales Management).
 
 ## Next Immediate Tasks
 1. Begin Phase 10 (Procurement Management) — Procurement will eventually create Tank RECEIPT transactions automatically from supplier deliveries.

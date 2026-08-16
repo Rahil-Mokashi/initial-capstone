@@ -25,12 +25,16 @@ from app.repositories.audit_log_repository import AuditLogRepository
 from app.repositories.dispenser_repository import DispenserRepository
 from app.repositories.employee_document_repository import EmployeeDocumentRepository
 from app.repositories.employee_repository import EmployeeRepository
+from app.repositories.fuel_delivery_repository import FuelDeliveryRepository
 from app.repositories.fuel_repository import FuelRepository
 from app.repositories.nozzle_assignment_repository import NozzleAssignmentRepository
 from app.repositories.nozzle_repository import NozzleRepository
+from app.repositories.purchase_order_repository import PurchaseOrderItemRepository, PurchaseOrderRepository
 from app.repositories.role_repository import RoleRepository
 from app.repositories.fuel_reconciliation_repository import FuelReconciliationRepository
 from app.repositories.shift_repository import ShiftRepository
+from app.repositories.supplier_invoice_repository import SupplierInvoiceRepository, SupplierPaymentRepository
+from app.repositories.supplier_repository import SupplierRepository
 from app.repositories.tank_reading_repository import TankReadingRepository
 from app.repositories.tank_repository import TankRepository
 from app.repositories.tank_transaction_repository import TankTransactionRepository
@@ -40,6 +44,7 @@ from app.services.attendance_service import AttendanceService
 from app.services.auth_service import AuthService
 from app.services.employee_service import EmployeeService
 from app.services.nozzle_service import NozzleService
+from app.services.procurement_service import ProcurementService
 from app.services.report_service import ReportService
 from app.services.shift_service import ShiftService
 from app.services.audit_service import AuditService
@@ -128,6 +133,7 @@ class MainWindow(QMainWindow):
         user_service: UserService,
         backup_service: BackupService,
         audit_service: AuditService,
+        procurement_service: ProcurementService,
         role_repo,
         fuel_repo,
         user_repo,
@@ -144,6 +150,7 @@ class MainWindow(QMainWindow):
         self._user_service = user_service
         self._backup_service = backup_service
         self._audit_service = audit_service
+        self._procurement_service = procurement_service
         self._role_repo = role_repo
         self._fuel_repo = fuel_repo
         self._user_repo = user_repo
@@ -159,6 +166,7 @@ class MainWindow(QMainWindow):
         self._user_window = None
         self._backup_window = None
         self._audit_window = None
+        self._procurement_window = None
 
         self.setWindowTitle("Petrol Pump ERP")
         self.setMinimumSize(960, 620)
@@ -174,72 +182,6 @@ class MainWindow(QMainWindow):
         role_tag = QLabel(user_data.get("role") or "No role")
         role_tag.setObjectName("roleTag")
 
-        employees_button = QPushButton("Employees")
-        employees_button.setObjectName("secondaryButton")
-        employees_button.setCursor(Qt.PointingHandCursor)
-        employees_button.clicked.connect(self._open_employees)
-        employees_button.setVisible(
-            self._auth_service.check_permission(user_data["id"], Permission.EMPLOYEE_VIEW.value)
-        )
-
-        attendance_button = QPushButton("Attendance")
-        attendance_button.setObjectName("secondaryButton")
-        attendance_button.setCursor(Qt.PointingHandCursor)
-        attendance_button.clicked.connect(self._open_attendance)
-        attendance_button.setVisible(
-            self._auth_service.check_permission(user_data["id"], Permission.ATTENDANCE_VIEW.value)
-        )
-
-        shifts_button = QPushButton("Shifts")
-        shifts_button.setObjectName("secondaryButton")
-        shifts_button.setCursor(Qt.PointingHandCursor)
-        shifts_button.clicked.connect(self._open_shifts)
-        shifts_button.setVisible(self._auth_service.check_permission(user_data["id"], Permission.SHIFT_VIEW.value))
-
-        nozzles_button = QPushButton("Nozzles")
-        nozzles_button.setObjectName("secondaryButton")
-        nozzles_button.setCursor(Qt.PointingHandCursor)
-        nozzles_button.clicked.connect(self._open_nozzles)
-        nozzles_button.setVisible(self._auth_service.check_permission(user_data["id"], Permission.NOZZLE_VIEW.value))
-
-        tanks_button = QPushButton("Tanks")
-        tanks_button.setObjectName("secondaryButton")
-        tanks_button.setCursor(Qt.PointingHandCursor)
-        tanks_button.clicked.connect(self._open_tanks)
-        tanks_button.setVisible(self._auth_service.check_permission(user_data["id"], Permission.INVENTORY_VIEW.value))
-
-        my_shift_button = QPushButton("My Shift")
-        my_shift_button.setObjectName("secondaryButton")
-        my_shift_button.setCursor(Qt.PointingHandCursor)
-        my_shift_button.clicked.connect(self._open_my_shift)
-        my_shift_button.setVisible(
-            self._auth_service.check_permission(user_data["id"], Permission.MY_ASSIGNMENT_VIEW.value)
-        )
-
-        reports_button = QPushButton("Reports")
-        reports_button.setObjectName("secondaryButton")
-        reports_button.setCursor(Qt.PointingHandCursor)
-        reports_button.clicked.connect(self._open_reports)
-        reports_button.setVisible(self._auth_service.check_permission(user_data["id"], Permission.INVENTORY_VIEW.value))
-
-        users_button = QPushButton("Users")
-        users_button.setObjectName("secondaryButton")
-        users_button.setCursor(Qt.PointingHandCursor)
-        users_button.clicked.connect(self._open_users)
-        users_button.setVisible(self._auth_service.check_permission(user_data["id"], Permission.USER_MANAGE.value))
-
-        backups_button = QPushButton("Backups")
-        backups_button.setObjectName("secondaryButton")
-        backups_button.setCursor(Qt.PointingHandCursor)
-        backups_button.clicked.connect(self._open_backups)
-        backups_button.setVisible(self._auth_service.check_permission(user_data["id"], Permission.BACKUP_MANAGE.value))
-
-        audit_log_button = QPushButton("Audit Log")
-        audit_log_button.setObjectName("secondaryButton")
-        audit_log_button.setCursor(Qt.PointingHandCursor)
-        audit_log_button.clicked.connect(self._open_audit_log)
-        audit_log_button.setVisible(self._auth_service.check_permission(user_data["id"], Permission.AUDIT_VIEW.value))
-
         account_button = QPushButton("Account")
         account_button.setObjectName("secondaryButton")
         account_button.setCursor(Qt.PointingHandCursor)
@@ -253,16 +195,6 @@ class MainWindow(QMainWindow):
         top_bar_layout.addSpacing(8)
         top_bar_layout.addWidget(role_tag)
         top_bar_layout.addStretch()
-        top_bar_layout.addWidget(employees_button)
-        top_bar_layout.addWidget(attendance_button)
-        top_bar_layout.addWidget(shifts_button)
-        top_bar_layout.addWidget(nozzles_button)
-        top_bar_layout.addWidget(tanks_button)
-        top_bar_layout.addWidget(my_shift_button)
-        top_bar_layout.addWidget(reports_button)
-        top_bar_layout.addWidget(users_button)
-        top_bar_layout.addWidget(backups_button)
-        top_bar_layout.addWidget(audit_log_button)
         top_bar_layout.addWidget(account_button)
         top_bar.setLayout(top_bar_layout)
 
@@ -278,43 +210,67 @@ class MainWindow(QMainWindow):
         header_layout.addWidget(greeting)
         header_layout.addWidget(today_label)
 
-        cards = [
-            ("👥", "Employees", "Staff, documents, and status", self._open_employees, Permission.EMPLOYEE_VIEW),
-            ("🕒", "Attendance", "Mark and review attendance", self._open_attendance, Permission.ATTENDANCE_VIEW),
-            ("⛽", "Shifts", "Open/close shifts, assign nozzles", self._open_shifts, Permission.SHIFT_VIEW),
-            ("🔧", "Nozzles", "Manage dispensers and nozzles", self._open_nozzles, Permission.NOZZLE_VIEW),
-            ("🛢️", "Tanks", "Stock, transactions, reconciliation", self._open_tanks, Permission.INVENTORY_VIEW),
-            ("🪪", "My Shift", "Your current nozzle and fuel assignment", self._open_my_shift, Permission.MY_ASSIGNMENT_VIEW),
-            ("📊", "Reports", "Fuel stock and reconciliation by fuel type", self._open_reports, Permission.INVENTORY_VIEW),
-            ("🔐", "Users", "Create logins and manage roles", self._open_users, Permission.USER_MANAGE),
-            ("🗄️", "Backups", "Back up or restore the database", self._open_backups, Permission.BACKUP_MANAGE),
-            ("📜", "Audit Log", "Review every recorded change", self._open_audit_log, Permission.AUDIT_VIEW),
+        card_groups = [
+            (
+                "DAILY OPERATIONS",
+                [
+                    ("👥", "Employees", "Staff, documents, and status", self._open_employees, Permission.EMPLOYEE_VIEW),
+                    ("🕒", "Attendance", "Mark and review attendance", self._open_attendance, Permission.ATTENDANCE_VIEW),
+                    ("⛽", "Shifts", "Open/close shifts, assign nozzles", self._open_shifts, Permission.SHIFT_VIEW),
+                    ("🪪", "My Shift", "Your current nozzle and fuel assignment", self._open_my_shift, Permission.MY_ASSIGNMENT_VIEW),
+                    ("🔧", "Nozzles", "Manage dispensers and nozzles", self._open_nozzles, Permission.NOZZLE_VIEW),
+                    ("🛢️", "Tanks", "Stock, transactions, reconciliation", self._open_tanks, Permission.INVENTORY_VIEW),
+                    ("🚛", "Procurement", "Suppliers, orders, and deliveries", self._open_procurement, Permission.PROCUREMENT_VIEW),
+                ],
+            ),
+            (
+                "REPORTS & ADMINISTRATION",
+                [
+                    ("📊", "Reports", "Fuel stock and reconciliation by fuel type", self._open_reports, Permission.INVENTORY_VIEW),
+                    ("🔐", "Users", "Create logins and manage roles", self._open_users, Permission.USER_MANAGE),
+                    ("🗄️", "Backups", "Back up or restore the database", self._open_backups, Permission.BACKUP_MANAGE),
+                    ("📜", "Audit Log", "Review every recorded change", self._open_audit_log, Permission.AUDIT_VIEW),
+                ],
+            ),
         ]
 
         CARDS_PER_ROW = 4
-        cards_grid = QGridLayout()
-        cards_grid.setSpacing(16)
-        for column in range(CARDS_PER_ROW):
-            cards_grid.setColumnStretch(column, 1)
-
-        visible_card_count = 0
-        for icon, title, subtitle, handler, permission in cards:
-            if not self._auth_service.check_permission(user_data["id"], permission.value):
-                continue
-            row, column = divmod(visible_card_count, CARDS_PER_ROW)
-            cards_grid.addWidget(DashboardCard(icon, title, subtitle, handler), row, column)
-            visible_card_count += 1
-
-        empty_state = QLabel("Nothing to show yet — ask an administrator for access to a module.")
-        empty_state.setObjectName("subtitle")
-
         body_layout = QVBoxLayout()
         body_layout.setContentsMargins(32, 32, 32, 32)
-        body_layout.setSpacing(24)
+        body_layout.setSpacing(28)
         body_layout.addLayout(header_layout)
-        if visible_card_count > 0:
-            body_layout.addLayout(cards_grid)
-        else:
+
+        total_visible_cards = 0
+        for group_label, cards in card_groups:
+            visible_cards = [
+                (icon, title, subtitle, handler)
+                for icon, title, subtitle, handler, permission in cards
+                if self._auth_service.check_permission(user_data["id"], permission.value)
+            ]
+            if not visible_cards:
+                continue
+            total_visible_cards += len(visible_cards)
+
+            group_label_widget = QLabel(group_label)
+            group_label_widget.setObjectName("dashGroupLabel")
+
+            group_grid = QGridLayout()
+            group_grid.setSpacing(16)
+            for column in range(CARDS_PER_ROW):
+                group_grid.setColumnStretch(column, 1)
+            for index, (icon, title, subtitle, handler) in enumerate(visible_cards):
+                row, column = divmod(index, CARDS_PER_ROW)
+                group_grid.addWidget(DashboardCard(icon, title, subtitle, handler), row, column)
+
+            group_layout = QVBoxLayout()
+            group_layout.setSpacing(10)
+            group_layout.addWidget(group_label_widget)
+            group_layout.addLayout(group_grid)
+            body_layout.addLayout(group_layout)
+
+        if total_visible_cards == 0:
+            empty_state = QLabel("Nothing to show yet — ask an administrator for access to a module.")
+            empty_state.setObjectName("subtitle")
             body_layout.addWidget(empty_state)
         body_layout.addStretch()
 
@@ -391,6 +347,19 @@ class MainWindow(QMainWindow):
             self._tank_service, self._employee_service, self._fuel_repo, self._auth_service, self._user_data["id"]
         )
         self._tank_window.show()
+
+    def _open_procurement(self) -> None:
+        from app.ui.procurement_window import ProcurementWindow
+
+        self._procurement_window = ProcurementWindow(
+            self._procurement_service,
+            self._fuel_repo,
+            self._tank_service,
+            self._employee_service,
+            self._auth_service,
+            self._user_data["id"],
+        )
+        self._procurement_window.show()
 
     def _open_my_shift(self) -> None:
         from app.ui.my_shift_window import MyShiftWindow
@@ -510,6 +479,19 @@ class AppController:
             self._auth_service,
         )
         self._audit_service = AuditService(audit_repo, self._auth_service)
+        self._procurement_service = ProcurementService(
+            SupplierRepository(self._db_session),
+            PurchaseOrderRepository(self._db_session),
+            PurchaseOrderItemRepository(self._db_session),
+            FuelDeliveryRepository(self._db_session),
+            SupplierInvoiceRepository(self._db_session),
+            SupplierPaymentRepository(self._db_session),
+            self._fuel_repo,
+            employee_repo,
+            self._tank_service,
+            audit_repo,
+            self._auth_service,
+        )
         self._user_repo = user_repo
         self.login_window = None
         self.main_window = None
@@ -548,6 +530,7 @@ class AppController:
             self._user_service,
             self._backup_service,
             self._audit_service,
+            self._procurement_service,
             self._role_repo,
             self._fuel_repo,
             self._user_repo,

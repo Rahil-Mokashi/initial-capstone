@@ -33,6 +33,8 @@ class Permission(str, Enum):
     NOZZLE_MANAGE = "nozzle.manage"
     MY_ASSIGNMENT_VIEW = "my_assignment.view"
     BACKUP_MANAGE = "backup.manage"
+    PROCUREMENT_VIEW = "procurement.view"
+    PROCUREMENT_MANAGE = "procurement.manage"
 
 
 class EmployeeStatus(str, Enum):
@@ -94,6 +96,37 @@ class TankTransactionType(str, Enum):
     ADJUSTMENT = "adjustment"
 
 
+class PurchaseOrderStatus(str, Enum):
+    """Values stored in PurchaseOrder.status (problemstatement.md #12)."""
+
+    DRAFT = "draft"
+    PLACED = "placed"
+    PARTIALLY_DELIVERED = "partially_delivered"
+    DELIVERED = "delivered"
+    CANCELLED = "cancelled"
+
+
+class FuelDeliveryStatus(str, Enum):
+    """Values stored in FuelDelivery.status - the tanker-arrival-to-
+    inventory-update workflow (problemstatement.md #12): Tanker Arrival ->
+    Document Verification -> Fuel Quality Verification -> Pre-Dip Reading
+    -> Fuel Unloading -> Post-Dip Reading -> Inventory Update."""
+
+    ARRIVED = "arrived"
+    DOCUMENTS_VERIFIED = "documents_verified"
+    QUALITY_VERIFIED = "quality_verified"
+    UNLOADED = "unloaded"
+    REJECTED = "rejected"
+
+
+class SupplierInvoiceStatus(str, Enum):
+    """Values stored in SupplierInvoice.status."""
+
+    UNPAID = "unpaid"
+    PARTIALLY_PAID = "partially_paid"
+    PAID = "paid"
+
+
 class VarianceClassification(str, Enum):
     """Fuel reconciliation variance classification (problemstatement.md #14).
 
@@ -132,6 +165,8 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
         Permission.SHIFT_REOPEN,
         Permission.NOZZLE_VIEW,
         Permission.NOZZLE_MANAGE,
+        Permission.PROCUREMENT_VIEW,
+        Permission.PROCUREMENT_MANAGE,
     ),
     UserRole.ACCOUNTANT: (
         Permission.INVENTORY_VIEW,
@@ -140,6 +175,7 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
         Permission.ATTENDANCE_VIEW,
         Permission.SHIFT_VIEW,
         Permission.NOZZLE_VIEW,
+        Permission.PROCUREMENT_VIEW,
     ),
     UserRole.SHIFT_SUPERVISOR: (
         Permission.INVENTORY_VIEW,
