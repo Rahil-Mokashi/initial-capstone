@@ -25,5 +25,32 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run tests
-        run: python -m pytest tests/ -q
+      # Split into a few sequential invocations rather than one
+      # `pytest tests/` run covering all ~450 tests: PySide6 accumulates
+      # native Qt resources (widgets, timers, window handles) across the
+      # ~15+ test modules that construct a QApplication, and running the
+      # entire suite as one long-lived process can hit a native resource
+      # crash near the end - reproduced locally, and confirmed to
+      # disappear once the same tests run in a few smaller batches
+      # instead. Glob-based (not a hardcoded file list) so a newly added
+      # test file automatically lands in one of these batches without
+      # needing this file updated.
+      # shell: bash (not the windows-latest default of PowerShell) so
+      # the [a-i] glob is expanded by the shell exactly as verified
+      # locally - PowerShell doesn't expand wildcards in arguments to
+      # external commands the way a POSIX shell does.
+      - name: Run tests (a-i)
+        shell: bash
+        run: python -m pytest tests/test_[a-i]*.py -q
+
+      - name: Run tests (j-p)
+        shell: bash
+        run: python -m pytest tests/test_[j-p]*.py -q
+
+      - name: Run tests (q-r)
+        shell: bash
+        run: python -m pytest tests/test_[q-r]*.py -q
+
+      - name: Run tests (s-z)
+        shell: bash
+        run: python -m pytest tests/test_[s-z]*.py -q
