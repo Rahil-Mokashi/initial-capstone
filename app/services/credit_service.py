@@ -23,6 +23,7 @@ from typing import List, Optional
 from app.core.constants import PaymentMethod, Permission, SaleStatus
 from app.core.exceptions import ConflictError, NotFoundError
 from app.core.permissions import require_permission
+from app.repositories.base import session_for, unit_of_work
 from app.models.credit_account import CreditAccount
 from app.models.customer_payment import CustomerPayment
 from app.schemas.credit import CreditAccountCreate, CustomerPaymentCreate
@@ -45,6 +46,7 @@ class CreditService:
         self._sale_repo = sale_repo
         self._audit_repo = audit_repo
         self._auth_service = auth_service
+        self._session = session_for(credit_account_repo)
 
     @require_permission(Permission.CREDIT_MANAGE.value)
     def create_credit_account(self, actor_user_id: str, data: CreditAccountCreate) -> CreditAccount:
@@ -103,6 +105,11 @@ class CreditService:
 
     @require_permission(Permission.CREDIT_MANAGE.value)
     def record_customer_payment(self, actor_user_id: str, data: CustomerPaymentCreate) -> CustomerPayment:
+        """Money received against a credit account. The payment row and its audit record commit together or not at all."""
+        with unit_of_work(self._session):
+            return self._record_customer_payment_impl(actor_user_id, data)
+
+    def _record_customer_payment_impl(self, actor_user_id: str, data: CustomerPaymentCreate):
         if not self._credit_account_repo.get_by_customer_id(data.customer_id):
             raise NotFoundError("This customer has no credit account")
 

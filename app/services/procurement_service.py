@@ -22,6 +22,7 @@ from app.core.constants import (
 )
 from app.core.exceptions import ConflictError, NotFoundError
 from app.core.permissions import require_permission
+from app.repositories.base import session_for, unit_of_work
 from app.database.base import StatusEnum
 from app.models.fuel_delivery import FuelDelivery
 from app.models.purchase_order import PurchaseOrder, PurchaseOrderItem
@@ -60,6 +61,7 @@ class ProcurementService:
         self._tank_service = tank_service
         self._audit_repo = audit_repo
         self._auth_service = auth_service
+        self._session = session_for(po_repo)
 
     # ------------------------------------------------------------------
     # Suppliers
@@ -119,6 +121,11 @@ class ProcurementService:
 
     @require_permission(Permission.PROCUREMENT_MANAGE.value)
     def create_purchase_order(self, actor_user_id: str, data: PurchaseOrderCreate) -> PurchaseOrder:
+        """Writes the order header and every line item; a header with missing lines would misstate what was actually ordered."""
+        with unit_of_work(self._session):
+            return self._create_purchase_order_impl(actor_user_id, data)
+
+    def _create_purchase_order_impl(self, actor_user_id: str, data: PurchaseOrderCreate):
         supplier = self._get_supplier_or_raise(data.supplier_id)
         if supplier.status != StatusEnum.ACTIVE.value:
             raise ConflictError("Cannot raise a purchase order against an inactive supplier")
@@ -320,7 +327,20 @@ class ProcurementService:
         creates the real Tank RECEIPT transaction for the delivered
         quantity - moving fuel into the tank through TankService's
         normal, capacity-checked, audited receipt path rather than a
-        parallel one."""
+        parallel one.
+
+        This is the single widest write in the application: a dip
+        reading, a tank receipt transaction, the tank's own stock, the
+        delivery record, and a recomputed purchase-order status. All of
+        it is one transaction, because any subset of it committed alone
+        misstates how much fuel is physically in the ground.
+        """
+        with unit_of_work(self._session):
+            return self._record_post_dip_and_unload_impl(actor_user_id, delivery_id, data)
+
+    def _record_post_dip_and_unload_impl(
+        self, actor_user_id: str, delivery_id: str, data: FuelDeliveryDipReading
+    ) -> FuelDelivery:
         delivery = self._get_delivery_or_raise(delivery_id)
         if delivery.status != FuelDeliveryStatus.QUALITY_VERIFIED.value or delivery.pre_dip_value is None:
             raise ConflictError("A pre-dip reading must be recorded before the post-dip reading")
@@ -429,6 +449,11 @@ class ProcurementService:
 
     @require_permission(Permission.PROCUREMENT_MANAGE.value)
     def record_payment(self, actor_user_id: str, invoice_id: str, data: SupplierPaymentCreate) -> SupplierPayment:
+        """Writes the payment and recomputes the invoice's status from its payments - the two must agree, so they commit together."""
+        with unit_of_work(self._session):
+            return self._record_payment_impl(actor_user_id, invoice_id, data)
+
+    def _record_payment_impl(self, actor_user_id: str, invoice_id: str, data: SupplierPaymentCreate):
         invoice = self._get_invoice_or_raise(invoice_id)
         if invoice.status == SupplierInvoiceStatus.PAID.value:
             raise ConflictError("This invoice is already fully paid")

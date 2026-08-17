@@ -28,6 +28,7 @@ from app.models.fuel_reconciliation import FuelReconciliation
 from app.models.tank import Tank
 from app.models.tank_reading import TankReading
 from app.models.tank_transaction import TankTransaction
+from app.repositories.base import session_for, unit_of_work
 from app.schemas.tank import ReconciliationPerform, TankCreate, TankReadingCreate, TankTransactionCreate
 
 
@@ -64,6 +65,7 @@ class TankService:
         self._employee_repo = employee_repo
         self._audit_repo = audit_repo
         self._auth_service = auth_service
+        self._session = session_for(tank_repo)
 
     @require_permission(Permission.INVENTORY_MANAGE.value)
     def create_tank(self, actor_user_id: str, data: TankCreate) -> Tank:
@@ -181,6 +183,15 @@ class TankService:
     def _record_transaction(
         self, actor_user_id: str, tank_id: str, transaction_type: TankTransactionType, data: TankTransactionCreate
     ) -> TankTransaction:
+        """Writes the transaction row and mutates the tank's stock, so the
+        two must land together or not at all - a committed stock change
+        with no transaction explaining it is unauditable."""
+        with unit_of_work(self._session):
+            return self._record_transaction_impl(actor_user_id, tank_id, transaction_type, data)
+
+    def _record_transaction_impl(
+        self, actor_user_id: str, tank_id: str, transaction_type: TankTransactionType, data: TankTransactionCreate
+    ) -> TankTransaction:
         tank = self._get_tank_or_raise(tank_id)
 
         if transaction_type in (TankTransactionType.RECEIPT, TankTransactionType.ISSUE) and data.quantity <= 0:
@@ -237,6 +248,13 @@ class TankService:
 
     @require_permission(Permission.INVENTORY_MANAGE.value)
     def perform_reconciliation(self, actor_user_id: str, tank_id: str, data: ReconciliationPerform) -> FuelReconciliation:
+        """Writes the reconciliation record and resets the tank's book stock
+        to the physical figure - one without the other is a silent,
+        unexplained stock change."""
+        with unit_of_work(self._session):
+            return self._perform_reconciliation_impl(actor_user_id, tank_id, data)
+
+    def _perform_reconciliation_impl(self, actor_user_id: str, tank_id: str, data: ReconciliationPerform) -> FuelReconciliation:
         tank = self._get_tank_or_raise(tank_id)
 
         last_reconciliation = self._reconciliation_repo.get_latest_for_tank(tank_id)
