@@ -79,3 +79,76 @@ You can also trigger one manually, and check database integrity on demand, from 
 ## Reports and permissions
 
 Every report is gated by a permission tied to the relevant role — a Manager sees Business Insights and procurement reports, an Accountant sees financial ones, and so on. If a role needs access to a report it currently doesn't have, that's a role/permission assignment to review in User Management, not something to work around.
+
+---
+
+## Protecting the database file (encryption at rest)
+
+The Petrol Pump ERP database is a single unencrypted SQLite file. Anyone
+with access to the PC — or to a stolen drive, or to a backup on a USB
+stick — can open it with a free tool and read every sale, salary, customer
+balance and supplier price in the business.
+
+**This is a deliberate, recorded decision, not an oversight.** The
+reasoning is below so that whoever inherits this system can revisit it
+rather than rediscover it.
+
+### Why the database itself is not encrypted
+
+The usual answer is SQLCipher, which encrypts every page of the file
+transparently. It was considered and not adopted, because on an
+unattended desktop application the key has to come from somewhere:
+
+- **Embedded in the application** — anyone who can read the database can
+  also read the executable, so this protects nothing and only creates the
+  impression of protection, which is worse.
+- **Typed by a person at every startup** — a real improvement, but it
+  means the pump cannot open in the morning if the one person who knows
+  the passphrase is off sick, and it will be written on a sticky note
+  beside the monitor within a week.
+- **Held by the operating system** — this is genuinely the right answer,
+  and it is exactly what full-disk encryption already provides.
+
+So the protection is delegated to the operating system, where the key
+management is already solved properly, rather than reimplemented badly
+inside the application.
+
+### What the administrator must actually do
+
+**1. Turn on BitLocker** on the drive holding the application and its
+data. On Windows 11 Pro: Settings → Privacy & security → Device
+encryption, or Control Panel → BitLocker Drive Encryption. Store the
+recovery key somewhere that is not the same machine.
+
+Without this, physical theft of the PC is total data disclosure.
+
+**2. Encrypt the off-device backups too.** A backup copied to a USB stick
+leaves the protection of the machine's disk encryption behind. Use a
+BitLocker To Go encrypted USB drive, or a network share on an encrypted
+server. An unencrypted backup on a lost USB stick is the same disclosure
+as a stolen PC, and far likelier.
+
+**3. Use separate Windows accounts** for staff who should not reach the
+data directory at all, and keep the database directory readable only by
+the account the application runs under.
+
+**4. Do not email or cloud-sync the database file.** It contains
+everything, and this application is offline by design precisely so that
+the data never leaves the premises unless somebody deliberately moves it.
+
+### What the application does protect
+
+Independently of the file, and regardless of disk encryption:
+
+- Passwords are never stored — only salted, iterated hashes.
+- Session tokens are stored hashed, so a stolen database yields no usable
+  sessions.
+- The audit trail is append-only, enforced by database triggers, and
+  chained with hashes so that tampering is detectable even by someone who
+  can bypass the triggers.
+- Every consequential action requires a reason and records who performed
+  it.
+
+Those defend against a dishonest user of the system. Disk encryption is
+what defends against someone who takes the disk. Both are needed, and only
+one of them can be solved in application code.

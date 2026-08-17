@@ -380,6 +380,20 @@ Blocks 1-3 are now essentially complete (10 findings fixed). The remaining findi
 - No cloud integration in the current phase (see Future Scope)
 
 ## Architecture Decisions
+
+### Encryption at rest: delegated to the OS, not implemented in the app (2026-08-17, audit finding #12)
+
+The database is a single unencrypted SQLite file containing every sale, salary, customer balance and supplier price. SQLCipher (transparent page-level encryption) was considered and **deliberately not adopted**, because on an unattended desktop application the key has to come from somewhere and every option is worse than the alternative:
+
+- **Embedded in the application** — anyone who can read the database can also read the executable, so it protects nothing while creating the *impression* of protection, which is worse than no encryption at all.
+- **Typed at every startup** — a real improvement, but the pump cannot open in the morning if the one person who knows the passphrase is off sick, and it ends up on a sticky note beside the monitor within a week. The same "a control people route around is not a control" reasoning that drove the lockout-expiry fix (#13).
+- **Held by the operating system** — genuinely correct, and exactly what full-disk encryption already provides.
+
+So protection is delegated to BitLocker, where key management is already solved properly, rather than reimplemented badly inside the application. `docs/administrator-guide.md` now has a section telling the administrator specifically what to do: enable BitLocker on the data drive, use BitLocker To Go for USB backups (an off-device copy leaves the machine's disk encryption behind — and a lost USB stick is far likelier than a stolen PC), restrict the data directory by Windows account, and never cloud-sync the file.
+
+The important part of this decision is that it is now **recorded rather than merely omitted**. An unencrypted database that nobody decided about is a defect; an unencrypted database with a documented threat model and an administrator procedure is an engineering trade-off. If the deployment context changes — a multi-tenant install, a laptop that leaves the site — revisit it here.
+
+
 - Desktop-only, offline-only for the current phase (no web, no cloud) — see Future Scope for the planned second phase
 - SQLite single-file database
 - PySide6 for UI
