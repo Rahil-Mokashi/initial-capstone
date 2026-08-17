@@ -2,6 +2,7 @@ import uuid
 
 from sqlalchemy import Column, Date, DateTime, ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
+from app.database.types import UtcDateTime
 
 from .base import Base, EntityMixin
 
@@ -28,8 +29,8 @@ class Shift(EntityMixin, Base):
     shift_date = Column(Date, nullable=False, index=True)
     shift_label = Column(String(64), nullable=False)
 
-    start_time = Column(DateTime, nullable=True)
-    end_time = Column(DateTime, nullable=True)
+    start_time = Column(UtcDateTime, nullable=True)
+    end_time = Column(UtcDateTime, nullable=True)
 
     opened_by_id = Column(String(36), ForeignKey("users.id"), nullable=False)
     closed_by_id = Column(String(36), ForeignKey("users.id"), nullable=True)
@@ -39,7 +40,7 @@ class Shift(EntityMixin, Base):
 
     reopen_reason = Column(Text, nullable=True)
     reopened_by_id = Column(String(36), ForeignKey("users.id"), nullable=True)
-    reopened_at = Column(DateTime, nullable=True)
+    reopened_at = Column(UtcDateTime, nullable=True)
 
     opened_by = relationship("User", foreign_keys=[opened_by_id])
     closed_by = relationship("User", foreign_keys=[closed_by_id])

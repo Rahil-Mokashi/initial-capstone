@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import Column, DateTime, ForeignKey, Numeric, String, Text
 from sqlalchemy.orm import relationship
+from app.database.types import UtcDateTime
 
 from .base import Base
 
@@ -53,11 +54,11 @@ class ShiftReconciliation(Base):
     status = Column(String(20), nullable=False)
 
     performed_by_id = Column(String(36), ForeignKey("users.id"), nullable=False)
-    performed_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    performed_at = Column(UtcDateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     remarks = Column(Text, nullable=True)
 
     approved_by_id = Column(String(36), ForeignKey("users.id"), nullable=True)
-    approved_at = Column(DateTime, nullable=True)
+    approved_at = Column(UtcDateTime, nullable=True)
     approval_remarks = Column(Text, nullable=True)
 
     shift = relationship("Shift")

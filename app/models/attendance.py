@@ -2,6 +2,7 @@ import uuid
 
 from sqlalchemy import Column, Date, DateTime, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import relationship
+from app.database.types import UtcDateTime
 
 from .base import Base, EntityMixin
 
@@ -27,15 +28,15 @@ class Attendance(EntityMixin, Base):
     employee_id = Column(String(36), ForeignKey("employees.id"), nullable=False, index=True)
     attendance_date = Column(Date, nullable=False, index=True)
 
-    check_in_time = Column(DateTime, nullable=True)
-    check_out_time = Column(DateTime, nullable=True)
+    check_in_time = Column(UtcDateTime, nullable=True)
+    check_out_time = Column(UtcDateTime, nullable=True)
     shift_label = Column(String(64), nullable=True)
     supervisor_id = Column(String(36), ForeignKey("users.id"), nullable=True)
     overtime_minutes = Column(Integer, nullable=False, default=0)
 
     correction_reason = Column(String(512), nullable=True)
     corrected_by_id = Column(String(36), ForeignKey("users.id"), nullable=True)
-    corrected_at = Column(DateTime, nullable=True)
+    corrected_at = Column(UtcDateTime, nullable=True)
 
     employee = relationship("Employee")
     supervisor = relationship("User", foreign_keys=[supervisor_id])

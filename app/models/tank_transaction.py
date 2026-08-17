@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import Column, DateTime, ForeignKey, Numeric, String, Text
 from sqlalchemy.orm import relationship
+from app.database.types import UtcDateTime
 
 from .base import Base
 
@@ -23,7 +24,7 @@ class TankTransaction(Base):
     transaction_type = Column(String(32), nullable=False)
     quantity = Column(Numeric(12, 3), nullable=False)
     recorded_by_id = Column(String(36), ForeignKey("users.id"), nullable=False)
-    transaction_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False, index=True)
+    transaction_at = Column(UtcDateTime, default=lambda: datetime.now(timezone.utc), nullable=False, index=True)
     reference = Column(String(256), nullable=True)
     remarks = Column(Text, nullable=True)
 

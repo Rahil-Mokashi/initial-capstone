@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import Column, DateTime, ForeignKey, Numeric, String, Text
 from sqlalchemy.orm import relationship
+from app.database.types import UtcDateTime
 
 from .base import Base
 
@@ -23,7 +24,7 @@ class TankReading(Base):
     employee_id = Column(String(36), ForeignKey("employees.id"), nullable=False)
     shift_id = Column(String(36), ForeignKey("shifts.id"), nullable=True)
 
-    reading_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False, index=True)
+    reading_at = Column(UtcDateTime, default=lambda: datetime.now(timezone.utc), nullable=False, index=True)
     dip_value = Column(Numeric(12, 3), nullable=True)
     physical_stock = Column(Numeric(12, 3), nullable=False)
     remarks = Column(Text, nullable=True)

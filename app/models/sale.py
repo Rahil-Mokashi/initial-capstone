@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import Column, DateTime, ForeignKey, Numeric, String, Text
 from sqlalchemy.orm import relationship
+from app.database.types import UtcDateTime
 
 from .base import Base
 
@@ -29,7 +30,7 @@ class Sale(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     receipt_number = Column(String(32), unique=True, nullable=False, index=True)
 
-    sale_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False, index=True)
+    sale_at = Column(UtcDateTime, default=lambda: datetime.now(timezone.utc), nullable=False, index=True)
     shift_id = Column(String(36), ForeignKey("shifts.id"), nullable=False, index=True)
     nozzle_id = Column(String(36), ForeignKey("nozzles.id"), nullable=False, index=True)
     fuel_id = Column(String(36), ForeignKey("fuels.id"), nullable=False)

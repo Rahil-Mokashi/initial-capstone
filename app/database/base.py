@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from sqlalchemy import Column, DateTime, String, Boolean
 from sqlalchemy.orm import declarative_base
+from .types import UtcDateTime
 
 
 Base = declarative_base()
@@ -24,9 +25,9 @@ class StatusEnum(str, Enum):
 class EntityMixin:
     """Mixin providing common fields and methods for all entities."""
 
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at = Column(UtcDateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at = Column(
-        DateTime,
+        UtcDateTime,
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
         nullable=False,
@@ -49,8 +50,8 @@ class EntityMixin:
 #     password_hash: Column(String, nullable=False)
 #     is_active: Column(Boolean, default=True)
 #     role: Column(String, default="attendant")
-#     created_at: Column(DateTime, default=datetime.utcnow)
-#     updated_at: Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+#     created_at: Column(UtcDateTime, default=datetime.utcnow)
+#     updated_at: Column(UtcDateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 #     is_deleted: Column(Boolean, default=False)
 #
 # class Role(EntityMixin):
@@ -72,15 +73,15 @@ class EntityMixin:
 #     last_name: Column(String, nullable=False)
 #     employee_id: Column(String, unique=True, index=True)
 #     role_id: Column(Integer, ForeignKey("roles.id"))
-#     hire_date: Column(DateTime)
+#     hire_date: Column(UtcDateTime)
 #     status: Column(String, default="active")
 #     is_deleted: Column(Boolean, default=False)
 #
 # class Shift(EntityMixin):
 #     __tablename__ = "shifts"
 #     id: Column(Integer, primary_key=True, index=True)
-#     start_time: Column(DateTime, nullable=False)
-#     end_time: Column(DateTime, nullable=False)
+#     start_time: Column(UtcDateTime, nullable=False)
+#     end_time: Column(UtcDateTime, nullable=False)
 #     shift_type: Column(String, nullable=False)  # e.g., "day", "night"
 #     is_active: Column(Boolean, default=True)
 #
@@ -110,7 +111,7 @@ class EntityMixin:
 #     __tablename__ = "sales"
 #     id: Column(Integer, primary_key=True, index=True)
 #     sale_id: Column(String, unique=True, index=True)
-#     sale_date: Column(DateTime, nullable=False)
+#     sale_date: Column(UtcDateTime, nullable=False)
 #     total_amount: Column(Integer, nullable=False)  # in paise
 #     currency: Column(String, default="INR")
 #     status: Column(String, default="completed")
@@ -123,7 +124,7 @@ class EntityMixin:
 #     amount: Column(Integer, nullable=False)  # in paise
 #     payment_method: Column(String)  # "cash", "upi", "card", "credit"
 #     status: Column(String, default="pending")
-#     created_at: Column(DateTime, default=datetime.utcnow)
+#     created_at: Column(UtcDateTime, default=datetime.utcnow)
 #
 # class CreditSale(EntityMixin):
 #     __tablename__ = "credit_sales"
@@ -139,7 +140,7 @@ class EntityMixin:
 #     expense_type: Column(String)  # "fuel", "supplier", "maintenance", etc.
 #     amount: Column(Integer, nullable=False)  # in paise
 #     description: Column(Text)
-#     date: Column(DateTime, nullable=False)
+#     date: Column(UtcDateTime, nullable=False)
 #     status: Column(String, default="pending")
 #
 # class Transfer(EntityMixin):
@@ -151,7 +152,7 @@ class EntityMixin:
 #     amount: Column(Integer, nullable=False)  # in paise
 #     purpose: Column(String)
 #     status: Column(String, default="pending")
-#     created_at: Column(DateTime, default=datetime.utcnow)
+#     created_at: Column(UtcDateTime, default=datetime.utcnow)
 #
 # class AuditLog(EntityMixin):
 #     __tablename__ = "audit_logs"
@@ -161,7 +162,7 @@ class EntityMixin:
 #     actor_id: Column(Integer, nullable=True)
 #     old_value: Column(Text)
 #     new_value: Column(Text)
-#     timestamp: Column(DateTime, default=datetime.utcnow)
+#     timestamp: Column(UtcDateTime, default=datetime.utcnow)
 #
 
 __all__ = [

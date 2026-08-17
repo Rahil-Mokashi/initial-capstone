@@ -15,16 +15,26 @@ from enum import Enum
 
 
 def local_day_bounds_utc(day: date) -> tuple[datetime, datetime]:
-    """Local calendar day -> naive-UTC instant bounds. Naive (not
-    timezone-aware) because SQLite/SQLAlchemy returns DateTime columns
-    as naive datetimes representing UTC on read, so these bounds are
-    stripped of tzinfo to compare cleanly against them in Python."""
+    """Local calendar day -> timezone-aware UTC instant bounds.
+
+    These used to be returned NAIVE, with tzinfo deliberately stripped,
+    to match the naive datetimes SQLAlchemy handed back from SQLite. That
+    was a workaround for a defect in the column type, not a design
+    choice: it meant a UTC instant and a value read from the database
+    could be compared only because BOTH had lost the information that
+    would have made the comparison meaningful.
+
+    app/database/types.py's UtcDateTime fixed the columns, so every
+    datetime read from the database is now aware UTC. The workaround has
+    to go with it - keeping it would reintroduce exactly the naive-vs-
+    aware mismatch it was invented to hide, just in the other direction.
+    """
 
     local_start = datetime.combine(day, time.min).astimezone()
     local_end = datetime.combine(day, time.max).astimezone()
     return (
-        local_start.astimezone(timezone.utc).replace(tzinfo=None),
-        local_end.astimezone(timezone.utc).replace(tzinfo=None),
+        local_start.astimezone(timezone.utc),
+        local_end.astimezone(timezone.utc),
     )
 
 
@@ -74,7 +84,7 @@ def period_bounds(period_type: PeriodType, reference_date: date) -> tuple[date, 
 
 
 def period_bounds_utc(period_type: PeriodType, reference_date: date) -> tuple[datetime, datetime]:
-    """period_bounds, converted to naive-UTC instants via local_day_bounds_utc."""
+    """period_bounds, converted to aware-UTC instants via local_day_bounds_utc."""
 
     start_date, end_date = period_bounds(period_type, reference_date)
     return local_day_bounds_utc(start_date)[0], local_day_bounds_utc(end_date)[1]

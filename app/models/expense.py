@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import Column, Date, DateTime, ForeignKey, Numeric, String, Text
 from sqlalchemy.orm import relationship
+from app.database.types import UtcDateTime
 
 from .base import Base, EntityMixin
 
@@ -45,11 +46,11 @@ class Expense(Base):
 
     status = Column(String(16), nullable=False)
     approved_by_id = Column(String(36), ForeignKey("users.id"), nullable=True)
-    approved_at = Column(DateTime, nullable=True)
+    approved_at = Column(UtcDateTime, nullable=True)
     approval_remarks = Column(Text, nullable=True)
 
     recorded_by_id = Column(String(36), ForeignKey("users.id"), nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at = Column(UtcDateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
 
     category = relationship("ExpenseCategory")
     employee = relationship("Employee")
