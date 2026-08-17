@@ -9,6 +9,7 @@ from typing import Callable, Optional
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QComboBox,
     QDateEdit,
     QFileDialog,
     QHBoxLayout,
@@ -34,12 +35,28 @@ class TableReportWindow(QMainWindow):
         fetch_report: Callable[..., object],
         filename_stem: str,
         supports_date_filter: bool = False,
+        choice_filters: Optional[list] = None,
     ):
+        """choice_filters is a list of (label, keyword, options) where
+        options is [(display_text, value), ...]. Each becomes a
+        drop-down whose selection is passed to the report as that
+        keyword, so "filter by employee/nozzle" is one generic mechanism
+        rather than a bespoke window per filtered report - the same
+        reasoning that made this class shared in the first place.
+
+        A filter with no options is skipped entirely rather than shown
+        empty: the options come from ReportService.get_report_filter_
+        options, which returns nothing for a dimension the user is not
+        allowed to see, and an empty drop-down would advertise data they
+        cannot have.
+        """
         super().__init__()
         self._actor_user_id = actor_user_id
         self._fetch_report = fetch_report
         self._filename_stem = filename_stem
         self._supports_date_filter = supports_date_filter
+        self._choice_filters = choice_filters or []
+        self._choice_inputs: list = []
 
         self.setMinimumSize(760, 560)
 
@@ -89,6 +106,20 @@ class TableReportWindow(QMainWindow):
             actions_row.addWidget(QLabel("To"))
             actions_row.addWidget(self.date_to_input)
 
+        for label, keyword, options in self._choice_filters:
+            if not options:
+                continue
+            combo = QComboBox()
+            # "All" carries None, so not choosing anything means no
+            # filtering rather than defaulting to whichever record
+            # happens to sort first.
+            combo.addItem(f"All {label.lower()}s", None)
+            for display, value in options:
+                combo.addItem(display, value)
+            self._choice_inputs.append((keyword, combo))
+            actions_row.addWidget(QLabel(label))
+            actions_row.addWidget(combo)
+
         actions_row.addWidget(self.refresh_button)
         actions_row.addStretch()
         actions_row.addWidget(self.print_button)
@@ -131,9 +162,20 @@ class TableReportWindow(QMainWindow):
             args["date_to"] = self.date_to_input.date().toPython()
         return args
 
+    def _choice_filter_args(self) -> dict:
+        """Only selections that are actually set are passed through, so a
+        report never receives employee_id=None as though it were a
+        deliberate choice."""
+        args = {}
+        for keyword, combo in self._choice_inputs:
+            value = combo.currentData()
+            if value is not None:
+                args[keyword] = value
+        return args
+
     def _get_report(self) -> Optional[object]:
         try:
-            return self._fetch_report(self._actor_user_id, **self._date_filter_args())
+            return self._fetch_report(self._actor_user_id, **self._date_filter_args(), **self._choice_filter_args())
         except Exception as exc:  # noqa: BLE001 - a report window must never crash the app
             self.error_label.setText(describe_unexpected_error(exc))
             self.error_label.show()

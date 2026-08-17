@@ -55,7 +55,17 @@ If the list cannot be worked out for some reason, the screen says so explicitly 
 
 ## Reports
 
-Open **Reports** from the main menu to generate any report you have access to — sales, payments, credit, expenses, reconciliation, and the Business Insights (performance & forecast) view. Every report supports:
+Open **Reports** from the main menu to generate any report you have access to. Alongside the per-module reports (sales, payments, credit, expenses, reconciliation) and the Business Insights performance & forecast view, there are five that cut across the whole business:
+
+- **Daily Summary** — one line per trading day: how many sales, how many litres, how much came in as cash, UPI, card and credit, what went out as approved expenses, and what's left.
+- **Attendant & Nozzle** — sales broken down by who served them and from which nozzle. This is a record of what happened at a nozzle, not a staff ranking: the numbers depend on shift length, which nozzle someone was assigned, and how busy the forecourt was.
+- **Fuel Movement** — every litre into and out of each tank. Receipts, issues and adjustments are shown separately on purpose: a large net change is ordinary trading, but a large adjustment figure is the one worth asking about.
+- **Cash Book** — money in and out per day with a running balance. A credit sale doesn't appear on the day it's made, because no money arrived; it shows up later when the customer pays.
+- **Attendance** — days present, absent, late, half day and on leave per employee, with overtime hours.
+
+The Attendant and Attendance reports also let you narrow to a single employee or nozzle using the drop-downs beside the date fields.
+
+Every report supports:
 
 - **Generate** — run it for the date range and filters you choose
 - **Print Preview** — see exactly what will print before committing paper

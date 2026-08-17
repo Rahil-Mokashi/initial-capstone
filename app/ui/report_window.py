@@ -260,6 +260,22 @@ class ReportsHubWindow(QMainWindow):
                 self._report_service.get_customer_outstanding_report, "customer_outstanding_report")),
             ("Shift Reconciliation Report", Permission.RECONCILIATION_VIEW, lambda: self._open_table_report(
                 self._report_service.get_reconciliation_report, "reconciliation_report", supports_date_filter=True)),
+            # problemstatement.md #25-32: the daily/attendant/inventory/
+            # financial/HR reports. Listed after the per-module reports
+            # above because these cut across modules rather than
+            # belonging to one.
+            ("Daily Summary Report", Permission.SALE_VIEW, lambda: self._open_table_report(
+                self._report_service.get_daily_summary_report, "daily_summary_report", supports_date_filter=True)),
+            ("Attendant & Nozzle Report", Permission.SALE_VIEW, lambda: self._open_table_report(
+                self._report_service.get_attendant_nozzle_report, "attendant_nozzle_report",
+                supports_date_filter=True, filter_by=("employee", "nozzle"))),
+            ("Fuel Movement Report", Permission.INVENTORY_VIEW, lambda: self._open_table_report(
+                self._report_service.get_fuel_movement_report, "fuel_movement_report", supports_date_filter=True)),
+            ("Cash Book", Permission.EXPENSE_VIEW, lambda: self._open_table_report(
+                self._report_service.get_cash_book_report, "cash_book", supports_date_filter=True)),
+            ("Attendance Report", Permission.ATTENDANCE_VIEW, lambda: self._open_table_report(
+                self._report_service.get_attendance_report, "attendance_report",
+                supports_date_filter=True, filter_by=("employee",))),
             ("Business Insights (Performance & Forecast)", Permission.ANALYTICS_VIEW, self._open_analytics),
         ]
 
@@ -296,10 +312,34 @@ class ReportsHubWindow(QMainWindow):
         self._open_windows.append(window)
         window.show()
 
-    def _open_table_report(self, fetch_report, filename_stem: str, supports_date_filter: bool = False) -> None:
+    def _open_table_report(
+        self,
+        fetch_report,
+        filename_stem: str,
+        supports_date_filter: bool = False,
+        filter_by: tuple = (),
+    ) -> None:
+        """filter_by names the extra dimensions this report accepts
+        ("employee", "nozzle"). The choices themselves come from
+        ReportService, which gates each list on the permission that owns
+        that data - so a user who may open the report but not see the
+        staff roster simply gets no employee drop-down."""
         from app.ui.table_report_window import TableReportWindow
 
-        window = TableReportWindow(self._actor_user_id, fetch_report, filename_stem, supports_date_filter)
+        choice_filters = []
+        if filter_by:
+            try:
+                options = self._report_service.get_report_filter_options(self._actor_user_id)
+            except Exception:  # noqa: BLE001 - a filter list must never stop a report opening
+                options = {}
+            if "employee" in filter_by:
+                choice_filters.append(("Employee", "employee_id", options.get("employees", [])))
+            if "nozzle" in filter_by:
+                choice_filters.append(("Nozzle", "nozzle_id", options.get("nozzles", [])))
+
+        window = TableReportWindow(
+            self._actor_user_id, fetch_report, filename_stem, supports_date_filter, choice_filters
+        )
         self._open_windows.append(window)
         window.show()
 

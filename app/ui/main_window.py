@@ -903,6 +903,10 @@ class AppController:
             customer_payment_repo,
             customer_repo,
             shift_reconciliation_repo,
+            TankTransactionRepository(self._db_session),
+            AttendanceRepository(self._db_session),
+            employee_repo,
+            ShiftRepository(self._db_session),
         )
         self._analytics_service = AnalyticsService(
             sale_repo,

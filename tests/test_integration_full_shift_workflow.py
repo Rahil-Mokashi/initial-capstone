@@ -27,6 +27,7 @@ from app.models.employee import Employee
 from app.models.fuel import Fuel
 from app.models.nozzle import Nozzle
 from app.models.user import User
+from app.repositories.attendance_repository import AttendanceRepository
 from app.repositories.audit_log_repository import AuditLogRepository
 from app.repositories.credit_account_repository import CreditAccountRepository
 from app.repositories.customer_payment_repository import CustomerPaymentRepository
@@ -147,6 +148,8 @@ def services(db_session):
         sale_repo, PaymentRepository(db_session), ExpenseRepository(db_session),
         CreditAccountRepository(db_session), CustomerPaymentRepository(db_session), customer_repo,
         ShiftReconciliationRepository(db_session),
+        TankTransactionRepository(db_session), AttendanceRepository(db_session),
+        EmployeeRepository(db_session), ShiftRepository(db_session),
     )
 
     return {
