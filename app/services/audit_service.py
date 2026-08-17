@@ -23,6 +23,26 @@ class AuditService:
         self._auth_service = auth_service
 
     @require_permission(Permission.AUDIT_VIEW.value)
+    def verify_trail(self, actor_user_id: str) -> tuple[bool, list[str]]:
+        """Recompute the audit hash chain and report whether it is intact.
+
+        Answers the question an auditor actually asks: has this trail been
+        altered since it was written? A break means the database was
+        modified outside the application, and names roughly where.
+
+        The verification itself is audit-logged - including when it fails,
+        which is precisely when someone would most want it not to be.
+        """
+        is_intact, problems = self._audit_repo.verify_chain()
+        self._audit_repo.record(
+            event_type="audit_trail_verified",
+            actor_id=actor_user_id,
+            entity_type="AuditLog",
+            description="intact" if is_intact else f"{len(problems)} problem(s): " + "; ".join(problems[:5]),
+        )
+        return is_intact, problems
+
+    @require_permission(Permission.AUDIT_VIEW.value)
     def search(
         self,
         actor_user_id: str,

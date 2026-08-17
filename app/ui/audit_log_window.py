@@ -6,6 +6,7 @@ to actually see that trail, which previously had no UI anywhere.
 
 from PySide6.QtCore import QDate, Qt
 from PySide6.QtWidgets import (
+    QMessageBox,
     QComboBox,
     QDateEdit,
     QHBoxLayout,
@@ -20,6 +21,9 @@ from PySide6.QtWidgets import (
 )
 
 from app.ui.qt_utils import qdate_to_date
+from app.core.exceptions import AppError
+from app.ui.background import run_in_background
+from app.ui.qt_utils import describe_unexpected_error
 
 TABLE_HEADERS = ["When", "Event", "Actor", "Entity", "Description"]
 
@@ -63,6 +67,15 @@ class AuditLogWindow(QMainWindow):
         filter_row.addWidget(self.date_to_input)
         filter_row.addWidget(self.filter_button)
 
+        self.verify_button = QPushButton("Verify Trail")
+        self.verify_button.setObjectName("secondaryButton")
+        self.verify_button.setCursor(Qt.PointingHandCursor)
+        self.verify_button.setToolTip(
+            "Recompute the audit hash chain and report whether the trail has "
+            "been altered since it was written.")
+        self.verify_button.clicked.connect(self._verify_trail)
+        filter_row.addWidget(self.verify_button)
+
         self.table = QTableWidget(0, len(TABLE_HEADERS))
         self.table.setHorizontalHeaderLabels(TABLE_HEADERS)
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
@@ -83,6 +96,36 @@ class AuditLogWindow(QMainWindow):
         self.setCentralWidget(container)
 
         self.refresh()
+
+    def _verify_trail(self) -> None:
+        """Answers the question an auditor actually asks: has this trail
+        been altered since it was written?
+
+        Runs off the GUI thread because the chain is recomputed over every
+        entry, and an audit log grows faster than any other table in this
+        app - every service action writes one.
+        """
+        run_in_background(
+            self,
+            lambda: self._audit_service.verify_trail(self._actor_user_id),
+            on_done=lambda result: self._show_verification(*result),
+            on_error=lambda exc: QMessageBox.warning(
+                self, "Could not verify the trail",
+                str(exc) if isinstance(exc, AppError) else describe_unexpected_error(exc)),
+            busy_widgets=[self.verify_button],
+        )
+
+    def _show_verification(self, is_intact, problems) -> None:
+        if is_intact:
+            QMessageBox.information(
+                self, "Audit trail verified",
+                "The audit trail is intact. Every entry matches its recorded "
+                "hash and follows its predecessor.")
+        else:
+            QMessageBox.warning(
+                self, "Audit trail has been altered",
+                "The audit trail does not verify. This means the database was "
+                "modified outside the application.\n\n" + "\n".join(problems[:10]))
 
     def refresh(self) -> None:
         entries = self._audit_service.search(
