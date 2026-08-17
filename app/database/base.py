@@ -6,7 +6,7 @@ Provides common mixins and utilities for all domain models.
 
 from datetime import datetime, timezone
 from enum import Enum
-from sqlalchemy import Column, DateTime, String, Boolean
+from sqlalchemy import Column, String, Boolean
 from sqlalchemy.orm import declarative_base
 from .types import UtcDateTime
 

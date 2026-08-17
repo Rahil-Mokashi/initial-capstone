@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, DateTime, ForeignKey, Numeric, String, Text
+from sqlalchemy import CheckConstraint, Column, ForeignKey, Numeric, String, Text
 from sqlalchemy.orm import relationship
 from app.database.types import UtcDateTime
 
@@ -18,6 +18,21 @@ class TankTransaction(Base):
     """
 
     __tablename__ = "tank_transactions"
+
+    # Value invariants enforced by the DATABASE, not just by Python.
+    # Foreign keys were already enforced at this level (PRAGMA
+    # foreign_keys=ON); the argument for value rules is identical, and
+    # the .db file is directly reachable by anyone with the machine.
+    __table_args__ = (
+        # NOT "quantity > 0". TankTransaction.quantity is a SIGNED stock
+        # delta by design (TankService._record_transaction stores ISSUE as
+        # negative, RECEIPT as positive, and ADJUSTMENT with whichever sign
+        # corrects the tank) - so a positivity constraint would contradict
+        # the domain model rather than protect it. What is genuinely
+        # meaningless is a movement of nothing.
+        CheckConstraint("quantity != 0", name="ck_tank_transactions_quantity_non_zero"),
+    )
+
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     tank_id = Column(String(36), ForeignKey("tanks.id"), nullable=False, index=True)

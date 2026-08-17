@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, DateTime, ForeignKey, Numeric, String
+from sqlalchemy import CheckConstraint, Column, ForeignKey, Numeric, String
 from sqlalchemy.orm import relationship
 from app.database.types import UtcDateTime
 
@@ -19,6 +19,16 @@ class NozzleAssignment(EntityMixin, Base):
     """
 
     __tablename__ = "nozzle_assignments"
+
+    # Value invariants enforced by the DATABASE, not just by Python.
+    # Foreign keys were already enforced at this level (PRAGMA
+    # foreign_keys=ON); the argument for value rules is identical, and
+    # the .db file is directly reachable by anyone with the machine.
+    __table_args__ = (
+        CheckConstraint("opening_meter >= 0", name="ck_nozzle_assignments_opening_meter_non_negative"),
+        CheckConstraint("closing_meter IS NULL OR closing_meter >= opening_meter", name="ck_nozzle_assignments_closing_not_before_opening"),
+    )
+
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     employee_id = Column(String(36), ForeignKey("employees.id"), nullable=False, index=True)

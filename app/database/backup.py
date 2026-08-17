@@ -80,7 +80,7 @@ def create_backup(db_path: str, reason: str = "manual") -> str:
 
     is_ok, messages = run_integrity_check(backup_path)
     if not is_ok:
-        raise IOError(f"Backup verification failed for {backup_path}: {'; '.join(messages)}")
+        raise OSError(f"Backup verification failed for {backup_path}: {'; '.join(messages)}")
 
     return backup_path
 

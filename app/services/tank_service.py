@@ -11,7 +11,7 @@ physical figure so the next period starts from a verified baseline.
 
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import List, Optional
+from typing import List
 
 from app.core.constants import (
     FUEL_VARIANCE_APPROVAL_THRESHOLD_PERCENT,

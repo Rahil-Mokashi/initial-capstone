@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, Date, DateTime, ForeignKey, Numeric, String, Text
+from sqlalchemy import CheckConstraint, Column, Date, ForeignKey, Numeric, String, Text
 from sqlalchemy.orm import relationship
 from app.database.types import UtcDateTime
 
@@ -14,6 +14,8 @@ class ExpenseCategory(EntityMixin, Base):
     deactivated, since historical expenses must keep referencing it."""
 
     __tablename__ = "expense_categories"
+
+
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
 
@@ -31,6 +33,15 @@ class Expense(Base):
     """
 
     __tablename__ = "expenses"
+
+    # Value invariants enforced by the DATABASE, not just by Python.
+    # Foreign keys were already enforced at this level (PRAGMA
+    # foreign_keys=ON); the argument for value rules is identical, and
+    # the .db file is directly reachable by anyone with the machine.
+    __table_args__ = (
+        CheckConstraint("amount > 0", name="ck_expenses_amount_positive"),
+    )
+
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     category_id = Column(String(36), ForeignKey("expense_categories.id"), nullable=False, index=True)

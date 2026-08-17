@@ -247,16 +247,15 @@ def test_unit_of_work_nests_without_the_inner_block_committing_early(db_session,
     creates Petrol, Diesel and Power, so asserting on those would test the
     seeder rather than the rollback.
     """
-    with pytest.raises(_InjectedFailure):
-        with unit_of_work(db_session):
-            db_session.add(Fuel(fuel_type="OuterBlockFuel", rate_per_liter=Decimal("90.00")))
+    with pytest.raises(_InjectedFailure), unit_of_work(db_session):
+        db_session.add(Fuel(fuel_type="OuterBlockFuel", rate_per_liter=Decimal("90.00")))
+        db_session.flush()
+
+        with unit_of_work(db_session):  # inner service's own boundary
+            db_session.add(Fuel(fuel_type="InnerBlockFuel", rate_per_liter=Decimal("110.00")))
             db_session.flush()
 
-            with unit_of_work(db_session):  # inner service's own boundary
-                db_session.add(Fuel(fuel_type="InnerBlockFuel", rate_per_liter=Decimal("110.00")))
-                db_session.flush()
-
-            raise _InjectedFailure("outer step failed after the inner one finished")
+        raise _InjectedFailure("outer step failed after the inner one finished")
 
     db_session.expire_all()
     remaining = {f.fuel_type for f in db_session.query(Fuel).all()}

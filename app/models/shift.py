@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import Column, Date, DateTime, ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy import Column, Date, ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
 from app.database.types import UtcDateTime
 

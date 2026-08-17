@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import Column, ForeignKey, Numeric, String, Text
+from sqlalchemy import CheckConstraint, Column, ForeignKey, Numeric, String, Text
 from sqlalchemy.orm import relationship
 
 from .base import Base, EntityMixin
@@ -17,6 +17,17 @@ class Tank(EntityMixin, Base):
     """
 
     __tablename__ = "tanks"
+
+    # Value invariants enforced by the DATABASE, not just by Python.
+    # Foreign keys were already enforced at this level (PRAGMA
+    # foreign_keys=ON); the argument for value rules is identical, and
+    # the .db file is directly reachable by anyone with the machine.
+    __table_args__ = (
+        CheckConstraint("capacity > 0", name="ck_tanks_capacity_positive"),
+        CheckConstraint("current_stock >= 0", name="ck_tanks_stock_non_negative"),
+        CheckConstraint("current_stock <= capacity", name="ck_tanks_stock_within_capacity"),
+    )
+
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     code = Column(String(32), unique=True, nullable=False, index=True)

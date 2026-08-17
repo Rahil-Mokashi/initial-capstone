@@ -22,6 +22,7 @@ from typing import List, Optional
 
 from app.core.constants import PaymentMethod, Permission, SaleStatus
 from app.core.exceptions import ConflictError, NotFoundError
+from app.core.dates import local_date_of
 from app.core.permissions import require_permission
 from app.repositories.base import session_for, unit_of_work
 from app.models.credit_account import CreditAccount
@@ -199,7 +200,10 @@ class CreditService:
             return False
 
         oldest_sale = min(credit_sales, key=lambda sale: sale.sale_at)
-        due_by = oldest_sale.sale_at.date() + timedelta(days=account.payment_due_days)
+        # local_date_of, not .date(): sale_at is a UTC instant, and the
+        # payment term runs from the local business day the sale happened
+        # on. See app/core/dates.py.
+        due_by = local_date_of(oldest_sale.sale_at) + timedelta(days=account.payment_due_days)
         return date.today() > due_by
 
     def _get_account_or_raise(self, customer_id: str) -> CreditAccount:

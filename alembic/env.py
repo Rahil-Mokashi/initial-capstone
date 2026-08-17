@@ -62,14 +62,54 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection,
-            target_metadata=target_metadata,
-            render_as_batch=RENDER_AS_BATCH,
-        )
+        # SQLite cannot ALTER TABLE to add or drop a constraint, so Alembic's
+        # batch mode (RENDER_AS_BATCH) emulates it by rebuilding the table:
+        # create a temp copy with the new shape, copy the rows across, DROP
+        # the original, rename the copy. That DROP is the problem. The app
+        # enables PRAGMA foreign_keys=ON on every connection
+        # (app/database/connection.py), and tables like nozzles, sales and
+        # tanks reference fuels - so dropping the original fails with
+        # "FOREIGN KEY constraint failed" even though the data is fine and
+        # the rename immediately puts an identical table back.
+        #
+        # So foreign-key enforcement is suspended for the duration of the
+        # migration and restored afterwards. Two details matter:
+        #
+        #  * PRAGMA foreign_keys is a NO-OP inside a transaction, so it has
+        #    to be issued on the raw DBAPI connection before Alembic opens
+        #    one below.
+        #  * PRAGMA foreign_key_check is run afterwards, because turning
+        #    enforcement off means a genuinely broken migration could leave
+        #    orphaned rows silently. Failing loudly here is the whole point
+        #    of having foreign keys in the first place.
+        raw_connection = connection.connection
+        cursor = raw_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys")
+        foreign_keys_were_on = bool(cursor.fetchone()[0])
+        cursor.execute("PRAGMA foreign_keys=OFF")
+        cursor.close()
 
-        with context.begin_transaction():
-            context.run_migrations()
+        try:
+            context.configure(
+                connection=connection,
+                target_metadata=target_metadata,
+                render_as_batch=RENDER_AS_BATCH,
+            )
+
+            with context.begin_transaction():
+                context.run_migrations()
+        finally:
+            cursor = raw_connection.cursor()
+            if foreign_keys_were_on:
+                cursor.execute("PRAGMA foreign_keys=ON")
+                violations = cursor.execute("PRAGMA foreign_key_check").fetchall()
+                if violations:
+                    cursor.close()
+                    raise RuntimeError(
+                        "Migration left orphaned rows behind - foreign key violations: "
+                        f"{violations[:10]}"
+                    )
+            cursor.close()
 
 
 if context.is_offline_mode():

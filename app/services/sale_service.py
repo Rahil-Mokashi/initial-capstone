@@ -20,7 +20,6 @@ exact same moments - the same reasoning already applied to folding
 Customer CRUD in here rather than a standalone CustomerService.
 """
 
-from decimal import Decimal
 from typing import List, Optional
 
 from app.core.constants import PaymentMethod, PaymentStatus, Permission, SaleStatus, ShiftStatus, TankTransactionType
