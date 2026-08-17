@@ -151,7 +151,11 @@ class CreditService:
         ]
         payments = self._customer_payment_repo.list_for_customer(customer_id)
 
-        events = [(sale.sale_at.date(), f"Sale {sale.receipt_number}", sale.amount, Decimal("0")) for sale in credit_sales]
+        # local_date_of, not .date(): sale_at is a UTC instant, and a
+        # customer-facing statement must show the local business day the
+        # sale actually happened on. On IST a 02:00 local sale is 20:30
+        # UTC the previous day, so .date() dates the line a day early.
+        events = [(local_date_of(sale.sale_at), f"Sale {sale.receipt_number}", sale.amount, Decimal("0")) for sale in credit_sales]
         events += [(payment.payment_date, "Payment received", Decimal("0"), payment.amount) for payment in payments]
         events.sort(key=lambda item: item[0])
 
