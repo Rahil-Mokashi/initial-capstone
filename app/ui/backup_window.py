@@ -3,8 +3,11 @@ restore testing"). Presentation only - BackupService owns the RBAC,
 audit logging, and the safety backup taken before any restore.
 """
 
+import os
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QFileDialog,
     QHBoxLayout,
     QInputDialog,
     QLabel,
@@ -17,7 +20,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.core.constants import OFFSITE_BACKUP_STALE_AFTER_DAYS
 from app.core.exceptions import AppError
+from app.database import backup as backup_module
 from app.ui.background import run_in_background
 from app.ui.qt_utils import describe_unexpected_error
 
@@ -64,9 +69,26 @@ class BackupWindow(QMainWindow):
         self.check_integrity_button.setObjectName("secondaryButton")
         self.check_integrity_button.clicked.connect(self._check_integrity)
 
+        self.copy_offsite_button = QPushButton("Copy to USB / Network...")
+        self.copy_offsite_button.setObjectName("secondaryButton")
+        self.copy_offsite_button.setToolTip(
+            "Copy the selected backup somewhere that is not this disk. Every "
+            "backup here sits on the same drive as the database, so a dead "
+            "drive, a theft or ransomware would take both.")
+        self.copy_offsite_button.clicked.connect(self._copy_offsite)
+
+        # A warning, not an alarm - the same non-accusatory tone as
+        # reconciliation variance. It reports a real exposure without
+        # implying the operator has done something wrong.
+        self.offsite_warning = QLabel("")
+        self.offsite_warning.setObjectName("warningLabel")
+        self.offsite_warning.setWordWrap(True)
+        self.offsite_warning.hide()
+
         top_row = QHBoxLayout()
         top_row.addWidget(title)
         top_row.addStretch()
+        top_row.addWidget(self.copy_offsite_button)
         top_row.addWidget(self.check_integrity_button)
         top_row.addWidget(self.restore_button)
         top_row.addWidget(self.backup_now_button)
@@ -84,6 +106,7 @@ class BackupWindow(QMainWindow):
         layout.setSpacing(16)
         layout.addLayout(top_row)
         layout.addWidget(subtitle)
+        layout.addWidget(self.offsite_warning)
         layout.addWidget(self.table)
 
         container = QWidget()
@@ -94,6 +117,7 @@ class BackupWindow(QMainWindow):
         self.refresh()
 
     def refresh(self) -> None:
+        self._refresh_offsite_warning()
         backups = self._backup_service.list_backups(self._actor_user_id)
         self.table.setRowCount(len(backups))
         for row_index, info in enumerate(backups):
@@ -110,6 +134,7 @@ class BackupWindow(QMainWindow):
         return [b for b in (
             getattr(self, "backup_now_button", None),
             getattr(self, "restore_button", None),
+            getattr(self, "copy_offsite_button", None),
             getattr(self, "check_integrity_button", None),
         ) if b is not None]
 
@@ -118,6 +143,73 @@ class BackupWindow(QMainWindow):
         showing a dialog is safe."""
         message = str(exc) if isinstance(exc, AppError) else describe_unexpected_error(exc)
         QMessageBox.warning(self, title, message)
+
+    def _copy_offsite(self) -> None:
+        """Copy the selected backup off this machine.
+
+        This is the single largest data-loss exposure in the product:
+        every backup lands next to the database, which protects against
+        software failure and not at all against a dead drive, a theft, a
+        fire or ransomware. With no cloud replica by design, an off-device
+        copy is the only real protection there is.
+        """
+        rows = self.table.selectionModel().selectedRows()
+        if not rows:
+            QMessageBox.information(
+                self, "Copy backup", "Select a backup to copy first.")
+            return
+        backup_path = self.table.item(rows[0].row(), 0).data(Qt.UserRole)
+
+        destination = QFileDialog.getExistingDirectory(
+            self, "Choose a USB drive or network folder")
+        if not destination:
+            return
+
+        run_in_background(
+            self,
+            lambda: self._backup_service.copy_backup_offsite(
+                self._actor_user_id, backup_path, destination),
+            on_done=self._on_offsite_copied,
+            on_error=lambda exc: self._report(exc, "Could not copy the backup"),
+            busy_widgets=self._action_buttons(),
+        )
+
+    def _on_offsite_copied(self, destination) -> None:
+        self._last_offsite_dir = os.path.dirname(str(destination))
+        self._refresh_offsite_warning()
+        QMessageBox.information(
+            self, "Backup copied",
+            f"The backup was copied and verified at:\n\n{destination}")
+
+    def _refresh_offsite_warning(self) -> None:
+        """Nag when the newest off-device copy is stale, or when there has
+        never been one.
+
+        Deliberately a nag rather than a scheduler: a pump has no IT staff
+        and the machine is not guaranteed to be running at any particular
+        time, so a visible warning beats a background job that silently
+        never fires.
+        """
+        destination = getattr(self, "_last_offsite_dir", None)
+        if not destination:
+            self.offsite_warning.setText(
+                "No off-device backup has been made from this screen yet. "
+                "Every backup listed below is on the same drive as the database.")
+            self.offsite_warning.show()
+            return
+
+        age_days = backup_module.latest_offsite_copy_age_days(destination)
+        if age_days is None:
+            self.offsite_warning.setText(
+                f"The off-device location ({destination}) is not reachable right now.")
+            self.offsite_warning.show()
+        elif age_days > OFFSITE_BACKUP_STALE_AFTER_DAYS:
+            self.offsite_warning.setText(
+                f"The most recent off-device backup is {age_days:.0f} days old. "
+                "Copy a fresh one to a USB drive or network folder.")
+            self.offsite_warning.show()
+        else:
+            self.offsite_warning.hide()
 
     def _backup_now(self) -> None:
         """Runs off the GUI thread (problemstatement.md #44).

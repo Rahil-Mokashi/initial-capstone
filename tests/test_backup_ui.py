@@ -124,3 +124,86 @@ def test_accountant_cannot_open_backup_window(qapp, backup_service, accountant_i
 
     with pytest.raises(PermissionDeniedError):
         BackupWindow(backup_service, accountant_id)
+
+
+# ---------------------------------------------------------------------
+# Off-device backup: the button and the staleness nag
+# ---------------------------------------------------------------------
+
+def test_the_warning_banner_shows_when_no_offsite_copy_has_been_made(
+    qapp, backup_service, admin_id
+):
+    """Every backup listed sits on the same drive as the database, so
+    saying nothing would leave the operator believing they are protected."""
+    from app.ui.backup_window import BackupWindow
+
+    window = BackupWindow(backup_service, admin_id)
+    assert window.offsite_warning.isHidden() is False
+    assert "same drive" in window.offsite_warning.text()
+
+
+def test_copying_without_selecting_a_backup_asks_for_a_selection(
+    qapp, backup_service, admin_id, monkeypatch
+):
+    shown = {}
+    monkeypatch.setattr("app.ui.backup_window.QMessageBox.information",
+                        lambda self, title, text: shown.update(title=title, text=text))
+    from app.ui.backup_window import BackupWindow
+
+    window = BackupWindow(backup_service, admin_id)
+    window._copy_offsite()
+    assert "Select a backup" in shown["text"]
+
+
+def test_a_fresh_offsite_copy_clears_the_warning(
+    qapp, backup_service, admin_id, tmp_path, monkeypatch
+):
+    from app.ui.backup_window import BackupWindow
+    from app.database.backup import copy_backup_to
+
+    window = BackupWindow(backup_service, admin_id)
+    usb = tmp_path / "usb"
+
+    backup_path = backup_service.create_backup(admin_id).path
+    copy_backup_to(backup_path, str(usb))
+    window._last_offsite_dir = str(usb)
+    window._refresh_offsite_warning()
+
+    assert window.offsite_warning.isHidden() is True, window.offsite_warning.text()
+
+
+def test_a_stale_offsite_copy_is_reported_with_its_age(
+    qapp, backup_service, admin_id, tmp_path
+):
+    import os
+
+    from app.database.backup import copy_backup_to
+    from app.ui.backup_window import BackupWindow
+
+    window = BackupWindow(backup_service, admin_id)
+    usb = tmp_path / "usb"
+    backup_path = backup_service.create_backup(admin_id).path
+    destination = copy_backup_to(backup_path, str(usb))
+
+    long_ago = os.path.getmtime(destination) - (30 * 86400)
+    os.utime(destination, (long_ago, long_ago))
+
+    window._last_offsite_dir = str(usb)
+    window._refresh_offsite_warning()
+
+    assert window.offsite_warning.isHidden() is False
+    assert "30 days old" in window.offsite_warning.text()
+
+
+def test_an_unreachable_destination_is_reported_not_crashed_on(
+    qapp, backup_service, admin_id, tmp_path
+):
+    """An unplugged USB drive is the condition being reported."""
+    from app.ui.backup_window import BackupWindow
+
+    window = BackupWindow(backup_service, admin_id)
+    window._last_offsite_dir = str(tmp_path / "unplugged")
+    window._refresh_offsite_warning()
+
+    assert window.offsite_warning.isHidden() is False
+    assert "not reachable" in window.offsite_warning.text()
