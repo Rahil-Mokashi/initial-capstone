@@ -57,7 +57,7 @@ from PySide6.QtWidgets import QApplication, QWidget
 from app.core.logging import logger
 
 
-def _is_alive(widget: QWidget) -> bool:
+def is_widget_alive(widget: QWidget) -> bool:
     """Whether the C++ object behind a PySide proxy still exists.
 
     shiboken6 ships with PySide6 and answers this directly. The fallback
@@ -138,7 +138,7 @@ def run_in_background(
             # reference counting), and touching it raises
             # "Internal C++ object already deleted". Skipping a dead widget
             # is correct here: there is no longer a button to re-enable.
-            if _is_alive(widget):
+            if is_widget_alive(widget):
                 widget.setEnabled(True)
         if busy_cursor:
             QApplication.restoreOverrideCursor()

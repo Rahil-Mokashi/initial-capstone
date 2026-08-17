@@ -11,6 +11,7 @@ from typing import Optional, Tuple
 
 from app.core.constants import DEFAULT_SESSION_TIMEOUT_HOURS, LOCKOUT_DURATION_MINUTES, MAX_FAILED_LOGIN_ATTEMPTS
 from app.core.exceptions import SessionExpiredError
+from app.core.logging import logger
 from app.core.security import generate_token, verify_password
 
 
@@ -189,3 +190,34 @@ class AuthService:
         if not user or not user.role:
             return False
         return any(p.name == permission_name for p in user.role.permissions)
+
+    def record_permission_denied(self, user_id: str, permission_name: str) -> None:
+        """Record a refused action in the audit trail.
+
+        Until now a denial was raised and then vanished: PermissionDeniedError
+        reached the UI, the user saw a message, and nothing anywhere kept a
+        record that someone had tried. That is the one class of security
+        event most worth keeping, because a single denial is a mis-click
+        while a pattern of them is somebody probing what they can reach -
+        and only the trail can tell those apart.
+
+        It lives on AuthService rather than in the decorator because
+        AuthService already owns the audit repository for every other
+        security event (login_failed, login_locked, session_expired), and
+        a denial belongs with them. The decorator has no business reaching
+        into another object's private repository.
+
+        Failures here are swallowed deliberately. This runs on the way to
+        raising PermissionDeniedError, and an audit-write problem must not
+        replace that error with a different one - the caller would then see
+        a confusing failure instead of "you are not allowed to do that",
+        and the permission check itself would appear to be broken.
+        """
+        try:
+            self._audit_repo.record(
+                event_type="permission_denied",
+                actor_id=user_id,
+                description=f"Denied: {permission_name}",
+            )
+        except Exception:  # noqa: BLE001
+            logger.warning("Could not record a permission denial for %s", permission_name, exc_info=True)

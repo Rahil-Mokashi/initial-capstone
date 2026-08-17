@@ -40,8 +40,13 @@ class BackupService:
     @require_permission(Permission.BACKUP_MANAGE.value)
     def check_integrity(self, actor_user_id: str) -> Tuple[bool, List[str]]:
         is_ok, messages = backup_module.run_integrity_check(self._db_path)
+        # A pass and a failure get DIFFERENT event types rather than one
+        # event whose description happens to read "ok". Anything wanting to
+        # find past failures - the notification service does - would
+        # otherwise have to pattern-match a human-readable string, which
+        # silently stops working the first time that wording changes.
         self._audit_repo.record(
-            event_type="database_integrity_checked",
+            event_type="database_integrity_checked" if is_ok else "database_integrity_failed",
             actor_id=actor_user_id,
             entity_type="Database",
             description="ok" if is_ok else "; ".join(messages),

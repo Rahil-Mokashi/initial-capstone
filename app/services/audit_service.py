@@ -34,8 +34,13 @@ class AuditService:
         which is precisely when someone would most want it not to be.
         """
         is_intact, problems = self._audit_repo.verify_chain()
+        # Distinct event types for pass and fail, for the same reason as
+        # BackupService.check_integrity: a detected break in the audit
+        # chain is the single most serious thing this application can
+        # discover about itself, and finding it later must not depend on
+        # pattern-matching the word "intact" out of a description.
         self._audit_repo.record(
-            event_type="audit_trail_verified",
+            event_type="audit_trail_verified" if is_intact else "audit_trail_tampered",
             actor_id=actor_user_id,
             entity_type="AuditLog",
             description="intact" if is_intact else f"{len(problems)} problem(s): " + "; ".join(problems[:5]),

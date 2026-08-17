@@ -373,6 +373,77 @@ DEFAULT_FUEL_TYPES = ["Petrol", "Diesel", "Power"]
 # non-accusatory tone already used for reconciliation variance.
 DASHBOARD_LOW_STOCK_THRESHOLD_PERCENT = 20.0
 
+
+class NotificationSeverity(str, Enum):
+    """Graduated severity for local application alerts (problemstatement.md
+    #43).
+
+    Three levels, not five: the point of severity here is to decide what
+    sorts to the top of one screen, and a scale finer than the decisions it
+    drives is noise. The same reasoning that kept the discrepancy workflow
+    to a single approval action rather than a multi-stage ticket system.
+
+    Deliberately a separate scale from VarianceClassification. That one
+    answers "how far out is this reconciliation, and who must sign it off";
+    this one answers "how loudly should the app mention it". A fuel
+    variance maps INTO this scale (see NotificationService) but the two are
+    not the same question, and collapsing them would mean every future
+    alert type had to pretend to be a variance.
+    """
+
+    INFO = "info"
+    WARNING = "warning"
+    CRITICAL = "critical"
+
+
+class NotificationCategory(str, Enum):
+    """The alert types enumerated in problemstatement.md #43.
+
+    Kept as an enum rather than free-text titles so the UI can group and
+    filter on a stable key, and so a typo cannot silently invent a
+    fourteenth category that nothing displays.
+    """
+
+    LOW_FUEL = "low_fuel"
+    FUEL_VARIANCE = "fuel_variance"
+    CASH_SHORTAGE = "cash_shortage"
+    CASH_EXCESS = "cash_excess"
+    PAYMENT_MISMATCH = "payment_mismatch"
+    FAILED_RECONCILIATION = "failed_reconciliation"
+    ATTENDANCE_ISSUE = "attendance_issue"
+    UNAUTHORIZED_ACTION = "unauthorized_action"
+    PENDING_APPROVAL = "pending_approval"
+    OUTSTANDING_CREDIT = "outstanding_credit"
+    SUPPLIER_PAYMENT_DUE = "supplier_payment_due"
+    BACKUP_FAILURE = "backup_failure"
+    DATABASE_ERROR = "database_error"
+
+
+# How far back the event-derived alerts (unauthorized action, database
+# error) look. Those two are the only categories that describe a moment
+# rather than a standing condition, so unlike the others they cannot
+# clear themselves when the situation improves - they age out instead.
+# A week is long enough that a Monday morning still shows what happened
+# over the weekend.
+NOTIFICATION_RECENT_EVENT_DAYS = 7
+
+# A backup is treated as failing once the newest one is older than this.
+# Deliberately derived from the absence of a recent backup file rather
+# than from a "backup failed" event record: the file's absence is the
+# consequence that actually matters, and it catches every cause - a full
+# disk, a permission change, a crash before the write, or a code path
+# nobody remembered to add logging to.
+#
+# Twice AUTO_BACKUP_INTERVAL_HOURS (24h), so one missed daily backup is
+# not yet an alert but two consecutive misses are.
+NOTIFICATION_BACKUP_OVERDUE_HOURS = 48
+
+# At most this many individual alerts per category, with a summary line
+# standing in for the rest. Twenty low-stock tanks must not push a
+# database error off the screen - an alert list nobody can scan is an
+# alert list nobody reads.
+NOTIFICATION_MAX_PER_CATEGORY = 5
+
 # Automatic scheduled backups (problemstatement.md #24, Phase 18): a
 # backup is taken on startup whenever the most recent one is older than
 # this many hours. 24h matches "once a day" without needing a
