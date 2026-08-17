@@ -14,8 +14,29 @@ class SaleRepository:
     def get_by_id(self, sale_id: str) -> Optional[Sale]:
         return self._session.query(Sale).filter_by(id=sale_id).first()
 
-    def list_all(self) -> List[Sale]:
-        return self._session.query(Sale).order_by(Sale.sale_at.desc()).all()
+    def list_all(self, limit: Optional[int] = None, offset: int = 0) -> List[Sale]:
+        """Newest first, optionally one page at a time.
+
+        limit defaults to None (everything) so existing callers and the
+        reporting code are unchanged, but the UI passes a page size. At
+        300 sales a day a pump reaches ~110,000 rows in a year, and
+        loading all of them to show thirty is the difference between a
+        screen that opens instantly in year three and one that does not.
+
+        Ordering is by Sale.sale_at descending, which is also the column the
+        page boundary is taken on, so pages cannot interleave.
+        """
+        query = self._session.query(Sale).order_by(Sale.sale_at.desc())
+        if offset:
+            query = query.offset(offset)
+        if limit is not None:
+            query = query.limit(limit)
+        return query.all()
+
+    def count_all(self) -> int:
+        """Row count for the pager, computed by the database rather than
+        by loading the rows and calling len()."""
+        return self._session.query(func.count(Sale.id)).scalar() or 0
 
     def list_by_shift(self, shift_id: str) -> List[Sale]:
         return self._session.query(Sale).filter_by(shift_id=shift_id).order_by(Sale.sale_at.desc()).all()

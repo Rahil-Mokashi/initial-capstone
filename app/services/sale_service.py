@@ -161,8 +161,16 @@ class SaleService:
         return sale
 
     @require_permission(Permission.SALE_VIEW.value)
-    def list_sales(self, actor_user_id: str) -> List[Sale]:
-        return self._sale_repo.list_all()
+    def list_sales(self, actor_user_id: str, limit: Optional[int] = None, offset: int = 0) -> List[Sale]:
+        """Newest first. limit defaults to None so reporting callers that
+        genuinely need every row are unchanged; screens pass a page size."""
+        return self._sale_repo.list_all(limit=limit, offset=offset)
+
+    @require_permission(Permission.SALE_VIEW.value)
+    def count_sales(self, actor_user_id: str) -> int:
+        """Total for the pager, counted by the database rather than by
+        loading every row and taking len()."""
+        return self._sale_repo.count_all()
 
     @require_permission(Permission.SALE_VIEW.value)
     def get_sale(self, actor_user_id: str, sale_id: str) -> Sale:
@@ -225,8 +233,12 @@ class SaleService:
     # ------------------------------------------------------------------
 
     @require_permission(Permission.SALE_VIEW.value)
-    def list_payments(self, actor_user_id: str) -> List[Payment]:
-        return self._payment_repo.list_all()
+    def list_payments(self, actor_user_id: str, limit: Optional[int] = None, offset: int = 0) -> List[Payment]:
+        return self._payment_repo.list_all(limit=limit, offset=offset)
+
+    @require_permission(Permission.SALE_VIEW.value)
+    def count_payments(self, actor_user_id: str) -> int:
+        return self._payment_repo.count_all()
 
     @require_permission(Permission.SALE_VIEW.value)
     def get_payment_for_sale(self, actor_user_id: str, sale_id: str) -> Optional[Payment]:
