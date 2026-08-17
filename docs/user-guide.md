@@ -40,6 +40,19 @@ At shift end, the supervisor closes it and performs reconciliation: expected cas
 ### Attendance
 Attendants can view and confirm their own attendance and shift history. Managers and supervisors mark attendance for the team.
 
+## Alerts
+
+The **Alerts** button in the top bar shows how many things currently need attention, and turns amber or red when any of them do. Open it for the full list. Alerts cover low fuel, fuel and cash variances, payment mismatches, unmarked attendance, items waiting for your approval, overdue customers, supplier invoices past their due date, missing backups, and database problems.
+
+Two things are worth knowing about how this screen behaves:
+
+- **You only see alerts for the parts of the app you have access to.** Anything waiting for an approval only reaches people who can actually give that approval.
+- **There is no "dismiss" button, and this is deliberate.** Every alert is worked out fresh from the current state of the business each time the screen refreshes, so an alert disappears by itself the moment the situation behind it is dealt with — refill the tank, approve the expense, record the customer's payment. Nothing here can be hidden while it is still true, which means an empty Alerts screen genuinely means nothing is outstanding.
+
+The count refreshes on its own about once a minute, so it may be blank for a short while just after you sign in. Opening the screen always recalculates it immediately.
+
+If the list cannot be worked out for some reason, the screen says so explicitly rather than showing an empty list — an empty screen always means "nothing wrong", never "could not check".
+
 ## Reports
 
 Open **Reports** from the main menu to generate any report you have access to — sales, payments, credit, expenses, reconciliation, and the Business Insights (performance & forecast) view. Every report supports:

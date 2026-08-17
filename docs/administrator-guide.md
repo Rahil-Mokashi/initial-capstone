@@ -76,6 +76,17 @@ The app takes a backup automatically:
 
 You can also trigger one manually, and check database integrity on demand, from the **Backup & Restore** screen. See `recovery-guide.md` for how to restore from one.
 
+## Alerts worth watching as an administrator
+
+The **Alerts** screen surfaces operational problems to whoever can act on them, but four categories are yours specifically:
+
+- **Backup failure** — raised when the newest backup is more than 48 hours old (twice the automatic daily interval, so one missed run is not yet an alert but two are). Note this is worked out from *the absence of a recent backup file*, not from an error message, so it catches every cause: a full disk, a permissions change on the backups folder, or a crash before the write completed. Treat it as urgent — it means the thing you would need in an emergency is not there.
+- **Database error** — a failed `PRAGMA integrity_check`, or a break detected in the audit log's hash chain. Both are serious. For integrity failures, follow `recovery-guide.md` and restore from a verified backup rather than continuing to trade on a damaged file.
+- **The audit trail has been altered** — the audit log is hash-chained specifically so that modification outside the application cannot be hidden. If this appears, the database file was changed by something other than this app. Investigate before dismissing it as a glitch.
+- **Refused actions** — actions the app denied for lack of permission. A single one is almost always a mis-click. A burst from one account in a short window is worth looking at in the Audit Log, since it is what somebody probing what they can reach looks like. The alert escalates in severity on repetition for exactly that reason.
+
+Alerts are recalculated from live data every time the screen refreshes, so there is nothing to acknowledge or clear — an alert stops appearing when the underlying situation is genuinely resolved. That also means an empty Alerts screen is meaningful: it says the checks ran and found nothing, not that nobody looked.
+
 ## Reports and permissions
 
 Every report is gated by a permission tied to the relevant role — a Manager sees Business Insights and procurement reports, an Accountant sees financial ones, and so on. If a role needs access to a report it currently doesn't have, that's a role/permission assignment to review in User Management, not something to work around.
