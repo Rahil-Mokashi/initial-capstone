@@ -11,6 +11,7 @@ from .employee_document import EmployeeDocument
 from .expense import Expense, ExpenseCategory
 from .fuel import Fuel
 from .fuel_delivery import FuelDelivery
+from .fuel_price_history import FuelPriceHistory
 from .fuel_reconciliation import FuelReconciliation
 from .nozzle import Nozzle
 from .nozzle_assignment import NozzleAssignment
@@ -43,6 +44,7 @@ __all__ = [
     "ExpenseCategory",
     "Fuel",
     "FuelDelivery",
+    "FuelPriceHistory",
     "FuelReconciliation",
     "Nozzle",
     "NozzleAssignment",

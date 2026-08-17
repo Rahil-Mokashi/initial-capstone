@@ -12,10 +12,16 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+import app.database.connection  # noqa: F401  (installs the FK/WAL pragma listener)
 import app.models  # noqa: F401  (registers all table metadata)
 from app.core.money import money, volume
 from app.database.base import Base
+from app.models.dispenser import Dispenser
 from app.models.employee import Employee
+from app.models.fuel import Fuel
+from app.models.nozzle import Nozzle
+from app.models.shift import Shift
+from app.models.user import User
 from app.models.sale import Sale
 from app.repositories.employee_repository import EmployeeRepository
 from app.repositories.sale_repository import SaleRepository
@@ -31,6 +37,36 @@ def db_session(tmp_path):
     session = factory()
     yield session
     session.close()
+
+
+@pytest.fixture()
+def sale_refs(db_session):
+    """Real rows for every foreign key a Sale carries.
+
+    Foreign keys are genuinely enforced in this app (PRAGMA
+    foreign_keys=ON, installed by app/database/connection.py on every
+    connection), so placeholder ids would be rejected - correctly.
+    """
+    user = User(username="seq_user", email="seq@example.com", password_hash="x", is_active=True)
+    fuel = Fuel(fuel_type="SequenceTestFuel", rate_per_liter=Decimal("100.00"))
+    dispenser = Dispenser(code="SEQ-D1", status="active")
+    employee = Employee(
+        employee_code="EMP-9001", first_name="Seq", last_name="Test",
+        contact_number="9000000000", joining_date=date(2026, 1, 1),
+    )
+    db_session.add_all([user, fuel, dispenser, employee])
+    db_session.commit()
+
+    nozzle = Nozzle(code="SEQ-N1", dispenser_id=dispenser.id, fuel_id=fuel.id, status="active")
+    shift = Shift(shift_date=date(2026, 1, 1), shift_label="Morning",
+                  opened_by_id=user.id, status="open")
+    db_session.add_all([nozzle, shift])
+    db_session.commit()
+
+    return {
+        "shift_id": shift.id, "nozzle_id": nozzle.id, "fuel_id": fuel.id,
+        "employee_id": employee.id, "user_id": user.id,
+    }
 
 
 # ---------------------------------------------------------------------
@@ -87,26 +123,26 @@ def test_a_sale_amount_is_settled_to_paise():
 # Document sequences
 # ---------------------------------------------------------------------
 
-def _add_sale(session, receipt_number):
+def _add_sale(session, refs, receipt_number):
     session.add(Sale(
-        receipt_number=receipt_number, shift_id="s", nozzle_id="n", fuel_id="f",
-        employee_id="e", quantity=Decimal("1"), rate_per_liter=Decimal("1"),
-        amount=Decimal("1"), payment_method="cash", status="completed",
-        recorded_by_id="u",
+        receipt_number=receipt_number, shift_id=refs["shift_id"], nozzle_id=refs["nozzle_id"],
+        fuel_id=refs["fuel_id"], employee_id=refs["employee_id"],
+        quantity=Decimal("1"), rate_per_liter=Decimal("1"), amount=Decimal("1"),
+        payment_method="cash", status="completed", recorded_by_id=refs["user_id"],
     ))
     session.commit()
 
 
-def test_receipt_numbers_start_at_one_and_increment(db_session):
+def test_receipt_numbers_start_at_one_and_increment(db_session, sale_refs):
     repo = SaleRepository(db_session)
     assert repo.next_receipt_number() == "RCPT-000001"
-    _add_sale(db_session, "RCPT-000001")
+    _add_sale(db_session, sale_refs, "RCPT-000001")
     assert repo.next_receipt_number() == "RCPT-000002"
-    _add_sale(db_session, "RCPT-000002")
+    _add_sale(db_session, sale_refs, "RCPT-000002")
     assert repo.next_receipt_number() == "RCPT-000003"
 
 
-def test_receipt_number_survives_a_gap_in_the_sequence(db_session):
+def test_receipt_number_survives_a_gap_in_the_sequence(db_session, sale_refs):
     """The regression this fix exists for.
 
     A restore from backup (or any row disappearing) makes the row count
@@ -116,7 +152,7 @@ def test_receipt_number_survives_a_gap_in_the_sequence(db_session):
     """
     repo = SaleRepository(db_session)
     for n in (1, 2, 3, 4, 5):
-        _add_sale(db_session, f"RCPT-{n:06d}")
+        _add_sale(db_session, sale_refs, f"RCPT-{n:06d}")
 
     # Simulate the post-restore state: fewer rows than numbers issued.
     db_session.query(Sale).filter(Sale.receipt_number.in_(["RCPT-000002", "RCPT-000003"])).delete(
@@ -129,10 +165,10 @@ def test_receipt_number_survives_a_gap_in_the_sequence(db_session):
     assert repo.next_receipt_number() == "RCPT-000006"
 
 
-def test_receipt_number_falls_back_rather_than_wedging_on_a_malformed_row(db_session):
+def test_receipt_number_falls_back_rather_than_wedging_on_a_malformed_row(db_session, sale_refs):
     """A hand-edited or legacy receipt number must not block all sales."""
     repo = SaleRepository(db_session)
-    _add_sale(db_session, "LEGACY")
+    _add_sale(db_session, sale_refs, "LEGACY")
     assert repo.next_receipt_number().startswith("RCPT-")
 
 

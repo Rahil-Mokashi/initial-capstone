@@ -21,6 +21,8 @@ COLOR_PRIMARY_SOFT = "#EEF0FE"
 
 COLOR_ACCENT = "#F59E0B"
 COLOR_ACCENT_SOFT = "#FEF3C7"
+# Amber dark enough to read as text on COLOR_ACCENT_SOFT.
+COLOR_ACCENT_TEXT = "#92610A"
 
 COLOR_DANGER = "#DC2626"
 COLOR_DANGER_BG = "#FEF2F2"
@@ -62,6 +64,13 @@ QLabel#errorLabel {{
     border-radius: 8px;
     padding: 8px;
     font-size: 12px;
+}}
+
+QLabel#warningLabel {{
+    color: {COLOR_ACCENT_TEXT};
+    background-color: {COLOR_ACCENT_SOFT};
+    border-radius: 8px;
+    padding: 8px;
 }}
 
 QLineEdit {{
