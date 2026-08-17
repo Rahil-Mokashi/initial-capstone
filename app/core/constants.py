@@ -317,6 +317,23 @@ PASSWORD_REQUIRE_DIGIT = True
 # Login attempt protection (problemstatement.md #39)
 MAX_FAILED_LOGIN_ATTEMPTS = 5
 
+# How long an automatic lockout lasts before the account unlocks itself.
+# This is the desktop equivalent of a web app's login rate limit: there is
+# no HTTP endpoint to throttle, but guessing a password is still the way
+# in, and the lockout is the only brake on it.
+#
+# It must EXPIRE. Previously a lockout was permanent until an admin
+# cleared it, which on a pump running a night shift with no admin present
+# meant a fat-fingered attendant could not record sales for hours - so the
+# security control became an availability outage, and the predictable
+# response is for staff to share one never-locked login, which is worse
+# than the attack it was defending against.
+#
+# 15 minutes makes online guessing hopeless (5 attempts per 15 minutes is
+# ~480 a day against a policy-enforced password) while costing an honest
+# user a coffee break at worst.
+LOCKOUT_DURATION_MINUTES = 15
+
 # Session management default, overridable via Settings.session_timeout_hours
 DEFAULT_SESSION_TIMEOUT_HOURS = 8
 

@@ -16,6 +16,10 @@ class User(EntityMixin, Base):
     last_name = Column(String(128), nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
     is_locked = Column(Boolean, default=False, nullable=False)
+    # When the automatic lockout was applied, so it can expire on its own.
+    # Nullable because an account locked by an administrator (rather than
+    # by failed attempts) has no expiry and must be cleared deliberately.
+    locked_at = Column(UtcDateTime, nullable=True)
     failed_attempts = Column(Integer, default=0, nullable=False)
     must_change_password = Column(Boolean, default=False, nullable=False)
     last_login = Column(UtcDateTime, nullable=True)
