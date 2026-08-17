@@ -1,3 +1,12 @@
+# This file declares WHAT the project depends on, with deliberately loose
+# ranges so a developer setting up locally gets current versions.
+#
+# It is NOT what CI and release builds install - those use requirements.lock,
+# which pins the exact versions the test suite is known to pass on and a
+# working .exe was built from. After changing anything here, regenerate the
+# lock (see the header of requirements.lock) rather than letting the two
+# drift apart.
+
 SQLAlchemy>=2.0
 alembic>=1.13
 pydantic-settings>=2.0

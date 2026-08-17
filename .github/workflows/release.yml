@@ -21,7 +21,12 @@ jobs:
           python-version: "3.13"
 
       - name: Install build dependencies
-        run: pip install -r requirements-build.txt
+        # The lock, not the loose ranges: a release binary handed to a
+        # client must be reproducible from its tag. Without this, rebuilding
+        # the same tag months later could silently produce a different
+        # executable, and there would be no way to tell which one a pump is
+        # actually running.
+        run: pip install -r requirements-build.lock
 
       - name: Build standalone executable
         run: pyinstaller petrol_pump_erp.spec
