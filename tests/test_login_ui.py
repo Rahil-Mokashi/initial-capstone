@@ -50,6 +50,18 @@ def controller(qapp, seeded_db):
     ctrl = AppController()
     ctrl.start()
     yield ctrl
+    # Tear the controller down instead of leaking it.
+    #
+    # Without this, every test in this module left behind a live database
+    # session, a running session timer and a full window tree (each
+    # dashboard card carries a QGraphicsDropShadowEffect), because nothing
+    # ever closed them. Those accumulate across the module and are a
+    # direct contributor to the native-resource crash that makes the full
+    # suite fall over - the failure looks random and lands in whichever
+    # test happens to allocate once too often, which is why it reads as
+    # unrelated to whatever change exposed it.
+    ctrl.shutdown()
+    qapp.processEvents()  # let deleteLater actually run before the next test
 
 
 def test_login_window_shown_on_start(controller):

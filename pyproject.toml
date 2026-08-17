@@ -18,9 +18,10 @@ description = "Offline-first Petrol Pump Management ERP (PySide6 + SQLAlchemy + 
 requires-python = ">=3.13"
 readme = "README.md"
 
-# Kept in step with requirements.txt, which remains the file the build and
-# CI install from. Exact pins for a shipped build belong in a lock file
-# (see the audit's dependency-pinning finding) rather than here.
+# Kept in step with requirements.txt. Neither file is what CI or a release
+# build installs from - both use requirements.lock / requirements-build.lock,
+# which pin the exact resolved versions. Ranges belong here and in
+# requirements.txt; exact pins belong in the lock.
 dependencies = [
     "SQLAlchemy>=2.0",
     "alembic>=1.13",
@@ -101,10 +102,23 @@ check_untyped_defs = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-# Qt tests leak native handles when many modules construct widgets in one
-# process; qt_api pins the binding so pytest-qt does not guess.
+# qt_api pins the binding so pytest-qt does not have to guess it.
 qt_api = "pyside6"
 filterwarnings = ["ignore::DeprecationWarning"]
+
+# Dump a full stack trace for any test still running after 100 seconds.
+#
+# This suite has a rare intermittent hang (roughly one full-suite run in
+# four) that produces NO fault and no output - the process simply sits
+# there with flat CPU until something kills it. A silent hang is the
+# worst possible failure to diagnose, because a CI job that is killed on
+# its own timeout reports nothing about where it stopped.
+#
+# The slowest legitimate test in this suite finishes well inside 100
+# seconds, so anything past that is stuck rather than slow. Note this
+# only PRINTS the stack, it does not abort the run - the goal is to make
+# the next occurrence self-diagnosing rather than to fail faster.
+faulthandler_timeout = 100
 
 [tool.coverage.run]
 source = ["app"]
