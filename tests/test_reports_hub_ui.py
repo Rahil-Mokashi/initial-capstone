@@ -206,7 +206,7 @@ def test_reports_hub_hides_reports_attendant_cannot_view(qapp, report_service, a
     from app.ui.report_window import ReportsHubWindow
 
     window = ReportsHubWindow(report_service, auth_service, attendant_id, analytics_service)
-    buttons = [w for w in window.findChildren(object) if hasattr(w, "text") and callable(getattr(w, "text"))]
+    buttons = [w for w in window.findChildren(object) if hasattr(w, "text") and callable(w.text)]
     labels = {b.text() for b in buttons if hasattr(b, "text")}
     assert "Sales Report" in labels
     assert "Expense Summary Report" not in labels

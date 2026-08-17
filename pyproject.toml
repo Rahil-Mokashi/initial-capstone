@@ -1,0 +1,114 @@
+# Single home for project metadata and tool configuration.
+#
+# Python packaging consolidated on this file through a series of PEPs:
+# PEP 518 introduced pyproject.toml and build-system requirements, PEP 517
+# defined a standard build-backend interface, and PEP 621 standardised the
+# [project] metadata table. Before this file existed there was nowhere for
+# ruff/mypy/pytest configuration to live, which is why the project had none
+# across ~26,000 lines of Python.
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "petrol-pump-erp"
+version = "1.0.0"
+description = "Offline-first Petrol Pump Management ERP (PySide6 + SQLAlchemy + SQLite)"
+requires-python = ">=3.13"
+readme = "README.md"
+
+# Kept in step with requirements.txt, which remains the file the build and
+# CI install from. Exact pins for a shipped build belong in a lock file
+# (see the audit's dependency-pinning finding) rather than here.
+dependencies = [
+    "SQLAlchemy>=2.0",
+    "alembic>=1.13",
+    "pydantic-settings>=2.0",
+    "PySide6>=6.7",
+    "reportlab>=4.0",
+    "openpyxl>=3.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-qt>=4.4",
+    "pytest-cov>=5.0",
+    "pypdf>=4.0",
+    "ruff>=0.6",
+    "mypy>=1.11",
+]
+
+[tool.setuptools]
+packages = ["app"]
+
+# ---------------------------------------------------------------------
+# Ruff: linter + formatter, written in Rust, replacing flake8/isort/black.
+# Fast enough to run on every save, which is the only reason a linter
+# actually gets used.
+# ---------------------------------------------------------------------
+[tool.ruff]
+line-length = 120          # matches the existing code, which is wider than black's 88
+target-version = "py313"
+exclude = ["alembic/versions", "build", "dist", ".venv"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes: unused imports, undefined names, shadowed variables
+    "I",    # isort: import ordering
+    "B",    # flake8-bugbear: likely bugs (mutable default args, etc.)
+    "UP",   # pyupgrade: outdated syntax for the target Python
+    "C4",   # comprehension simplifications
+    "DTZ",  # flake8-datetimez: naive datetime calls - directly relevant to
+            # this project, which shipped a real bug from exactly that
+    "SIM",  # simplifications
+]
+ignore = [
+    "E501",   # line length is handled by the formatter, not the linter
+    "B008",   # function call in argument default - normal in Qt/SQLAlchemy code
+    "SIM108", # ternary-instead-of-if is not always more readable
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests legitimately construct edge-case values and import for side effects.
+"tests/*" = ["DTZ", "F401"]
+# Model and connection modules import purely to register metadata.
+"app/models/__init__.py" = ["F401"]
+"app/database/connection.py" = ["F401"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+# ---------------------------------------------------------------------
+# mypy: deliberately NOT strict yet. Turning strict mode on across 26,000
+# lines produces thousands of errors nobody reads. The services and
+# repositories are checked first because that is where a mis-wired
+# dependency does financial damage - SaleService.__init__ alone takes
+# twelve untyped positional parameters.
+# ---------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.13"
+warn_redundant_casts = true
+warn_unused_ignores = true
+ignore_missing_imports = true
+exclude = ["alembic/", "build/", "dist/"]
+
+[[tool.mypy.overrides]]
+module = ["app.services.*", "app.repositories.*", "app.core.*"]
+check_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Qt tests leak native handles when many modules construct widgets in one
+# process; qt_api pins the binding so pytest-qt does not guess.
+qt_api = "pyside6"
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.coverage.run]
+source = ["app"]
+omit = ["app/ui/*", "*/__pycache__/*"]
+
+[tool.coverage.report]
+exclude_lines = ["pragma: no cover", "if TYPE_CHECKING:", "raise NotImplementedError"]

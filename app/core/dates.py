@@ -38,6 +38,23 @@ def local_day_bounds_utc(day: date) -> tuple[datetime, datetime]:
     )
 
 
+def local_date_of(moment: datetime) -> date:
+    """The LOCAL business date a stored UTC instant falls on.
+
+    The inverse of local_day_bounds_utc, and needed for the same reason.
+    Datetimes are stored and returned as UTC (app/database/types.py), so
+    calling .date() on one yields the UTC calendar date - which is not the
+    date the business considers that event to have happened on whenever
+    local time and UTC fall either side of midnight.
+
+    Concretely, on this IST (UTC+5:30) machine a credit sale made at 02:00
+    local on the 17th is 20:30 UTC on the 16th. Using .date() would treat
+    it as the 16th, and any due-date arithmetic counting from it would come
+    out a day early - marking a customer overdue before they actually are.
+    """
+    return moment.astimezone().date()
+
+
 class PeriodType(str, Enum):
     """Reporting period granularity (business performance reports)."""
 

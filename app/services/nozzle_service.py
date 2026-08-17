@@ -7,7 +7,7 @@ maintenance) without ever deleting a row — a retired nozzle is
 deactivated, not removed, so its assignment history stays intact.
 """
 
-from typing import List, Optional
+from typing import List
 
 from app.core.constants import MAX_NOZZLES_PER_DISPENSER, NozzleStatus, Permission
 from app.core.exceptions import ConflictError, NotFoundError

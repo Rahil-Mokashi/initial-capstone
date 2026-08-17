@@ -2,7 +2,7 @@ import uuid
 from datetime import date as date_type
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, Date, DateTime, ForeignKey, Numeric, String, Text
+from sqlalchemy import Column, Date, ForeignKey, Numeric, String, Text
 from sqlalchemy.orm import relationship
 from app.database.types import UtcDateTime
 

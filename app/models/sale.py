@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, DateTime, ForeignKey, Numeric, String, Text
+from sqlalchemy import CheckConstraint, Column, ForeignKey, Numeric, String, Text
 from sqlalchemy.orm import relationship
 from app.database.types import UtcDateTime
 
@@ -26,6 +26,17 @@ class Sale(Base):
     """
 
     __tablename__ = "sales"
+
+    # Value invariants enforced by the DATABASE, not just by Python.
+    # Foreign keys were already enforced at this level (PRAGMA
+    # foreign_keys=ON); the argument for value rules is identical, and
+    # the .db file is directly reachable by anyone with the machine.
+    __table_args__ = (
+        CheckConstraint("quantity > 0", name="ck_sales_quantity_positive"),
+        CheckConstraint("rate_per_liter >= 0", name="ck_sales_rate_non_negative"),
+        CheckConstraint("amount >= 0", name="ck_sales_amount_non_negative"),
+    )
+
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     receipt_number = Column(String(32), unique=True, nullable=False, index=True)

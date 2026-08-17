@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
 
-from sqlalchemy import Column, DateTime, ForeignKey, Numeric, String, Text
+from sqlalchemy import CheckConstraint, Column, ForeignKey, Numeric, String, Text
 from sqlalchemy.orm import relationship
 from app.database.types import UtcDateTime
 
@@ -28,6 +28,15 @@ class FuelPriceHistory(EntityMixin, Base):
     """
 
     __tablename__ = "fuel_price_history"
+
+    # Value invariants enforced by the DATABASE, not just by Python.
+    # Foreign keys were already enforced at this level (PRAGMA
+    # foreign_keys=ON); the argument for value rules is identical, and
+    # the .db file is directly reachable by anyone with the machine.
+    __table_args__ = (
+        CheckConstraint("new_rate_per_liter > 0", name="ck_fuel_price_history_new_rate_positive"),
+    )
+
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     fuel_id = Column(String(36), ForeignKey("fuels.id"), nullable=False, index=True)

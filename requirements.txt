@@ -6,3 +6,10 @@ PySide6>=6.7
 reportlab>=4.0
 openpyxl>=3.1
 pypdf>=4.0  # test-only: verifies PDF export content in tests/test_report_export.py
+
+# Dev/test tooling (see pyproject.toml [project.optional-dependencies].dev)
+pytest-qt>=4.4   # owns Qt widget lifetime in tests; without it the UI suites
+                 # leak native handles and abort the interpreter at teardown
+pytest-cov>=5.0
+ruff>=0.6
+mypy>=1.11

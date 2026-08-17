@@ -118,7 +118,7 @@ def init_db() -> None:
         try:
             backup_path = backup_module.create_backup(db_path, reason="pre_migration")
             logger.info("Pre-migration backup created at %s", backup_path)
-        except (OSError, IOError):
+        except OSError:
             logger.warning("Could not create a pre-migration backup; proceeding anyway", exc_info=True)
 
     migrations.upgrade_to_head(db_path)
@@ -134,7 +134,7 @@ def init_db() -> None:
             if backup_module.should_take_scheduled_backup(db_path, settings.auto_backup_interval_hours):
                 backup_path = backup_module.create_backup(db_path, reason="scheduled")
                 logger.info("Scheduled backup created at %s", backup_path)
-        except (OSError, IOError):
+        except OSError:
             logger.warning("Could not create the scheduled backup; proceeding anyway", exc_info=True)
 
 

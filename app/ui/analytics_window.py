@@ -28,7 +28,6 @@ from PySide6.QtWidgets import (
 )
 
 from app.core.dates import PeriodType
-from app.core.exceptions import AppError
 from app.services.report_export import export_table_csv, export_table_excel, export_table_pdf
 from app.services.report_service import TableReport
 from app.ui.print_utils import show_print_preview
