@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import Column, Date, DateTime, ForeignKey, Numeric, String, Text
 from sqlalchemy.orm import relationship
+from app.database.types import UtcDateTime
 
 from .base import Base
 
@@ -28,9 +29,9 @@ class PurchaseOrder(Base):
     created_by_id = Column(String(36), ForeignKey("users.id"), nullable=False)
     remarks = Column(Text, nullable=True)
 
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at = Column(UtcDateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at = Column(
-        DateTime,
+        UtcDateTime,
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
         nullable=False,

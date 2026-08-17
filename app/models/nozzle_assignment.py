@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import Column, DateTime, ForeignKey, Numeric, String
 from sqlalchemy.orm import relationship
+from app.database.types import UtcDateTime
 
 from .base import Base, EntityMixin
 
@@ -24,8 +25,8 @@ class NozzleAssignment(EntityMixin, Base):
     nozzle_id = Column(String(36), ForeignKey("nozzles.id"), nullable=False, index=True)
     shift_id = Column(String(36), ForeignKey("shifts.id"), nullable=False, index=True)
 
-    start_time = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
-    end_time = Column(DateTime, nullable=True)
+    start_time = Column(UtcDateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    end_time = Column(UtcDateTime, nullable=True)
 
     opening_meter = Column(Numeric(12, 3), nullable=False)
     closing_meter = Column(Numeric(12, 3), nullable=True)

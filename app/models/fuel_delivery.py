@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import Column, DateTime, ForeignKey, Numeric, String, Text
 from sqlalchemy.orm import relationship
+from app.database.types import UtcDateTime
 
 from .base import Base
 
@@ -33,14 +34,14 @@ class FuelDelivery(Base):
 
     tanker_number = Column(String(32), nullable=False)
     driver_name = Column(String(128), nullable=True)
-    arrived_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    arrived_at = Column(UtcDateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     status = Column(String(32), nullable=False)
 
     document_verified_by_id = Column(String(36), ForeignKey("users.id"), nullable=True)
-    document_verified_at = Column(DateTime, nullable=True)
+    document_verified_at = Column(UtcDateTime, nullable=True)
 
     quality_verified_by_id = Column(String(36), ForeignKey("users.id"), nullable=True)
-    quality_verified_at = Column(DateTime, nullable=True)
+    quality_verified_at = Column(UtcDateTime, nullable=True)
     quality_notes = Column(Text, nullable=True)
 
     pre_dip_value = Column(Numeric(12, 3), nullable=True)

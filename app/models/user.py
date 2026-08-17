@@ -1,6 +1,7 @@
 import uuid
 from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Integer
 from sqlalchemy.orm import relationship
+from app.database.types import UtcDateTime
 from .base import Base, EntityMixin
 
 
@@ -17,7 +18,7 @@ class User(EntityMixin, Base):
     is_locked = Column(Boolean, default=False, nullable=False)
     failed_attempts = Column(Integer, default=0, nullable=False)
     must_change_password = Column(Boolean, default=False, nullable=False)
-    last_login = Column(DateTime, nullable=True)
+    last_login = Column(UtcDateTime, nullable=True)
     role_id = Column(String(36), ForeignKey("roles.id"), nullable=True)
 
     role = relationship("Role", back_populates="users")

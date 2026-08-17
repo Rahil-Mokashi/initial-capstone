@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import Column, DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import relationship
+from app.database.types import UtcDateTime
 
 from .base import Base
 
@@ -27,7 +28,7 @@ class AuditLog(Base):
     old_value = Column(Text, nullable=True)
     new_value = Column(Text, nullable=True)
     device_info = Column(String(256), nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False, index=True)
+    created_at = Column(UtcDateTime, default=lambda: datetime.now(timezone.utc), nullable=False, index=True)
 
     actor = relationship("User")
 

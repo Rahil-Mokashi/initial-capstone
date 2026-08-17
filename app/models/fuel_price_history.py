@@ -4,6 +4,7 @@ from decimal import Decimal
 
 from sqlalchemy import Column, DateTime, ForeignKey, Numeric, String, Text
 from sqlalchemy.orm import relationship
+from app.database.types import UtcDateTime
 
 from .base import Base, EntityMixin
 
@@ -42,7 +43,7 @@ class FuelPriceHistory(EntityMixin, Base):
     reason = Column(Text, nullable=False)
 
     changed_by_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
-    effective_from = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc), index=True)
+    effective_from = Column(UtcDateTime, nullable=False, default=lambda: datetime.now(timezone.utc), index=True)
 
     fuel = relationship("Fuel")
 

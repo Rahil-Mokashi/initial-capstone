@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String
 from sqlalchemy.orm import relationship
+from app.database.types import UtcDateTime
 
 from .base import Base
 
@@ -22,7 +23,7 @@ class EmployeeDocument(Base):
     document_type = Column(String(64), nullable=False)
     file_reference = Column(String(512), nullable=False)
     description = Column(String(256), nullable=True)
-    uploaded_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    uploaded_at = Column(UtcDateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     is_deleted = Column(Boolean, default=False, nullable=False)
 
     employee = relationship("Employee", back_populates="documents")

@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import Column, Date, DateTime, ForeignKey, Numeric, String, Text
 from sqlalchemy.orm import relationship
+from app.database.types import UtcDateTime
 
 from .base import Base
 
@@ -28,7 +29,7 @@ class SupplierInvoice(Base):
     recorded_by_id = Column(String(36), ForeignKey("users.id"), nullable=False)
     remarks = Column(Text, nullable=True)
 
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at = Column(UtcDateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
 
     supplier = relationship("Supplier")
     purchase_order = relationship("PurchaseOrder")
@@ -57,7 +58,7 @@ class SupplierPayment(Base):
     recorded_by_id = Column(String(36), ForeignKey("users.id"), nullable=False)
     remarks = Column(Text, nullable=True)
 
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at = Column(UtcDateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
 
     invoice = relationship("SupplierInvoice", back_populates="payments")
     recorded_by = relationship("User")

@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal
 
 import pytest
@@ -334,7 +334,12 @@ def test_forecast_detects_an_increasing_trend(db_session, analytics_service, sal
         sale_date = date.today() - timedelta(weeks=weeks_ago)
         sale = Sale(
             receipt_number=f"RCPT-TEST-{weeks_ago}",
-            sale_at=__import__("datetime").datetime.combine(sale_date, __import__("datetime").time(12, 0)),
+            # Aware UTC: sale_at is a UTC instant (app/database/types.py).
+            # A naive value here only ever "worked" while the columns were
+            # naive too, and the session keeps the exact Python object
+            # assigned (expire_on_commit=False), so it never gets corrected
+            # on read.
+            sale_at=datetime.combine(sale_date, time(12, 0), tzinfo=timezone.utc),
             shift_id=open_shift_id, nozzle_id=nozzle_id, fuel_id=fuel.id, employee_id=employee_id,
             quantity=quantity, rate_per_liter=Decimal("100.00"), amount=quantity * Decimal("100.00"),
             payment_method=PaymentMethod.CASH.value, status="completed", recorded_by_id=admin_id,
