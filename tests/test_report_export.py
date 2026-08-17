@@ -192,3 +192,82 @@ def test_build_sale_receipt_html_includes_reference_when_present(sale_stub):
     payment = SimpleNamespace(reference_number="UPI-REF-999")
     html = build_sale_receipt_html(sale_stub, payment)
     assert "UPI-REF-999" in html
+
+
+# ---------------------------------------------------------------------
+# Letterhead: printed documents carry the business identity
+# ---------------------------------------------------------------------
+
+class _Company:
+    """Stands in for AppSetting without needing a database."""
+
+    def __init__(self, **kw):
+        self.company_name = kw.get("company_name")
+        self.phone = kw.get("phone")
+        self.email = kw.get("email")
+        self.gst_number = kw.get("gst_number")
+        self.licence_number = kw.get("licence_number")
+        self.receipt_footer = kw.get("receipt_footer")
+        self._lines = kw.get("lines", [])
+
+    @property
+    def has_company_profile(self):
+        return bool(self.company_name)
+
+    def address_lines(self):
+        return self._lines
+
+
+def test_a_letterhead_carries_the_business_identity():
+    from app.services.report_export import build_letterhead_html
+
+    html = build_letterhead_html(_Company(
+        company_name="Shree Petroleum Services",
+        lines=["Nashik Road", "Nashik, Maharashtra - 422101"],
+        phone="0253 2451234", gst_number="27AAPFU0939F1ZV"))
+
+    for expected in ("Shree Petroleum Services", "Nashik Road",
+                     "0253 2451234", "27AAPFU0939F1ZV"):
+        assert expected in html
+
+
+def test_a_letterhead_omits_fields_that_were_never_filled_in():
+    """A pump that has not entered a GST number must not print an empty
+    'GSTIN:' label on every receipt."""
+    from app.services.report_export import build_letterhead_html
+
+    html = build_letterhead_html(_Company(company_name="Corner Pump", lines=[]))
+    assert "Corner Pump" in html
+    assert "GSTIN" not in html
+    assert "Licence" not in html
+    assert "Phone" not in html
+
+
+def test_no_company_profile_falls_back_to_the_application_name():
+    """Every existing caller passes nothing, and a pump that has not filled
+    in Settings must still get a usable - if anonymous - document."""
+    from app.services.report_export import build_letterhead_html
+
+    assert "Petrol Pump ERP" in build_letterhead_html(None)
+    assert "Petrol Pump ERP" in build_letterhead_html(_Company(company_name=None))
+
+
+def test_a_receipt_is_headed_by_the_business_not_the_software(sale_stub):
+    """The point of the whole feature: a receipt with no pump name on it
+    cannot be handed to a customer."""
+    from app.services.report_export import build_sale_receipt_html
+
+    html = build_sale_receipt_html(sale_stub, None, _Company(
+        company_name="Shree Petroleum Services", lines=["Nashik Road"]))
+
+    assert "Shree Petroleum Services" in html
+    assert sale_stub.receipt_number in html
+
+
+def test_a_custom_receipt_footer_replaces_the_default(sale_stub):
+    from app.services.report_export import build_sale_receipt_html
+
+    html = build_sale_receipt_html(sale_stub, None, _Company(
+        company_name="X", lines=[], receipt_footer="Goods once sold are not returnable."))
+    assert "Goods once sold are not returnable." in html
+    assert "Thank you for your business." not in html

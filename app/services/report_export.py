@@ -125,7 +125,44 @@ def export_sale_receipt_pdf(sale, payment, file_path: str) -> None:
     doc.build(elements)
 
 
-def build_sale_receipt_html(sale, payment) -> str:
+def build_letterhead_html(company=None) -> str:
+    """The business identity that heads a printed document.
+
+    Optional on purpose. Passing None falls back to the application name,
+    so every existing caller keeps working and a pump that has not filled
+    in Settings yet still gets a usable document - just an anonymous one.
+    The Settings screen warns about that rather than this function
+    refusing to print.
+    """
+    if company is None or not getattr(company, "has_company_profile", False):
+        return "<h2>Petrol Pump ERP</h2>"
+
+    lines = [f"<h2>{company.company_name}</h2>"]
+    address = "<br/>".join(company.address_lines())
+    if address:
+        lines.append(f"<p>{address}</p>")
+
+    contact = " &nbsp;|&nbsp; ".join(
+        part for part in (
+            f"Phone: {company.phone}" if company.phone else "",
+            f"Email: {company.email}" if company.email else "",
+        ) if part
+    )
+    if contact:
+        lines.append(f"<p>{contact}</p>")
+
+    statutory = " &nbsp;|&nbsp; ".join(
+        part for part in (
+            f"GSTIN: {company.gst_number}" if company.gst_number else "",
+            f"Licence: {company.licence_number}" if company.licence_number else "",
+        ) if part
+    )
+    if statutory:
+        lines.append(f"<p>{statutory}</p>")
+    return "".join(lines)
+
+
+def build_sale_receipt_html(sale, payment, company=None) -> str:
     rows = [
         ("Fuel Type", sale.fuel.fuel_type if sale.fuel else ""),
         ("Nozzle", sale.nozzle.code if sale.nozzle else ""),
@@ -140,22 +177,26 @@ def build_sale_receipt_html(sale, payment) -> str:
         rows.append(("Reference", payment.reference_number))
 
     row_html = "".join(f"<tr><td><b>{label}</b></td><td>{value}</td></tr>" for label, value in rows)
+    footer = "Thank you for your business."
+    if company is not None and getattr(company, "receipt_footer", None):
+        footer = company.receipt_footer
     return f"""
-    <h2>Petrol Pump ERP</h2>
+    {build_letterhead_html(company)}
     <h3>Receipt {sale.receipt_number}</h3>
     <p>{sale.sale_at.strftime('%Y-%m-%d %H:%M')}</p>
     <table border="1" cellspacing="0" cellpadding="6" width="100%">{row_html}</table>
-    <p>Thank you for your business.</p>
+    <p>{footer}</p>
     """
 
 
-def build_table_report_html(report: TableReport) -> str:
+def build_table_report_html(report: TableReport, company=None) -> str:
     header_cells = "".join(f"<th>{header}</th>" for header in report.headers)
     row_html = "".join(
         "<tr>" + "".join(f"<td>{cell}</td>" for cell in row) + "</tr>" for row in report.rows
     )
     return f"""
-    <h2>{report.title}</h2>
+    {build_letterhead_html(company)}
+    <h3>{report.title}</h3>
     <p>Generated {datetime.now().strftime('%Y-%m-%d %H:%M')}</p>
     <table border="1" cellspacing="0" cellpadding="6" width="100%">
     <tr>{header_cells}</tr>
