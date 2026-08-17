@@ -613,7 +613,9 @@ class MainWindow(QMainWindow):
     def _open_backups(self) -> None:
         from app.ui.backup_window import BackupWindow
 
-        self._backup_window = BackupWindow(self._backup_service, self._user_data["id"])
+        self._backup_window = BackupWindow(
+            self._backup_service, self._user_data["id"], self._settings_service
+        )
         self._backup_window.show()
 
     def _open_audit_log(self) -> None:
