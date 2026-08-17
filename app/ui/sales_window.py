@@ -40,6 +40,13 @@ from app.schemas.customer import CustomerCreate
 from app.schemas.sale import SaleCreate
 from app.ui.qt_utils import chain_enter_to_next_field, describe_unexpected_error
 
+# One screenful at a time. The sales table is the highest-volume list in
+# the app - at 300 sales a day a pump reaches ~110,000 rows in a year, and
+# every row becomes several native Qt objects on each refresh. Paging also
+# bounds the per-row payment lookup below to the page size rather than the
+# whole table.
+SALES_PAGE_SIZE = 50
+
 SALE_HEADERS = ["Receipt #", "When", "Fuel", "Quantity", "Amount", "Method", "Sale Status", "Payment Status"]
 CUSTOMER_HEADERS = ["Name", "Phone", "Status"]
 
@@ -122,6 +129,26 @@ class SalesTab(QWidget):
         top_row.addWidget(self.cancel_button)
         top_row.addWidget(self.add_button)
 
+        self._page = 0
+
+        self.prev_button = QPushButton("< Previous")
+        self.prev_button.setObjectName("secondaryButton")
+        self.prev_button.clicked.connect(self._previous_page)
+
+        self.next_button = QPushButton("Next >")
+        self.next_button.setObjectName("secondaryButton")
+        self.next_button.clicked.connect(self._next_page)
+
+        self.page_label = QLabel("")
+        self.page_label.setObjectName("subtitle")
+
+        pager_row = QHBoxLayout()
+        pager_row.addWidget(self.prev_button)
+        pager_row.addWidget(self.next_button)
+        pager_row.addWidget(self.page_label)
+        pager_row.addStretch()
+        self._pager_row = pager_row
+
         self.table = QTableWidget(0, len(SALE_HEADERS))
         self.table.setHorizontalHeaderLabels(SALE_HEADERS)
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
@@ -133,12 +160,41 @@ class SalesTab(QWidget):
         layout.setSpacing(12)
         layout.addLayout(top_row)
         layout.addWidget(self.table)
+        layout.addLayout(self._pager_row)
         self.setLayout(layout)
 
         self.refresh()
 
+    def _previous_page(self) -> None:
+        if self._page > 0:
+            self._page -= 1
+            self.refresh()
+
+    def _next_page(self) -> None:
+        self._page += 1
+        self.refresh()
+
     def refresh(self) -> None:
-        sales = self._sale_service.list_sales(self._actor_user_id)
+        total = self._sale_service.count_sales(self._actor_user_id)
+
+        # Clamp: a deletion or a cancellation elsewhere can leave the
+        # current page past the end, and showing an empty screen with no
+        # way back would look like data loss.
+        last_page = max((total - 1) // SALES_PAGE_SIZE, 0) if total else 0
+        self._page = min(max(self._page, 0), last_page)
+
+        offset = self._page * SALES_PAGE_SIZE
+        sales = self._sale_service.list_sales(
+            self._actor_user_id, limit=SALES_PAGE_SIZE, offset=offset
+        )
+
+        first = offset + 1 if sales else 0
+        self.page_label.setText(
+            f"Showing {first}-{offset + len(sales)} of {total}" if total else "No sales yet"
+        )
+        self.prev_button.setEnabled(self._page > 0)
+        self.next_button.setEnabled(offset + len(sales) < total)
+
         self.table.setRowCount(len(sales))
         for row_index, sale in enumerate(sales):
             payment = self._sale_service.get_payment_for_sale(self._actor_user_id, sale.id)
