@@ -39,10 +39,17 @@ def _format_size(size_bytes: int) -> str:
 
 
 class BackupWindow(QMainWindow):
-    def __init__(self, backup_service, actor_user_id: str):
+    def __init__(self, backup_service, actor_user_id: str, settings_service=None):
         super().__init__()
         self._backup_service = backup_service
         self._actor_user_id = actor_user_id
+        # Optional so existing callers and tests keep working. When present,
+        # the off-device folder configured in Settings is used as the default
+        # destination and as the folder the staleness warning watches -
+        # otherwise the operator has to re-find the USB drive every time,
+        # and that friction is exactly what stops off-device backups
+        # actually happening.
+        self._settings_service = settings_service
 
         self.setWindowTitle("Backups")
         self.setMinimumSize(720, 520)
@@ -161,7 +168,8 @@ class BackupWindow(QMainWindow):
         backup_path = self.table.item(rows[0].row(), 0).data(Qt.UserRole)
 
         destination = QFileDialog.getExistingDirectory(
-            self, "Choose a USB drive or network folder")
+            self, "Choose a USB drive or network folder",
+            self._configured_offsite_dir() or "")
         if not destination:
             return
 
@@ -181,6 +189,20 @@ class BackupWindow(QMainWindow):
             self, "Backup copied",
             f"The backup was copied and verified at:\n\n{destination}")
 
+    def _configured_offsite_dir(self):
+        """The folder set on the Settings screen, if there is one.
+
+        Failures here are swallowed deliberately: a missing settings row or
+        a permission problem must not stop the Backups screen from opening,
+        because taking a backup is more important than defaulting a path.
+        """
+        if self._settings_service is None:
+            return None
+        try:
+            return self._settings_service.get_company_profile().offsite_backup_dir
+        except Exception:  # noqa: BLE001
+            return None
+
     def _refresh_offsite_warning(self) -> None:
         """Nag when the newest off-device copy is stale, or when there has
         never been one.
@@ -190,7 +212,7 @@ class BackupWindow(QMainWindow):
         time, so a visible warning beats a background job that silently
         never fires.
         """
-        destination = getattr(self, "_last_offsite_dir", None)
+        destination = getattr(self, "_last_offsite_dir", None) or self._configured_offsite_dir()
         if not destination:
             self.offsite_warning.setText(
                 "No off-device backup has been made from this screen yet. "

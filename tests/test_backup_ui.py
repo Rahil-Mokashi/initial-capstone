@@ -207,3 +207,39 @@ def test_an_unreachable_destination_is_reported_not_crashed_on(
 
     assert window.offsite_warning.isHidden() is False
     assert "not reachable" in window.offsite_warning.text()
+
+
+def test_the_offsite_folder_defaults_from_settings(
+    qapp, backup_service, admin_id, tmp_path
+):
+    """Re-finding the USB drive on every copy is the friction that stops
+    off-device backups actually happening, so Settings supplies the default."""
+    from types import SimpleNamespace
+
+    from app.ui.backup_window import BackupWindow
+
+    usb = tmp_path / "usb"
+    usb.mkdir()
+    fake_settings = SimpleNamespace(
+        get_company_profile=lambda: SimpleNamespace(offsite_backup_dir=str(usb)))
+
+    window = BackupWindow(backup_service, admin_id, fake_settings)
+    assert window._configured_offsite_dir() == str(usb)
+
+
+def test_a_broken_settings_service_does_not_stop_backups_opening(
+    qapp, backup_service, admin_id
+):
+    """Taking a backup matters more than defaulting a path, so a failure
+    reading settings is swallowed rather than blocking the screen."""
+    from types import SimpleNamespace
+
+    from app.ui.backup_window import BackupWindow
+
+    def explode():
+        raise RuntimeError("settings unavailable")
+
+    window = BackupWindow(backup_service, admin_id,
+                          SimpleNamespace(get_company_profile=explode))
+    assert window._configured_offsite_dir() is None
+    assert window.offsite_warning.isHidden() is False
