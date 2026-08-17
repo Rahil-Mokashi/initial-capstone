@@ -125,7 +125,10 @@ def test_account_locks_after_max_failed_attempts(auth_service, db_session):
 
     success, data, error = auth_service.authenticate("admin", DEFAULT_ADMIN_PASSWORD)
     assert success is False
-    assert error == "Account is locked due to failed attempts"
+    # The message now also tells the user how long to wait, rather than
+    # leaving them to guess whether the lock is permanent.
+    assert "locked" in error
+    assert "15 minutes" in error
 
 
 def test_check_permission_admin_has_full_access(auth_service, db_session):
@@ -199,3 +202,101 @@ def test_require_permission_decorator_blocks_unauthorized(auth_service, db_sessi
     assert dummy.do_admin_thing(admin.id) == "done"
     with pytest.raises(PermissionDeniedError):
         dummy.do_admin_thing(attendant.id)
+
+
+# ---------------------------------------------------------------------
+# Lockout expiry - the desktop equivalent of a login rate limit
+# ---------------------------------------------------------------------
+
+def test_lockout_expires_on_its_own_after_the_configured_window(db_session, auth_service):
+    """A permanent lock is an availability outage, not a security control.
+
+    On a pump running a night shift with no administrator present, a
+    fat-fingered attendant used to be unable to record sales for hours -
+    and the predictable staff response is to share one never-locked login,
+    which is worse than the attack the lock defended against.
+    """
+    from datetime import datetime, timedelta, timezone
+
+    from app.core.constants import LOCKOUT_DURATION_MINUTES, MAX_FAILED_LOGIN_ATTEMPTS
+    from app.models.user import User
+
+    for _ in range(MAX_FAILED_LOGIN_ATTEMPTS):
+        auth_service.authenticate("admin", "WrongPassword!")
+
+    user = db_session.query(User).filter_by(username="admin").first()
+    assert user.is_locked is True
+    assert user.locked_at is not None
+
+    ok, _, error = auth_service.authenticate("admin", "Admin@123")
+    assert ok is False and "locked" in error.lower()
+
+    # Wind the clock back past the window.
+    user.locked_at = datetime.now(timezone.utc) - timedelta(minutes=LOCKOUT_DURATION_MINUTES + 1)
+    db_session.commit()
+
+    ok, data, error = auth_service.authenticate("admin", "Admin@123")
+    assert ok is True, f"account did not unlock itself: {error}"
+
+    db_session.expire_all()
+    user = db_session.query(User).filter_by(username="admin").first()
+    assert user.is_locked is False
+    assert user.locked_at is None
+    assert user.failed_attempts == 0
+
+
+def test_a_lockout_still_blocks_before_the_window_elapses(db_session, auth_service):
+    from app.core.constants import MAX_FAILED_LOGIN_ATTEMPTS
+
+    for _ in range(MAX_FAILED_LOGIN_ATTEMPTS):
+        auth_service.authenticate("admin", "WrongPassword!")
+
+    ok, _, error = auth_service.authenticate("admin", "Admin@123")
+    assert ok is False
+    assert "locked" in error.lower()
+
+
+def test_an_administrator_lock_with_no_timestamp_never_expires(db_session, auth_service):
+    """A deliberate administrative lock must be cleared deliberately -
+    only the automatic failed-attempt lockout times out."""
+    from app.models.user import User
+
+    user = db_session.query(User).filter_by(username="admin").first()
+    user.is_locked = True
+    user.locked_at = None
+    db_session.commit()
+
+    ok, _, error = auth_service.authenticate("admin", "Admin@123")
+    assert ok is False
+    assert "locked" in error.lower()
+
+
+def test_a_successful_login_clears_any_stale_lock_state(db_session, auth_service):
+    from app.models.user import User
+
+    ok, _, _ = auth_service.authenticate("admin", "Admin@123")
+    assert ok is True
+    db_session.expire_all()
+    user = db_session.query(User).filter_by(username="admin").first()
+    assert user.is_locked is False
+    assert user.locked_at is None
+
+
+def test_the_expiry_is_audit_logged(db_session, auth_service):
+    """An account unlocking itself is a security-relevant event and must
+    appear in the trail, not happen invisibly."""
+    from datetime import datetime, timedelta, timezone
+
+    from app.core.constants import LOCKOUT_DURATION_MINUTES, MAX_FAILED_LOGIN_ATTEMPTS
+    from app.models.audit_log import AuditLog
+    from app.models.user import User
+
+    for _ in range(MAX_FAILED_LOGIN_ATTEMPTS):
+        auth_service.authenticate("admin", "WrongPassword!")
+    user = db_session.query(User).filter_by(username="admin").first()
+    user.locked_at = datetime.now(timezone.utc) - timedelta(minutes=LOCKOUT_DURATION_MINUTES + 1)
+    db_session.commit()
+
+    auth_service.authenticate("admin", "Admin@123")
+    events = db_session.query(AuditLog).filter_by(event_type="login_lockout_expired").all()
+    assert len(events) == 1
