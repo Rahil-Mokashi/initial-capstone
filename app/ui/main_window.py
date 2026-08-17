@@ -23,6 +23,7 @@ from app.core.constants import Permission
 from app.core.exceptions import SessionExpiredError
 from app.database import connection as db_connection
 from app.repositories.attendance_repository import AttendanceRepository
+from app.repositories.app_setting_repository import AppSettingRepository
 from app.repositories.audit_log_repository import AuditLogRepository
 from app.repositories.credit_account_repository import CreditAccountRepository
 from app.repositories.customer_payment_repository import CustomerPaymentRepository
@@ -58,6 +59,7 @@ from app.services.dashboard_service import DashboardService
 from app.services.employee_service import EmployeeService
 from app.services.expense_service import ExpenseService
 from app.services.fuel_service import FuelService
+from app.services.settings_service import SettingsService
 from app.services.nozzle_service import NozzleService
 from app.services.procurement_service import ProcurementService
 from app.services.reconciliation_service import ReconciliationService
@@ -208,6 +210,7 @@ class MainWindow(QMainWindow):
         analytics_service: AnalyticsService,
         dashboard_service: DashboardService,
         fuel_service: FuelService,
+        settings_service: SettingsService,
         role_repo,
         fuel_repo,
         user_repo,
@@ -233,6 +236,7 @@ class MainWindow(QMainWindow):
         self._analytics_service = analytics_service
         self._dashboard_service = dashboard_service
         self._fuel_service = fuel_service
+        self._settings_service = settings_service
         self._role_repo = role_repo
         self._fuel_repo = fuel_repo
         self._user_repo = user_repo
@@ -324,6 +328,7 @@ class MainWindow(QMainWindow):
                         (Permission.INVENTORY_VIEW, Permission.SALE_VIEW, Permission.EXPENSE_VIEW, Permission.CREDIT_VIEW, Permission.RECONCILIATION_VIEW, Permission.ANALYTICS_VIEW),
                     ),
                     ("🔐", "Users", "Create logins and manage roles", self._open_users, Permission.USER_MANAGE),
+                    ("⚙️", "Settings", "Company profile, printing, backups", self._open_settings, Permission.SETTINGS_VIEW),
                     ("🗄️", "Backups", "Back up or restore the database", self._open_backups, Permission.BACKUP_MANAGE),
                     ("📜", "Audit Log", "Review every recorded change", self._open_audit_log, Permission.AUDIT_VIEW),
                 ],
@@ -514,6 +519,14 @@ class MainWindow(QMainWindow):
         )
         self._nozzle_window.show()
 
+    def _open_settings(self) -> None:
+        from app.ui.settings_window import SettingsWindow
+
+        self._settings_window = SettingsWindow(
+            self._settings_service, self._user_data["id"], self._auth_service
+        )
+        self._settings_window.show()
+
     def _open_fuel_prices(self) -> None:
         from app.ui.fuel_price_window import FuelPriceWindow
 
@@ -697,6 +710,9 @@ class AppController:
             self._auth_service,
         )
         self._audit_service = AuditService(audit_repo, self._auth_service)
+        self._settings_service = SettingsService(
+            AppSettingRepository(self._db_session), audit_repo, self._auth_service
+        )
         self._procurement_service = ProcurementService(
             SupplierRepository(self._db_session),
             PurchaseOrderRepository(self._db_session),
@@ -830,6 +846,7 @@ class AppController:
             self._analytics_service,
             self._dashboard_service,
             self._fuel_service,
+            self._settings_service,
             self._role_repo,
             self._fuel_repo,
             self._user_repo,

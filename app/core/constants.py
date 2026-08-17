@@ -25,6 +25,13 @@ class Permission(str, Enum):
     # permission than routine inventory management: it silently
     # changes the revenue of every future sale, so it gets the same
     # separate-grant treatment as SHIFT_REOPEN and EXPENSE_APPROVE.
+    # Installation-wide settings: the company profile that heads every
+    # printed document, and operational preferences. Managing them is
+    # owner/admin territory, but VIEW is granted widely because the
+    # printing code needs the company profile to head a receipt whoever
+    # prints it.
+    SETTINGS_VIEW = "settings.view"
+    SETTINGS_MANAGE = "settings.manage"
     FUEL_PRICE_VIEW = "fuel_price.view"
     FUEL_PRICE_MANAGE = "fuel_price.manage"
     AUDIT_VIEW = "audit.view"
@@ -243,9 +250,11 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
     UserRole.OWNER: tuple(Permission),
     UserRole.MANAGER: (
         Permission.INVENTORY_VIEW,
+        Permission.SETTINGS_VIEW,
         Permission.INVENTORY_MANAGE,
         Permission.FUEL_PRICE_VIEW,
         Permission.FUEL_PRICE_MANAGE,
+        Permission.SETTINGS_MANAGE,
         Permission.AUDIT_VIEW,
         Permission.EMPLOYEE_VIEW,
         Permission.EMPLOYEE_MANAGE,
@@ -272,6 +281,7 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
     ),
     UserRole.ACCOUNTANT: (
         Permission.INVENTORY_VIEW,
+        Permission.SETTINGS_VIEW,
         Permission.FUEL_PRICE_VIEW,
         Permission.AUDIT_VIEW,
         Permission.EMPLOYEE_VIEW,
@@ -288,6 +298,7 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
     ),
     UserRole.SHIFT_SUPERVISOR: (
         Permission.INVENTORY_VIEW,
+        Permission.SETTINGS_VIEW,
         Permission.FUEL_PRICE_VIEW,
         Permission.EMPLOYEE_VIEW,
         Permission.ATTENDANCE_VIEW,
@@ -302,6 +313,7 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
     ),
     UserRole.ATTENDANT: (
         Permission.MY_ASSIGNMENT_VIEW,
+        Permission.SETTINGS_VIEW,
         Permission.FUEL_PRICE_VIEW,
         Permission.SALE_VIEW,
         Permission.SALE_MANAGE,
