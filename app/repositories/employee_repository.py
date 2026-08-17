@@ -29,11 +29,20 @@ class EmployeeRepository:
     def next_employee_code(self) -> str:
         """Generate the next sequential employee code (EMP-0001, EMP-0002, ...).
 
-        Safe for a single-user offline desktop app; employee rows are never
-        hard-deleted so the count never goes backwards.
+        Derived from the highest code ever issued rather than a row count,
+        for the same reason as SaleRepository.next_receipt_number: a count
+        is not a high-water mark, and after a restore from backup it hands
+        out codes that already exist. Employee codes are unique, so that
+        collision blocks employee creation outright.
         """
-        count = self._session.query(func.count(Employee.id)).scalar() or 0
-        return f"EMP-{count + 1:04d}"
+        highest = self._session.query(func.max(Employee.employee_code)).scalar()
+        if not highest:
+            return "EMP-0001"
+        try:
+            last = int(str(highest).rsplit("-", 1)[1])
+        except (IndexError, ValueError):
+            last = self._session.query(func.count(Employee.id)).scalar() or 0
+        return f"EMP-{last + 1:04d}"
 
     def add(self, employee: Employee) -> Employee:
         self._session.add(employee)

@@ -25,6 +25,7 @@ from typing import List, Optional
 
 from app.core.constants import PaymentMethod, PaymentStatus, Permission, SaleStatus, ShiftStatus, TankTransactionType
 from app.core.exceptions import ConflictError, NotFoundError
+from app.core.money import money
 from app.core.permissions import require_permission
 from app.database.base import StatusEnum
 from app.repositories.base import session_for, unit_of_work
@@ -96,7 +97,11 @@ class SaleService:
         tank_id = self._resolve_tank_id(nozzle)
 
         rate_per_liter = fuel.rate_per_liter
-        amount = data.quantity * rate_per_liter
+        # Settled to paise here, once, rather than left at whatever
+        # precision quantity x rate happens to produce and rounded
+        # implicitly (and with the wrong rounding mode) by the Numeric
+        # column on the way in - see app/core/money.py.
+        amount = money(data.quantity * rate_per_liter)
 
         if data.payment_method == PaymentMethod.CREDIT:
             self._credit_service.ensure_credit_available(data.customer_id, amount)

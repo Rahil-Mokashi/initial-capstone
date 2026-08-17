@@ -27,10 +27,38 @@ class SaleRepository:
         return self._session.query(Sale).filter_by(customer_id=customer_id).order_by(Sale.sale_at.desc()).all()
 
     def next_receipt_number(self) -> str:
-        """Sequential RCPT-000001, RCPT-000002, ... - safe for a
-        single-user offline desktop app; sales are never hard-deleted."""
-        count = self._session.query(func.count(Sale.id)).scalar() or 0
-        return f"RCPT-{count + 1:06d}"
+        """Sequential RCPT-000001, RCPT-000002, ...
+
+        Derived from the highest receipt number ever issued, NOT from a
+        row count. A count is not a high-water mark, and the two diverge
+        the moment any row disappears - at which point COUNT(*) + 1
+        returns a number that already exists, the unique index on
+        receipt_number rejects the insert, and every further sale is
+        blocked with an error an attendant cannot resolve.
+
+        That is not hypothetical here, because this app ships a restore
+        feature: restoring to an earlier backup rewinds the count while
+        the receipt numbers already printed on customers' receipts stay
+        issued. MAX() rewinds with the data, so the sequence continues
+        from wherever the restored database actually left off.
+
+        The read and the subsequent insert happen inside the caller's
+        unit of work (see app/repositories/base.py), and SQLite permits
+        only one writer at a time, so no second writer can claim the same
+        number in between.
+        """
+        highest = self._session.query(func.max(Sale.receipt_number)).scalar()
+        if not highest:
+            return "RCPT-000001"
+        try:
+            last = int(str(highest).rsplit("-", 1)[1])
+        except (IndexError, ValueError):
+            # A receipt number that doesn't match the expected shape (a
+            # hand-edited row, or a future format change) must not wedge
+            # sales entirely - fall back to the row count, which is at
+            # worst wrong in the same way the old implementation always was.
+            last = self._session.query(func.count(Sale.id)).scalar() or 0
+        return f"RCPT-{last + 1:06d}"
 
     def add(self, sale: Sale) -> Sale:
         self._session.add(sale)
