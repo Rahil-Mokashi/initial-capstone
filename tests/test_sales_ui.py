@@ -339,3 +339,119 @@ def test_customer_form_creates_customer(qapp, sale_service, admin_id):
 
     assert dialog.result() == QDialog.Accepted
     assert len(sale_service.list_customers(admin_id)) == 1
+
+
+# ---------------------------------------------------------------------
+# Pagination on the sales list
+# ---------------------------------------------------------------------
+
+def _record_sales(sale_service, admin_id, open_shift_id, nozzle_id, employee_id, count):
+    from decimal import Decimal
+
+    from app.core.constants import PaymentMethod
+    from app.schemas.sale import SaleCreate
+
+    for _ in range(count):
+        sale_service.create_sale(admin_id, SaleCreate(
+            shift_id=open_shift_id, nozzle_id=nozzle_id, employee_id=employee_id,
+            quantity=Decimal("1"), payment_method=PaymentMethod.CASH))
+
+
+def test_sales_list_shows_only_one_page_at_a_time(
+    qapp, sale_service, shift_service, employee_service, fuel_repo, auth_service,
+    admin_id, open_shift_id, nozzle_id, employee_id, monkeypatch
+):
+    """The whole point of paging: the table holds a screenful, not the
+    whole table. At 110,000 rows the difference is a screen that opens and
+    one that does not."""
+    import app.ui.sales_window as module
+    from app.ui.sales_window import SalesTab
+
+    monkeypatch.setattr(module, "SALES_PAGE_SIZE", 5)
+
+    tab = SalesTab(sale_service, shift_service, employee_service, auth_service, admin_id, can_manage=True)
+    _record_sales(sale_service, admin_id, open_shift_id, nozzle_id, employee_id, 12)
+    tab.refresh()
+
+    assert tab.table.rowCount() == 5
+    assert "of 12" in tab.page_label.text()
+    assert tab.prev_button.isEnabled() is False   # already on the first page
+    assert tab.next_button.isEnabled() is True
+
+
+def test_paging_forward_and_back_covers_every_sale_exactly_once(
+    qapp, sale_service, shift_service, employee_service, fuel_repo, auth_service,
+    admin_id, open_shift_id, nozzle_id, employee_id, monkeypatch
+):
+    """A boundary that drops or repeats a row means a transaction the
+    operator cannot find, or one they count twice."""
+    import app.ui.sales_window as module
+    from app.ui.sales_window import SalesTab
+
+    monkeypatch.setattr(module, "SALES_PAGE_SIZE", 5)
+
+    tab = SalesTab(sale_service, shift_service, employee_service, auth_service, admin_id, can_manage=True)
+    _record_sales(sale_service, admin_id, open_shift_id, nozzle_id, employee_id, 12)
+    tab.refresh()
+
+    seen = []
+    while True:
+        seen += [tab.table.item(r, 0).text() for r in range(tab.table.rowCount())]
+        if not tab.next_button.isEnabled():
+            break
+        tab._next_page()
+
+    assert len(seen) == 12
+    assert len(set(seen)) == 12, "a receipt appeared on two pages"
+
+
+def test_the_last_page_disables_next(
+    qapp, sale_service, shift_service, employee_service, fuel_repo, auth_service,
+    admin_id, open_shift_id, nozzle_id, employee_id, monkeypatch
+):
+    import app.ui.sales_window as module
+    from app.ui.sales_window import SalesTab
+
+    monkeypatch.setattr(module, "SALES_PAGE_SIZE", 5)
+    tab = SalesTab(sale_service, shift_service, employee_service, auth_service, admin_id, can_manage=True)
+    _record_sales(sale_service, admin_id, open_shift_id, nozzle_id, employee_id, 12)
+    tab.refresh()
+
+    tab._next_page()
+    tab._next_page()  # page 3 of 3: rows 11-12
+    assert tab.table.rowCount() == 2
+    assert tab.next_button.isEnabled() is False
+    assert tab.prev_button.isEnabled() is True
+
+
+def test_a_page_left_past_the_end_is_clamped_rather_than_showing_nothing(
+    qapp, sale_service, shift_service, employee_service, fuel_repo, auth_service,
+    admin_id, open_shift_id, nozzle_id, employee_id, monkeypatch
+):
+    """Sitting on page 3 when the data shrinks must not leave the operator
+    staring at an empty screen with no way back - that looks like data loss."""
+    import app.ui.sales_window as module
+    from app.ui.sales_window import SalesTab
+
+    monkeypatch.setattr(module, "SALES_PAGE_SIZE", 5)
+    tab = SalesTab(sale_service, shift_service, employee_service, auth_service, admin_id, can_manage=True)
+    _record_sales(sale_service, admin_id, open_shift_id, nozzle_id, employee_id, 12)
+    tab.refresh()
+
+    tab._page = 99          # as if the data shrank underneath us
+    tab.refresh()
+
+    assert tab.table.rowCount() > 0, "clamping failed; the screen went blank"
+    assert tab.next_button.isEnabled() is False
+
+
+def test_an_empty_sales_list_says_so_and_disables_both_buttons(
+    qapp, sale_service, shift_service, employee_service, fuel_repo, auth_service, admin_id
+):
+    from app.ui.sales_window import SalesTab
+
+    tab = SalesTab(sale_service, shift_service, employee_service, auth_service, admin_id, can_manage=True)
+    assert tab.table.rowCount() == 0
+    assert tab.page_label.text() == "No sales yet"
+    assert tab.prev_button.isEnabled() is False
+    assert tab.next_button.isEnabled() is False
