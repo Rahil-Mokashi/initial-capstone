@@ -5,7 +5,6 @@ from sqlalchemy.orm import Session
 
 import hashlib
 import uuid
-from datetime import datetime, timezone
 
 from app.models.audit_log import AuditLog
 
