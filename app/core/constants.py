@@ -334,6 +334,14 @@ MAX_FAILED_LOGIN_ATTEMPTS = 5
 # user a coffee break at worst.
 LOCKOUT_DURATION_MINUTES = 15
 
+# How old the newest off-device backup may get before the Backups screen
+# starts warning about it. Every backup the app takes lands next to the
+# database, so a dead drive, a theft or ransomware would take both - and
+# with no cloud replica by design, an off-device copy is the only real
+# protection. Seven days is a nag interval, not a policy: a pump has no IT
+# staff, so a visible reminder beats a scheduler that silently never fires.
+OFFSITE_BACKUP_STALE_AFTER_DAYS = 7
+
 # Session management default, overridable via Settings.session_timeout_hours
 DEFAULT_SESSION_TIMEOUT_HOURS = 8
 
