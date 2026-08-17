@@ -362,4 +362,90 @@ QLabel#statLabel {{
     color: {COLOR_TEXT_MUTED};
     font-weight: 600;
 }}
+
+/* --- Notifications (problemstatement.md #43) ---
+   Severity is carried by a `tone` property rather than three separate
+   object names, so the alert widget stays one widget and Qt re-polishes
+   it when the severity changes. The colour vocabulary is the one already
+   in use elsewhere: danger red for critical, the accent amber that
+   warningLabel already uses for warnings, and the primary indigo for
+   informational items - no new colours introduced for a new screen. */
+
+QWidget#alertCard {{
+    background-color: {COLOR_SURFACE};
+    border: 1px solid {COLOR_BORDER};
+    border-left: 4px solid {COLOR_PRIMARY};
+    border-radius: 12px;
+}}
+
+QWidget#alertCard[tone="critical"] {{
+    border-left: 4px solid {COLOR_DANGER};
+}}
+
+QWidget#alertCard[tone="warning"] {{
+    border-left: 4px solid {COLOR_ACCENT};
+}}
+
+QLabel#alertTitle {{
+    font-size: 15px;
+    font-weight: 700;
+}}
+
+QLabel#alertDetail {{
+    font-size: 13px;
+    color: {COLOR_TEXT_MUTED};
+}}
+
+QLabel#alertTag {{
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 6px;
+    padding: 3px 8px;
+    background-color: {COLOR_PRIMARY_SOFT};
+    color: {COLOR_PRIMARY};
+}}
+
+QLabel#alertTag[tone="critical"] {{
+    background-color: {COLOR_DANGER_BG};
+    color: {COLOR_DANGER};
+}}
+
+QLabel#alertTag[tone="warning"] {{
+    background-color: {COLOR_ACCENT_SOFT};
+    color: {COLOR_ACCENT_TEXT};
+}}
+
+/* The top-bar button that opens the alerts screen. It carries its own
+   count, so a `tone` of "critical"/"warning" makes an unattended problem
+   visible from the dashboard without the operator opening anything. */
+QPushButton#alertsButton {{
+    background-color: {COLOR_PRIMARY_SOFT};
+    color: {COLOR_PRIMARY};
+    border: none;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-weight: 700;
+}}
+
+QPushButton#alertsButton:hover {{
+    background-color: {COLOR_BORDER};
+}}
+
+QPushButton#alertsButton[tone="critical"] {{
+    background-color: {COLOR_DANGER_BG};
+    color: {COLOR_DANGER};
+}}
+
+QPushButton#alertsButton[tone="warning"] {{
+    background-color: {COLOR_ACCENT_SOFT};
+    color: {COLOR_ACCENT_TEXT};
+}}
+
+QLabel#alertEmptyState {{
+    font-size: 15px;
+    color: {COLOR_SUCCESS};
+    background-color: {COLOR_SUCCESS_BG};
+    border-radius: 12px;
+    padding: 24px;
+}}
 """

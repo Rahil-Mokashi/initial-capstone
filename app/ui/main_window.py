@@ -1,3 +1,4 @@
+import contextlib
 from datetime import datetime
 
 from PySide6.QtCore import Qt, QTimer, Signal
@@ -60,6 +61,7 @@ from app.services.employee_service import EmployeeService
 from app.services.expense_service import ExpenseService
 from app.services.fuel_service import FuelService
 from app.services.settings_service import SettingsService
+from app.services.notification_service import NotificationService
 from app.services.nozzle_service import NozzleService
 from app.services.procurement_service import ProcurementService
 from app.services.reconciliation_service import ReconciliationService
@@ -70,6 +72,7 @@ from app.services.audit_service import AuditService
 from app.services.backup_service import BackupService
 from app.services.tank_service import TankService
 from app.services.user_service import UserService
+from app.ui.background import is_widget_alive
 from app.ui.qt_utils import describe_unexpected_error
 from app.ui.styles import STYLESHEET
 
@@ -211,6 +214,7 @@ class MainWindow(QMainWindow):
         dashboard_service: DashboardService,
         fuel_service: FuelService,
         settings_service: SettingsService,
+        notification_service,
         role_repo,
         fuel_repo,
         user_repo,
@@ -237,6 +241,7 @@ class MainWindow(QMainWindow):
         self._dashboard_service = dashboard_service
         self._fuel_service = fuel_service
         self._settings_service = settings_service
+        self._notification_service = notification_service
         self._role_repo = role_repo
         self._fuel_repo = fuel_repo
         self._user_repo = user_repo
@@ -258,6 +263,7 @@ class MainWindow(QMainWindow):
         self._credit_window = None
         self._expense_window = None
         self._reconciliation_window = None
+        self._notification_window = None
 
         self.setWindowTitle("Petrol Pump ERP")
         self.setMinimumSize(960, 620)
@@ -282,10 +288,22 @@ class MainWindow(QMainWindow):
         account_menu.addAction("Logout", self._logout)
         account_button.setMenu(account_menu)
 
+        # The alert count belongs in the top bar rather than on a dashboard
+        # card, because it must be visible from every state of this screen
+        # - including when the operator has scrolled the cards out of view.
+        # It carries the count itself so an unattended critical problem is
+        # apparent without opening anything.
+        self.alerts_button = QPushButton("Alerts")
+        self.alerts_button.setObjectName("alertsButton")
+        self.alerts_button.setCursor(Qt.PointingHandCursor)
+        self.alerts_button.clicked.connect(self._open_notifications)
+
         top_bar_layout.addWidget(user_label)
         top_bar_layout.addSpacing(8)
         top_bar_layout.addWidget(role_tag)
         top_bar_layout.addStretch()
+        top_bar_layout.addWidget(self.alerts_button)
+        top_bar_layout.addSpacing(8)
         top_bar_layout.addWidget(account_button)
         top_bar.setLayout(top_bar_layout)
 
@@ -373,6 +391,27 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(container)
 
         self._populate_dashboard(self._compute_card_columns())
+        # The alert count is deliberately NOT computed here, and the two
+        # earlier attempts are recorded because the reasoning is not
+        # obvious from the result.
+        #
+        # Computing it inside __init__ crashed the interpreter: a garbage
+        # collection landing inside SQLAlchemy's result processing while
+        # a freshly-built Qt widget tree was still settling. Deferring it
+        # with QTimer.singleShot(0, ...) only moved the crash, because
+        # the callback then ran while that same widget tree was becoming
+        # garbage. Reducing it to a SINGLE trivial query crashed too -
+        # which is what proved the problem is not the amount of work but
+        # the moment: database work does not belong near Qt widget
+        # construction or teardown in this application.
+        #
+        # So the badge is filled in from the session tick that already
+        # runs every 60 seconds against a settled, idle window, and
+        # refreshed again whenever the Alerts screen is opened. The cost
+        # is a blank count for up to a minute after login; the benefit is
+        # that refreshing periodically is what a live indicator should do
+        # anyway, rather than taking one reading at login and letting it
+        # go stale for the rest of the shift.
 
         self._session_timer = QTimer(self)
         self._session_timer.timeout.connect(self._check_session)
@@ -471,6 +510,66 @@ class MainWindow(QMainWindow):
             tiles.append((str(summary.pending_purchase_orders_count), "Purchase orders pending", "normal"))
         return tiles
 
+    def refresh_alert_badge(self) -> None:
+        """Update the top-bar Alerts button's count and colour.
+
+        Failure is swallowed and the button falls back to a plain "Alerts"
+        label. The alert count is an aid, not a gate: a dashboard that
+        refuses to load because a badge query failed would be a far worse
+        outcome than a badge that is briefly missing - the same reasoning
+        already applied to the KPI strip in _build_stat_tiles.
+        """
+        # Belt and braces alongside the timer's context binding: this can
+        # also be reached from the session timer, and querying the
+        # database on behalf of a window that no longer exists is work
+        # whose result has nowhere to go.
+        if not is_widget_alive(self):
+            return
+
+        try:
+            summary = self._notification_service.get_notifications(self._user_data["id"])
+        except Exception:  # noqa: BLE001
+            self.alerts_button.setText("Alerts")
+            self._set_alert_tone("")
+            return
+
+        if summary.total == 0:
+            self.alerts_button.setText("Alerts")
+            self._set_alert_tone("")
+            return
+
+        self.alerts_button.setText(f"Alerts ({summary.total})")
+        # The badge takes the colour of the WORST thing in the list, not
+        # the most common one - the point of the tone is to say whether
+        # anything here cannot wait.
+        if summary.critical_count:
+            self._set_alert_tone("critical")
+        elif summary.warning_count:
+            self._set_alert_tone("warning")
+        else:
+            self._set_alert_tone("")
+
+    def _set_alert_tone(self, tone: str) -> None:
+        """Qt does not restyle a widget when a property used in a
+        stylesheet selector changes, so the style has to be explicitly
+        unpolished and repolished - otherwise the colour would only ever
+        be whatever it was when the widget was first shown."""
+        self.alerts_button.setProperty("tone", tone)
+        self.alerts_button.style().unpolish(self.alerts_button)
+        self.alerts_button.style().polish(self.alerts_button)
+
+    def _open_notifications(self) -> None:
+        from app.ui.notification_window import NotificationWindow
+
+        try:
+            self._notification_window = NotificationWindow(self._notification_service, self._user_data["id"])
+            self._notification_window.show()
+            # Opening the screen is also the natural moment to re-sync the
+            # badge, since the window has just recomputed the same list.
+            self.refresh_alert_badge()
+        except Exception as exc:  # noqa: BLE001
+            QMessageBox.warning(self, "Could not open alerts", describe_unexpected_error(exc))
+
     def _check_session(self) -> None:
         try:
             self._auth_service.validate_session(self._session_token)
@@ -478,8 +577,18 @@ class MainWindow(QMainWindow):
             self._session_timer.stop()
             QMessageBox.information(self, "Session expired", "Your session has expired. Please log in again.")
             self.logout_requested.emit(True)
+            return
         except Exception as exc:  # noqa: BLE001 - a periodic timer callback must never crash the app
             describe_unexpected_error(exc)
+            return
+
+        # Piggy-backed on the session tick rather than given a timer of
+        # its own: the session is still valid, the window is settled and
+        # idle, and this is exactly the safe moment for database work
+        # (see the note in __init__ about why it cannot happen earlier).
+        # One timer also means one place where periodic work happens,
+        # instead of two competing schedules.
+        self.refresh_alert_badge()
 
     def _logout(self) -> None:
         self._session_timer.stop()
@@ -802,6 +911,24 @@ class AppController:
             self._fuel_repo,
             self._auth_service,
         )
+        # Wired last because it reads across nearly every module - it is a
+        # consumer of the others, never a dependency of them, which is why
+        # nothing above needs to know it exists.
+        self._notification_service = NotificationService(
+            tank_repo=tank_repo,
+            fuel_reconciliation_repo=reconciliation_repo,
+            shift_reconciliation_repo=shift_reconciliation_repo,
+            expense_repo=expense_repo,
+            employee_repo=employee_repo,
+            attendance_repo=AttendanceRepository(self._db_session),
+            credit_account_repo=credit_account_repo,
+            supplier_invoice_repo=SupplierInvoiceRepository(self._db_session),
+            supplier_payment_repo=SupplierPaymentRepository(self._db_session),
+            audit_repo=audit_repo,
+            credit_service=self._credit_service,
+            auth_service=self._auth_service,
+            db_path=db_connection.DB_PATH,
+        )
         self._user_repo = user_repo
         self.login_window = None
         self.main_window = None
@@ -849,6 +976,7 @@ class AppController:
             self._dashboard_service,
             self._fuel_service,
             self._settings_service,
+            self._notification_service,
             self._role_repo,
             self._fuel_repo,
             self._user_repo,
@@ -864,10 +992,51 @@ class AppController:
             self.main_window = None
         self._show_login()
 
+    def shutdown(self) -> None:
+        """Release everything this controller owns.
+
+        The controller holds a long-lived database session and the two
+        top-level windows, and until now nothing ever gave them back.
+        In the real application that was survivable, because the process
+        exits immediately afterwards and the operating system reclaims
+        it all. It was NOT survivable anywhere a controller is created
+        more than once in a single process - which is exactly what the
+        UI test suite does, one per test, and is a direct contributor to
+        the cumulative native-resource crash that forces CI to run the
+        suite in batches.
+
+        Stopping the session timer first matters: it is what would
+        otherwise fire against half-torn-down state.
+
+        Every step is individually guarded because shutdown must always
+        complete. Something already being closed, or already gone, is
+        the normal case here rather than an error.
+        """
+        for window in (self.main_window, self.login_window):
+            if window is None:
+                continue
+            with contextlib.suppress(Exception):  # shutdown must never raise
+                timer = getattr(window, "_session_timer", None)
+                if timer is not None:
+                    timer.stop()
+                window.close()
+                window.deleteLater()
+        self.main_window = None
+        self.login_window = None
+
+        with contextlib.suppress(Exception):
+            self._db_session.close()
+
 
 def launch_app() -> None:
     app = QApplication([])
     app.setStyleSheet(STYLESHEET)
     controller = AppController()
     controller.start()
-    app.exec()
+    try:
+        app.exec()
+    finally:
+        # Closes the database session rather than relying on process
+        # exit to do it. WAL mode leaves -wal/-shm sidecar files that a
+        # clean close checkpoints back into the database file.
+        controller.shutdown()
