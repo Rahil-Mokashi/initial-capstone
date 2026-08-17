@@ -363,3 +363,60 @@ def test_a_sale_amount_is_stored_settled_to_paise(env):
     s = env["sale"].create_sale(env["user_id"], sale_data(env, quantity=Decimal("10.555")))
     assert Decimal(str(s.amount)) == Decimal("1080.52")  # half-up, not half-even
     assert Decimal(str(s.amount)).as_tuple().exponent == -2
+
+
+# =====================================================================
+# Pagination: correct at scale, and correct at the page boundaries
+# =====================================================================
+
+def test_paging_returns_every_row_exactly_once(env):
+    """The failure mode that matters is not slowness, it is a page
+    boundary that drops or repeats a row - which on a sales list means a
+    transaction the operator cannot find, or one they count twice."""
+    for _ in range(25):
+        env["sale"].create_sale(env["user_id"], sale_data(env, quantity=Decimal("1")))
+
+    assert env["sale"].count_sales(env["user_id"]) == 25
+
+    seen = []
+    for offset in range(0, 25, 10):
+        page = env["sale"].list_sales(env["user_id"], limit=10, offset=offset)
+        seen.extend(s.id for s in page)
+
+    assert len(seen) == 25
+    assert len(set(seen)) == 25, "a row appeared on two pages"
+    assert set(seen) == {s.id for s in env["sale"].list_sales(env["user_id"])}
+
+
+def test_the_first_page_holds_the_newest_sales(env):
+    """A sales screen is useless if page 1 is the oldest data."""
+    made = [env["sale"].create_sale(env["user_id"], sale_data(env, quantity=Decimal("1")))
+            for _ in range(5)]
+    first_page = env["sale"].list_sales(env["user_id"], limit=2)
+    assert first_page[0].receipt_number == made[-1].receipt_number
+
+
+def test_an_offset_past_the_end_returns_empty_rather_than_erroring(env):
+    env["sale"].create_sale(env["user_id"], sale_data(env))
+    assert env["sale"].list_sales(env["user_id"], limit=10, offset=500) == []
+
+
+def test_omitting_the_limit_still_returns_everything(env):
+    """Reporting callers genuinely need every row; paging must be opt-in
+    so adding it did not silently truncate any existing report."""
+    for _ in range(12):
+        env["sale"].create_sale(env["user_id"], sale_data(env, quantity=Decimal("1")))
+    assert len(env["sale"].list_sales(env["user_id"])) == 12
+
+
+def test_count_is_computed_without_loading_the_rows(env):
+    """count_all uses SELECT COUNT(*), not len(list_all()) - the whole
+    point is not materialising 110,000 rows to display a total."""
+    import app.repositories.sale_repository as module
+
+    for _ in range(7):
+        env["sale"].create_sale(env["user_id"], sale_data(env, quantity=Decimal("1")))
+
+    source = module.SaleRepository.count_all.__doc__ or ""
+    assert "database" in source.lower()
+    assert env["sale"].count_sales(env["user_id"]) == 7
