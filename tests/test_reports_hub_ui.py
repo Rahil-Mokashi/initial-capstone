@@ -37,6 +37,7 @@ from app.repositories.user_repository import UserRepository
 from app.repositories.user_session_repository import UserSessionRepository
 from app.schemas.sale import SaleCreate
 from app.schemas.tank import TankCreate
+from app.repositories.attendance_repository import AttendanceRepository
 from app.services.auth_service import AuthService
 from app.services.credit_service import CreditService
 from app.services.report_service import ReportService
@@ -179,6 +180,8 @@ def report_service(db_session, auth_service):
         SaleRepository(db_session), PaymentRepository(db_session), ExpenseRepository(db_session),
         CreditAccountRepository(db_session), CustomerPaymentRepository(db_session),
         CustomerRepository(db_session), ShiftReconciliationRepository(db_session),
+        TankTransactionRepository(db_session), AttendanceRepository(db_session),
+        EmployeeRepository(db_session), ShiftRepository(db_session),
     )
 
 
@@ -223,3 +226,75 @@ def test_table_report_window_shows_sales_data(qapp, report_service, sale_service
     window = TableReportWindow(admin_id, report_service.get_sales_report, "sales_report", supports_date_filter=True)
     assert window.table.rowCount() == 2  # one fuel-type row + a total row
     assert window.windowTitle() == "Sales Report"
+
+
+# --------------------------------------------------------------------
+# problemstatement.md #25-32 reports and the employee/nozzle filters
+# --------------------------------------------------------------------
+
+
+def hub_labels(window) -> set:
+    return {
+        widget.text()
+        for widget in window.findChildren(object)
+        if hasattr(widget, "text") and callable(widget.text)
+    }
+
+
+def test_hub_offers_the_new_cross_module_reports(qapp, report_service, analytics_service, auth_service, admin_id):
+    from app.ui.report_window import ReportsHubWindow
+
+    labels = hub_labels(ReportsHubWindow(report_service, auth_service, admin_id, analytics_service))
+    for expected in ("Daily Summary Report", "Attendant & Nozzle Report", "Fuel Movement Report",
+                     "Cash Book", "Attendance Report"):
+        assert expected in labels
+
+
+def test_cash_book_is_hidden_from_a_role_that_cannot_see_expenses(
+    qapp, report_service, analytics_service, auth_service, attendant_id
+):
+    """Mirrors the service-level guard: the report combines takings with
+    expenditure, so it takes the stricter permission of the two and must
+    not even be offered to a role that lacks it."""
+    from app.ui.report_window import ReportsHubWindow
+
+    labels = hub_labels(ReportsHubWindow(report_service, auth_service, attendant_id, analytics_service))
+    assert "Daily Summary Report" in labels      # SALE_VIEW - allowed
+    assert "Cash Book" not in labels             # EXPENSE_VIEW - not granted
+    assert "Attendance Report" not in labels     # ATTENDANCE_VIEW - not granted
+
+
+def test_a_choice_filter_is_passed_through_to_the_report(qapp, report_service, admin_id, employee_id):
+    """The drop-down has to actually reach the service, not just render."""
+    from app.ui.table_report_window import TableReportWindow
+
+    received = {}
+
+    def fake_report(actor_user_id, **kwargs):
+        received.update(kwargs)
+        return report_service.get_attendant_nozzle_report(actor_user_id, **kwargs)
+
+    window = TableReportWindow(
+        admin_id, fake_report, "attendant_nozzle_report",
+        supports_date_filter=True,
+        choice_filters=[("Employee", "employee_id", [("EMP-0001 - Ravi Kumar", employee_id)])],
+    )
+    # Defaults to "All employees", so nothing is filtered yet.
+    assert "employee_id" not in received
+
+    keyword, combo = window._choice_inputs[0]
+    combo.setCurrentIndex(1)
+    window.refresh()
+    assert received["employee_id"] == employee_id
+
+
+def test_a_filter_with_no_permitted_options_is_not_shown_at_all(qapp, report_service, admin_id):
+    """An empty drop-down would advertise data the user is not allowed to
+    have; the filter is omitted instead."""
+    from app.ui.table_report_window import TableReportWindow
+
+    window = TableReportWindow(
+        admin_id, report_service.get_attendant_nozzle_report, "attendant_nozzle_report",
+        choice_filters=[("Employee", "employee_id", [])],
+    )
+    assert window._choice_inputs == []

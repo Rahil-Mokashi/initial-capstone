@@ -42,6 +42,7 @@ from app.schemas.expense import ExpenseCategoryCreate, ExpenseCreate
 from app.schemas.sale import SaleCreate
 from app.schemas.shift_reconciliation import ShiftReconciliationPerform
 from app.schemas.tank import TankCreate
+from app.repositories.attendance_repository import AttendanceRepository
 from app.services.auth_service import AuthService
 from app.services.credit_service import CreditService
 from app.services.expense_service import ExpenseService
@@ -196,6 +197,8 @@ def report_service(db_session, auth_service):
         SaleRepository(db_session), PaymentRepository(db_session), ExpenseRepository(db_session),
         CreditAccountRepository(db_session), CustomerPaymentRepository(db_session),
         CustomerRepository(db_session), ShiftReconciliationRepository(db_session),
+        TankTransactionRepository(db_session), AttendanceRepository(db_session),
+        EmployeeRepository(db_session), ShiftRepository(db_session),
     )
 
 
@@ -311,3 +314,164 @@ def test_credit_report_denied_for_attendant(report_service, attendant_id):
 def test_reconciliation_report_denied_for_attendant(report_service, attendant_id):
     with pytest.raises(PermissionDeniedError):
         report_service.get_reconciliation_report(attendant_id)
+
+
+# --------------------------------------------------------------------
+# problemstatement.md #25-32: daily, attendant/nozzle, fuel movement,
+# cash book and attendance reports
+# --------------------------------------------------------------------
+
+
+def test_daily_summary_splits_takings_by_payment_method(
+    report_service, sale_service, expense_service, admin_id, open_shift_id, nozzle_id, employee_id
+):
+    """The question a daily summary answers is never just "how much did
+    we take" but "how much of it is cash somebody should be able to
+    count", so the method split has to be on the same row."""
+    make_sale(sale_service, admin_id, open_shift_id, nozzle_id, employee_id, quantity=Decimal("10"))
+    make_sale(sale_service, admin_id, open_shift_id, nozzle_id, employee_id,
+              quantity=Decimal("5"), method=PaymentMethod.UPI)
+
+    category = expense_service.create_category(admin_id, ExpenseCategoryCreate(name="Cleaning"))
+    expense = expense_service.create_expense(
+        admin_id,
+        ExpenseCreate(category_id=category.id, amount=Decimal("200"), payment_method=PaymentMethod.CASH,
+                      employee_id=employee_id),
+    )
+    expense_service.approve_expense(admin_id, expense.id)
+
+    report = report_service.get_daily_summary_report(admin_id)
+    today = next(row for row in report.rows if row[0] == date.today().isoformat())
+
+    assert today[1] == "2"                 # two sales
+    assert today[3] == "1000.00"           # cash   (10 L @ 100)
+    assert today[4] == "500.00"            # UPI    (5 L @ 100)
+    assert today[7] == "1500.00"           # gross
+    assert today[8] == "200.00"            # expenses
+    assert today[9] == "1300.00"           # net
+
+
+def test_daily_summary_only_counts_approved_expenses(
+    report_service, sale_service, expense_service, admin_id, open_shift_id, nozzle_id, employee_id
+):
+    """A pending expense is not confirmed money out - the same rule shift
+    reconciliation already applies."""
+    make_sale(sale_service, admin_id, open_shift_id, nozzle_id, employee_id, quantity=Decimal("10"))
+    category = expense_service.create_category(admin_id, ExpenseCategoryCreate(name="Cleaning"))
+    expense_service.create_expense(
+        admin_id,
+        ExpenseCreate(category_id=category.id, amount=Decimal("999"), payment_method=PaymentMethod.CASH,
+                      employee_id=employee_id),
+    )
+
+    report = report_service.get_daily_summary_report(admin_id)
+    today = next(row for row in report.rows if row[0] == date.today().isoformat())
+    assert today[8] == "0.00"
+    assert today[9] == "1000.00"
+
+
+def test_attendant_nozzle_report_groups_by_who_and_where(
+    report_service, sale_service, admin_id, open_shift_id, nozzle_id, employee_id
+):
+    make_sale(sale_service, admin_id, open_shift_id, nozzle_id, employee_id, quantity=Decimal("10"))
+    make_sale(sale_service, admin_id, open_shift_id, nozzle_id, employee_id, quantity=Decimal("4"))
+
+    report = report_service.get_attendant_nozzle_report(admin_id)
+    row = next(row for row in report.rows if row[0] != "Total")
+
+    assert row[1] == "N1"          # nozzle
+    assert row[3] == "2"           # two sales rolled into one line
+    assert row[4] == "14.00"       # quantity
+    assert row[5] == "1400.00"     # amount
+
+
+def test_attendant_nozzle_report_filters_by_employee(
+    report_service, sale_service, admin_id, open_shift_id, nozzle_id, employee_id
+):
+    """The 'filter by employee/nozzle' item from Phase 16."""
+    make_sale(sale_service, admin_id, open_shift_id, nozzle_id, employee_id, quantity=Decimal("10"))
+
+    matching = report_service.get_attendant_nozzle_report(admin_id, employee_id=employee_id)
+    assert any(row[0] != "Total" for row in matching.rows)
+
+    other = report_service.get_attendant_nozzle_report(admin_id, employee_id="no-such-employee")
+    assert other.rows == []
+
+
+def test_fuel_movement_reports_receipts_and_issues_separately(
+    report_service, sale_service, admin_id, open_shift_id, nozzle_id, employee_id, tank_id
+):
+    """Netting them would hide the figure that actually warrants a
+    conversation - a large adjustment, as opposed to ordinary trading."""
+    make_sale(sale_service, admin_id, open_shift_id, nozzle_id, employee_id, quantity=Decimal("10"))
+
+    report = report_service.get_fuel_movement_report(admin_id)
+    row = next(row for row in report.rows if row[0] == "T1")
+
+    assert row[4] == "-10.000"     # issues carry their sign, as stored
+    assert row[6] == "-10.000"     # net change
+
+
+def test_cash_book_excludes_credit_sales_on_the_day_of_sale(
+    report_service, sale_service, credit_service, admin_id, open_shift_id, nozzle_id, employee_id
+):
+    """A credit sale brings in no money, which is exactly what makes this
+    a cash book rather than a restatement of the sales report."""
+    from app.schemas.credit import CreditAccountCreate
+    from app.schemas.customer import CustomerCreate
+
+    customer = sale_service.create_customer(admin_id, CustomerCreate(name="Sharma Transport"))
+    credit_service.create_credit_account(
+        admin_id, CreditAccountCreate(customer_id=customer.id, credit_limit=Decimal("50000"))
+    )
+
+    make_sale(sale_service, admin_id, open_shift_id, nozzle_id, employee_id, quantity=Decimal("10"))
+    make_sale(sale_service, admin_id, open_shift_id, nozzle_id, employee_id, quantity=Decimal("20"),
+              method=PaymentMethod.CREDIT, customer_id=customer.id)
+
+    report = report_service.get_cash_book_report(admin_id)
+    today = next(row for row in report.rows if row[0] == date.today().isoformat())
+    assert today[1] == "1000.00"   # only the cash sale arrived as money
+
+
+def test_cash_book_is_denied_to_a_role_that_cannot_see_expenses(report_service, attendant_id):
+    """A combined report takes the stricter permission of everything it
+    discloses, so reporting cannot become a side door to expense data."""
+    with pytest.raises(PermissionDeniedError):
+        report_service.get_cash_book_report(attendant_id)
+
+
+def test_attendance_report_counts_each_status_separately(report_service, db_session, admin_id, employee_id):
+    """Collapsing these into one 'days worked' figure would throw away
+    exactly the detail the report exists to provide."""
+    from app.models.attendance import Attendance
+
+    for day_offset, status in ((0, "present"), (1, "absent"), (2, "leave"), (3, "present")):
+        db_session.add(
+            Attendance(
+                employee_id=employee_id,
+                attendance_date=date(2026, 6, 1 + day_offset),
+                status=status,
+                overtime_minutes=30 if status == "present" else 0,
+            )
+        )
+    db_session.commit()
+
+    report = report_service.get_attendance_report(admin_id)
+    row = next(row for row in report.rows if row[0] == "EMP-0001")
+
+    assert row[2] == "4"      # days recorded
+    assert row[3] == "2"      # present
+    assert row[4] == "1"      # absent
+    assert row[7] == "1"      # leave
+    assert row[8] == "1.0"    # overtime hours
+
+
+def test_filter_options_hide_staff_names_from_a_role_without_employee_view(
+    report_service, admin_id, attendant_id, employee_id
+):
+    """An Attendant holds SALE_VIEW, which lets them open the attendant
+    report - but that must not turn a filter drop-down into a staff
+    directory."""
+    assert report_service.get_report_filter_options(admin_id)["employees"]
+    assert report_service.get_report_filter_options(attendant_id)["employees"] == []

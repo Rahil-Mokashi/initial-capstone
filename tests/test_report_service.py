@@ -33,6 +33,8 @@ from app.repositories.user_repository import UserRepository
 from app.repositories.user_session_repository import UserSessionRepository
 from app.schemas.nozzle import DispenserCreate, NozzleCreate
 from app.schemas.tank import ReconciliationPerform, TankCreate
+from app.repositories.attendance_repository import AttendanceRepository
+from app.repositories.shift_repository import ShiftRepository
 from app.services.auth_service import AuthService
 from app.services.nozzle_service import NozzleService
 from app.services.report_service import ReportService
@@ -134,6 +136,10 @@ def report_service(db_session):
         CustomerPaymentRepository(db_session),
         CustomerRepository(db_session),
         ShiftReconciliationRepository(db_session),
+        TankTransactionRepository(db_session),
+        AttendanceRepository(db_session),
+        EmployeeRepository(db_session),
+        ShiftRepository(db_session),
     )
 
 
