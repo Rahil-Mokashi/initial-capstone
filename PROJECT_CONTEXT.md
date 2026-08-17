@@ -303,6 +303,15 @@ The user asked for a full evaluation of every aspect of the app, then for every 
 
 - [x] **Real bug found by the new linter**: `CreditService.is_overdue` computed the due date from `oldest_sale.sale_at.date()`. Now that datetimes are aware UTC, `.date()` yields the *UTC* calendar date, not the local business date — so on IST a credit sale at 02:00 local is dated to the previous day and the customer is marked overdue a day early. `app/core/dates.py` gained `local_date_of()` (the inverse of `local_day_bounds_utc`).
 
+
+### Block 4: responsiveness (started)
+
+- [x] **Slow work runs off the GUI thread** (audit finding #15, problemstatement.md #44 — "Do heavy operations outside the main UI thread. Never freeze the application while generating a large report."). The app previously had no threading at all. `app/ui/background.py`'s `run_in_background()` wraps `QThreadPool`/`QRunnable`; results return via a Qt signal, which Qt delivers as a *queued* connection across threads, so callbacks land on the GUI thread where touching widgets is legal — thread-safety by construction, no locks in calling code. Wired into the Backups screen first (backup now, integrity check) because those take plain data in and return a file path, touching no ORM objects.
+  - **Note for extending this to report queries**: a SQLAlchemy `Session` is not thread-safe. A database worker needs its own Session and must return plain data, never live ORM instances — those would lazy-load from the wrong thread's session the moment the GUI touched them.
+  - Writing the tests found a real bug in the helper: closing a window while a task runs left the callback re-enabling a button whose C++ object had already been destroyed with its parent (`Internal C++ object already deleted`). Qt owns widget lifetime through the parent tree independently of Python reference counting, so a Python proxy outliving its C++ object is normal rather than exceptional. Guarded with `shiboken6.isValid()`.
+
+- Recorded for a later pass: `mypy app/services/` reports ~79 errors, nearly all `Column[str]` vs `str`. These are artifacts of the SQLAlchemy 1.x-style `Column()` declarations rather than 2.0's `Mapped[str]` annotations, not real defects. Fixing them properly means migrating all 31 models to `Mapped[]`, which is its own focused change. Ruff's ~500 remaining findings are likewise cosmetic modernisation (`Optional[X]` -> `X | None`, `List` -> `list`) deliberately left out so they do not bury real changes in churn.
+
 ### Still outstanding from the audit
 Blocks 1-3 are now essentially complete (10 findings fixed). The remaining findings, in the audit's recommended order: pinned dependencies and a lock file, and finishing the full-suite test crash (Block 3 remainder); background threading and pagination (Block 4); the discrepancy/exception workflow, notifications, a settings screen, tank calibration and report filters (Block 5); password hash format, audit-log triggers and hash chain, off-device backups (Block 6); the shared list-window refactor and lazy service registry (Block 7); onedir build, code signing, dashboard tiles, keyboard shortcuts (Block 8).
 
