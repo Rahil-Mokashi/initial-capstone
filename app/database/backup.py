@@ -11,17 +11,75 @@ transactionally consistent snapshot regardless of WAL state.
 """
 
 import os
+import shutil
 import re
 import sqlite3
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import List, Tuple
+from typing import Optional, List, Tuple
 
 
 def _backups_dir(db_path: str) -> str:
     backups_dir = os.path.join(os.path.dirname(os.path.abspath(db_path)), "backups")
     os.makedirs(backups_dir, exist_ok=True)
     return backups_dir
+
+
+def copy_backup_to(backup_path: str, destination_dir: str) -> str:
+    """Copy an existing backup to another location - a USB stick, a network
+    share, anywhere that is not this disk.
+
+    This is the single largest data-loss exposure in the product. Every
+    backup the app takes lands next to the database, which protects against
+    software failure and not at all against the thing that actually
+    destroys a forecourt PC: a dead drive, a theft, a fire, or ransomware.
+    For an offline product with no cloud replica, an off-device copy is the
+    only real protection there is.
+
+    A plain file copy is correct HERE, unlike when creating a backup: the
+    source is an already-consistent, already-integrity-checked snapshot
+    that nothing is writing to, so none of the reasons create_backup uses
+    SQLite's online backup API apply.
+    """
+    if not os.path.exists(backup_path):
+        raise IOError(f"Backup file no longer exists: {backup_path}")
+    os.makedirs(destination_dir, exist_ok=True)
+    destination = os.path.join(destination_dir, os.path.basename(backup_path))
+    shutil.copy2(backup_path, destination)
+
+    # Verify the copy actually arrived intact rather than trusting that the
+    # write succeeded - a failing USB stick can accept a copy and return a
+    # corrupt file, which is exactly the moment this matters.
+    is_ok, messages = run_integrity_check(destination)
+    if not is_ok:
+        raise IOError(f"The copied backup failed its integrity check: {'; '.join(messages)}")
+    return destination
+
+
+def latest_offsite_copy_age_days(backup_path_or_dir: str) -> Optional[float]:
+    """How many days since the newest file in an off-device backup folder,
+    or None if the folder is unreachable or empty.
+
+    Used to nag rather than to schedule. A pump has no IT staff and the
+    machine is not guaranteed to be running at any particular time, so a
+    visible warning that the last off-device copy is stale beats a
+    scheduler that silently never fires.
+    """
+    try:
+        if not os.path.isdir(backup_path_or_dir):
+            return None
+        newest = max(
+            (os.path.getmtime(os.path.join(backup_path_or_dir, f))
+             for f in os.listdir(backup_path_or_dir) if f.endswith(".db")),
+            default=None,
+        )
+    except OSError:
+        # An unplugged USB drive or an unreachable share is not an error
+        # worth crashing on; it is the very condition being reported.
+        return None
+    if newest is None:
+        return None
+    return (datetime.now().timestamp() - newest) / 86400.0
 
 
 def _backup_filename(reason: str) -> str:
