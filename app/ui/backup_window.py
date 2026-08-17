@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.core.exceptions import AppError
+from app.ui.background import run_in_background
 from app.ui.qt_utils import describe_unexpected_error
 
 BACKUP_HEADERS = ["Created", "File", "Size"]
@@ -103,28 +104,54 @@ class BackupWindow(QMainWindow):
         self.table.resizeColumnsToContents()
         self.table.horizontalHeader().setStretchLastSection(True)
 
+    def _action_buttons(self):
+        """Disabled while a background task runs, so a slow backup cannot
+        be started four times by an impatient click."""
+        return [b for b in (
+            getattr(self, "backup_now_button", None),
+            getattr(self, "restore_button", None),
+            getattr(self, "check_integrity_button", None),
+        ) if b is not None]
+
+    def _report(self, exc: Exception, title: str) -> None:
+        """Errors arrive here on the GUI thread via a queued signal, so
+        showing a dialog is safe."""
+        message = str(exc) if isinstance(exc, AppError) else describe_unexpected_error(exc)
+        QMessageBox.warning(self, title, message)
+
     def _backup_now(self) -> None:
-        try:
-            self._backup_service.create_backup(self._actor_user_id)
-        except AppError as exc:
-            QMessageBox.warning(self, "Could not create backup", str(exc))
-            return
-        except Exception as exc:  # noqa: BLE001
-            QMessageBox.warning(self, "Could not create backup", describe_unexpected_error(exc))
-            return
+        """Runs off the GUI thread (problemstatement.md #44).
+
+        create_backup copies the whole database page by page through
+        SQLite's online backup API and then verifies the result with a
+        full PRAGMA integrity_check. On a database with a few years of
+        trading that is seconds, and every one of them would be a frozen,
+        "Not Responding" window if it ran in this slot.
+        """
+        run_in_background(
+            self,
+            lambda: self._backup_service.create_backup(self._actor_user_id),
+            on_done=self._on_backup_created,
+            on_error=lambda exc: self._report(exc, "Could not create backup"),
+            busy_widgets=self._action_buttons(),
+        )
+
+    def _on_backup_created(self, _result) -> None:
         self.refresh()
         QMessageBox.information(self, "Backup created", "A new backup has been saved.")
 
     def _check_integrity(self) -> None:
-        try:
-            is_ok, messages = self._backup_service.check_integrity(self._actor_user_id)
-        except AppError as exc:
-            QMessageBox.warning(self, "Could not check integrity", str(exc))
-            return
-        except Exception as exc:  # noqa: BLE001
-            QMessageBox.warning(self, "Could not check integrity", describe_unexpected_error(exc))
-            return
+        """PRAGMA integrity_check walks every B-tree page and index entry
+        in the file, so it is the slowest read the app ever performs."""
+        run_in_background(
+            self,
+            lambda: self._backup_service.check_integrity(self._actor_user_id),
+            on_done=lambda result: self._on_integrity_checked(*result),
+            on_error=lambda exc: self._report(exc, "Could not check integrity"),
+            busy_widgets=self._action_buttons(),
+        )
 
+    def _on_integrity_checked(self, is_ok, messages) -> None:
         if is_ok:
             QMessageBox.information(self, "Integrity check", "The database passed its integrity check.")
         else:

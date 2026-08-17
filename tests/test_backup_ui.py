@@ -84,7 +84,7 @@ def test_window_shows_existing_backups(qapp, backup_service, admin_id):
     assert window.table.rowCount() == 1
 
 
-def test_backup_now_button_adds_a_row(qapp, backup_service, admin_id, monkeypatch):
+def test_backup_now_button_adds_a_row(qapp, qtbot, backup_service, admin_id, monkeypatch):
     # QMessageBox.information() is modal and blocks on a real display;
     # stub it out so this test can't hang waiting for a click that will
     # never come (same pattern as test_login_ui.py's session-expiry test).
@@ -95,18 +95,24 @@ def test_backup_now_button_adds_a_row(qapp, backup_service, admin_id, monkeypatc
     window = BackupWindow(backup_service, admin_id)
     assert window.table.rowCount() == 0
 
+    # Backing up now runs on a worker thread (problemstatement.md #44:
+    # never freeze the window), so the row appears when the task reports
+    # back on the GUI thread rather than by the time this call returns.
     window._backup_now()
-    assert window.table.rowCount() == 1
+    qtbot.waitUntil(lambda: window.table.rowCount() == 1, timeout=10000)
 
 
-def test_check_integrity_button_shows_a_passing_result(qapp, backup_service, admin_id, monkeypatch):
+def test_check_integrity_button_shows_a_passing_result(qapp, qtbot, backup_service, admin_id, monkeypatch):
     shown = {}
     monkeypatch.setattr("app.ui.backup_window.QMessageBox.information", lambda self, title, text: shown.update(title=title, text=text))
 
     from app.ui.backup_window import BackupWindow
 
     window = BackupWindow(backup_service, admin_id)
+    # Also asynchronous now - PRAGMA integrity_check walks every page in
+    # the file and is the slowest read the app performs.
     window._check_integrity()
+    qtbot.waitUntil(lambda: "title" in shown, timeout=10000)
 
     assert shown["title"] == "Integrity check"
     assert "passed" in shown["text"]
