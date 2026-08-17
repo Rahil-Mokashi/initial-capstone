@@ -9,6 +9,8 @@ recoverable.
 
 from typing import List, Tuple
 
+import os
+
 from app.core.constants import Permission
 from app.core.permissions import require_permission
 from app.database import backup as backup_module
@@ -45,6 +47,34 @@ class BackupService:
             description="ok" if is_ok else "; ".join(messages),
         )
         return is_ok, messages
+
+    @require_permission(Permission.BACKUP_MANAGE.value)
+    def copy_backup_offsite(self, actor_user_id: str, backup_path: str, destination_dir: str) -> str:
+        """Copy a backup somewhere that is not this disk.
+
+        Audit-logged both ways: an off-device copy is a copy of every
+        financial record in the business leaving the machine, which is a
+        security-relevant event in its own right, not just a safety one.
+        """
+        if not destination_dir or not destination_dir.strip():
+            raise ValueError("A destination folder is required")
+        try:
+            destination = backup_module.copy_backup_to(backup_path, destination_dir.strip())
+        except (OSError, IOError) as exc:
+            self._audit_repo.record(
+                event_type="backup_offsite_copy_failed",
+                actor_id=actor_user_id,
+                entity_type="Backup",
+                description=f"{backup_path} -> {destination_dir}: {exc}",
+            )
+            raise
+        self._audit_repo.record(
+            event_type="backup_copied_offsite",
+            actor_id=actor_user_id,
+            entity_type="Backup",
+            description=f"{os.path.basename(backup_path)} -> {destination_dir}",
+        )
+        return destination
 
     @require_permission(Permission.BACKUP_MANAGE.value)
     def restore_backup(self, actor_user_id: str, backup_path: str, reason: str) -> None:
