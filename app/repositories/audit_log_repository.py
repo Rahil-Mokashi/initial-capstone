@@ -3,7 +3,42 @@ from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
+import hashlib
+import uuid
+from datetime import datetime, timezone
+
 from app.models.audit_log import AuditLog
+
+
+def compute_entry_hash(entry: AuditLog) -> str:
+    """SHA-256 over an entry's own fields plus its predecessor's hash.
+
+    Every field that carries meaning is included, so changing any of them
+    changes the hash. The previous hash is included too, which is what
+    makes the entries a CHAIN rather than independent checksums: altering
+    an old row invalidates every row after it, so tampering cannot be
+    hidden by recomputing one hash.
+
+    A plain fast SHA-256 is right here. Unlike a password there is no
+    low-entropy secret to brute-force - the goal is detecting change, not
+    resisting guessing.
+    """
+    parts = [
+        entry.previous_hash or "",
+        entry.id or "",
+        entry.event_type or "",
+        entry.actor_id or "",
+        entry.entity_type or "",
+        entry.entity_id or "",
+        entry.description or "",
+        entry.old_value or "",
+        entry.new_value or "",
+        entry.device_info or "",
+        entry.created_at.isoformat() if entry.created_at else "",
+    ]
+    #  (unit separator) cannot appear in these values, so no field can
+    # be crafted to look like a boundary and shift the others.
+    return hashlib.sha256("".join(parts).encode("utf-8")).hexdigest()
 from app.repositories.base import safe_commit
 
 
@@ -38,10 +73,70 @@ class AuditLogRepository:
             new_value=new_value,
             device_info=device_info,
         )
+        # Chain this entry to the one before it before writing, so the
+        # trail is tamper-evident (see AuditLog's docstring).
+        # id and created_at both come from Python-side column defaults that
+        # SQLAlchemy applies at INSERT time, not at construction - so at
+        # this point they are still None. They must be materialised BEFORE
+        # hashing, or the row is written with an id and timestamp the hash
+        # never covered, and verification fails on untampered data.
+        entry.id = entry.id or str(uuid.uuid4())
+        entry.created_at = entry.created_at or datetime.now(timezone.utc)
+        previous = self.get_latest_entry()
+        entry.previous_hash = previous.entry_hash if previous else None
+        entry.entry_hash = compute_entry_hash(entry)
+
         self._session.add(entry)
         safe_commit(self._session)
         self._session.refresh(entry)
         return entry
+
+    def get_latest_entry(self) -> Optional[AuditLog]:
+        """The most recent entry, which the next one chains onto.
+
+        Ordered by created_at then id: created_at alone is not a reliable
+        tie-break because several audit rows written inside one service
+        operation can share a timestamp, and a chain built on an ambiguous
+        order would fail verification for no reason.
+        """
+        return (
+            self._session.query(AuditLog)
+            .order_by(AuditLog.created_at.desc(), AuditLog.id.desc())
+            .first()
+        )
+
+    def verify_chain(self) -> tuple[bool, list[str]]:
+        """Recompute every hash and confirm the chain is unbroken.
+
+        Returns (is_intact, problems). A break tells you the audit trail
+        was modified outside the application, and roughly where.
+        """
+        entries = (
+            self._session.query(AuditLog)
+            .order_by(AuditLog.created_at.asc(), AuditLog.id.asc())
+            .all()
+        )
+        problems: list[str] = []
+        expected_previous = None
+
+        for entry in entries:
+            if entry.entry_hash is None:
+                # Rows written before the chain existed are not a tamper
+                # signal; they simply predate it.
+                expected_previous = None
+                continue
+            if entry.previous_hash != expected_previous:
+                problems.append(
+                    f"Entry {entry.id} ({entry.event_type}) does not follow its predecessor"
+                )
+            recomputed = compute_entry_hash(entry)
+            if recomputed != entry.entry_hash:
+                problems.append(
+                    f"Entry {entry.id} ({entry.event_type}) has been modified since it was written"
+                )
+            expected_previous = entry.entry_hash
+
+        return (not problems), problems
 
     def list_for_actor(self, actor_id: str):
         return (
