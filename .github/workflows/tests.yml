@@ -15,6 +15,13 @@ jobs:
     # state (e.g. tests/test_login_ui.py's Enter-key navigation test),
     # which only behaves correctly with a genuine window session.
     runs-on: windows-latest
+    # The suite finishes in about 5-6 minutes. This cap exists because of
+    # a known intermittent hang (see PROJECT_CONTEXT.md) where the process
+    # sits with flat CPU indefinitely rather than crashing. Without a cap
+    # such a run would occupy a runner until GitHub's own six-hour limit,
+    # for no extra information - pytest's faulthandler_timeout has already
+    # printed the stack by then.
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
@@ -22,35 +29,32 @@ jobs:
         with:
           python-version: "3.13"
 
+      # Installs from the LOCK file, not requirements.txt. requirements.txt
+      # carries loose ranges, so two runs of the same commit could install
+      # different versions and a green CI run would not mean the code is
+      # sound - only that it was sound against whatever resolved that day.
+      # The lock pins the exact versions the suite is known to pass on.
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements.lock
 
-      # Split into a few sequential invocations rather than one
-      # `pytest tests/` run covering all ~450 tests: PySide6 accumulates
-      # native Qt resources (widgets, timers, window handles) across the
-      # ~15+ test modules that construct a QApplication, and running the
-      # entire suite as one long-lived process can hit a native resource
-      # crash near the end - reproduced locally, and confirmed to
-      # disappear once the same tests run in a few smaller batches
-      # instead. Glob-based (not a hardcoded file list) so a newly added
-      # test file automatically lands in one of these batches without
-      # needing this file updated.
-      # shell: bash (not the windows-latest default of PowerShell) so
-      # the [a-i] glob is expanded by the shell exactly as verified
-      # locally - PowerShell doesn't expand wildcards in arguments to
-      # external commands the way a POSIX shell does.
-      - name: Run tests (a-i)
-        shell: bash
-        run: python -m pytest tests/test_[a-i]*.py -q
-
-      - name: Run tests (j-p)
-        shell: bash
-        run: python -m pytest tests/test_[j-p]*.py -q
-
-      - name: Run tests (q-r)
-        shell: bash
-        run: python -m pytest tests/test_[q-r]*.py -q
-
-      - name: Run tests (s-z)
-        shell: bash
-        run: python -m pytest tests/test_[s-z]*.py -q
+      # One invocation for the whole suite.
+      #
+      # This used to be four alphabetical batches, because running every
+      # test in one process reliably aborted the interpreter with a
+      # Windows access violation partway through. That was never a
+      # scheduling problem: 17 of the 20 UI test modules built their own
+      # QApplication and constructed real windows without registering
+      # them for cleanup, and Qt owns widget lifetime through the parent
+      # tree independently of Python reference counting - so dropping the
+      # last Python reference to a window did not free it. Windows,
+      # timers and per-card graphics effects accumulated for the whole
+      # session until an allocation tipped the process over, which is why
+      # the crash looked random and appeared to be caused by whichever
+      # change came last.
+      #
+      # tests/conftest.py now destroys leftover top-level widgets after
+      # every test, so the batching is no longer needed. Keep it that way:
+      # if this ever has to be split again, the leak has come back and the
+      # fixture is the place to look, not this file.
+      - name: Run tests
+        run: python -m pytest tests/ -q

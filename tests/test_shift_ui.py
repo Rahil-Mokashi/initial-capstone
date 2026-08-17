@@ -218,10 +218,30 @@ def test_detail_dialog_assign_nozzle_and_close_shift(qapp, shift_service, employ
     detail = ShiftDetailDialog(shift_service, service, auth_service, admin_id, shift.id)
     assert detail.table.rowCount() == 1
 
-    # Closing should be blocked while the assignment is still active
+    # Closing should be blocked while the assignment is still active.
+    #
+    # BOTH dialogs have to be stubbed, not just the confirmation. This
+    # step deliberately drives the REJECTED path, and _close_shift reports
+    # that rejection with QMessageBox.warning - a modal dialog that blocks
+    # on exec() waiting for a click no test will ever make. Patching only
+    # .question left .warning live, and this test was the source of the
+    # suite's intermittent hang: it survived only when a queued event
+    # happened to dismiss the dialog, so it passed most runs and stalled
+    # forever on the rest.
     monkeypatch.setattr("app.ui.shift_window.QMessageBox.question", lambda *a, **k: QMessageBox.Yes)
+    warnings: list[str] = []
+    monkeypatch.setattr(
+        "app.ui.shift_window.QMessageBox.warning",
+        lambda parent, title, text, *a, **k: warnings.append(text) or QMessageBox.Ok,
+    )
+
     detail._close_shift()
     assert shift_service.get_shift(admin_id, shift.id).status == "open"
+    # Assert the refusal was actually surfaced, rather than only that the
+    # shift stayed open - otherwise a future change that silently swallowed
+    # the error would still pass this test while leaving the operator with
+    # no idea why the shift did not close.
+    assert warnings and "assignment" in warnings[0].lower()
 
     # Complete the assignment (simulate choosing "Yes" then entering a closing meter)
     monkeypatch.setattr(
