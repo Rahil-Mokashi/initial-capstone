@@ -24,6 +24,7 @@ from app.core.constants import (
 )
 from app.core.exceptions import ConflictError, NotFoundError
 from app.core.permissions import require_permission
+from app.repositories.base import session_for, unit_of_work
 from app.models.shift_reconciliation import ShiftReconciliation
 from app.schemas.shift_reconciliation import ShiftReconciliationPerform
 
@@ -65,9 +66,15 @@ class ReconciliationService:
         self._expense_repo = expense_repo
         self._audit_repo = audit_repo
         self._auth_service = auth_service
+        self._session = session_for(reconciliation_repo)
 
     @require_permission(Permission.RECONCILIATION_MANAGE.value)
     def perform_shift_reconciliation(self, actor_user_id: str, data: ShiftReconciliationPerform) -> ShiftReconciliation:
+        """Computes expected against declared for cash, UPI and card and writes the result as one record. Wrapped in a transaction so a failure can never leave a shift half-reconciled."""
+        with unit_of_work(self._session):
+            return self._perform_shift_reconciliation_impl(actor_user_id, data)
+
+    def _perform_shift_reconciliation_impl(self, actor_user_id: str, data: ShiftReconciliationPerform):
         shift = self._shift_repo.get_by_id(data.shift_id)
         if not shift:
             raise NotFoundError(f"Shift not found: {data.shift_id}")

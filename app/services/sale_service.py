@@ -27,6 +27,7 @@ from app.core.constants import PaymentMethod, PaymentStatus, Permission, SaleSta
 from app.core.exceptions import ConflictError, NotFoundError
 from app.core.permissions import require_permission
 from app.database.base import StatusEnum
+from app.repositories.base import session_for, unit_of_work
 from app.models.customer import Customer
 from app.models.payment import Payment
 from app.models.sale import Sale
@@ -49,9 +50,25 @@ class SaleService:
         self._auth_service = auth_service
         self._payment_repo = payment_repo
         self._credit_service = credit_service
+        self._session = session_for(sale_repo)
 
     @require_permission(Permission.SALE_MANAGE.value)
     def create_sale(self, actor_user_id: str, data: SaleCreate) -> Sale:
+        """Record a sale, its tank issue and its payment as ONE transaction.
+
+        This method writes to four tables (sales, tank_transactions,
+        tanks, payments) and every one of those writes has to happen or
+        none of them can. Without the unit of work each repository
+        committed independently, so a failure partway through left fuel
+        issued from a tank with no sale accounting for it, or a completed
+        sale with no payment record — which then silently corrupted shift
+        reconciliation. See CLAUDE.md: "Never allow partial financial
+        writes."
+        """
+        with unit_of_work(self._session):
+            return self._create_sale_impl(actor_user_id, data)
+
+    def _create_sale_impl(self, actor_user_id: str, data: SaleCreate) -> Sale:
         shift = self._shift_repo.get_by_id(data.shift_id)
         if not shift:
             raise NotFoundError(f"Shift not found: {data.shift_id}")
@@ -143,6 +160,17 @@ class SaleService:
 
     @require_permission(Permission.SALE_MANAGE.value)
     def cancel_sale(self, actor_user_id: str, sale_id: str, reason: str) -> Sale:
+        """Cancel a sale, reverse its fuel and reverse its payment atomically.
+
+        Same reasoning as create_sale: a cancellation that reversed the
+        fuel but failed before reversing the payment would leave the
+        books claiming money was collected for fuel that went back in the
+        tank.
+        """
+        with unit_of_work(self._session):
+            return self._cancel_sale_impl(actor_user_id, sale_id, reason)
+
+    def _cancel_sale_impl(self, actor_user_id: str, sale_id: str, reason: str) -> Sale:
         if not reason or not reason.strip():
             raise ValueError("A reason is required to cancel a sale")
 

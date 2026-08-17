@@ -148,3 +148,9 @@ reports/*.csv
 *.swp
 *.swo
 *~
+# SQLite WAL sidecar files (created automatically whenever WAL mode is on)
+*.db-shm
+*.db-wal
+
+# Runtime-generated report exports directory
+app/reports/
