@@ -32,6 +32,7 @@ from app.repositories.customer_repository import CustomerRepository
 from app.repositories.employee_repository import EmployeeRepository
 from app.repositories.expense_repository import ExpenseCategoryRepository, ExpenseRepository
 from app.repositories.fuel_delivery_repository import FuelDeliveryRepository
+from app.repositories.fuel_price_history_repository import FuelPriceHistoryRepository
 from app.repositories.fuel_repository import FuelRepository
 from app.repositories.nozzle_assignment_repository import NozzleAssignmentRepository
 from app.repositories.nozzle_repository import NozzleRepository
@@ -56,6 +57,7 @@ from app.services.credit_service import CreditService
 from app.services.dashboard_service import DashboardService
 from app.services.employee_service import EmployeeService
 from app.services.expense_service import ExpenseService
+from app.services.fuel_service import FuelService
 from app.services.nozzle_service import NozzleService
 from app.services.procurement_service import ProcurementService
 from app.services.reconciliation_service import ReconciliationService
@@ -205,6 +207,7 @@ class MainWindow(QMainWindow):
         reconciliation_service: ReconciliationService,
         analytics_service: AnalyticsService,
         dashboard_service: DashboardService,
+        fuel_service: FuelService,
         role_repo,
         fuel_repo,
         user_repo,
@@ -229,6 +232,7 @@ class MainWindow(QMainWindow):
         self._reconciliation_service = reconciliation_service
         self._analytics_service = analytics_service
         self._dashboard_service = dashboard_service
+        self._fuel_service = fuel_service
         self._role_repo = role_repo
         self._fuel_repo = fuel_repo
         self._user_repo = user_repo
@@ -307,6 +311,7 @@ class MainWindow(QMainWindow):
                     ("⚖️", "Reconciliation", "Reconcile cash, UPI, and card per shift", self._open_reconciliation, Permission.RECONCILIATION_VIEW),
                     ("🔧", "Nozzles", "Manage dispensers and nozzles", self._open_nozzles, Permission.NOZZLE_VIEW),
                     ("🛢️", "Tanks", "Stock, transactions, reconciliation", self._open_tanks, Permission.INVENTORY_VIEW),
+                    ("🏷️", "Fuel Prices", "Set selling rates, view price history", self._open_fuel_prices, Permission.FUEL_PRICE_VIEW),
                     ("🚛", "Procurement", "Suppliers, orders, and deliveries", self._open_procurement, Permission.PROCUREMENT_VIEW),
                 ],
             ),
@@ -509,6 +514,14 @@ class MainWindow(QMainWindow):
         )
         self._nozzle_window.show()
 
+    def _open_fuel_prices(self) -> None:
+        from app.ui.fuel_price_window import FuelPriceWindow
+
+        self._fuel_price_window = FuelPriceWindow(
+            self._user_data["id"], self._fuel_service, self._auth_service
+        )
+        self._fuel_price_window.show()
+
     def _open_tanks(self) -> None:
         from app.ui.tank_window import TankListWindow
 
@@ -650,6 +663,12 @@ class AppController:
             self._auth_service,
         )
         self._fuel_repo = FuelRepository(self._db_session)
+        self._fuel_service = FuelService(
+            self._fuel_repo,
+            FuelPriceHistoryRepository(self._db_session),
+            audit_repo,
+            self._auth_service,
+        )
         self._tank_repo = TankRepository(self._db_session)
         tank_repo = self._tank_repo
         self._nozzle_service = NozzleService(
@@ -810,6 +829,7 @@ class AppController:
             self._reconciliation_service,
             self._analytics_service,
             self._dashboard_service,
+            self._fuel_service,
             self._role_repo,
             self._fuel_repo,
             self._user_repo,

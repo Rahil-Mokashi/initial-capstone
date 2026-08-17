@@ -21,6 +21,12 @@ class Permission(str, Enum):
     ROLE_MANAGE = "role.manage"
     INVENTORY_VIEW = "inventory.view"
     INVENTORY_MANAGE = "inventory.manage"
+    # Changing a fuel's selling price is deliberately a stricter
+    # permission than routine inventory management: it silently
+    # changes the revenue of every future sale, so it gets the same
+    # separate-grant treatment as SHIFT_REOPEN and EXPENSE_APPROVE.
+    FUEL_PRICE_VIEW = "fuel_price.view"
+    FUEL_PRICE_MANAGE = "fuel_price.manage"
     AUDIT_VIEW = "audit.view"
     EMPLOYEE_VIEW = "employee.view"
     EMPLOYEE_MANAGE = "employee.manage"
@@ -238,6 +244,8 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
     UserRole.MANAGER: (
         Permission.INVENTORY_VIEW,
         Permission.INVENTORY_MANAGE,
+        Permission.FUEL_PRICE_VIEW,
+        Permission.FUEL_PRICE_MANAGE,
         Permission.AUDIT_VIEW,
         Permission.EMPLOYEE_VIEW,
         Permission.EMPLOYEE_MANAGE,
@@ -264,6 +272,7 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
     ),
     UserRole.ACCOUNTANT: (
         Permission.INVENTORY_VIEW,
+        Permission.FUEL_PRICE_VIEW,
         Permission.AUDIT_VIEW,
         Permission.EMPLOYEE_VIEW,
         Permission.ATTENDANCE_VIEW,
@@ -279,6 +288,7 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
     ),
     UserRole.SHIFT_SUPERVISOR: (
         Permission.INVENTORY_VIEW,
+        Permission.FUEL_PRICE_VIEW,
         Permission.EMPLOYEE_VIEW,
         Permission.ATTENDANCE_VIEW,
         Permission.ATTENDANCE_MANAGE,
@@ -292,6 +302,7 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
     ),
     UserRole.ATTENDANT: (
         Permission.MY_ASSIGNMENT_VIEW,
+        Permission.FUEL_PRICE_VIEW,
         Permission.SALE_VIEW,
         Permission.SALE_MANAGE,
     ),

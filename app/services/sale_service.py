@@ -35,6 +35,7 @@ from app.models.sale import Sale
 from app.schemas.customer import CustomerCreate
 from app.schemas.sale import SaleCreate
 from app.schemas.tank import TankTransactionCreate
+from app.services.fuel_service import FuelService
 
 
 class SaleService:
@@ -93,6 +94,11 @@ class SaleService:
         fuel = self._fuel_repo.get_by_id(nozzle.fuel_id)
         if not fuel:
             raise NotFoundError(f"Fuel type not found: {nozzle.fuel_id}")
+        # Refuse to book a zero-value sale. Fuels are seeded at 0.00 and
+        # stay there until a manager sets a real price, and a sale at
+        # 0.00 looks completed and correct while silently understating
+        # revenue everywhere downstream. See FuelService.
+        FuelService.ensure_fuel_is_priced(fuel)
 
         tank_id = self._resolve_tank_id(nozzle)
 
