@@ -46,12 +46,14 @@ Name: "desktopicon"; Description: "Create a &desktop shortcut"; GroupDescription
 
 [Files]
 Source: "..\dist\PetrolPumpERP.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\docs\first-shift-runbook.md"; DestDir: "{app}\docs"; Flags: ignoreversion
 Source: "..\docs\user-guide.md"; DestDir: "{app}\docs"; Flags: ignoreversion
 Source: "..\docs\administrator-guide.md"; DestDir: "{app}\docs"; Flags: ignoreversion
 Source: "..\docs\recovery-guide.md"; DestDir: "{app}\docs"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
+Name: "{group}\First Shift Runbook"; Filename: "{app}\docs\first-shift-runbook.md"
 Name: "{group}\User Guide"; Filename: "{app}\docs\user-guide.md"
 Name: "{group}\Administrator Guide"; Filename: "{app}\docs\administrator-guide.md"
 Name: "{group}\Backup & Recovery Guide"; Filename: "{app}\docs\recovery-guide.md"
