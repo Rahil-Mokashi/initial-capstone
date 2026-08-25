@@ -10,11 +10,11 @@ from PySide6.QtWidgets import (
     QDialog,
     QDoubleSpinBox,
     QFormLayout,
+    QGridLayout,
     QHBoxLayout,
     QInputDialog,
     QLabel,
     QLineEdit,
-    QMainWindow,
     QMessageBox,
     QPushButton,
     QTabWidget,
@@ -27,7 +27,12 @@ from PySide6.QtWidgets import (
 from app.core.constants import Permission, TankStatus, TankTransactionType
 from app.core.exceptions import AppError
 from app.schemas.tank import ReconciliationPerform, TankCreate, TankReadingCreate, TankTransactionCreate
-from app.ui.qt_utils import chain_enter_to_next_field, describe_unexpected_error, qdate_to_date
+from app.ui.qt_utils import apply_hard_shadow, chain_enter_to_next_field, describe_unexpected_error, qdate_to_date
+from app.ui.widgets import GridBackgroundWidget, TankGaugeCard, VarianceBarCard
+
+GAUGE_COLUMNS = 3
+RECENT_TRANSACTIONS_PANEL_WIDTH = 300
+RECENT_TRANSACTIONS_SHOWN = 8
 
 TANK_HEADERS = ["Code", "Fuel", "Capacity", "Current Stock", "Status"]
 TRANSACTION_HEADERS = ["Date", "Type", "Quantity", "Reference", "Recorded By"]
@@ -35,7 +40,7 @@ READING_HEADERS = ["Date", "Physical Stock", "Dip", "Employee"]
 RECONCILIATION_HEADERS = ["Date", "Expected", "Physical", "Variance", "Classification"]
 
 
-class TankListWindow(QMainWindow):
+class TankListWindow(QWidget):
     def __init__(self, tank_service, employee_service, fuel_repo, auth_service, actor_user_id: str):
         super().__init__()
         self._tank_service = tank_service
@@ -46,7 +51,7 @@ class TankListWindow(QMainWindow):
         self._can_manage = auth_service.check_permission(actor_user_id, Permission.INVENTORY_MANAGE.value)
 
         self.setWindowTitle("Tanks & Inventory")
-        self.setMinimumSize(820, 560)
+        self.setMinimumSize(900, 720)
 
         title = QLabel("Tanks & Inventory")
         title.setObjectName("title")
@@ -61,7 +66,11 @@ class TankListWindow(QMainWindow):
         top_row.addStretch()
         top_row.addWidget(self.add_button)
 
+        self._gauge_grid = QGridLayout()
+        self._gauge_grid.setSpacing(16)
+
         self.table = QTableWidget(0, len(TANK_HEADERS))
+        self.table.setAlternatingRowColors(True)
         self.table.setHorizontalHeaderLabels(TANK_HEADERS)
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
@@ -69,21 +78,110 @@ class TankListWindow(QMainWindow):
         self.table.horizontalHeader().setStretchLastSection(True)
         self.table.doubleClicked.connect(self._open_selected_tank)
 
+        main_column = QVBoxLayout()
+        main_column.setSpacing(16)
+        main_column.addLayout(top_row)
+        main_column.addLayout(self._gauge_grid)
+        main_column.addWidget(self.table)
+
+        self._recent_panel, self._recent_layout = self._build_recent_transactions_panel()
+
+        columns_row = QHBoxLayout()
+        columns_row.setSpacing(20)
+        columns_row.addLayout(main_column, stretch=1)
+        columns_row.addWidget(self._recent_panel)
+
         layout = QVBoxLayout()
         layout.setContentsMargins(24, 24, 24, 24)
-        layout.setSpacing(16)
-        layout.addLayout(top_row)
-        layout.addWidget(self.table)
+        layout.addLayout(columns_row)
 
-        container = QWidget()
+        container = GridBackgroundWidget()
         container.setObjectName("background")
         container.setLayout(layout)
-        self.setCentralWidget(container)
+        _page_layout = QVBoxLayout(self)
+        _page_layout.setContentsMargins(0, 0, 0, 0)
+        _page_layout.addWidget(container)
 
         self.refresh()
 
+    def _build_recent_transactions_panel(self):
+        """A fixed-width side panel of the newest receipts/issues/
+        adjustments across every tank - matches the reference design's own
+        "Recent Transactions" panel sitting beside the tank grid, using
+        TankService.list_recent_transactions rather than duplicating any
+        of TankDetailDialog's per-tank transaction fetching."""
+        title = QLabel("Recent Transactions")
+        title.setObjectName("sectionTitle")
+
+        rows_layout = QVBoxLayout()
+        rows_layout.setSpacing(12)
+
+        inner = QVBoxLayout()
+        inner.setContentsMargins(20, 18, 20, 18)
+        inner.setSpacing(14)
+        inner.addWidget(title)
+        inner.addLayout(rows_layout)
+        inner.addStretch()
+
+        panel = QWidget()
+        panel.setObjectName("card")
+        panel.setAttribute(Qt.WA_StyledBackground, True)
+        panel.setFixedWidth(RECENT_TRANSACTIONS_PANEL_WIDTH)
+        panel.setLayout(inner)
+        apply_hard_shadow(panel)
+        return panel, rows_layout
+
+    def _refresh_recent_transactions(self) -> None:
+        while self._recent_layout.count():
+            item = self._recent_layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.hide()
+                widget.deleteLater()
+
+        transactions = self._tank_service.list_recent_transactions(
+            self._actor_user_id, limit=RECENT_TRANSACTIONS_SHOWN
+        )
+        if not transactions:
+            empty = QLabel("No transactions recorded yet.")
+            empty.setObjectName("subtitle")
+            empty.setWordWrap(True)
+            self._recent_layout.addWidget(empty)
+            return
+
+        for txn in transactions:
+            title_label = QLabel(f"{txn.transaction_type.title()} — {txn.tank.code if txn.tank else ''}")
+            title_label.setObjectName("dashCardTitle")
+
+            detail_label = QLabel(f"{txn.quantity:+g} L    {txn.transaction_at.strftime('%d %b, %H:%M')}")
+            detail_label.setObjectName("subtitle")
+
+            row = QVBoxLayout()
+            row.setSpacing(2)
+            row.addWidget(title_label)
+            row.addWidget(detail_label)
+            self._recent_layout.addLayout(row)
+
     def refresh(self) -> None:
         tanks = self._tank_service.list_tanks(self._actor_user_id)
+        self._refresh_recent_transactions()
+
+        while self._gauge_grid.count():
+            item = self._gauge_grid.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()
+        for index, tank in enumerate(tanks):
+            row, column = divmod(index, GAUGE_COLUMNS)
+            card = TankGaugeCard(
+                tank.code,
+                tank.fuel.fuel_type if tank.fuel else "",
+                tank.status,
+                tank.current_stock,
+                tank.capacity,
+            )
+            self._gauge_grid.addWidget(card, row, column)
+
         self.table.setRowCount(len(tanks))
         for row_index, tank in enumerate(tanks):
             self.table.setItem(row_index, 0, QTableWidgetItem(tank.code))
@@ -260,10 +358,25 @@ class TankDetailDialog(QDialog):
         self.readings_table = self._make_table(READING_HEADERS)
         self.reconciliations_table = self._make_table(RECONCILIATION_HEADERS)
 
+        # The variance card sits above the reconciliation history table
+        # rather than replacing it - same "add alongside, don't replace"
+        # rule the tank gauge grid followed above the tank list table.
+        # Rebuilt on every refresh since which reconciliation is "latest"
+        # can change; empty (no card) until at least one exists.
+        self._variance_card_slot = QVBoxLayout()
+        self._variance_card_slot.setContentsMargins(0, 0, 0, 12)
+
+        reconciliation_tab = QWidget()
+        reconciliation_tab_layout = QVBoxLayout()
+        reconciliation_tab_layout.setContentsMargins(0, 8, 0, 0)
+        reconciliation_tab_layout.addLayout(self._variance_card_slot)
+        reconciliation_tab_layout.addWidget(self.reconciliations_table)
+        reconciliation_tab.setLayout(reconciliation_tab_layout)
+
         tabs = QTabWidget()
         tabs.addTab(self.transactions_table, "Transactions")
         tabs.addTab(self.readings_table, "Readings")
-        tabs.addTab(self.reconciliations_table, "Reconciliation")
+        tabs.addTab(reconciliation_tab, "Reconciliation")
 
         close_button = QPushButton("Close")
         close_button.setObjectName("secondaryButton")
@@ -283,6 +396,7 @@ class TankDetailDialog(QDialog):
 
     def _make_table(self, headers) -> QTableWidget:
         table = QTableWidget(0, len(headers))
+        table.setAlternatingRowColors(True)
         table.setHorizontalHeaderLabels(headers)
         table.setEditTriggers(QTableWidget.NoEditTriggers)
         table.verticalHeader().setVisible(False)
@@ -324,6 +438,27 @@ class TankDetailDialog(QDialog):
             self.reconciliations_table.setItem(row_index, 3, QTableWidgetItem(f"{rec.variance:+g}"))
             self.reconciliations_table.setItem(row_index, 4, QTableWidgetItem(rec.classification.replace("_", " ").title()))
         self.reconciliations_table.resizeColumnsToContents()
+
+        while self._variance_card_slot.count():
+            item = self._variance_card_slot.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.hide()
+                widget.deleteLater()
+        if reconciliations:
+            # list_reconciliations orders newest-first (FuelReconciliationRepository.list_for_tank),
+            # so the first entry is always the latest one.
+            latest = reconciliations[0]
+            self._variance_card_slot.addWidget(
+                VarianceBarCard(
+                    latest.reconciliation_date.isoformat(),
+                    latest.expected_closing_stock,
+                    latest.physical_stock,
+                    latest.variance,
+                    latest.variance_percent,
+                    latest.classification,
+                )
+            )
 
     def _open_transaction_dialog(self, transaction_type: TankTransactionType) -> None:
         dialog = TankTransactionDialog(self._tank_service, self._actor_user_id, self._tank_id, transaction_type, self)

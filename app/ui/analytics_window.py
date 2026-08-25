@@ -17,7 +17,6 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
     QLabel,
-    QMainWindow,
     QMessageBox,
     QPushButton,
     QTabWidget,
@@ -32,6 +31,7 @@ from app.services.report_export import export_table_csv, export_table_excel, exp
 from app.services.report_service import TableReport
 from app.ui.print_utils import show_print_preview
 from app.ui.qt_utils import describe_unexpected_error
+from app.ui.widgets import GridBackgroundWidget
 
 PERIOD_LABELS = [
     ("Daily", PeriodType.DAY),
@@ -90,7 +90,7 @@ def _forecasts_to_table_report(forecasts) -> TableReport:
     return TableReport(title="Sales Forecast", headers=headers, rows=rows)
 
 
-class AnalyticsWindow(QMainWindow):
+class AnalyticsWindow(QWidget):
     def __init__(self, analytics_service, actor_user_id: str):
         super().__init__()
         self.setWindowTitle("Business Insights")
@@ -112,10 +112,12 @@ class AnalyticsWindow(QMainWindow):
         layout.addWidget(title)
         layout.addWidget(tabs)
 
-        container = QWidget()
+        container = GridBackgroundWidget()
         container.setObjectName("background")
         container.setLayout(layout)
-        self.setCentralWidget(container)
+        _page_layout = QVBoxLayout(self)
+        _page_layout.setContentsMargins(0, 0, 0, 0)
+        _page_layout.addWidget(container)
 
 
 class PerformanceTab(QWidget):
@@ -174,6 +176,7 @@ class PerformanceTab(QWidget):
         self.note_label.setWordWrap(True)
 
         self.table = QTableWidget(0, 0)
+        self.table.setAlternatingRowColors(True)
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table.verticalHeader().setVisible(False)
         self.table.horizontalHeader().setStretchLastSection(True)
@@ -271,6 +274,7 @@ class ForecastTab(QWidget):
         top_row.addWidget(self.export_pdf_button)
 
         self.table = QTableWidget(0, 0)
+        self.table.setAlternatingRowColors(True)
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table.verticalHeader().setVisible(False)
         self.table.horizontalHeader().setStretchLastSection(True)

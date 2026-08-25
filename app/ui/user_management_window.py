@@ -14,7 +14,6 @@ from PySide6.QtWidgets import (
     QInputDialog,
     QLabel,
     QLineEdit,
-    QMainWindow,
     QMessageBox,
     QPushButton,
     QTableWidget,
@@ -26,6 +25,7 @@ from PySide6.QtWidgets import (
 from app.core.exceptions import AppError
 from app.schemas.user import UserCreate
 from app.ui.qt_utils import chain_enter_to_next_field, describe_unexpected_error
+from app.ui.widgets import GridBackgroundWidget
 
 USER_HEADERS = ["Username", "Email", "Role", "Status"]
 
@@ -38,7 +38,7 @@ def _status_text(user) -> str:
     return "Active"
 
 
-class UserListWindow(QMainWindow):
+class UserListWindow(QWidget):
     def __init__(self, user_service, role_repo, actor_user_id: str):
         super().__init__()
         self._user_service = user_service
@@ -61,6 +61,7 @@ class UserListWindow(QMainWindow):
         top_row.addWidget(self.add_button)
 
         self.table = QTableWidget(0, len(USER_HEADERS))
+        self.table.setAlternatingRowColors(True)
         self.table.setHorizontalHeaderLabels(USER_HEADERS)
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
@@ -74,10 +75,12 @@ class UserListWindow(QMainWindow):
         layout.addLayout(top_row)
         layout.addWidget(self.table)
 
-        container = QWidget()
+        container = GridBackgroundWidget()
         container.setObjectName("background")
         container.setLayout(layout)
-        self.setCentralWidget(container)
+        _page_layout = QVBoxLayout(self)
+        _page_layout.setContentsMargins(0, 0, 0, 0)
+        _page_layout.addWidget(container)
 
         self.refresh()
 

@@ -4,7 +4,6 @@ import platform
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
-    QGraphicsDropShadowEffect,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -13,10 +12,10 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from PySide6.QtGui import QColor
 
 from app.services.auth_service import AuthService
-from app.ui.qt_utils import chain_enter_to_next_field, describe_unexpected_error
+from app.ui.qt_utils import apply_hard_shadow, chain_enter_to_next_field, describe_unexpected_error
+from app.ui.widgets import GridBackgroundWidget
 
 HERO_BULLETS = [
     "Works fully offline",
@@ -94,17 +93,13 @@ class LoginWindow(QMainWindow):
         self.setWindowTitle("Petrol Pump ERP - Login")
         self.setMinimumSize(820, 500)
 
-        form_side = QWidget()
+        form_side = GridBackgroundWidget()
         form_side.setObjectName("background")
 
         card = QWidget()
         card.setObjectName("card")
         card.setFixedWidth(340)
-        card_shadow = QGraphicsDropShadowEffect(card)
-        card_shadow.setBlurRadius(28)
-        card_shadow.setOffset(0, 8)
-        card_shadow.setColor(QColor(79, 70, 229, 35))
-        card.setGraphicsEffect(card_shadow)
+        apply_hard_shadow(card)
 
         heading = QLabel("Welcome back")
         heading.setObjectName("title")

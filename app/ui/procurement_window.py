@@ -19,7 +19,6 @@ from PySide6.QtWidgets import (
     QInputDialog,
     QLabel,
     QLineEdit,
-    QMainWindow,
     QMessageBox,
     QPushButton,
     QTabWidget,
@@ -36,17 +35,28 @@ from app.schemas.fuel_delivery import FuelDeliveryArrive, FuelDeliveryDipReading
 from app.schemas.purchase_order import PurchaseOrderCreate, PurchaseOrderItemCreate
 from app.schemas.supplier import SupplierCreate
 from app.schemas.supplier_invoice import SupplierInvoiceCreate, SupplierPaymentCreate
-from app.ui.qt_utils import chain_enter_to_next_field, describe_unexpected_error, qdate_to_date
+from app.ui.qt_utils import apply_hard_shadow, chain_enter_to_next_field, describe_unexpected_error, qdate_to_date
+from app.ui.widgets import GridBackgroundWidget
 
 SUPPLIER_HEADERS = ["Name", "Contact", "Phone", "Status"]
 PO_HEADERS = ["PO Number", "Supplier", "Order Date", "Status"]
+
+# The same "still owed to us" statuses DashboardService's own pending-PO
+# count uses - a PO this tab's card row should surface as a delivery
+# still outstanding, not one already fully received or abandoned.
+PENDING_DELIVERY_STATUSES = {
+    PurchaseOrderStatus.DRAFT.value,
+    PurchaseOrderStatus.PLACED.value,
+    PurchaseOrderStatus.PARTIALLY_DELIVERED.value,
+}
+PENDING_DELIVERY_CARDS_SHOWN = 3
 INVOICE_HEADERS = ["Invoice #", "Supplier", "Date", "Amount", "Status"]
 ITEM_HEADERS = ["Fuel", "Quantity", "Rate/L"]
 DELIVERY_HEADERS = ["Tanker", "Arrived", "Status", "Received"]
 PAYMENT_HEADERS = ["Date", "Amount", "Method", "Reference"]
 
 
-class ProcurementWindow(QMainWindow):
+class ProcurementWindow(QWidget):
     def __init__(self, procurement_service, fuel_repo, tank_service, employee_service, auth_service, actor_user_id: str):
         super().__init__()
         self._procurement_service = procurement_service
@@ -76,10 +86,12 @@ class ProcurementWindow(QMainWindow):
         layout.addWidget(title)
         layout.addWidget(tabs)
 
-        container = QWidget()
+        container = GridBackgroundWidget()
         container.setObjectName("background")
         container.setLayout(layout)
-        self.setCentralWidget(container)
+        _page_layout = QVBoxLayout(self)
+        _page_layout.setContentsMargins(0, 0, 0, 0)
+        _page_layout.addWidget(container)
 
 
 # ----------------------------------------------------------------------
@@ -104,6 +116,7 @@ class SupplierTab(QWidget):
         top_row.addWidget(self.add_button)
 
         self.table = QTableWidget(0, len(SUPPLIER_HEADERS))
+        self.table.setAlternatingRowColors(True)
         self.table.setHorizontalHeaderLabels(SUPPLIER_HEADERS)
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
@@ -258,6 +271,7 @@ class PurchaseOrderDetailDialog(QDialog):
         self.summary_label.setWordWrap(True)
 
         self.items_table = QTableWidget(0, len(ITEM_HEADERS))
+        self.items_table.setAlternatingRowColors(True)
         self.items_table.setHorizontalHeaderLabels(ITEM_HEADERS)
         self.items_table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.items_table.verticalHeader().setVisible(False)
@@ -275,6 +289,7 @@ class PurchaseOrderDetailDialog(QDialog):
         action_row.addStretch()
 
         self.deliveries_table = QTableWidget(0, len(DELIVERY_HEADERS))
+        self.deliveries_table.setAlternatingRowColors(True)
         self.deliveries_table.setHorizontalHeaderLabels(DELIVERY_HEADERS)
         self.deliveries_table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.deliveries_table.setSelectionBehavior(QTableWidget.SelectRows)
@@ -579,6 +594,51 @@ class FuelDeliveryDetailDialog(QDialog):
 # ----------------------------------------------------------------------
 
 
+class _PendingDeliveryCard(QWidget):
+    """One outstanding purchase order, as a card - matching the reference
+    design's "Pending Deliveries" row on the Deliveries screen. Takes the
+    PurchaseOrder ORM object directly (read-only display, no business
+    logic) rather than duplicating ProcurementService's own status
+    classification here."""
+
+    def __init__(self, po, parent=None):
+        super().__init__(parent)
+        self.setObjectName("card")
+        self.setAttribute(Qt.WA_StyledBackground, True)
+
+        status_label = QLabel(po.status.replace("_", " ").title())
+        status_label.setObjectName("statusTagInactive")
+
+        header_row = QHBoxLayout()
+        header_row.addWidget(QLabel(po.po_number))
+        header_row.addStretch()
+        header_row.addWidget(status_label)
+
+        supplier_label = QLabel(po.supplier.name if po.supplier else "")
+        supplier_label.setObjectName("dashCardTitle")
+
+        fuel_types = ", ".join(sorted({item.fuel.fuel_type for item in po.items if item.fuel})) or "—"
+        total_quantity = sum((item.quantity_ordered for item in po.items), Decimal("0"))
+        detail_label = QLabel(f"{fuel_types}  •  {total_quantity:g} L")
+        detail_label.setObjectName("subtitle")
+
+        eta_text = po.expected_delivery_date.strftime("%d %b %Y") if po.expected_delivery_date else "No ETA set"
+        eta_label = QLabel(eta_text)
+        eta_label.setObjectName("subtitle")
+
+        layout = QVBoxLayout()
+        layout.setContentsMargins(16, 14, 16, 14)
+        layout.setSpacing(6)
+        layout.addLayout(header_row)
+        layout.addWidget(supplier_label)
+        layout.addWidget(detail_label)
+        layout.addWidget(eta_label)
+        self.setLayout(layout)
+        self.setMinimumWidth(220)
+
+        apply_hard_shadow(self)
+
+
 class PurchaseOrderTab(QWidget):
     def __init__(self, procurement_service, fuel_repo, tank_service, employee_service, actor_user_id: str, can_manage: bool):
         super().__init__()
@@ -598,7 +658,13 @@ class PurchaseOrderTab(QWidget):
         top_row.addStretch()
         top_row.addWidget(self.add_button)
 
+        pending_label = QLabel("Pending Deliveries")
+        pending_label.setObjectName("sectionTitle")
+        self._pending_cards_layout = QHBoxLayout()
+        self._pending_cards_layout.setSpacing(16)
+
         self.table = QTableWidget(0, len(PO_HEADERS))
+        self.table.setAlternatingRowColors(True)
         self.table.setHorizontalHeaderLabels(PO_HEADERS)
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
@@ -609,13 +675,35 @@ class PurchaseOrderTab(QWidget):
         layout = QVBoxLayout()
         layout.setSpacing(12)
         layout.addLayout(top_row)
+        layout.addWidget(pending_label)
+        layout.addLayout(self._pending_cards_layout)
         layout.addWidget(self.table)
         self.setLayout(layout)
 
         self.refresh()
 
+    def _refresh_pending_cards(self, orders) -> None:
+        while self._pending_cards_layout.count():
+            item = self._pending_cards_layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.hide()
+                widget.deleteLater()
+
+        pending = [po for po in orders if po.status in PENDING_DELIVERY_STATUSES][:PENDING_DELIVERY_CARDS_SHOWN]
+        if not pending:
+            empty = QLabel("Nothing pending - every order is delivered or cleared.")
+            empty.setObjectName("subtitle")
+            self._pending_cards_layout.addWidget(empty)
+            return
+
+        for po in pending:
+            self._pending_cards_layout.addWidget(_PendingDeliveryCard(po))
+        self._pending_cards_layout.addStretch()
+
     def refresh(self) -> None:
         orders = self._procurement_service.list_purchase_orders(self._actor_user_id)
+        self._refresh_pending_cards(orders)
         self.table.setRowCount(len(orders))
         for row_index, po in enumerate(orders):
             self.table.setItem(row_index, 0, QTableWidgetItem(po.po_number))
@@ -694,6 +782,7 @@ class PurchaseOrderFormDialog(QDialog):
         item_row.addWidget(self.add_item_button)
 
         self.items_table = QTableWidget(0, len(ITEM_HEADERS))
+        self.items_table.setAlternatingRowColors(True)
         self.items_table.setHorizontalHeaderLabels(ITEM_HEADERS)
         self.items_table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.items_table.verticalHeader().setVisible(False)
@@ -797,6 +886,7 @@ class InvoiceTab(QWidget):
         top_row.addWidget(self.add_button)
 
         self.table = QTableWidget(0, len(INVOICE_HEADERS))
+        self.table.setAlternatingRowColors(True)
         self.table.setHorizontalHeaderLabels(INVOICE_HEADERS)
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
@@ -959,6 +1049,7 @@ class InvoiceDetailDialog(QDialog):
         self.record_payment_button.setVisible(can_manage)
 
         self.payments_table = QTableWidget(0, len(PAYMENT_HEADERS))
+        self.payments_table.setAlternatingRowColors(True)
         self.payments_table.setHorizontalHeaderLabels(PAYMENT_HEADERS)
         self.payments_table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.payments_table.verticalHeader().setVisible(False)

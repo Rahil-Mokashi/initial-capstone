@@ -1,11 +1,10 @@
 import contextlib
+import platform
 from datetime import datetime
 
 from PySide6.QtCore import Qt, QTimer, Signal
-from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QApplication,
-    QGraphicsDropShadowEffect,
     QGridLayout,
     QHBoxLayout,
     QLabel,
@@ -15,6 +14,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QScrollArea,
     QSizePolicy,
+    QStackedWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -73,8 +73,10 @@ from app.services.backup_service import BackupService
 from app.services.tank_service import TankService
 from app.services.user_service import UserService
 from app.ui.background import is_widget_alive
-from app.ui.qt_utils import describe_unexpected_error
-from app.ui.styles import STYLESHEET
+from app.ui.qt_utils import apply_hard_shadow, describe_unexpected_error
+from app.ui.sidebar import SIDEBAR_WIDTH, Sidebar
+from app.ui.theme import apply_theme, is_dark_mode, set_dark_mode
+from app.ui.widgets import GridBackgroundWidget
 
 SESSION_CHECK_INTERVAL_MS = 60_000
 
@@ -130,11 +132,7 @@ class DashboardCard(QWidget):
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.setMinimumHeight(108)
 
-        shadow = QGraphicsDropShadowEffect(self)
-        shadow.setBlurRadius(20)
-        shadow.setOffset(0, 4)
-        shadow.setColor(QColor(27, 30, 43, 22))
-        self.setGraphicsEffect(shadow)
+        apply_hard_shadow(self)
 
     def mousePressEvent(self, event) -> None:  # noqa: N802 - Qt override
         if event.button() == Qt.LeftButton:
@@ -154,10 +152,10 @@ class StatCard(QWidget):
 
         value_label = QLabel(value)
         value_label.setObjectName("statValue")
-        value_label.setProperty("tone", tone)
 
         caption_label = QLabel(label)
         caption_label.setObjectName("statLabel")
+        caption_label.setProperty("tone", tone)
 
         layout = QVBoxLayout()
         layout.setContentsMargins(18, 16, 18, 16)
@@ -167,6 +165,8 @@ class StatCard(QWidget):
         self.setLayout(layout)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.setMinimumHeight(80)
+
+        apply_hard_shadow(self)
 
 
 def compute_dashboard_columns(window_width: int) -> int:
@@ -248,25 +248,19 @@ class MainWindow(QMainWindow):
         self._tank_repo = tank_repo
         self._user_data = user_data
         self._session_token = user_data["session_token"]
-        self._employee_window = None
-        self._attendance_window = None
-        self._shift_window = None
-        self._nozzle_window = None
-        self._tank_window = None
-        self._my_shift_window = None
-        self._report_window = None
-        self._user_window = None
-        self._backup_window = None
-        self._audit_window = None
-        self._procurement_window = None
-        self._sales_window = None
-        self._credit_window = None
-        self._expense_window = None
-        self._reconciliation_window = None
-        self._notification_window = None
+        # Every module used to be its own top-level popup window, each
+        # tracked by one of these attributes so it wouldn't be garbage
+        # collected out from under itself. Now every module is an
+        # embedded page inside self._content_stack instead (see
+        # _open_module_page/_push_subpage below) - _page_stack holds the
+        # equivalent references for whatever is currently on screen.
+        self._page_stack: list[tuple[QWidget, str, str | None]] = []
 
         self.setWindowTitle("Petrol Pump ERP")
-        self.setMinimumSize(960, 620)
+        # 960 was sized for the old top-bar-only chrome; the sidebar now
+        # permanently occupies SIDEBAR_WIDTH of that, so the minimum was
+        # widened to keep the same amount of breathing room for content.
+        self.setMinimumSize(960 + SIDEBAR_WIDTH, 620)
 
         top_bar = QWidget()
         top_bar.setObjectName("topBar")
@@ -276,7 +270,7 @@ class MainWindow(QMainWindow):
         user_label = QLabel(user_data["username"])
         user_label.setObjectName("userLabel")
 
-        role_tag = QLabel(user_data.get("role") or "No role")
+        role_tag = QLabel((user_data.get("role") or "No role").upper())
         role_tag.setObjectName("roleTag")
 
         account_button = QPushButton("Account")
@@ -284,6 +278,11 @@ class MainWindow(QMainWindow):
         account_button.setCursor(Qt.PointingHandCursor)
         account_menu = QMenu(account_button)
         account_menu.addAction("Change Password", self._open_change_password)
+        account_menu.addSeparator()
+        self._dark_mode_action = account_menu.addAction("Dark Mode")
+        self._dark_mode_action.setCheckable(True)
+        self._dark_mode_action.setChecked(is_dark_mode())
+        self._dark_mode_action.toggled.connect(self._toggle_dark_mode)
         account_menu.addSeparator()
         account_menu.addAction("Logout", self._logout)
         account_button.setMenu(account_menu)
@@ -327,6 +326,7 @@ class MainWindow(QMainWindow):
                     ("🕒", "Attendance", "Mark and review attendance", self._open_attendance, Permission.ATTENDANCE_VIEW),
                     ("⛽", "Shifts", "Open/close shifts, assign nozzles", self._open_shifts, Permission.SHIFT_VIEW),
                     ("🪪", "My Shift", "Your current nozzle and fuel assignment", self._open_my_shift, Permission.MY_ASSIGNMENT_VIEW),
+                    ("⚡", "Terminal", "Fast fuel-sale entry at the pump", self._open_terminal, Permission.SALE_MANAGE),
                     ("💳", "Sales", "Record sales and manage customers", self._open_sales, Permission.SALE_VIEW),
                     ("🧾", "Credit", "Credit accounts, payments, and balances", self._open_credit, Permission.CREDIT_VIEW),
                     ("🧮", "Expenses", "Record and approve pump expenses", self._open_expenses, Permission.EXPENSE_VIEW),
@@ -362,10 +362,31 @@ class MainWindow(QMainWindow):
         body_layout.setContentsMargins(DASHBOARD_PAGE_MARGIN, DASHBOARD_PAGE_MARGIN, DASHBOARD_PAGE_MARGIN, DASHBOARD_PAGE_MARGIN)
         body_layout.setSpacing(28)
         body_layout.addLayout(header_layout)
+
+        # Built once here (not inside _populate_dashboard, which clears and
+        # rebuilds its own layout on every column-count change during a
+        # resize) so resizing the window never re-fetches or re-renders
+        # the chart's data - same reasoning _stat_tiles is computed once
+        # in __init__ rather than inside _populate_dashboard.
+        if self._is_card_visible(Permission.SALE_VIEW):
+            from app.ui.widgets import SalesTrendChart
+
+            chart_card = QWidget()
+            chart_card.setObjectName("card")
+            chart_card.setAttribute(Qt.WA_StyledBackground, True)
+            chart_layout = QVBoxLayout()
+            chart_layout.setContentsMargins(20, 16, 20, 16)
+            chart_layout.addWidget(
+                SalesTrendChart(lambda days: self._dashboard_service.get_recent_daily_sales(user_data["id"], days))
+            )
+            chart_card.setLayout(chart_layout)
+            apply_hard_shadow(chart_card)
+            body_layout.addWidget(chart_card)
+
         body_layout.addLayout(self._dynamic_dashboard_layout)
         body_layout.addStretch()
 
-        body = QWidget()
+        body = GridBackgroundWidget()
         body.setObjectName("background")
         body.setLayout(body_layout)
 
@@ -379,15 +400,77 @@ class MainWindow(QMainWindow):
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QScrollArea.NoFrame)
         scroll.setWidget(body)
+        self._dashboard_page = scroll
 
-        layout = QVBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-        layout.addWidget(top_bar)
-        layout.addWidget(scroll, stretch=1)
+        # A breadcrumb strip sits between the top bar and whatever is
+        # currently on screen. It is hidden on the dashboard itself and
+        # appears the moment a module page is open, giving the operator
+        # a "Back" affordance and a sense of where they are - the same
+        # job a browser's back button + tab title used to do implicitly
+        # when every module was its own separate window.
+        self._back_button = QPushButton("← Back")
+        self._back_button.setObjectName("secondaryButton")
+        self._back_button.setCursor(Qt.PointingHandCursor)
+        self._back_button.clicked.connect(self._go_back)
+
+        # Every segment but the last is a clickable link straight to that
+        # level (e.g. clicking "Reports" from "Reports > Sales Report"
+        # jumps back to the hub in one step); rebuilt on every navigation
+        # since its length depends on how deep the operator has drilled.
+        self._breadcrumb_segments_layout = QHBoxLayout()
+        self._breadcrumb_segments_layout.setSpacing(6)
+
+        breadcrumb_layout = QHBoxLayout()
+        breadcrumb_layout.setContentsMargins(DASHBOARD_PAGE_MARGIN, 10, DASHBOARD_PAGE_MARGIN, 10)
+        breadcrumb_layout.setSpacing(12)
+        breadcrumb_layout.addWidget(self._back_button)
+        breadcrumb_layout.addLayout(self._breadcrumb_segments_layout)
+        breadcrumb_layout.addStretch()
+
+        self._breadcrumb_bar = QWidget()
+        self._breadcrumb_bar.setObjectName("breadcrumbBar")
+        self._breadcrumb_bar.setLayout(breadcrumb_layout)
+        self._breadcrumb_bar.setVisible(False)
+
+        # Every module page (created lazily, on first visit) lives here
+        # instead of as its own top-level QMainWindow - index 0 is
+        # permanently the dashboard; _open_module_page/_push_subpage add
+        # and remove the rest as the operator navigates.
+        self._content_stack = QStackedWidget()
+        self._content_stack.addWidget(scroll)
+
+        content_layout = QVBoxLayout()
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(0)
+        content_layout.addWidget(top_bar)
+        content_layout.addWidget(self._breadcrumb_bar)
+        content_layout.addWidget(self._content_stack, stretch=1)
+
+        content_column = QWidget()
+        content_column.setLayout(content_layout)
+
+        self._sidebar = Sidebar(
+            app_name="Petrol Pump ERP",
+            device_label=platform.node() or "unknown-device",
+            groups=self._card_groups,
+            is_card_visible=self._is_card_visible,
+            home_action=("🏠", "Dashboard", self._go_home),
+            footer_actions=[
+                ("🆘", "Support", self._open_support),
+                ("🔑", "Change Password", self._open_change_password),
+                ("🚪", "Logout", self._logout),
+            ],
+        )
+        self._sidebar.set_active("Dashboard")
+
+        outer_layout = QHBoxLayout()
+        outer_layout.setContentsMargins(0, 0, 0, 0)
+        outer_layout.setSpacing(0)
+        outer_layout.addWidget(self._sidebar)
+        outer_layout.addWidget(content_column, stretch=1)
 
         container = QWidget()
-        container.setLayout(layout)
+        container.setLayout(outer_layout)
         self.setCentralWidget(container)
 
         self._populate_dashboard(self._compute_card_columns())
@@ -424,7 +507,7 @@ class MainWindow(QMainWindow):
             self._populate_dashboard(columns)
 
     def _compute_card_columns(self) -> int:
-        return compute_dashboard_columns(self.width())
+        return compute_dashboard_columns(self.width() - SIDEBAR_WIDTH)
 
     @staticmethod
     def _clear_layout(layout) -> None:
@@ -432,11 +515,25 @@ class MainWindow(QMainWindow):
             item = layout.takeAt(0)
             widget = item.widget()
             if widget is not None:
+                # Removing a widget from a layout does not hide it - it
+                # stays painted at its last position/size until Qt gets
+                # around to processing the deferred deleteLater(), which
+                # can be a visible frame or two later. Hiding it here,
+                # synchronously, is what actually stops it from being
+                # drawn - deleteLater() alone only reclaims the memory.
+                widget.hide()
                 widget.deleteLater()
                 continue
             child_layout = item.layout()
             if child_layout is not None:
                 MainWindow._clear_layout(child_layout)
+
+    def _is_card_visible(self, permission) -> bool:
+        """Shared by both the sidebar's nav items and the dashboard's own
+        quick-access card grid, so the two can never show a different set
+        of modules to the same logged-in user."""
+        permissions = permission if isinstance(permission, tuple) else (permission,)
+        return any(self._auth_service.check_permission(self._user_data["id"], p.value) for p in permissions)
 
     def _populate_dashboard(self, columns: int) -> None:
         self._dashboard_columns = columns
@@ -453,16 +550,12 @@ class MainWindow(QMainWindow):
                 stats_grid.addWidget(StatCard(value, label, tone), row, column)
             self._dynamic_dashboard_layout.addLayout(stats_grid)
 
-        def _card_visible(permission) -> bool:
-            permissions = permission if isinstance(permission, tuple) else (permission,)
-            return any(self._auth_service.check_permission(self._user_data["id"], p.value) for p in permissions)
-
         total_visible_cards = 0
         for group_label, cards in self._card_groups:
             visible_cards = [
                 (icon, title, subtitle, handler)
                 for icon, title, subtitle, handler, permission in cards
-                if _card_visible(permission)
+                if self._is_card_visible(permission)
             ]
             if not visible_cards:
                 continue
@@ -562,8 +655,13 @@ class MainWindow(QMainWindow):
         from app.ui.notification_window import NotificationWindow
 
         try:
-            self._notification_window = NotificationWindow(self._notification_service, self._user_data["id"])
-            self._notification_window.show()
+            # Alerts has no sidebar row of its own (it's reached from the
+            # always-visible top-bar button, not a module card), so it
+            # gets a plain key with nothing to highlight.
+            self._open_module_page(
+                "Alerts", lambda: NotificationWindow(self._notification_service, self._user_data["id"])
+            )
+            self._sidebar.set_active(None)
             # Opening the screen is also the natural moment to re-sync the
             # badge, since the window has just recomputed the same list.
             self.refresh_alert_badge()
@@ -598,146 +696,309 @@ class MainWindow(QMainWindow):
             describe_unexpected_error(exc)
         self.logout_requested.emit(False)
 
+    # ------------------------------------------------------------------
+    # Embedded-page navigation
+    #
+    # Every module used to be its own top-level QMainWindow, created
+    # fresh and handed to .show() on every click - a real OS window the
+    # operator then had to find, arrange, and close by hand, and one
+    # that could just as easily get lost behind the main window. All of
+    # that now lives inside self._content_stack instead. The dashboard
+    # (index 0) never leaves the stack; every module page is added on
+    # demand and thrown away (deleteLater) the moment the operator
+    # navigates elsewhere, so each visit still gets a fresh instance
+    # querying live data - exactly the behaviour the old "always
+    # construct a new window" pattern gave for free.
+    # ------------------------------------------------------------------
+
+    def _open_module_page(self, key: str, factory) -> None:
+        """Entry point for a sidebar/dashboard-card click: replaces
+        whatever is currently open (including any drill-down pushed on
+        top of it) with a single fresh top-level module page."""
+        self._clear_page_stack()
+        widget = factory()
+        self._content_stack.addWidget(widget)
+        self._content_stack.setCurrentWidget(widget)
+        self._page_stack = [(widget, key, key)]
+        self._sidebar.set_active(key)
+        self._update_breadcrumb()
+
+    def _push_subpage(self, title: str, factory) -> None:
+        """Called by a hub page (e.g. Reports) to drill into a detail
+        page while leaving the hub itself one step back - the embedded
+        equivalent of the hub opening a second popup window on top of
+        itself."""
+        widget = factory()
+        self._content_stack.addWidget(widget)
+        self._content_stack.setCurrentWidget(widget)
+        self._page_stack.append((widget, title, None))
+        self._update_breadcrumb()
+
+    def _go_back(self) -> None:
+        if not self._page_stack:
+            return
+        widget, _title, _key = self._page_stack.pop()
+        self._content_stack.removeWidget(widget)
+        widget.deleteLater()
+        if not self._page_stack:
+            self._go_home()
+            return
+        self._content_stack.setCurrentWidget(self._page_stack[-1][0])
+        self._sidebar.set_active(self._page_stack[0][2])
+        self._update_breadcrumb()
+
+    def _jump_to(self, index: int) -> None:
+        """Clicking a non-final breadcrumb segment jumps straight to that
+        level in one step, instead of clicking Back repeatedly."""
+        if index >= len(self._page_stack) - 1:
+            return
+        for widget, _title, _key in self._page_stack[index + 1 :]:
+            self._content_stack.removeWidget(widget)
+            widget.deleteLater()
+        self._page_stack = self._page_stack[: index + 1]
+        self._content_stack.setCurrentWidget(self._page_stack[-1][0])
+        self._sidebar.set_active(self._page_stack[0][2])
+        self._update_breadcrumb()
+
+    def _go_home(self) -> None:
+        self._clear_page_stack()
+        self._content_stack.setCurrentWidget(self._dashboard_page)
+        self._sidebar.set_active("Dashboard")
+        self._breadcrumb_bar.setVisible(False)
+
+    def _clear_page_stack(self) -> None:
+        for widget, _title, _key in self._page_stack:
+            self._content_stack.removeWidget(widget)
+            widget.deleteLater()
+        self._page_stack = []
+
+    def _update_breadcrumb(self) -> None:
+        self._clear_layout(self._breadcrumb_segments_layout)
+
+        if not self._page_stack:
+            self._breadcrumb_bar.setVisible(False)
+            return
+        self._breadcrumb_bar.setVisible(True)
+
+        last_index = len(self._page_stack) - 1
+        for index, (_widget, title, _key) in enumerate(self._page_stack):
+            if index == last_index:
+                segment = QLabel(title)
+                segment.setObjectName("breadcrumbLabel")
+            else:
+                segment = QPushButton(title)
+                segment.setObjectName("breadcrumbLink")
+                segment.setCursor(Qt.PointingHandCursor)
+                segment.clicked.connect(lambda _checked=False, i=index: self._jump_to(i))
+            self._breadcrumb_segments_layout.addWidget(segment)
+
+            if index != last_index:
+                separator = QLabel("›")
+                separator.setObjectName("breadcrumbSeparator")
+                self._breadcrumb_segments_layout.addWidget(separator)
+
     def _open_employees(self) -> None:
         from app.ui.employee_window import EmployeeListWindow
 
-        self._employee_window = EmployeeListWindow(self._employee_service, self._auth_service, self._user_data["id"])
-        self._employee_window.show()
+        self._open_module_page(
+            "Employees",
+            lambda: EmployeeListWindow(self._employee_service, self._auth_service, self._user_data["id"]),
+        )
 
     def _open_attendance(self) -> None:
         from app.ui.attendance_window import AttendanceWindow
 
-        self._attendance_window = AttendanceWindow(
-            self._attendance_service, self._employee_service, self._auth_service, self._user_data["id"]
+        self._open_module_page(
+            "Attendance",
+            lambda: AttendanceWindow(
+                self._attendance_service, self._employee_service, self._auth_service, self._user_data["id"]
+            ),
         )
-        self._attendance_window.show()
 
     def _open_shifts(self) -> None:
         from app.ui.shift_window import ShiftListWindow
 
-        self._shift_window = ShiftListWindow(
-            self._shift_service, self._employee_service, self._auth_service, self._user_data["id"]
+        self._open_module_page(
+            "Shifts",
+            lambda: ShiftListWindow(
+                self._shift_service, self._employee_service, self._auth_service, self._user_data["id"]
+            ),
         )
-        self._shift_window.show()
 
     def _open_nozzles(self) -> None:
         from app.ui.nozzle_window import NozzleManagementWindow
 
-        self._nozzle_window = NozzleManagementWindow(
-            self._nozzle_service, self._fuel_repo, self._tank_repo, self._auth_service, self._user_data["id"]
+        self._open_module_page(
+            "Nozzles",
+            lambda: NozzleManagementWindow(
+                self._nozzle_service, self._fuel_repo, self._tank_repo, self._auth_service, self._user_data["id"]
+            ),
         )
-        self._nozzle_window.show()
 
     def _open_settings(self) -> None:
         from app.ui.settings_window import SettingsWindow
 
-        self._settings_window = SettingsWindow(
-            self._settings_service, self._user_data["id"], self._auth_service
+        self._open_module_page(
+            "Settings",
+            lambda: SettingsWindow(self._settings_service, self._user_data["id"], self._auth_service),
         )
-        self._settings_window.show()
 
     def _open_fuel_prices(self) -> None:
         from app.ui.fuel_price_window import FuelPriceWindow
 
-        self._fuel_price_window = FuelPriceWindow(
-            self._user_data["id"], self._fuel_service, self._auth_service
+        self._open_module_page(
+            "Fuel Prices",
+            lambda: FuelPriceWindow(self._user_data["id"], self._fuel_service, self._auth_service),
         )
-        self._fuel_price_window.show()
 
     def _open_tanks(self) -> None:
         from app.ui.tank_window import TankListWindow
 
-        self._tank_window = TankListWindow(
-            self._tank_service, self._employee_service, self._fuel_repo, self._auth_service, self._user_data["id"]
+        self._open_module_page(
+            "Tanks",
+            lambda: TankListWindow(
+                self._tank_service, self._employee_service, self._fuel_repo, self._auth_service, self._user_data["id"]
+            ),
         )
-        self._tank_window.show()
 
     def _open_procurement(self) -> None:
         from app.ui.procurement_window import ProcurementWindow
 
-        self._procurement_window = ProcurementWindow(
-            self._procurement_service,
-            self._fuel_repo,
-            self._tank_service,
-            self._employee_service,
-            self._auth_service,
-            self._user_data["id"],
+        self._open_module_page(
+            "Procurement",
+            lambda: ProcurementWindow(
+                self._procurement_service,
+                self._fuel_repo,
+                self._tank_service,
+                self._employee_service,
+                self._auth_service,
+                self._user_data["id"],
+            ),
         )
-        self._procurement_window.show()
+
+    def _open_terminal(self) -> None:
+        from app.ui.terminal_window import TerminalWindow
+
+        self._open_module_page(
+            "Terminal",
+            lambda: TerminalWindow(
+                self._sale_service,
+                self._shift_service,
+                self._employee_service,
+                self._auth_service,
+                self._user_data["id"],
+            ),
+        )
 
     def _open_sales(self) -> None:
         from app.ui.sales_window import SalesWindow
 
-        self._sales_window = SalesWindow(
-            self._sale_service,
-            self._shift_service,
-            self._employee_service,
-            self._auth_service,
-            self._user_data["id"],
+        self._open_module_page(
+            "Sales",
+            lambda: SalesWindow(
+                self._sale_service,
+                self._shift_service,
+                self._employee_service,
+                self._auth_service,
+                self._user_data["id"],
+                self._report_service,
+            ),
         )
-        self._sales_window.show()
 
     def _open_credit(self) -> None:
         from app.ui.credit_window import CreditWindow
 
-        self._credit_window = CreditWindow(self._credit_service, self._sale_service, self._auth_service, self._user_data["id"])
-        self._credit_window.show()
+        self._open_module_page(
+            "Credit",
+            lambda: CreditWindow(self._credit_service, self._sale_service, self._auth_service, self._user_data["id"]),
+        )
 
     def _open_expenses(self) -> None:
         from app.ui.expense_window import ExpenseWindow
 
-        self._expense_window = ExpenseWindow(
-            self._expense_service, self._employee_service, self._shift_service, self._auth_service, self._user_data["id"]
+        self._open_module_page(
+            "Expenses",
+            lambda: ExpenseWindow(
+                self._expense_service, self._employee_service, self._shift_service, self._auth_service, self._user_data["id"]
+            ),
         )
-        self._expense_window.show()
 
     def _open_reconciliation(self) -> None:
         from app.ui.reconciliation_window import ReconciliationWindow
 
-        self._reconciliation_window = ReconciliationWindow(
-            self._reconciliation_service, self._shift_service, self._auth_service, self._user_data["id"]
+        self._open_module_page(
+            "Reconciliation",
+            lambda: ReconciliationWindow(
+                self._reconciliation_service, self._shift_service, self._auth_service, self._user_data["id"]
+            ),
         )
-        self._reconciliation_window.show()
 
     def _open_my_shift(self) -> None:
         from app.ui.my_shift_window import MyShiftWindow
 
-        self._my_shift_window = MyShiftWindow(self._shift_service, self._auth_service, self._user_data["id"])
-        self._my_shift_window.show()
+        self._open_module_page(
+            "My Shift",
+            lambda: MyShiftWindow(self._shift_service, self._auth_service, self._user_data["id"]),
+        )
 
     def _open_reports(self) -> None:
         from app.ui.report_window import ReportsHubWindow
 
-        self._report_window = ReportsHubWindow(
-            self._report_service, self._auth_service, self._user_data["id"], self._analytics_service
+        self._open_module_page(
+            "Reports",
+            lambda: ReportsHubWindow(
+                self._report_service,
+                self._auth_service,
+                self._user_data["id"],
+                self._analytics_service,
+                open_subpage=self._push_subpage,
+            ),
         )
-        self._report_window.show()
 
     def _open_users(self) -> None:
         from app.ui.user_management_window import UserListWindow
 
-        self._user_window = UserListWindow(self._user_service, self._role_repo, self._user_data["id"])
-        self._user_window.show()
+        self._open_module_page(
+            "Users",
+            lambda: UserListWindow(self._user_service, self._role_repo, self._user_data["id"]),
+        )
 
     def _open_backups(self) -> None:
         from app.ui.backup_window import BackupWindow
 
-        self._backup_window = BackupWindow(
-            self._backup_service, self._user_data["id"], self._settings_service
+        self._open_module_page(
+            "Backups",
+            lambda: BackupWindow(self._backup_service, self._user_data["id"], self._settings_service),
         )
-        self._backup_window.show()
 
     def _open_audit_log(self) -> None:
         from app.ui.audit_log_window import AuditLogWindow
 
-        self._audit_window = AuditLogWindow(self._audit_service, self._user_repo, self._user_data["id"])
-        self._audit_window.show()
+        self._open_module_page(
+            "Audit Log",
+            lambda: AuditLogWindow(self._audit_service, self._user_repo, self._user_data["id"]),
+        )
+
+    def _open_support(self) -> None:
+        from app.ui.support_window import SupportWindow
+
+        # No sidebar row of its own (it's reached from the footer action,
+        # not a module card) - same "clear the highlight" treatment
+        # Alerts gets.
+        self._open_module_page("Support", SupportWindow)
+        self._sidebar.set_active(None)
 
     def _open_change_password(self) -> None:
         from app.ui.change_password_dialog import ChangePasswordDialog
 
         dialog = ChangePasswordDialog(self._user_service, self._user_data["id"], forced=False, parent=self)
         dialog.exec()
+
+    def _toggle_dark_mode(self, enabled: bool) -> None:
+        set_dark_mode(enabled)
+        app = QApplication.instance()
+        if app is not None:
+            apply_theme(app)
 
 
 class AppController:
@@ -1034,7 +1295,7 @@ class AppController:
 
 def launch_app() -> None:
     app = QApplication([])
-    app.setStyleSheet(STYLESHEET)
+    apply_theme(app)
     controller = AppController()
     controller.start()
     try:

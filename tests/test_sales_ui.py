@@ -256,6 +256,52 @@ def test_attendant_without_assignment_shows_error(
     assert dialog.error_label.isHidden() is False
 
 
+def test_fuel_revenue_cards_show_todays_sales_grouped_by_fuel(
+    qapp, sale_service, shift_service, employee_service, fuel_repo, auth_service, admin_id, open_shift_id, nozzle_id, employee_id, db_session
+):
+    from app.repositories.attendance_repository import AttendanceRepository
+    from app.repositories.credit_account_repository import CreditAccountRepository
+    from app.repositories.customer_payment_repository import CustomerPaymentRepository
+    from app.repositories.expense_repository import ExpenseRepository
+    from app.repositories.fuel_reconciliation_repository import FuelReconciliationRepository
+    from app.repositories.nozzle_repository import NozzleRepository
+    from app.repositories.payment_repository import PaymentRepository
+    from app.repositories.shift_reconciliation_repository import ShiftReconciliationRepository
+    from app.repositories.tank_transaction_repository import TankTransactionRepository
+    from app.schemas.sale import SaleCreate
+    from app.services.report_service import ReportService
+    from app.ui.sales_window import SalesWindow
+
+    sale_service.create_sale(
+        admin_id,
+        SaleCreate(shift_id=open_shift_id, nozzle_id=nozzle_id, employee_id=employee_id, quantity=Decimal("5"), payment_method=PaymentMethod.CASH),
+    )
+
+    report_service = ReportService(
+        fuel_repo, TankRepository(db_session), NozzleRepository(db_session), FuelReconciliationRepository(db_session),
+        auth_service, SaleRepository(db_session), PaymentRepository(db_session), ExpenseRepository(db_session),
+        CreditAccountRepository(db_session), CustomerPaymentRepository(db_session), CustomerRepository(db_session),
+        ShiftReconciliationRepository(db_session), TankTransactionRepository(db_session), AttendanceRepository(db_session),
+        EmployeeRepository(db_session), ShiftRepository(db_session),
+    )
+
+    window = SalesWindow(sale_service, shift_service, employee_service, auth_service, admin_id, report_service)
+    assert window._fuel_cards_layout.count() == 1
+
+    from PySide6.QtWidgets import QLabel
+    card = window._fuel_cards_layout.itemAt(0).widget()
+    texts = [label.text() for label in card.findChildren(QLabel)]
+    assert any("PETROL" in text for text in texts)
+    assert any("500.00" in text for text in texts)
+
+
+def test_sales_window_without_report_service_skips_fuel_cards(qapp, sale_service, shift_service, employee_service, auth_service, admin_id):
+    from app.ui.sales_window import SalesWindow
+
+    window = SalesWindow(sale_service, shift_service, employee_service, auth_service, admin_id)
+    assert window._fuel_cards_layout.count() == 0
+
+
 def test_sales_window_gates_record_button_on_manage_permission(
     qapp, sale_service, shift_service, employee_service, fuel_repo, auth_service, accountant_id
 ):

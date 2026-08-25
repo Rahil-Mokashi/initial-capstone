@@ -246,6 +246,13 @@ class TankService:
     def list_transactions(self, actor_user_id: str, tank_id: str) -> List[TankTransaction]:
         return self._transaction_repo.list_for_tank(tank_id)
 
+    @require_permission(Permission.INVENTORY_VIEW.value)
+    def list_recent_transactions(self, actor_user_id: str, limit: int = 10) -> List[TankTransaction]:
+        """Newest transactions across every tank - backs the tank list
+        screen's "Recent Transactions" panel, distinct from
+        list_transactions' one-tank history."""
+        return self._transaction_repo.list_recent(limit=limit)
+
     @require_permission(Permission.INVENTORY_MANAGE.value)
     def perform_reconciliation(self, actor_user_id: str, tank_id: str, data: ReconciliationPerform) -> FuelReconciliation:
         """Writes the reconciliation record and resets the tank's book stock

@@ -11,7 +11,6 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QInputDialog,
     QLabel,
-    QMainWindow,
     QMessageBox,
     QPushButton,
     QTableWidget,
@@ -25,6 +24,7 @@ from app.core.exceptions import AppError
 from app.database import backup as backup_module
 from app.ui.background import run_in_background
 from app.ui.qt_utils import describe_unexpected_error
+from app.ui.widgets import GridBackgroundWidget
 
 BACKUP_HEADERS = ["Created", "File", "Size"]
 
@@ -38,7 +38,7 @@ def _format_size(size_bytes: int) -> str:
     return f"{size:.1f} GB"
 
 
-class BackupWindow(QMainWindow):
+class BackupWindow(QWidget):
     def __init__(self, backup_service, actor_user_id: str, settings_service=None):
         super().__init__()
         self._backup_service = backup_service
@@ -101,6 +101,7 @@ class BackupWindow(QMainWindow):
         top_row.addWidget(self.backup_now_button)
 
         self.table = QTableWidget(0, len(BACKUP_HEADERS))
+        self.table.setAlternatingRowColors(True)
         self.table.setHorizontalHeaderLabels(BACKUP_HEADERS)
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
@@ -116,10 +117,12 @@ class BackupWindow(QMainWindow):
         layout.addWidget(self.offsite_warning)
         layout.addWidget(self.table)
 
-        container = QWidget()
+        container = GridBackgroundWidget()
         container.setObjectName("background")
         container.setLayout(layout)
-        self.setCentralWidget(container)
+        _page_layout = QVBoxLayout(self)
+        _page_layout.setContentsMargins(0, 0, 0, 0)
+        _page_layout.addWidget(container)
 
         self.refresh()
 

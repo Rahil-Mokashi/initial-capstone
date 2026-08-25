@@ -25,7 +25,6 @@ from PySide6.QtWidgets import (
     QHeaderView,
     QLabel,
     QLineEdit,
-    QMainWindow,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
@@ -37,9 +36,10 @@ from app.core.constants import Permission
 from app.core.exceptions import AppError
 from app.schemas.fuel import MAX_REASONABLE_RATE_PER_LITER, FuelRateChange
 from app.ui.qt_utils import chain_enter_to_next_field, describe_unexpected_error
+from app.ui.widgets import GridBackgroundWidget
 
 
-class FuelPriceWindow(QMainWindow):
+class FuelPriceWindow(QWidget):
     def __init__(self, actor_user_id: str, fuel_service, auth_service):
         super().__init__()
         self._actor_user_id = actor_user_id
@@ -90,6 +90,7 @@ class FuelPriceWindow(QMainWindow):
         self.history_button.clicked.connect(self._show_history)
 
         self.table = QTableWidget(0, 3)
+        self.table.setAlternatingRowColors(True)
         self.table.setHorizontalHeaderLabels(["Fuel", "Rate per litre", "Status"])
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
@@ -113,10 +114,12 @@ class FuelPriceWindow(QMainWindow):
         layout.addLayout(actions)
         layout.addWidget(self.table, stretch=1)
 
-        container = QWidget()
+        container = GridBackgroundWidget()
         container.setObjectName("background")
         container.setLayout(layout)
-        self.setCentralWidget(container)
+        _page_layout = QVBoxLayout(self)
+        _page_layout.setContentsMargins(0, 0, 0, 0)
+        _page_layout.addWidget(container)
 
         self.refresh()
 
@@ -152,8 +155,13 @@ class FuelPriceWindow(QMainWindow):
             status_item = QTableWidgetItem("Priced" if priced else "No price set")
             if not priced:
                 # A zero price is not an empty state, it is a fuel that
-                # cannot be sold - make that unmissable.
-                status_item.setForeground(QColor("#B91C1C"))
+                # cannot be sold - make that unmissable. Uses the shared
+                # danger token rather than a hardcoded hex, so this stays
+                # in sync with the stylesheet's palette (and dark mode)
+                # instead of silently drifting from it.
+                from app.ui.styles import COLOR_ALERT_RED
+
+                status_item.setForeground(QColor(COLOR_ALERT_RED))
             self.table.setItem(row, 2, status_item)
 
         if unpriced:
@@ -290,6 +298,7 @@ class FuelPriceHistoryDialog(QDialog):
         self.setMinimumSize(640, 420)
 
         table = QTableWidget(len(history), 4)
+        table.setAlternatingRowColors(True)
         table.setHorizontalHeaderLabels(["Effective from", "From", "To", "Reason"])
         table.setEditTriggers(QTableWidget.NoEditTriggers)
         table.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)

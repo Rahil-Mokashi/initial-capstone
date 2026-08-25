@@ -13,7 +13,6 @@ from PySide6.QtWidgets import (
     QInputDialog,
     QLabel,
     QLineEdit,
-    QMainWindow,
     QMessageBox,
     QPushButton,
     QTableWidget,
@@ -26,11 +25,12 @@ from app.core.constants import Permission
 from app.core.exceptions import AppError
 from app.schemas.shift_reconciliation import ShiftReconciliationPerform
 from app.ui.qt_utils import describe_unexpected_error
+from app.ui.widgets import GridBackgroundWidget
 
 RECONCILIATION_HEADERS = ["Shift", "Cash Var.", "UPI Var.", "Card Var.", "Classification", "Status"]
 
 
-class ReconciliationWindow(QMainWindow):
+class ReconciliationWindow(QWidget):
     def __init__(self, reconciliation_service, shift_service, auth_service, actor_user_id: str):
         super().__init__()
         self.setWindowTitle("Shift Reconciliation")
@@ -51,10 +51,12 @@ class ReconciliationWindow(QMainWindow):
         layout.addWidget(title)
         layout.addWidget(self.reconciliations_tab)
 
-        container = QWidget()
+        container = GridBackgroundWidget()
         container.setObjectName("background")
         container.setLayout(layout)
-        self.setCentralWidget(container)
+        _page_layout = QVBoxLayout(self)
+        _page_layout.setContentsMargins(0, 0, 0, 0)
+        _page_layout.addWidget(container)
 
 
 class ReconciliationsTab(QWidget):
@@ -81,6 +83,7 @@ class ReconciliationsTab(QWidget):
         top_row.addWidget(self.add_button)
 
         self.table = QTableWidget(0, len(RECONCILIATION_HEADERS))
+        self.table.setAlternatingRowColors(True)
         self.table.setHorizontalHeaderLabels(RECONCILIATION_HEADERS)
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)

@@ -202,7 +202,7 @@ def test_reports_hub_shows_every_report_for_admin(qapp, report_service, analytic
 
     window = ReportsHubWindow(report_service, auth_service, admin_id, analytics_service)
     # 8 reports: fuel summary, sales, payment summary, expense summary, credit x2, reconciliation, analytics
-    assert window.centralWidget() is not None
+    assert window.layout() is not None
 
 
 def test_reports_hub_hides_reports_attendant_cannot_view(qapp, report_service, analytics_service, auth_service, attendant_id):

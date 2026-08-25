@@ -15,7 +15,6 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
-    QMainWindow,
     QPushButton,
     QScrollArea,
     QVBoxLayout,
@@ -23,7 +22,8 @@ from PySide6.QtWidgets import (
 )
 
 from app.core.constants import NotificationSeverity
-from app.ui.qt_utils import describe_unexpected_error
+from app.ui.qt_utils import apply_hard_shadow, describe_unexpected_error
+from app.ui.widgets import GridBackgroundWidget
 
 # Kept next to the presentation code rather than on the enum: these are
 # labels for a human reading a screen, not part of the domain vocabulary.
@@ -73,8 +73,10 @@ class AlertCard(QWidget):
         layout.addWidget(detail)
         self.setLayout(layout)
 
+        apply_hard_shadow(self)
 
-class NotificationWindow(QMainWindow):
+
+class NotificationWindow(QWidget):
     def __init__(self, notification_service, actor_user_id: str):
         super().__init__()
         self._notification_service = notification_service
@@ -130,10 +132,12 @@ class NotificationWindow(QMainWindow):
         layout.addWidget(self.error_label)
         layout.addWidget(scroll, stretch=1)
 
-        container = QWidget()
+        container = GridBackgroundWidget()
         container.setObjectName("background")
         container.setLayout(layout)
-        self.setCentralWidget(container)
+        _page_layout = QVBoxLayout(self)
+        _page_layout.setContentsMargins(0, 0, 0, 0)
+        _page_layout.addWidget(container)
 
         self.refresh()
 

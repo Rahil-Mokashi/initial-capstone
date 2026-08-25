@@ -7,9 +7,9 @@ sees numbers for what they're allowed to open.
 """
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
-from typing import Optional
+from typing import List, Optional, Tuple
 
 from app.core.constants import (
     DASHBOARD_LOW_STOCK_THRESHOLD_PERCENT,
@@ -88,3 +88,34 @@ class DashboardService:
             )
 
         return summary
+
+    def get_recent_daily_sales(self, actor_user_id: str, days: int = 7) -> List[Tuple[date, Decimal]]:
+        """Total COMPLETED sale revenue for each of the last `days` local
+        calendar days (oldest first), for the dashboard's sales-trend
+        chart. Gated on SALE_VIEW like every other sales figure this
+        service returns; an empty list for a user without that permission
+        rather than raising, matching get_summary's "just don't show it"
+        pattern.
+
+        Fetches every sale once (`list_all()`, the same call get_summary's
+        own today's-sales figure already makes) rather than one query per
+        day - at this app's documented sales volume that is a few thousand
+        rows even at 30 days, trivial to filter in Python, and one query
+        instead of up to thirty.
+        """
+        if not self._auth_service.check_permission(actor_user_id, Permission.SALE_VIEW.value):
+            return []
+
+        all_sales = self._sale_repo.list_all()
+        completed = [sale for sale in all_sales if sale.status == SaleStatus.COMPLETED.value]
+
+        series: List[Tuple[date, Decimal]] = []
+        for offset in range(days - 1, -1, -1):
+            day = date.today() - timedelta(days=offset)
+            day_start_utc, day_end_utc = local_day_bounds_utc(day)
+            total = sum(
+                (sale.amount for sale in completed if day_start_utc <= sale.sale_at <= day_end_utc),
+                Decimal("0"),
+            )
+            series.append((day, total))
+        return series
