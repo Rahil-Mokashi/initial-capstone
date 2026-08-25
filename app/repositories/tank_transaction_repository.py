@@ -23,6 +23,16 @@ class TankTransactionRepository:
             .all()
         )
 
+    def list_recent(self, limit: int = 10) -> List[TankTransaction]:
+        """Newest first, across every tank - for a dashboard/list-page
+        activity feed rather than one specific tank's own history."""
+        return (
+            self._session.query(TankTransaction)
+            .order_by(TankTransaction.transaction_at.desc())
+            .limit(limit)
+            .all()
+        )
+
     def sum_for_tank_by_type(
         self, tank_id: str, transaction_type: str, date_from: Optional[date] = None, date_to: Optional[date] = None
     ) -> Decimal:

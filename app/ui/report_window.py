@@ -9,12 +9,13 @@ top-level module.
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QFileDialog,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
-    QMainWindow,
     QMessageBox,
     QPushButton,
     QScrollArea,
+    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
@@ -22,7 +23,8 @@ from PySide6.QtWidgets import (
 from app.core.constants import Permission
 from app.services.report_export import export_fuel_summary_excel, export_fuel_summary_pdf
 from app.ui.print_utils import show_print_preview
-from app.ui.qt_utils import describe_unexpected_error
+from app.ui.qt_utils import apply_hard_shadow, describe_unexpected_error
+from app.ui.widgets import GridBackgroundWidget
 
 
 class FuelTypeSummaryCard(QWidget):
@@ -56,8 +58,10 @@ class FuelTypeSummaryCard(QWidget):
             layout.addWidget(QLabel(row))
         self.setLayout(layout)
 
+        apply_hard_shadow(self)
 
-class FuelTypeSummaryReportWindow(QMainWindow):
+
+class FuelTypeSummaryReportWindow(QWidget):
     """problemstatement.md #30/#31: fuel-type-sectioned inventory summary.
 
     Full Phase 16 scope (print/PDF/Excel export, print preview, the rest
@@ -120,10 +124,12 @@ class FuelTypeSummaryReportWindow(QMainWindow):
         layout.addLayout(actions_row)
         layout.addWidget(scroll)
 
-        container = QWidget()
+        container = GridBackgroundWidget()
         container.setObjectName("background")
         container.setLayout(layout)
-        self.setCentralWidget(container)
+        _page_layout = QVBoxLayout(self)
+        _page_layout.setContentsMargins(0, 0, 0, 0)
+        _page_layout.addWidget(container)
 
         self.refresh()
 
@@ -221,18 +227,23 @@ def _build_report_html(summaries) -> str:
     """
 
 
-class ReportsHubWindow(QMainWindow):
+class ReportsHubWindow(QWidget):
     """Landing screen for the Reports module: a list of every report the
     acting user can open, gated per-report on that report's own
     permission."""
 
-    def __init__(self, report_service, auth_service, actor_user_id: str, analytics_service):
+    def __init__(self, report_service, auth_service, actor_user_id: str, analytics_service, open_subpage=None):
         super().__init__()
         self._report_service = report_service
         self._auth_service = auth_service
         self._actor_user_id = actor_user_id
         self._analytics_service = analytics_service
-        self._open_windows = []
+        # Set by MainWindow when this hub is opened as an embedded page,
+        # so drilling into one report (e.g. "Sales Report") pushes a page
+        # onto the shared content stack instead of opening a second
+        # top-level window on top of this one. Left as None for direct,
+        # standalone construction (e.g. tests) that never click through.
+        self._open_subpage = open_subpage
 
         self.setWindowTitle("Reports")
         self.setMinimumSize(420, 480)
@@ -243,8 +254,17 @@ class ReportsHubWindow(QMainWindow):
         subtitle = QLabel("Choose a report to view, print, or export.")
         subtitle.setObjectName("subtitle")
 
-        buttons_layout = QVBoxLayout()
+        # A wrapped grid of pill buttons rather than one full-width button
+        # per row - closer to the reference design's compact row of pill
+        # tabs than a tall vertical list reads, and still handles this
+        # hub's full report count (up to a dozen, more than a true
+        # single-row tab strip could ever fit).
+        REPORT_GRID_COLUMNS = 3
+        buttons_layout = QGridLayout()
         buttons_layout.setSpacing(10)
+        for column in range(REPORT_GRID_COLUMNS):
+            buttons_layout.setColumnStretch(column, 1)
+        self._report_button_count = 0
 
         report_definitions = [
             ("Fuel Type Summary", Permission.INVENTORY_VIEW, self._open_fuel_summary),
@@ -287,8 +307,11 @@ class ReportsHubWindow(QMainWindow):
             button = QPushButton(label)
             button.setObjectName("secondaryButton")
             button.setCursor(Qt.PointingHandCursor)
+            button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
             button.clicked.connect(handler)
-            buttons_layout.addWidget(button)
+            row, column = divmod(self._report_button_count, REPORT_GRID_COLUMNS)
+            buttons_layout.addWidget(button, row, column)
+            self._report_button_count += 1
 
         layout = QVBoxLayout()
         layout.setContentsMargins(24, 24, 24, 24)
@@ -302,15 +325,22 @@ class ReportsHubWindow(QMainWindow):
         layout.addLayout(buttons_layout)
         layout.addStretch()
 
-        container = QWidget()
+        container = GridBackgroundWidget()
         container.setObjectName("background")
         container.setLayout(layout)
-        self.setCentralWidget(container)
+        _page_layout = QVBoxLayout(self)
+        _page_layout.setContentsMargins(0, 0, 0, 0)
+        _page_layout.addWidget(container)
+
+    def _navigate(self, title: str, factory) -> None:
+        if self._open_subpage is not None:
+            self._open_subpage(title, factory)
 
     def _open_fuel_summary(self) -> None:
-        window = FuelTypeSummaryReportWindow(self._report_service, self._auth_service, self._actor_user_id)
-        self._open_windows.append(window)
-        window.show()
+        self._navigate(
+            "Fuel Type Summary",
+            lambda: FuelTypeSummaryReportWindow(self._report_service, self._auth_service, self._actor_user_id),
+        )
 
     def _open_table_report(
         self,
@@ -337,15 +367,16 @@ class ReportsHubWindow(QMainWindow):
             if "nozzle" in filter_by:
                 choice_filters.append(("Nozzle", "nozzle_id", options.get("nozzles", [])))
 
-        window = TableReportWindow(
-            self._actor_user_id, fetch_report, filename_stem, supports_date_filter, choice_filters
+        self._navigate(
+            filename_stem.replace("_", " ").title(),
+            lambda: TableReportWindow(
+                self._actor_user_id, fetch_report, filename_stem, supports_date_filter, choice_filters
+            ),
         )
-        self._open_windows.append(window)
-        window.show()
 
     def _open_analytics(self) -> None:
         from app.ui.analytics_window import AnalyticsWindow
 
-        window = AnalyticsWindow(self._analytics_service, self._actor_user_id)
-        self._open_windows.append(window)
-        window.show()
+        self._navigate(
+            "Business Insights", lambda: AnalyticsWindow(self._analytics_service, self._actor_user_id)
+        )

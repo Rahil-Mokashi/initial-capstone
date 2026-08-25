@@ -23,7 +23,6 @@ from PySide6.QtWidgets import (
     QInputDialog,
     QLabel,
     QLineEdit,
-    QMainWindow,
     QMessageBox,
     QPushButton,
     QTabWidget,
@@ -39,6 +38,7 @@ from app.database.base import StatusEnum
 from app.schemas.customer import CustomerCreate
 from app.schemas.sale import SaleCreate
 from app.ui.qt_utils import chain_enter_to_next_field, describe_unexpected_error
+from app.ui.widgets import GridBackgroundWidget
 
 # One screenful at a time. The sales table is the highest-volume list in
 # the app - at 300 sales a day a pump reaches ~110,000 rows in a year, and
@@ -51,8 +51,8 @@ SALE_HEADERS = ["Receipt #", "When", "Fuel", "Quantity", "Amount", "Method", "Sa
 CUSTOMER_HEADERS = ["Name", "Phone", "Status"]
 
 
-class SalesWindow(QMainWindow):
-    def __init__(self, sale_service, shift_service, employee_service, auth_service, actor_user_id: str):
+class SalesWindow(QWidget):
+    def __init__(self, sale_service, shift_service, employee_service, auth_service, actor_user_id: str, report_service=None):
         super().__init__()
         self.setWindowTitle("Sales")
         self.setMinimumSize(860, 600)
@@ -75,12 +75,88 @@ class SalesWindow(QMainWindow):
         layout.setContentsMargins(24, 24, 24, 24)
         layout.setSpacing(16)
         layout.addWidget(title)
+
+        # Today's per-fuel revenue cards - reuses ReportService.get_sales_report
+        # (already fuel-type-sectioned, already SALE_VIEW-gated) rather than
+        # re-aggregating sales in the UI, matching CLAUDE.md's "no business
+        # logic in UI widgets" rule. report_service is optional (defaults to
+        # None) so existing callers/tests that construct SalesWindow without
+        # it keep working - the card row is simply skipped, same as a
+        # permission gate hiding a section.
+        self._report_service = report_service
+        self._actor_user_id = actor_user_id
+        self._fuel_cards_layout = QHBoxLayout()
+        self._fuel_cards_layout.setSpacing(16)
+        if report_service is not None:
+            layout.addLayout(self._fuel_cards_layout)
+            self._refresh_fuel_cards()
+
         layout.addWidget(tabs)
 
-        container = QWidget()
+        container = GridBackgroundWidget()
         container.setObjectName("background")
         container.setLayout(layout)
-        self.setCentralWidget(container)
+        _page_layout = QVBoxLayout(self)
+        _page_layout.setContentsMargins(0, 0, 0, 0)
+        _page_layout.addWidget(container)
+
+    def _refresh_fuel_cards(self) -> None:
+        from datetime import date
+        from decimal import Decimal
+
+        while self._fuel_cards_layout.count():
+            item = self._fuel_cards_layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.hide()
+                widget.deleteLater()
+
+        try:
+            report = self._report_service.get_sales_report(self._actor_user_id, date.today(), date.today())
+        except Exception:  # noqa: BLE001 - a broken card row must never block the whole screen
+            return
+
+        for row in report.rows:
+            fuel_type, _count, quantity, amount = row
+            if fuel_type == "Total":
+                continue
+            self._fuel_cards_layout.addWidget(_FuelRevenueCard(fuel_type, Decimal(quantity), Decimal(amount)))
+
+        if not self._fuel_cards_layout.count():
+            self._fuel_cards_layout.addWidget(_FuelRevenueCard("No sales today", Decimal("0"), Decimal("0")))
+
+
+class _FuelRevenueCard(QWidget):
+    """Today's liters + revenue for one fuel type - the reference design's
+    "3 fuel-grade revenue cards" atop the Sales screen. Takes plain values
+    rather than a report row so it stays independent of ReportService's
+    exact row shape."""
+
+    def __init__(self, fuel_type: str, quantity, amount, parent=None):
+        super().__init__(parent)
+        self.setObjectName("card")
+        self.setAttribute(Qt.WA_StyledBackground, True)
+
+        name_label = QLabel(fuel_type.upper())
+        name_label.setObjectName("dashCardSubtitle")
+
+        amount_label = QLabel(f"₹{amount:,.2f}")
+        amount_label.setObjectName("statValue")
+
+        quantity_label = QLabel(f"{quantity:g} L today")
+        quantity_label.setObjectName("subtitle")
+
+        layout = QVBoxLayout()
+        layout.setContentsMargins(18, 16, 18, 16)
+        layout.setSpacing(4)
+        layout.addWidget(name_label)
+        layout.addWidget(amount_label)
+        layout.addWidget(quantity_label)
+        self.setLayout(layout)
+
+        from app.ui.qt_utils import apply_hard_shadow
+
+        apply_hard_shadow(self)
 
 
 class SalesTab(QWidget):
@@ -150,6 +226,7 @@ class SalesTab(QWidget):
         self._pager_row = pager_row
 
         self.table = QTableWidget(0, len(SALE_HEADERS))
+        self.table.setAlternatingRowColors(True)
         self.table.setHorizontalHeaderLabels(SALE_HEADERS)
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
@@ -499,6 +576,7 @@ class CustomersTab(QWidget):
         top_row.addWidget(self.add_button)
 
         self.table = QTableWidget(0, len(CUSTOMER_HEADERS))
+        self.table.setAlternatingRowColors(True)
         self.table.setHorizontalHeaderLabels(CUSTOMER_HEADERS)
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)

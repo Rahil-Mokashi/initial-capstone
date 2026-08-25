@@ -228,7 +228,17 @@ def test_detail_dialog_assign_nozzle_and_close_shift(qapp, shift_service, employ
     # suite's intermittent hang: it survived only when a queued event
     # happened to dismiss the dialog, so it passed most runs and stalled
     # forever on the rest.
-    monkeypatch.setattr("app.ui.shift_window.QMessageBox.question", lambda *a, **k: QMessageBox.Yes)
+    # One stub covers both confirm_dialog call sites exercised below
+    # (_close_shift and _open_assignment_action) - each asks a
+    # differently-worded question, so the stub branches on the title
+    # the same way a real operator would answer a different question
+    # differently, rather than returning one fixed label for both.
+    def _stub_confirm(parent, title, text, buttons):
+        if title == "Nozzle assignment":
+            return "Complete Assignment"
+        return "Close Shift"
+
+    monkeypatch.setattr("app.ui.shift_window.confirm_dialog", _stub_confirm)
     warnings: list[str] = []
     monkeypatch.setattr(
         "app.ui.shift_window.QMessageBox.warning",

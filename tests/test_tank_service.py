@@ -210,6 +210,28 @@ def test_issue_exceeding_current_stock_rejected(tank_service, admin_id, fuel_id)
         )
 
 
+def test_list_recent_transactions_spans_every_tank_newest_first(tank_service, admin_id, fuel_id):
+    tank_a = make_tank(tank_service, admin_id, fuel_id)
+    tank_b = make_tank(tank_service, admin_id, fuel_id, code="T2")
+
+    tank_service.record_transaction(admin_id, tank_a.id, TankTransactionType.RECEIPT, TankTransactionCreate(quantity=100.0))
+    tank_service.record_transaction(admin_id, tank_b.id, TankTransactionType.RECEIPT, TankTransactionCreate(quantity=200.0))
+    tank_service.record_transaction(admin_id, tank_a.id, TankTransactionType.ISSUE, TankTransactionCreate(quantity=50.0))
+
+    recent = tank_service.list_recent_transactions(admin_id, limit=10)
+    assert len(recent) == 3
+    assert recent[0].quantity == -50.0  # the most recent transaction, an issue on tank_a
+    assert {t.tank_id for t in recent} == {tank_a.id, tank_b.id}
+
+
+def test_list_recent_transactions_respects_limit(tank_service, admin_id, fuel_id):
+    tank = make_tank(tank_service, admin_id, fuel_id)
+    for _ in range(5):
+        tank_service.record_transaction(admin_id, tank.id, TankTransactionType.RECEIPT, TankTransactionCreate(quantity=10.0))
+
+    assert len(tank_service.list_recent_transactions(admin_id, limit=3)) == 3
+
+
 def test_adjustment_requires_reason(tank_service, admin_id, fuel_id):
     tank = make_tank(tank_service, admin_id, fuel_id)
     with pytest.raises(ValueError):

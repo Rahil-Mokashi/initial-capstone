@@ -181,6 +181,50 @@ def test_tank_list_shows_created_tanks(qapp, tank_service, admin_id, fuel_id):
     window = TankListWindow(service, None, None, auth_service, admin_id)
     assert window.table.rowCount() == 1
     assert window.table.item(0, 0).text() == "T1"
+    # The gauge grid is a second, independent rendering of the same
+    # tank list (see TankGaugeCard) - it must stay in sync with the
+    # table on every refresh, not just at construction.
+    assert window._gauge_grid.count() == 1
+
+
+def test_gauge_grid_rebuilds_on_refresh(qapp, tank_service, admin_id, fuel_id):
+    from app.ui.tank_window import TankListWindow
+
+    service, auth_service = tank_service
+    window = TankListWindow(service, None, None, auth_service, admin_id)
+    assert window._gauge_grid.count() == 0
+
+    service.create_tank(admin_id, TankCreate(code="T1", fuel_id=fuel_id, capacity=10000.0, opening_stock=5000.0))
+    window.refresh()
+    assert window._gauge_grid.count() == 1
+
+    service.create_tank(admin_id, TankCreate(code="T2", fuel_id=fuel_id, capacity=8000.0, opening_stock=1000.0))
+    window.refresh()
+    assert window._gauge_grid.count() == 2
+
+
+def test_recent_transactions_panel_shows_empty_state_then_a_recorded_transaction(qapp, tank_service, admin_id, fuel_id):
+    from app.ui.tank_window import TankListWindow
+
+    service, auth_service = tank_service
+    window = TankListWindow(service, None, None, auth_service, admin_id)
+
+    from PySide6.QtWidgets import QLabel
+
+    def panel_texts():
+        return [label.text() for label in window._recent_panel.findChildren(QLabel)]
+
+    assert any("No transactions recorded yet" in text for text in panel_texts())
+
+    tank = service.create_tank(admin_id, TankCreate(code="T1", fuel_id=fuel_id, capacity=10000.0, opening_stock=1000.0))
+    from app.schemas.tank import TankTransactionCreate
+
+    service.record_transaction(admin_id, tank.id, TankTransactionType.RECEIPT, TankTransactionCreate(quantity=250.0))
+    window.refresh()
+
+    texts = panel_texts()
+    assert any("Receipt" in text and "T1" in text for text in texts)
+    assert any("+250" in text for text in texts)
 
 
 def test_detail_dialog_record_receipt_and_reconcile(qapp, tank_service, employee_service, admin_id, fuel_id):
@@ -200,10 +244,20 @@ def test_detail_dialog_record_receipt_and_reconcile(qapp, tank_service, employee
     detail = TankDetailDialog(service, employee_service, auth_service, admin_id, tank.id)
     assert detail.transactions_table.rowCount() == 1
 
+    # Before any reconciliation exists, the variance card has nothing to
+    # show - no card, not an empty/placeholder one.
+    assert detail._variance_card_slot.count() == 0
+
     reconcile_dialog = ReconciliationDialog(service, admin_id, tank.id)
     reconcile_dialog.physical_stock_input.setValue(1500.0)
     reconcile_dialog._save()
     assert reconcile_dialog.result() == QDialog.Accepted
+
+    # The variance card is a second, independent rendering of the same
+    # latest-reconciliation figures already in the table - it must
+    # appear the moment a reconciliation exists, on refresh.
+    detail._refresh()
+    assert detail._variance_card_slot.count() == 1
 
 
 def test_reading_dialog_does_not_change_book_stock(qapp, tank_service, employee_service, admin_id, fuel_id, employee_id):

@@ -14,7 +14,6 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
-    QMainWindow,
     QPushButton,
     QSpinBox,
     QTableWidget,
@@ -28,11 +27,12 @@ from app.core.constants import AttendanceStatus, Permission
 from app.core.exceptions import AppError
 from app.schemas.attendance import AttendanceCorrection, AttendanceMark
 from app.ui.qt_utils import describe_unexpected_error, qdate_to_date
+from app.ui.widgets import GridBackgroundWidget
 
 TABLE_HEADERS = ["Employee", "Status", "Check In", "Check Out", "Overtime (min)", "Corrected"]
 
 
-class AttendanceWindow(QMainWindow):
+class AttendanceWindow(QWidget):
     """Daily attendance roster: pick a date, view who's marked, mark/correct entries."""
 
     def __init__(self, attendance_service, employee_service, auth_service, actor_user_id: str):
@@ -67,6 +67,7 @@ class AttendanceWindow(QMainWindow):
         top_row.addWidget(self.mark_button)
 
         self.table = QTableWidget(0, len(TABLE_HEADERS))
+        self.table.setAlternatingRowColors(True)
         self.table.setHorizontalHeaderLabels(TABLE_HEADERS)
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
@@ -80,10 +81,12 @@ class AttendanceWindow(QMainWindow):
         layout.addLayout(top_row)
         layout.addWidget(self.table)
 
-        container = QWidget()
+        container = GridBackgroundWidget()
         container.setObjectName("background")
         container.setLayout(layout)
-        self.setCentralWidget(container)
+        _page_layout = QVBoxLayout(self)
+        _page_layout.setContentsMargins(0, 0, 0, 0)
+        _page_layout.addWidget(container)
 
         self.refresh()
 

@@ -15,7 +15,6 @@ from PySide6.QtWidgets import (
     QInputDialog,
     QLabel,
     QLineEdit,
-    QMainWindow,
     QMessageBox,
     QPushButton,
     QSpinBox,
@@ -30,11 +29,12 @@ from app.core.exceptions import AppError
 from app.services.report_export import export_table_excel, export_table_pdf
 from app.schemas.credit import CreditAccountCreate, CustomerPaymentCreate
 from app.ui.qt_utils import describe_unexpected_error
+from app.ui.widgets import GridBackgroundWidget
 
 ACCOUNT_HEADERS = ["Customer", "Credit Limit", "Outstanding", "Overdue", "Due (days)"]
 
 
-class CreditWindow(QMainWindow):
+class CreditWindow(QWidget):
     def __init__(self, credit_service, sale_service, auth_service, actor_user_id: str):
         super().__init__()
         self.setWindowTitle("Credit Management")
@@ -52,10 +52,12 @@ class CreditWindow(QMainWindow):
         layout.addWidget(title)
         layout.addWidget(self.accounts_tab)
 
-        container = QWidget()
+        container = GridBackgroundWidget()
         container.setObjectName("background")
         container.setLayout(layout)
-        self.setCentralWidget(container)
+        _page_layout = QVBoxLayout(self)
+        _page_layout.setContentsMargins(0, 0, 0, 0)
+        _page_layout.addWidget(container)
 
 
 class CreditAccountsTab(QWidget):
@@ -93,6 +95,7 @@ class CreditAccountsTab(QWidget):
         top_row.addWidget(self.open_button)
 
         self.table = QTableWidget(0, len(ACCOUNT_HEADERS))
+        self.table.setAlternatingRowColors(True)
         self.table.setHorizontalHeaderLabels(ACCOUNT_HEADERS)
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
@@ -341,6 +344,7 @@ class CustomerStatementDialog(QDialog):
         self._report = self._build_report(customer_name, entries)
 
         table = QTableWidget(len(entries), 4)
+        table.setAlternatingRowColors(True)
         table.setHorizontalHeaderLabels(["Date", "Description", "Debit", "Credit"])
         table.setEditTriggers(QTableWidget.NoEditTriggers)
         table.verticalHeader().setVisible(False)

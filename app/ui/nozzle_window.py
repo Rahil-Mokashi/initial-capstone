@@ -13,7 +13,6 @@ from PySide6.QtWidgets import (
     QInputDialog,
     QLabel,
     QLineEdit,
-    QMainWindow,
     QMessageBox,
     QPushButton,
     QTabWidget,
@@ -28,12 +27,13 @@ from app.core.exceptions import AppError
 from app.database.base import StatusEnum
 from app.schemas.nozzle import DispenserCreate, NozzleCreate
 from app.ui.qt_utils import describe_unexpected_error
+from app.ui.widgets import GridBackgroundWidget
 
 DISPENSER_HEADERS = ["Code", "Status"]
 NOZZLE_HEADERS = ["Code", "Dispenser", "Fuel Type", "Status"]
 
 
-class NozzleManagementWindow(QMainWindow):
+class NozzleManagementWindow(QWidget):
     """Tabbed Dispensers/Nozzles master-data screen."""
 
     def __init__(self, nozzle_service, fuel_service_repo, tank_repo, auth_service, actor_user_id: str):
@@ -65,10 +65,12 @@ class NozzleManagementWindow(QMainWindow):
         layout.addWidget(title)
         layout.addWidget(tabs)
 
-        container = QWidget()
+        container = GridBackgroundWidget()
         container.setObjectName("background")
         container.setLayout(layout)
-        self.setCentralWidget(container)
+        _page_layout = QVBoxLayout(self)
+        _page_layout.setContentsMargins(0, 0, 0, 0)
+        _page_layout.addWidget(container)
 
 
 class DispenserTab(QWidget):
@@ -88,6 +90,7 @@ class DispenserTab(QWidget):
         top_row.addWidget(self.add_button)
 
         self.table = QTableWidget(0, len(DISPENSER_HEADERS))
+        self.table.setAlternatingRowColors(True)
         self.table.setHorizontalHeaderLabels(DISPENSER_HEADERS)
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
@@ -218,6 +221,7 @@ class NozzleTab(QWidget):
         top_row.addWidget(self.add_button)
 
         self.table = QTableWidget(0, len(NOZZLE_HEADERS))
+        self.table.setAlternatingRowColors(True)
         self.table.setHorizontalHeaderLabels(NOZZLE_HEADERS)
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)

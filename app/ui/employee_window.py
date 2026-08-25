@@ -21,7 +21,6 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QListWidget,
     QListWidgetItem,
-    QMainWindow,
     QMessageBox,
     QPushButton,
     QTableWidget,
@@ -34,11 +33,12 @@ from app.core.constants import EmployeeStatus, Permission
 from app.core.exceptions import AppError
 from app.schemas.employee import EmployeeCreate, EmployeeUpdate
 from app.ui.qt_utils import chain_enter_to_next_field, describe_unexpected_error, qdate_to_date
+from app.ui.widgets import GridBackgroundWidget, confirm_dialog
 
 TABLE_HEADERS = ["Code", "Name", "Designation", "Department", "Status", "Joining Date"]
 
 
-class EmployeeListWindow(QMainWindow):
+class EmployeeListWindow(QWidget):
     """Searchable employee list with add/view actions."""
 
     def __init__(self, employee_service, auth_service, actor_user_id: str):
@@ -71,6 +71,7 @@ class EmployeeListWindow(QMainWindow):
         top_row.addWidget(self.add_button)
 
         self.table = QTableWidget(0, len(TABLE_HEADERS))
+        self.table.setAlternatingRowColors(True)
         self.table.setHorizontalHeaderLabels(TABLE_HEADERS)
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
@@ -84,10 +85,12 @@ class EmployeeListWindow(QMainWindow):
         layout.addLayout(top_row)
         layout.addWidget(self.table)
 
-        container = QWidget()
+        container = GridBackgroundWidget()
         container.setObjectName("background")
         container.setLayout(layout)
-        self.setCentralWidget(container)
+        _page_layout = QVBoxLayout(self)
+        _page_layout.setContentsMargins(0, 0, 0, 0)
+        _page_layout.addWidget(container)
 
         self.refresh()
 
@@ -347,12 +350,13 @@ class EmployeeDetailDialog(QDialog):
             QMessageBox.warning(self, "Could not change status", describe_unexpected_error(exc))
 
     def _record_exit(self) -> None:
-        confirm = QMessageBox.question(
+        confirm = confirm_dialog(
             self,
             "Confirm exit",
             "This will mark the employee as terminated. Continue?",
+            [("Cancel", "secondaryButton"), ("Mark as Exited", "dangerButton")],
         )
-        if confirm != QMessageBox.Yes:
+        if confirm != "Mark as Exited":
             return
 
         reason, ok = QInputDialog.getText(self, "Record exit", "Reason for exit:")
@@ -423,8 +427,11 @@ class EmployeeDetailDialog(QDialog):
         item = self.documents_list.currentItem()
         if not item:
             return
-        confirm = QMessageBox.question(self, "Remove document", "Remove this document?")
-        if confirm != QMessageBox.Yes:
+        confirm = confirm_dialog(
+            self, "Remove document", "Remove this document?",
+            [("Cancel", "secondaryButton"), ("Remove", "dangerButton")],
+        )
+        if confirm != "Remove":
             return
         reason, ok = QInputDialog.getText(self, "Remove document", "Reason:")
         if not ok or not reason.strip():

@@ -13,7 +13,6 @@ from PySide6.QtWidgets import (
     QInputDialog,
     QLabel,
     QLineEdit,
-    QMainWindow,
     QMessageBox,
     QPushButton,
     QTabWidget,
@@ -27,12 +26,13 @@ from app.core.constants import PaymentMethod, Permission
 from app.core.exceptions import AppError
 from app.schemas.expense import ExpenseCategoryCreate, ExpenseCreate
 from app.ui.qt_utils import chain_enter_to_next_field, describe_unexpected_error
+from app.ui.widgets import GridBackgroundWidget
 
 EXPENSE_HEADERS = ["Date", "Category", "Amount", "Method", "Employee", "Status"]
 CATEGORY_HEADERS = ["Name", "Status"]
 
 
-class ExpenseWindow(QMainWindow):
+class ExpenseWindow(QWidget):
     def __init__(self, expense_service, employee_service, shift_service, auth_service, actor_user_id: str):
         super().__init__()
         self.setWindowTitle("Expenses")
@@ -59,10 +59,12 @@ class ExpenseWindow(QMainWindow):
         layout.addWidget(title)
         layout.addWidget(tabs)
 
-        container = QWidget()
+        container = GridBackgroundWidget()
         container.setObjectName("background")
         container.setLayout(layout)
-        self.setCentralWidget(container)
+        _page_layout = QVBoxLayout(self)
+        _page_layout.setContentsMargins(0, 0, 0, 0)
+        _page_layout.addWidget(container)
 
 
 class ExpensesTab(QWidget):
@@ -96,6 +98,7 @@ class ExpensesTab(QWidget):
         top_row.addWidget(self.add_button)
 
         self.table = QTableWidget(0, len(EXPENSE_HEADERS))
+        self.table.setAlternatingRowColors(True)
         self.table.setHorizontalHeaderLabels(EXPENSE_HEADERS)
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
@@ -294,6 +297,7 @@ class ExpenseCategoriesTab(QWidget):
         top_row.addWidget(self.add_button)
 
         self.table = QTableWidget(0, len(CATEGORY_HEADERS))
+        self.table.setAlternatingRowColors(True)
         self.table.setHorizontalHeaderLabels(CATEGORY_HEADERS)
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)

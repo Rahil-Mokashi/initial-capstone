@@ -206,27 +206,23 @@ def test_detail_dialog_status_change(qapp, employee_service, admin_id, monkeypat
 
 
 def test_detail_dialog_record_exit_requires_confirmation(qapp, employee_service, admin_id, monkeypatch):
-    from PySide6.QtWidgets import QMessageBox
-
     from app.ui.employee_window import EmployeeDetailDialog
 
     service, _ = employee_service
     employee = service.create_employee(admin_id, make_employee_data())
     dialog = EmployeeDetailDialog(service, admin_id, employee.id, can_manage=True)
 
-    monkeypatch.setattr("app.ui.employee_window.QMessageBox.question", lambda *a, **k: QMessageBox.No)
+    monkeypatch.setattr("app.ui.employee_window.confirm_dialog", lambda *a, **k: "Cancel")
     dialog._record_exit()
     assert service.get_employee(admin_id, employee.id).status != "terminated"
 
-    monkeypatch.setattr("app.ui.employee_window.QMessageBox.question", lambda *a, **k: QMessageBox.Yes)
+    monkeypatch.setattr("app.ui.employee_window.confirm_dialog", lambda *a, **k: "Mark as Exited")
     monkeypatch.setattr("app.ui.employee_window.QInputDialog.getText", lambda *a, **k: ("Resigned", True))
     dialog._record_exit()
     assert service.get_employee(admin_id, employee.id).status == "terminated"
 
 
 def test_detail_dialog_add_and_remove_document(qapp, employee_service, admin_id, monkeypatch):
-    from PySide6.QtWidgets import QMessageBox
-
     from app.ui.employee_window import EmployeeDetailDialog
 
     service, _ = employee_service
@@ -241,7 +237,7 @@ def test_detail_dialog_add_and_remove_document(qapp, employee_service, admin_id,
     assert dialog.documents_list.count() == 1
 
     dialog.documents_list.setCurrentRow(0)
-    monkeypatch.setattr("app.ui.employee_window.QMessageBox.question", lambda *a, **k: QMessageBox.Yes)
+    monkeypatch.setattr("app.ui.employee_window.confirm_dialog", lambda *a, **k: "Remove")
     monkeypatch.setattr("app.ui.employee_window.QInputDialog.getText", lambda *a, **k: ("Wrong file", True))
     dialog._remove_selected_document()
     assert dialog.documents_list.count() == 0

@@ -11,11 +11,9 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QFileDialog,
     QFormLayout,
-    QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
-    QMainWindow,
     QMessageBox,
     QPushButton,
     QScrollArea,
@@ -27,10 +25,35 @@ from PySide6.QtWidgets import (
 from app.core.constants import Permission
 from app.core.exceptions import AppError
 from app.schemas.app_setting import AppSettingUpdate
-from app.ui.qt_utils import chain_enter_to_next_field, describe_unexpected_error
+from app.ui.qt_utils import apply_hard_shadow, chain_enter_to_next_field, describe_unexpected_error
+from app.ui.widgets import GridBackgroundWidget
 
 
-class SettingsWindow(QMainWindow):
+def _card_section(section_title: str, inner_layout) -> QWidget:
+    """A rounded white card with a section heading, standing in for
+    QGroupBox - QGroupBox keeps native OS chrome (its own title frame)
+    that ignores this app's card/shadow QSS entirely, so every other
+    screen's section grouping already uses this exact pattern (objectName
+    "card" + a "sectionTitle" label) instead. Settings was the one holdout
+    still using native group boxes."""
+    heading = QLabel(section_title)
+    heading.setObjectName("sectionTitle")
+
+    layout = QVBoxLayout()
+    layout.setContentsMargins(20, 16, 20, 20)
+    layout.setSpacing(12)
+    layout.addWidget(heading)
+    layout.addLayout(inner_layout)
+
+    card = QWidget()
+    card.setObjectName("card")
+    card.setAttribute(Qt.WA_StyledBackground, True)
+    card.setLayout(layout)
+    apply_hard_shadow(card)
+    return card
+
+
+class SettingsWindow(QWidget):
     def __init__(self, settings_service, actor_user_id: str, auth_service):
         super().__init__()
         self._settings_service = settings_service
@@ -87,8 +110,7 @@ class SettingsWindow(QMainWindow):
         profile_form.addRow("GST number", self.gst_input)
         profile_form.addRow("Licence number", self.licence_input)
 
-        profile_box = QGroupBox("Company profile")
-        profile_box.setLayout(profile_form)
+        profile_box = _card_section("Company profile", profile_form)
 
         # --- Printing -------------------------------------------------
         self.footer_input = QTextEdit()
@@ -99,8 +121,7 @@ class SettingsWindow(QMainWindow):
 
         printing_form = QFormLayout()
         printing_form.addRow("Receipt footer", self.footer_input)
-        printing_box = QGroupBox("Printing")
-        printing_box.setLayout(printing_form)
+        printing_box = _card_section("Printing", printing_form)
 
         # --- Backups --------------------------------------------------
         self.offsite_dir_input = QLineEdit()
@@ -119,8 +140,7 @@ class SettingsWindow(QMainWindow):
             "A USB drive or network folder. Backups taken by the app sit on the "
             "same disk as the database, so a copy somewhere else is the only "
             "protection against a failed drive, theft or ransomware."))
-        backup_box = QGroupBox("Backups")
-        backup_box.setLayout(backup_form)
+        backup_box = _card_section("Backups", backup_form)
 
         # --- Actions ---------------------------------------------------
         self.save_button = QPushButton("Save Settings")
@@ -141,7 +161,7 @@ class SettingsWindow(QMainWindow):
 
         body = QVBoxLayout()
         body.setContentsMargins(24, 24, 24, 24)
-        body.setSpacing(14)
+        body.setSpacing(20)
         body.addWidget(title)
         body.addWidget(subtitle)
         body.addWidget(self.warning_label)
@@ -152,7 +172,7 @@ class SettingsWindow(QMainWindow):
         body.addLayout(actions)
         body.addStretch()
 
-        inner = QWidget()
+        inner = GridBackgroundWidget()
         inner.setObjectName("background")
         inner.setLayout(body)
 
@@ -161,7 +181,9 @@ class SettingsWindow(QMainWindow):
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setWidget(inner)
-        self.setCentralWidget(scroll)
+        _page_layout = QVBoxLayout(self)
+        _page_layout.setContentsMargins(0, 0, 0, 0)
+        _page_layout.addWidget(scroll)
 
         chain_enter_to_next_field(
             self.company_name_input, self.address1_input, self.address2_input,

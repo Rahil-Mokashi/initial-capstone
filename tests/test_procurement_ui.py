@@ -207,6 +207,29 @@ def test_po_form_save_without_items_shows_error(qapp, procurement_service, fuel_
     assert dialog.error_label.isHidden() is False
 
 
+def test_pending_delivery_cards_show_outstanding_purchase_orders(qapp, procurement_service, fuel_repo, tank_service, employee_service, admin_id, fuel_id):
+    from app.ui.procurement_window import PurchaseOrderTab
+
+    tab = PurchaseOrderTab(procurement_service, fuel_repo, tank_service, employee_service, admin_id, can_manage=True)
+    from PySide6.QtWidgets import QLabel
+    assert any("Nothing pending" in label.text() for label in tab.findChildren(QLabel))
+
+    supplier = procurement_service.create_supplier(admin_id, SupplierCreate(name="Acme Fuels"))
+    procurement_service.create_purchase_order(
+        admin_id,
+        PurchaseOrderCreate(
+            supplier_id=supplier.id,
+            items=[PurchaseOrderItemCreate(fuel_id=fuel_id, quantity_ordered=Decimal("2000"), rate_per_liter=Decimal("95.5"))],
+        ),
+    )
+    tab.refresh()
+
+    assert tab._pending_cards_layout.count() >= 1
+    texts = [label.text() for label in tab.findChildren(QLabel)]
+    assert any("Acme Fuels" in text for text in texts)
+    assert any("Petrol" in text and "2000" in text for text in texts)
+
+
 def test_po_detail_dialog_records_full_delivery_workflow(qapp, procurement_service, tank_service, employee_service, admin_id, fuel_id, employee_id):
     from app.ui.procurement_window import FuelDeliveryDetailDialog, PurchaseOrderDetailDialog
 

@@ -4,6 +4,8 @@ for the UI layer."""
 from datetime import date
 
 from PySide6.QtCore import QDate
+from PySide6.QtGui import QColor
+from PySide6.QtWidgets import QGraphicsDropShadowEffect, QWidget
 
 from app.core.logging import logger
 
@@ -38,6 +40,49 @@ def chain_enter_to_next_field(*fields) -> None:
         return_pressed = getattr(current_field, "returnPressed", None)
         if return_pressed is not None:
             return_pressed.connect(next_field.setFocus)
+
+
+def apply_hard_shadow(widget: QWidget, dx: int = 5, dy: int = 5, color: str | None = None) -> None:
+    """Give a card-like widget the design system's soft card elevation - a
+    gently blurred, low-opacity shadow sitting close under the card, the
+    same "shadow-subtle-card" language the second reskin pass (2026-08-25,
+    matching the PetrolStream reference) uses everywhere: barely-there
+    elevation plus the card's own hairline border does the visual work,
+    not a heavy shadow.
+
+    Function/parameter names are kept as-is (`apply_hard_shadow`, `dx`/`dy`)
+    even though the shadow itself is no longer hard-edged - every existing
+    caller (TankGaugeCard, VarianceBarCard, DashboardCard, StatCard,
+    AlertCard, the login card, MyShiftWindow's card, FuelTypeSummaryCard)
+    picks up the new softer look automatically with no call-site changes,
+    which matters more here than the name staying literally accurate.
+
+    QSS (Qt's stylesheet language) has no `box-shadow` property, so this
+    can't be expressed as a selector in styles.py the way colors/borders
+    are - it has to be attached in code, per widget, via
+    QGraphicsDropShadowEffect.
+
+    `color` defaults to None, meaning "whatever the active theme's shadow
+    color is" (light mode's is near-black at low opacity; dark mode needs
+    a lighter grey at low opacity, since a black-on-black shadow would be
+    invisible) - resolved here rather than at each call site, so every
+    existing caller picks up the right color for both themes automatically
+    instead of needing to be taught about theming.
+    """
+    if color is None:
+        from app.ui.styles import DARK_SHADOW_COLOR, LIGHT_SHADOW_COLOR
+        from app.ui.theme import is_dark_mode
+
+        color = DARK_SHADOW_COLOR if is_dark_mode() else LIGHT_SHADOW_COLOR
+
+    shadow_color = QColor(color)
+    shadow_color.setAlpha(46)
+
+    shadow = QGraphicsDropShadowEffect(widget)
+    shadow.setBlurRadius(28)
+    shadow.setOffset(0, max(dx, dy) // 2)
+    shadow.setColor(shadow_color)
+    widget.setGraphicsEffect(shadow)
 
 
 GENERIC_ERROR_MESSAGE = "Something went wrong. Please try again, and contact support if this keeps happening."

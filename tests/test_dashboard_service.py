@@ -226,3 +226,48 @@ def test_pending_purchase_order_is_counted(dashboard_service, db_session, admin_
 
     summary = dashboard_service.get_summary(admin_id)
     assert summary.pending_purchase_orders_count == 1
+
+
+def test_recent_daily_sales_returns_one_entry_per_day_oldest_first(dashboard_service, admin_id):
+    series = dashboard_service.get_recent_daily_sales(admin_id, days=7)
+    assert len(series) == 7
+    assert series[-1][0] == date.today()
+    assert [day for day, _amount in series] == sorted(day for day, _amount in series)
+    assert all(amount == Decimal("0") for _day, amount in series)
+
+
+def test_recent_daily_sales_attributes_todays_sale_to_today(dashboard_service, sale_service, admin_id, open_shift_id, nozzle_id, employee_id):
+    sale_service.create_sale(
+        admin_id,
+        SaleCreate(shift_id=open_shift_id, nozzle_id=nozzle_id, employee_id=employee_id, quantity=Decimal("10"), payment_method=PaymentMethod.CASH),
+    )
+    series = dashboard_service.get_recent_daily_sales(admin_id, days=7)
+    today_total = dict(series)[date.today()]
+    assert today_total == Decimal("1000.00")
+
+
+def test_recent_daily_sales_excludes_cancelled_sales(dashboard_service, sale_service, admin_id, open_shift_id, nozzle_id, employee_id):
+    sale = sale_service.create_sale(
+        admin_id,
+        SaleCreate(shift_id=open_shift_id, nozzle_id=nozzle_id, employee_id=employee_id, quantity=Decimal("10"), payment_method=PaymentMethod.CASH),
+    )
+    sale_service.cancel_sale(admin_id, sale.id, reason="Wrong amount")
+    series = dashboard_service.get_recent_daily_sales(admin_id, days=7)
+    assert dict(series)[date.today()] == Decimal("0")
+
+
+def test_recent_daily_sales_empty_for_a_role_without_sale_view(dashboard_service, db_session):
+    from app.core.constants import UserRole
+
+    seed_initial_data()
+    no_access_id = make_user(db_session, UserRole.ATTENDANT.value, "noaccess").id
+    # Strip the attendant's SALE_VIEW grant to prove the gate is real, not
+    # just "attendants happen to always have it".
+    from app.models.role import Role
+
+    role = db_session.query(Role).filter_by(name=UserRole.ATTENDANT.value).first()
+    role.permissions = [p for p in role.permissions if p.name != "sale.view"]
+    db_session.commit()
+
+    series = dashboard_service.get_recent_daily_sales(no_access_id, days=7)
+    assert series == []

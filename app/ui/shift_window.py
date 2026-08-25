@@ -16,7 +16,6 @@ from PySide6.QtWidgets import (
     QInputDialog,
     QLabel,
     QLineEdit,
-    QMainWindow,
     QMessageBox,
     QPushButton,
     QTableWidget,
@@ -29,12 +28,13 @@ from app.core.constants import Permission
 from app.core.exceptions import AppError
 from app.schemas.shift import NozzleAssignmentComplete, NozzleAssignmentCreate, ShiftOpen
 from app.ui.qt_utils import describe_unexpected_error, qdate_to_date
+from app.ui.widgets import GridBackgroundWidget, confirm_dialog
 
 SHIFT_TABLE_HEADERS = ["Date", "Shift", "Status", "Opened By"]
 ASSIGNMENT_TABLE_HEADERS = ["Employee", "Nozzle", "Opening", "Closing", "Status"]
 
 
-class ShiftListWindow(QMainWindow):
+class ShiftListWindow(QWidget):
     def __init__(self, shift_service, employee_service, auth_service, actor_user_id: str):
         super().__init__()
         self._shift_service = shift_service
@@ -61,6 +61,7 @@ class ShiftListWindow(QMainWindow):
         top_row.addWidget(self.open_button)
 
         self.table = QTableWidget(0, len(SHIFT_TABLE_HEADERS))
+        self.table.setAlternatingRowColors(True)
         self.table.setHorizontalHeaderLabels(SHIFT_TABLE_HEADERS)
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
@@ -74,10 +75,12 @@ class ShiftListWindow(QMainWindow):
         layout.addLayout(top_row)
         layout.addWidget(self.table)
 
-        container = QWidget()
+        container = GridBackgroundWidget()
         container.setObjectName("background")
         container.setLayout(layout)
-        self.setCentralWidget(container)
+        _page_layout = QVBoxLayout(self)
+        _page_layout.setContentsMargins(0, 0, 0, 0)
+        _page_layout.addWidget(container)
 
         self.refresh()
 
@@ -216,6 +219,7 @@ class ShiftDetailDialog(QDialog):
         action_row.addWidget(self.reopen_button)
 
         self.table = QTableWidget(0, len(ASSIGNMENT_TABLE_HEADERS))
+        self.table.setAlternatingRowColors(True)
         self.table.setHorizontalHeaderLabels(ASSIGNMENT_TABLE_HEADERS)
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
@@ -274,15 +278,15 @@ class ShiftDetailDialog(QDialog):
         if status != "active" or not self._can_manage:
             return
 
-        choice = QMessageBox.question(
+        choice = confirm_dialog(
             self,
             "Nozzle assignment",
-            "Complete this assignment now? (No = cancel it instead)",
-            QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel,
+            "Complete this assignment, or cancel it instead?",
+            [("Dismiss", "secondaryButton"), ("Cancel Assignment", "dangerButton"), ("Complete Assignment", "")],
         )
-        if choice == QMessageBox.Cancel:
+        if choice in (None, "Dismiss"):
             return
-        if choice == QMessageBox.Yes:
+        if choice == "Complete Assignment":
             closing_meter, ok = QInputDialog.getDouble(self, "Closing meter", "Closing meter reading:", 0, 0, 10_000_000, 2)
             if not ok:
                 return
@@ -307,8 +311,11 @@ class ShiftDetailDialog(QDialog):
         self._refresh()
 
     def _close_shift(self) -> None:
-        confirm = QMessageBox.question(self, "Close shift", "Close this shift? Active assignments must be completed or cancelled first.")
-        if confirm != QMessageBox.Yes:
+        confirm = confirm_dialog(
+            self, "Close shift", "Close this shift? Active assignments must be completed or cancelled first.",
+            [("Cancel", "secondaryButton"), ("Close Shift", "dangerButton")],
+        )
+        if confirm != "Close Shift":
             return
         try:
             self._shift_service.close_shift(self._actor_user_id, self._shift_id)

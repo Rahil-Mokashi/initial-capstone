@@ -12,7 +12,6 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
-    QMainWindow,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
@@ -21,6 +20,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.ui.qt_utils import qdate_to_date
+from app.ui.widgets import GridBackgroundWidget
 from app.core.exceptions import AppError
 from app.ui.background import run_in_background
 from app.ui.qt_utils import describe_unexpected_error
@@ -28,7 +28,7 @@ from app.ui.qt_utils import describe_unexpected_error
 TABLE_HEADERS = ["When", "Event", "Actor", "Entity", "Description"]
 
 
-class AuditLogWindow(QMainWindow):
+class AuditLogWindow(QWidget):
     def __init__(self, audit_service, user_repo, actor_user_id: str):
         super().__init__()
         self._audit_service = audit_service
@@ -77,6 +77,7 @@ class AuditLogWindow(QMainWindow):
         filter_row.addWidget(self.verify_button)
 
         self.table = QTableWidget(0, len(TABLE_HEADERS))
+        self.table.setAlternatingRowColors(True)
         self.table.setHorizontalHeaderLabels(TABLE_HEADERS)
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
@@ -90,10 +91,12 @@ class AuditLogWindow(QMainWindow):
         layout.addLayout(filter_row)
         layout.addWidget(self.table)
 
-        container = QWidget()
+        container = GridBackgroundWidget()
         container.setObjectName("background")
         container.setLayout(layout)
-        self.setCentralWidget(container)
+        _page_layout = QVBoxLayout(self)
+        _page_layout.setContentsMargins(0, 0, 0, 0)
+        _page_layout.addWidget(container)
 
         self.refresh()
 

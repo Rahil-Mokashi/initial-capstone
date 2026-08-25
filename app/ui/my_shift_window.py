@@ -6,15 +6,15 @@ the lookup itself lives in ShiftService.get_my_active_assignment.
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QLabel,
-    QMainWindow,
     QVBoxLayout,
     QWidget,
 )
 
-from app.ui.qt_utils import describe_unexpected_error
+from app.ui.qt_utils import apply_hard_shadow, describe_unexpected_error
+from app.ui.widgets import GridBackgroundWidget
 
 
-class MyShiftWindow(QMainWindow):
+class MyShiftWindow(QWidget):
     """Shows the logged-in attendant's current nozzle/fuel assignment, if any."""
 
     def __init__(self, shift_service, auth_service, actor_user_id: str):
@@ -38,10 +38,12 @@ class MyShiftWindow(QMainWindow):
         layout.addLayout(self.body_layout)
         layout.addStretch()
 
-        container = QWidget()
+        container = GridBackgroundWidget()
         container.setObjectName("background")
         container.setLayout(layout)
-        self.setCentralWidget(container)
+        _page_layout = QVBoxLayout(self)
+        _page_layout.setContentsMargins(0, 0, 0, 0)
+        _page_layout.addWidget(container)
 
         self.refresh()
 
@@ -82,6 +84,7 @@ class MyShiftWindow(QMainWindow):
         card_layout.addWidget(self._field_label(f"Opening meter: {assignment.opening_meter:g}"))
         card_layout.addWidget(self._field_label(f"Status: {assignment.status.title()}"))
         card.setLayout(card_layout)
+        apply_hard_shadow(card)
 
         self.body_layout.addWidget(card)
 
