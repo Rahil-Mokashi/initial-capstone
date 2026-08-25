@@ -29,7 +29,7 @@ class GridBackgroundWidget(QWidget):
 
     DOT_SPACING = 20
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, force_dark_dots: bool = False):
         super().__init__(parent)
         # Required for this widget's own QSS background-color/border
         # (set via its objectName selector in styles.py) to actually
@@ -37,6 +37,13 @@ class GridBackgroundWidget(QWidget):
         # backgrounds without this, a documented Qt/QSS gotcha already
         # noted elsewhere in this codebase (see AlertCard).
         self.setAttribute(Qt.WA_StyledBackground, True)
+        # The login hero panel is a fixed black surface regardless of the
+        # app's light/dark toggle (see styles.py's login-panel docstring),
+        # so it always needs the light-toned dot color - the normal
+        # theme-read below would pick the near-black LIGHT_DOT_COLOR
+        # whenever the app itself is in light mode, which is invisible
+        # against a black panel.
+        self._force_dark_dots = force_dark_dots
 
     def paintEvent(self, event) -> None:  # noqa: N802 - Qt override
         super().paintEvent(event)
@@ -48,7 +55,7 @@ class GridBackgroundWidget(QWidget):
         from app.ui.styles import DARK_DOT_COLOR, LIGHT_DOT_COLOR
         from app.ui.theme import is_dark_mode
 
-        dot_color = QColor(*(DARK_DOT_COLOR if is_dark_mode() else LIGHT_DOT_COLOR))
+        dot_color = QColor(*(DARK_DOT_COLOR if (self._force_dark_dots or is_dark_mode()) else LIGHT_DOT_COLOR))
 
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing, False)
