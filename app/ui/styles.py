@@ -498,6 +498,73 @@ QLabel#heroBadgeGlyph {{
     font-weight: 700;
 }}
 
+/* --- Login redesign (2026-08-25): feature rows with their own icon
+   chip (the same icon-chip + title + description language dashCard
+   already uses, restated here in the hero panel's dark-on-black
+   register), plus a bottom-anchored footer bar so the panel's lower
+   half carries real information (device/date) instead of empty space. */
+
+QWidget#heroFeatureIcon {{
+    background-color: {COLOR_GRAPHITE};
+    border: 1px solid {COLOR_STEEL};
+    border-radius: {RADIUS_LG}px;
+}}
+
+QLabel#heroFeatureIconGlyph {{
+    font-size: 16px;
+    qproperty-alignment: AlignCenter;
+}}
+
+QLabel#heroFeatureTitle {{
+    color: {COLOR_PAPER_WHITE};
+    font-size: 14px;
+    font-weight: 700;
+}}
+
+QLabel#heroFeatureDesc {{
+    color: {COLOR_ASH};
+    font-size: 12px;
+}}
+
+QWidget#heroFooter {{
+    border-top: 1px solid {COLOR_GRAPHITE};
+}}
+
+QLabel#heroFooterText {{
+    color: {COLOR_STEEL};
+    font-size: 11px;
+    font-family: {FONT_MONO};
+}}
+
+/* --- Login form card --- */
+
+QLabel#fieldLabel {{
+    color: {color_text_muted};
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}}
+
+QPushButton#togglePasswordButton {{
+    background-color: {color_surface};
+    color: {color_text_muted};
+    border: 1.5px solid {color_border};
+    border-radius: {RADIUS_MD}px;
+    padding: 0px 12px;
+    font-size: 12px;
+    font-weight: 600;
+}}
+
+QPushButton#togglePasswordButton:hover {{
+    background-color: {color_surface_hover};
+    color: {color_text};
+}}
+
+QLabel#loginFootnote {{
+    color: {color_text_faint};
+    font-size: 12px;
+}}
+
 /* --- Dashboard quick-access cards --- */
 
 QWidget#dashCard {{
