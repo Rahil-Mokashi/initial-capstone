@@ -2,12 +2,15 @@ import contextlib
 import platform
 from datetime import date, datetime
 
-from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtCore import QEvent, QSize, Qt, QTimer, Signal
+from PySide6.QtGui import QColor, QFont, QIcon, QPainter, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
+    QCompleter,
     QGridLayout,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QMenu,
     QMessageBox,
     QMainWindow,
@@ -17,6 +20,7 @@ from PySide6.QtWidgets import (
     QStackedWidget,
     QVBoxLayout,
     QWidget,
+    QWidgetAction,
 )
 
 from app.core.config import settings
@@ -74,7 +78,7 @@ from app.services.tank_service import TankService
 from app.services.user_service import UserService
 from app.ui.background import is_widget_alive
 from app.ui.qt_utils import apply_hard_shadow, describe_unexpected_error
-from app.ui.sidebar import SIDEBAR_WIDTH, Sidebar
+from app.ui.sidebar import HEADER_HEIGHT, SIDEBAR_WIDTH, Sidebar
 from app.ui.theme import apply_theme, is_dark_mode, set_dark_mode
 from app.ui.widgets import GridBackgroundWidget, TankGaugeCard
 
@@ -229,30 +233,46 @@ class MainWindow(QMainWindow):
         # widened to keep the same amount of breathing room for content.
         self.setMinimumSize(960 + SIDEBAR_WIDTH, 620)
 
+        display_name = user_data.get("first_name") or user_data["username"]
+        full_name = " ".join(part for part in (user_data.get("first_name"), user_data.get("last_name")) if part) or user_data["username"]
+
         top_bar = QWidget()
         top_bar.setObjectName("topBar")
+        top_bar.setFixedHeight(HEADER_HEIGHT)
         top_bar_layout = QHBoxLayout()
         top_bar_layout.setContentsMargins(DASHBOARD_PAGE_MARGIN, 14, DASHBOARD_PAGE_MARGIN, 14)
+        top_bar_layout.setSpacing(12)
 
-        user_label = QLabel(user_data["username"])
-        user_label.setObjectName("userLabel")
+        # A single searchable index across the modules this user can
+        # actually see (built from the same is_card_visible gate the
+        # sidebar/dashboard use), so typing here can never surface a
+        # record the sidebar itself would have hidden. Rebuilt on every
+        # focus rather than once at login, so a record added mid-shift
+        # (a new employee, a new nozzle) is findable without a restart.
+        self._search_index: dict[str, callable] = {}
+        self.search_input = QLineEdit()
+        self.search_input.setObjectName("topBarSearch")
+        self.search_input.setPlaceholderText("🔍  Search employees, nozzles, tanks…")
+        self.search_input.setFixedWidth(280)
+        self.search_input.setClearButtonEnabled(True)
+        self._search_completer = QCompleter([])
+        self._search_completer.setCaseSensitivity(Qt.CaseInsensitive)
+        self._search_completer.setFilterMode(Qt.MatchContains)
+        self._search_completer.setCompletionMode(QCompleter.PopupCompletion)
+        self._search_completer.activated[str].connect(self._handle_search_selected)
+        self.search_input.setCompleter(self._search_completer)
+        self.search_input.installEventFilter(self)
+        self._rebuild_search_index()
 
-        role_tag = QLabel((user_data.get("role") or "No role").upper())
-        role_tag.setObjectName("roleTag")
-
-        account_button = QPushButton("Account")
-        account_button.setObjectName("secondaryButton")
-        account_button.setCursor(Qt.PointingHandCursor)
-        account_menu = QMenu(account_button)
-        account_menu.addAction("Change Password", self._open_change_password)
-        account_menu.addSeparator()
-        self._dark_mode_action = account_menu.addAction("Dark Mode")
-        self._dark_mode_action.setCheckable(True)
-        self._dark_mode_action.setChecked(is_dark_mode())
-        self._dark_mode_action.toggled.connect(self._toggle_dark_mode)
-        account_menu.addSeparator()
-        account_menu.addAction("Logout", self._logout)
-        account_button.setMenu(account_menu)
+        # Ticks every second so the bar reads as genuinely live rather
+        # than a date stamped once at login - cheap, since it only ever
+        # updates one label's text.
+        self.clock_label = QLabel("")
+        self.clock_label.setObjectName("topBarClock")
+        self._update_clock()
+        self._clock_timer = QTimer(self)
+        self._clock_timer.timeout.connect(self._update_clock)
+        self._clock_timer.start(1000)
 
         # The alert count belongs in the top bar rather than on a dashboard
         # card, because it must be visible from every state of this screen
@@ -262,18 +282,47 @@ class MainWindow(QMainWindow):
         self.alerts_button = QPushButton("Alerts")
         self.alerts_button.setObjectName("alertsButton")
         self.alerts_button.setCursor(Qt.PointingHandCursor)
-        self.alerts_button.clicked.connect(self._open_notifications)
+        self._alerts_menu = QMenu(self.alerts_button)
+        self._alerts_menu.setObjectName("alertsMenu")
+        self._alerts_menu.aboutToShow.connect(self._populate_alerts_menu)
+        self.alerts_button.setMenu(self._alerts_menu)
 
-        top_bar_layout.addWidget(user_label)
-        top_bar_layout.addSpacing(8)
-        top_bar_layout.addWidget(role_tag)
+        # The account control doubles as the identity display (an
+        # initials avatar + name, replacing the old separate "admin" /
+        # "ADMIN" pair) and the entry point to account actions - one
+        # element instead of three, each carrying more than it used to.
+        account_button = QPushButton(f"  {display_name}")
+        account_button.setObjectName("accountButton")
+        account_button.setCursor(Qt.PointingHandCursor)
+        account_button.setIconSize(QSize(26, 26))
+        self._account_button = account_button
+        account_menu = QMenu(account_button)
+        account_menu.setObjectName("accountMenu")
+        self._account_header_widget, self._account_header_labels = self._build_account_header(user_data, full_name)
+        header_action = QWidgetAction(account_menu)
+        header_action.setDefaultWidget(self._account_header_widget)
+        account_menu.addAction(header_action)
+        account_menu.addSeparator()
+        account_menu.addAction("Change Password", self._open_change_password)
+        account_menu.addSeparator()
+        self._dark_mode_action = account_menu.addAction("Dark Mode")
+        self._dark_mode_action.setCheckable(True)
+        self._dark_mode_action.setChecked(is_dark_mode())
+        self._dark_mode_action.toggled.connect(self._toggle_dark_mode)
+        account_menu.addSeparator()
+        account_menu.addAction("Logout", self._logout)
+        account_button.setMenu(account_menu)
+        self._refresh_account_avatar()
+
+        top_bar_layout.addWidget(self.search_input)
         top_bar_layout.addStretch()
+        top_bar_layout.addWidget(self.clock_label)
+        top_bar_layout.addSpacing(16)
         top_bar_layout.addWidget(self.alerts_button)
         top_bar_layout.addSpacing(8)
         top_bar_layout.addWidget(account_button)
         top_bar.setLayout(top_bar_layout)
 
-        display_name = user_data.get("first_name") or user_data["username"]
         greeting = QLabel(f"{_greeting_for_now()}, {display_name}")
         greeting.setObjectName("dashGreeting")
 
@@ -1124,6 +1173,233 @@ class MainWindow(QMainWindow):
         app = QApplication.instance()
         if app is not None:
             apply_theme(app)
+        # The avatar is a hand-drawn pixmap (QSS cannot style a
+        # QPushButton's icon), so switching theme has to redraw it
+        # explicitly - everything else on this button restyles itself
+        # automatically via the new stylesheet.
+        self._refresh_account_avatar()
+
+    def eventFilter(self, obj, event) -> bool:  # noqa: N802 - Qt override
+        # Refreshes the search index the moment the operator focuses the
+        # box, rather than only once at login - a record added mid-shift
+        # (a new employee, a newly wired nozzle) should be findable
+        # without restarting the app, and this is the cheapest moment to
+        # pay for that: right before they start typing, not on every
+        # keystroke.
+        if obj is self.search_input and event.type() == QEvent.FocusIn:
+            self._rebuild_search_index()
+        return super().eventFilter(obj, event)
+
+    def _rebuild_search_index(self) -> None:
+        """(display label -> handler) for every record this user may see.
+
+        Reuses the exact same services and permission gate
+        (_is_card_visible) the sidebar and dashboard already use, so the
+        search box can never surface a record its own navigation would
+        have hidden from this role.
+        """
+        actor_id = self._user_data["id"]
+        index: dict[str, callable] = {}
+
+        if self._is_card_visible(Permission.EMPLOYEE_VIEW):
+            try:
+                for employee in self._employee_service.list_employees(actor_id):
+                    label = f"👥  {employee.first_name} {employee.last_name}  ·  {employee.employee_code}"
+                    index[label] = self._open_employees
+            except Exception:  # noqa: BLE001 - search must not break the top bar
+                pass
+
+        if self._is_card_visible(Permission.NOZZLE_VIEW):
+            try:
+                for nozzle in self._nozzle_service.list_nozzles(actor_id):
+                    index[f"🔧  Nozzle {nozzle.code}"] = self._open_nozzles
+            except Exception:  # noqa: BLE001
+                pass
+
+        if self._is_card_visible(Permission.INVENTORY_VIEW):
+            try:
+                for tank in self._tank_service.list_tanks(actor_id):
+                    index[f"🛢️  Tank {tank.code}"] = self._open_tanks
+            except Exception:  # noqa: BLE001
+                pass
+
+        if self._is_card_visible(Permission.USER_MANAGE):
+            try:
+                for user in self._user_repo.list_all():
+                    index[f"🔐  {user.username}  ·  user account"] = self._open_users
+            except Exception:  # noqa: BLE001
+                pass
+
+        self._search_index = index
+        self._search_completer.model().setStringList(sorted(index.keys()))
+
+    def _handle_search_selected(self, label: str) -> None:
+        handler = self._search_index.get(label)
+        self.search_input.clear()
+        if handler is not None:
+            handler()
+
+    def _update_clock(self) -> None:
+        self.clock_label.setText(datetime.now().strftime("%a, %d %b  ·  %I:%M:%S %p"))
+
+    def _populate_alerts_menu(self) -> None:
+        """Rebuilt every time the menu is about to open (not cached) so
+        it always reflects the same live data refresh_alert_badge's count
+        just did - a stale preview showing different alerts than the
+        badge's own number would undermine trust in both.
+        """
+        from app.ui.notification_window import AlertCard
+
+        self._alerts_menu.clear()
+        actor_id = self._user_data["id"]
+
+        container = QWidget()
+        container.setObjectName("alertsMenuPanel")
+        layout = QVBoxLayout()
+        layout.setContentsMargins(4, 4, 4, 4)
+        layout.setSpacing(8)
+
+        try:
+            summary = self._notification_service.get_notifications(actor_id)
+        except Exception as exc:  # noqa: BLE001
+            layout.addWidget(QLabel(describe_unexpected_error(exc)))
+            summary = None
+
+        if summary is not None:
+            if summary.total == 0:
+                all_clear = QLabel("All clear — nothing needs attention right now.")
+                all_clear.setObjectName("subtitle")
+                layout.addWidget(all_clear)
+            else:
+                shown = [n for n in summary.notifications if not n.is_summary][:ALERTS_SHOWN_ON_DASHBOARD]
+                for notification in shown:
+                    layout.addWidget(AlertCard(notification))
+
+                view_all = QPushButton(f"View all {summary.total} alerts →")
+                view_all.setObjectName("secondaryButton")
+                view_all.setCursor(Qt.PointingHandCursor)
+                view_all.clicked.connect(self._go_to_all_alerts)
+                layout.addWidget(view_all)
+
+        container.setLayout(layout)
+        panel_action = QWidgetAction(self._alerts_menu)
+        panel_action.setDefaultWidget(container)
+        self._alerts_menu.addAction(panel_action)
+
+    def _go_to_all_alerts(self) -> None:
+        self._alerts_menu.close()
+        self._open_notifications()
+
+    def _build_account_header(self, user_data: dict, full_name: str):
+        """The account menu's top block: avatar, name, role, last login.
+
+        Built once (the name/role/last-login text are fixed for the
+        whole session); only the avatar pixmap can change afterwards
+        (a theme switch), which _refresh_account_avatar updates in
+        place via the returned label reference rather than rebuilding
+        this whole widget.
+        """
+        avatar_label = QLabel()
+        avatar_label.setFixedSize(40, 40)
+
+        name_label = QLabel(full_name)
+        name_label.setObjectName("accountMenuName")
+
+        role_label = QLabel((user_data.get("role") or "No role").upper())
+        role_label.setObjectName("roleTag")
+
+        text_layout = QVBoxLayout()
+        text_layout.setSpacing(4)
+        text_layout.addWidget(name_label)
+        text_layout.addWidget(role_label, alignment=Qt.AlignLeft)
+
+        top_row = QHBoxLayout()
+        top_row.setSpacing(12)
+        top_row.addWidget(avatar_label)
+        top_row.addLayout(text_layout, stretch=1)
+
+        last_login_label = QLabel("")
+        last_login_label.setObjectName("accountMenuLastLogin")
+        last_login_label.setWordWrap(True)
+        self._set_last_login_text(last_login_label, user_data.get("last_login"))
+
+        layout = QVBoxLayout()
+        layout.setContentsMargins(14, 12, 14, 12)
+        layout.setSpacing(10)
+        layout.addLayout(top_row)
+        layout.addWidget(last_login_label)
+
+        widget = QWidget()
+        widget.setObjectName("accountMenuHeader")
+        widget.setAttribute(Qt.WA_StyledBackground, True)
+        widget.setLayout(layout)
+        return widget, {"avatar": avatar_label, "last_login": last_login_label}
+
+    @staticmethod
+    def _set_last_login_text(label: QLabel, last_login_iso: str | None) -> None:
+        if not last_login_iso:
+            label.setText("First login this session")
+            return
+        try:
+            when = datetime.fromisoformat(last_login_iso)
+        except ValueError:
+            label.setText("First login this session")
+            return
+        label.setText("Last login: " + when.strftime("%d %b %Y, %I:%M %p"))
+
+    def _refresh_account_avatar(self) -> None:
+        """Redraws the initials pixmap for both the top-bar button and
+        the account menu's header - the one piece of this UI that is
+        hand-painted rather than QSS-driven, so a theme switch has to
+        explicitly repaint it (see _toggle_dark_mode)."""
+        initials = self._account_initials()
+        icon, pixmap = self._make_avatar(initials)
+        self._account_button.setIcon(icon)
+        if hasattr(self, "_account_header_labels"):
+            self._account_header_labels["avatar"].setPixmap(pixmap)
+
+    def _account_initials(self) -> str:
+        first = (self._user_data.get("first_name") or "").strip()
+        last = (self._user_data.get("last_name") or "").strip()
+        if first or last:
+            return f"{first[:1]}{last[:1]}".upper() or self._user_data["username"][:2].upper()
+        return self._user_data["username"][:2].upper()
+
+    @staticmethod
+    def _make_avatar(initials: str, size: int = 40) -> tuple[QIcon, QPixmap]:
+        """A filled-circle initials badge, drawn rather than loaded from
+        a file - there is no photo to show for a login account, and this
+        is the same "text avatar" convention most desktop and web apps
+        use for the same reason.
+
+        Colors are read directly rather than through QSS, since QPainter
+        draws pixels once at call time and has no stylesheet to consult -
+        matching the light/dark "primary" fill this app's filled buttons
+        already use (COLOR_CARBON_BLACK on light, COLOR_PAPER_WHITE on
+        dark - see styles.py's module docstring on why that pair
+        inverts).
+        """
+        from app.ui.styles import COLOR_CARBON_BLACK, COLOR_PAPER_WHITE
+
+        dark = is_dark_mode()
+        fill = QColor(COLOR_PAPER_WHITE if dark else COLOR_CARBON_BLACK)
+        text_color = QColor(COLOR_CARBON_BLACK if dark else COLOR_PAPER_WHITE)
+
+        pixmap = QPixmap(size, size)
+        pixmap.fill(Qt.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(fill)
+        painter.drawEllipse(0, 0, size, size)
+        font = QFont()
+        font.setBold(True)
+        font.setPointSize(max(10, size // 3))
+        painter.setFont(font)
+        painter.setPen(text_color)
+        painter.drawText(pixmap.rect(), Qt.AlignCenter, initials)
+        painter.end()
+        return QIcon(pixmap), pixmap
 
 
 class AppController:

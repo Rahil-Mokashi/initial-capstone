@@ -87,6 +87,12 @@ class AuthService:
             self._record_failed_login(user, device_info)
             return False, None, "Invalid username or password"
 
+        # Captured before _record_successful_login overwrites it with
+        # *this* login's timestamp - the account menu wants to show when
+        # the user last signed in before now, not the moment that just
+        # happened (which would make it always read "just now").
+        previous_login = user.last_login
+
         self._record_successful_login(user)
         token = generate_token()
         expires_at = datetime.now(timezone.utc) + self._session_timeout
@@ -94,6 +100,7 @@ class AuthService:
         self._audit_repo.record(event_type="login_success", actor_id=user.id, device_info=device_info)
 
         response = self._build_user_response(user)
+        response["last_login"] = previous_login.isoformat() if previous_login else None
         response["session_token"] = token
         response["expires_at"] = expires_at.isoformat()
         return True, response, None
