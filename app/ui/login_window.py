@@ -12,6 +12,27 @@ terminal - which device this is, and today's date) and gives the form
 real field labels, a password visibility toggle, and a security pill
 that makes the card read as a deliberate product surface rather than a
 bare form.
+
+Rebranded 2026-08-26: the screen used to read as an internal back-office
+tool - "Petrol Pump ERP" spelled out, a literal gas-pump emoji as the
+logo mark, "STAFF SIGN-IN", "pump account", and a footnote pointing
+someone at the "Users screen." None of that belongs on a login page for
+software meant to be deployed commercially to a customer's business -
+the product needs a real name and a wordmark, and the copy needs to
+read like any other professional product's sign-in page rather than
+exposing internal navigation labels. The rest of the application (main
+window title, PDF letterhead, installer, docs) still says "Petrol Pump
+ERP" - that is a separate, much larger rebrand this pass deliberately
+does not touch; scoping it to the login screen keeps the blast radius
+to the one surface that was actually asked about.
+
+Re-laid-out later the same day: the split dark-hero-panel/form-on-the-right
+layout is gone. The credentials card is now centered on the page, the
+brand mark (badge + "FuelDesk") sits above it instead of inside a side
+panel, and the same feature/terminal content that used to fill that
+panel is now four standalone bold callout cards flanking the centered
+card - two on each side - so the page still carries real information,
+just distributed around the card instead of stacked beside it.
 """
 
 import platform
@@ -32,123 +53,113 @@ from app.services.auth_service import AuthService
 from app.ui.qt_utils import apply_hard_shadow, chain_enter_to_next_field, describe_unexpected_error
 from app.ui.widgets import GridBackgroundWidget
 
+# The login screen's own product identity - see the module docstring for
+# why this differs from the "Petrol Pump ERP" name used everywhere else
+# in the app (main window title, PDF letterhead, installer, docs).
+PRODUCT_NAME = "FuelDesk"
+PRODUCT_MARK = "F"
+
 # (icon, title, description) - the same icon-chip + title + description
-# shape DashboardCard already uses, restated for the dark hero panel.
-HERO_FEATURES = [
-    ("📡", "Fully offline", "No internet or cloud dependency, ever."),
-    ("🔐", "Role-based access", "Six roles, permission-checked on every action."),
+# shape the dashboard's own cards use, restated as standalone bold cards
+# flanking the centered login card instead of rows inside a side panel.
+BOLD_FEATURES = [
+    ("📡", "Works fully offline", "No internet or cloud dependency, ever."),
+    ("🔐", "Role-based access control", "Granular permissions, checked on every action."),
     ("📜", "Complete audit trail", "Every change is logged and reviewable."),
 ]
+
+BOLD_CARD_WIDTH = 200
 
 
 def get_device_info() -> str:
     return platform.node() or "unknown-device"
 
 
-def _build_hero_feature_row(icon: str, title: str, description: str) -> QWidget:
-    icon_box = QWidget()
-    icon_box.setObjectName("heroFeatureIcon")
-    icon_box.setFixedSize(34, 34)
-    icon_layout = QVBoxLayout(icon_box)
-    icon_layout.setContentsMargins(0, 0, 0, 0)
-    icon_glyph = QLabel(icon)
-    icon_glyph.setObjectName("heroFeatureIconGlyph")
-    icon_layout.addWidget(icon_glyph)
-
-    title_label = QLabel(title)
-    title_label.setObjectName("heroFeatureTitle")
-
-    desc_label = QLabel(description)
-    desc_label.setObjectName("heroFeatureDesc")
-    desc_label.setWordWrap(True)
-
-    text_column = QVBoxLayout()
-    text_column.setContentsMargins(0, 0, 0, 0)
-    text_column.setSpacing(1)
-    text_column.addWidget(title_label)
-    text_column.addWidget(desc_label)
-
-    row = QHBoxLayout()
-    row.setSpacing(14)
-    row.addWidget(icon_box)
-    row.addLayout(text_column, stretch=1)
-
-    wrapper = QWidget()
-    wrapper.setLayout(row)
-    return wrapper
-
-
-def _build_hero_panel() -> QWidget:
-    """Left-hand brand panel: what makes the login screen feel like a
-    product rather than a bare form."""
-    panel = GridBackgroundWidget(force_dark_dots=True)
-    panel.setObjectName("heroPanel")
-    panel.setMinimumWidth(420)
-
+def _build_brand_header() -> QWidget:
+    """Badge + product name, centered above the login card."""
     badge = QWidget()
     badge.setObjectName("heroBadge")
-    badge.setFixedSize(48, 48)
+    badge.setFixedSize(56, 56)
     badge_layout = QVBoxLayout(badge)
     badge_layout.setContentsMargins(0, 0, 0, 0)
-    badge_glyph = QLabel("⛽")
+    badge_glyph = QLabel(PRODUCT_MARK)
     badge_glyph.setObjectName("heroBadgeGlyph")
     badge_glyph.setAlignment(Qt.AlignCenter)
     badge_layout.addWidget(badge_glyph)
 
-    title = QLabel("Petrol Pump ERP")
-    title.setObjectName("heroTitle")
-    title.setWordWrap(True)
+    title = QLabel(PRODUCT_NAME)
+    title.setObjectName("brandTitle")
 
-    tagline = QLabel("Sales, shifts, staff, and attendance — built to run reliably without the internet.")
-    tagline.setObjectName("heroTagline")
-    tagline.setWordWrap(True)
+    mark_row = QHBoxLayout()
+    mark_row.setSpacing(16)
+    mark_row.addWidget(badge)
+    mark_row.addWidget(title)
+    mark_row_wrap = QWidget()
+    mark_row_wrap.setLayout(mark_row)
 
-    features_layout = QVBoxLayout()
-    features_layout.setSpacing(20)
-    for icon, feature_title, description in HERO_FEATURES:
-        features_layout.addWidget(_build_hero_feature_row(icon, feature_title, description))
+    tagline = QLabel("Secure sign-in to your operations platform")
+    tagline.setObjectName("brandTagline")
+    tagline.setAlignment(Qt.AlignCenter)
 
-    top_content = QVBoxLayout()
-    top_content.setContentsMargins(0, 0, 0, 0)
-    top_content.setSpacing(0)
-    top_content.addWidget(badge)
-    top_content.addSpacing(28)
-    top_content.addWidget(title)
-    top_content.addSpacing(12)
-    top_content.addWidget(tagline)
-    top_content.addSpacing(36)
-    top_content.addLayout(features_layout)
+    column = QVBoxLayout()
+    column.setSpacing(10)
+    column.addWidget(mark_row_wrap, alignment=Qt.AlignHCenter)
+    column.addWidget(tagline)
 
-    # A bottom-anchored footer so the panel's lower half carries real,
-    # genuinely useful information (which shared terminal this is, what
-    # today's date is) instead of sitting empty - deliberately not a
-    # fabricated "v1.0"-style version tag, since nothing in this codebase
-    # tracks a real version number to show truthfully.
-    device_label = QLabel(f"DEVICE — {get_device_info().upper()}")
-    device_label.setObjectName("heroFooterText")
+    wrapper = QWidget()
+    wrapper.setLayout(column)
+    return wrapper
 
-    date_label = QLabel(datetime.now().strftime("%A, %d %B %Y").upper())
-    date_label.setObjectName("heroFooterText")
 
-    footer_layout = QHBoxLayout()
-    footer_layout.setContentsMargins(0, 16, 0, 0)
-    footer_layout.addWidget(device_label)
-    footer_layout.addStretch()
-    footer_layout.addWidget(date_label)
+def _build_bold_card(icon: str, title: str, description: str) -> QWidget:
+    """One standalone bold callout card - filled with color_primary, the
+    same "strongest visual anchor" tone the button system already uses,
+    so it stays high-contrast against the page in either theme."""
+    icon_box = QWidget()
+    icon_box.setObjectName("boldSideIcon")
+    icon_box.setFixedSize(34, 34)
+    icon_layout = QVBoxLayout(icon_box)
+    icon_layout.setContentsMargins(0, 0, 0, 0)
+    icon_glyph = QLabel(icon)
+    icon_glyph.setObjectName("boldSideIconGlyph")
+    icon_layout.addWidget(icon_glyph)
 
-    footer = QWidget()
-    footer.setObjectName("heroFooter")
-    footer.setLayout(footer_layout)
+    title_label = QLabel(title)
+    title_label.setObjectName("boldSideTitle")
+    title_label.setWordWrap(True)
 
-    content_layout = QVBoxLayout()
-    content_layout.setContentsMargins(48, 56, 48, 32)
-    content_layout.setSpacing(0)
-    content_layout.addLayout(top_content)
-    content_layout.addStretch()
-    content_layout.addWidget(footer)
+    desc_label = QLabel(description)
+    desc_label.setObjectName("boldSideDesc")
+    desc_label.setWordWrap(True)
 
-    panel.setLayout(content_layout)
-    return panel
+    card_layout = QVBoxLayout()
+    card_layout.setContentsMargins(18, 18, 18, 18)
+    card_layout.setSpacing(12)
+    card_layout.addWidget(icon_box)
+    card_layout.addWidget(title_label)
+    card_layout.addWidget(desc_label)
+
+    card = QWidget()
+    card.setObjectName("boldSideCard")
+    card.setFixedWidth(BOLD_CARD_WIDTH)
+    card.setLayout(card_layout)
+    apply_hard_shadow(card)
+    return card
+
+
+def _build_bold_column(cards: list[QWidget]) -> QWidget:
+    """Vertically centers a stack of bold cards next to the login card."""
+    layout = QVBoxLayout()
+    layout.setSpacing(20)
+    layout.addStretch()
+    for card in cards:
+        layout.addWidget(card)
+    layout.addStretch()
+
+    wrapper = QWidget()
+    wrapper.setFixedWidth(BOLD_CARD_WIDTH)
+    wrapper.setLayout(layout)
+    return wrapper
 
 
 class LoginWindow(QMainWindow):
@@ -161,22 +172,33 @@ class LoginWindow(QMainWindow):
 
     login_succeeded = Signal(dict)
 
+    # Below this window width, the two flanking bold-card columns are
+    # hidden (see _apply_responsive_layout) rather than left to crowd or
+    # clip against the credentials card.
+    SIDE_COLUMNS_MIN_WIDTH = 1360
+
     def __init__(self, auth_service: AuthService):
         super().__init__()
         self._auth_service = auth_service
 
-        self.setWindowTitle("Petrol Pump ERP - Login")
-        self.setMinimumSize(900, 560)
+        self.setWindowTitle(f"{PRODUCT_NAME} — Sign In")
+        # The true floor: brand header + card alone, columns hidden - the
+        # card's own vertical content (pill, heading, two fields, button,
+        # error slot, footnote) needs ~740px of height with the header
+        # above it, not the 640 an earlier pass guessed without measuring;
+        # that guess left the footnote overlapping the card's bottom edge
+        # at the window's own declared minimum size.
+        self.setMinimumSize(640, 780)
 
-        form_side = GridBackgroundWidget()
-        form_side.setObjectName("background")
+        page = GridBackgroundWidget()
+        page.setObjectName("background")
 
         card = QWidget()
         card.setObjectName("card")
         card.setFixedWidth(380)
         apply_hard_shadow(card)
 
-        security_pill = QLabel("STAFF SIGN-IN")
+        security_pill = QLabel("SECURE SIGN-IN")
         security_pill.setObjectName("roleTag")
         security_pill.setAlignment(Qt.AlignCenter)
         # A pill can't center itself inside a stretching layout without
@@ -190,7 +212,7 @@ class LoginWindow(QMainWindow):
         heading.setObjectName("title")
         heading.setAlignment(Qt.AlignCenter)
 
-        subtitle = QLabel("Sign in with your pump account to continue")
+        subtitle = QLabel("Sign in to access your dashboard")
         subtitle.setObjectName("subtitle")
         subtitle.setAlignment(Qt.AlignCenter)
         subtitle.setWordWrap(True)
@@ -198,7 +220,7 @@ class LoginWindow(QMainWindow):
         username_label = QLabel("USERNAME")
         username_label.setObjectName("fieldLabel")
         self.username_input = QLineEdit()
-        self.username_input.setPlaceholderText("e.g. attendant1")
+        self.username_input.setPlaceholderText("Enter your username")
 
         password_label = QLabel("PASSWORD")
         password_label.setObjectName("fieldLabel")
@@ -220,7 +242,7 @@ class LoginWindow(QMainWindow):
 
         chain_enter_to_next_field(self.username_input, self.password_input)
 
-        self.login_button = QPushButton("Login →")
+        self.login_button = QPushButton("Sign In →")
         self.login_button.setCursor(Qt.PointingHandCursor)
         self.login_button.setMinimumHeight(44)
         self.login_button.clicked.connect(self._attempt_login)
@@ -231,7 +253,7 @@ class LoginWindow(QMainWindow):
         self.error_label.setWordWrap(True)
         self.error_label.hide()
 
-        footnote = QLabel("Locked out or need a reset? Ask an administrator to sort you out on the Users screen.")
+        footnote = QLabel("Locked out or need a password reset? Contact your system administrator.")
         footnote.setObjectName("loginFootnote")
         footnote.setAlignment(Qt.AlignCenter)
         footnote.setWordWrap(True)
@@ -259,23 +281,57 @@ class LoginWindow(QMainWindow):
         card_layout.addWidget(footnote)
         card.setLayout(card_layout)
 
-        form_layout = QVBoxLayout()
-        form_layout.addStretch()
-        form_layout.addWidget(card, alignment=Qt.AlignCenter)
-        form_layout.addStretch()
-        form_side.setLayout(form_layout)
+        # Card flanked by two bold callout cards, distributed two-per-side
+        # rather than stacked in a single side panel (see module docstring).
+        this_terminal_card = _build_bold_card(
+            "🖥️",
+            "This terminal",
+            f"{get_device_info()} · {datetime.now().strftime('%A, %d %B %Y')}",
+        )
+        # Kept as attributes so resizeEvent() can show/hide them - the
+        # actual sign-in card must never be the thing that gives way when
+        # the window gets narrow, so these decorative columns are what
+        # drops out instead (see resizeEvent below).
+        self._left_column = _build_bold_column([_build_bold_card(*BOLD_FEATURES[0]), _build_bold_card(*BOLD_FEATURES[1])])
+        self._right_column = _build_bold_column([_build_bold_card(*BOLD_FEATURES[2]), this_terminal_card])
 
-        root_layout = QHBoxLayout()
-        root_layout.setContentsMargins(0, 0, 0, 0)
-        root_layout.setSpacing(0)
-        root_layout.addWidget(_build_hero_panel(), stretch=4)
-        root_layout.addWidget(form_side, stretch=5)
+        content_row = QHBoxLayout()
+        content_row.setSpacing(0)
+        content_row.addWidget(self._left_column)
+        content_row.addStretch(1)
+        content_row.addWidget(card)
+        content_row.addStretch(1)
+        content_row.addWidget(self._right_column)
 
-        root = QWidget()
-        root.setLayout(root_layout)
-        self.setCentralWidget(root)
+        page_layout = QVBoxLayout()
+        page_layout.setContentsMargins(48, 40, 48, 40)
+        page_layout.addStretch(1)
+        page_layout.addWidget(_build_brand_header(), alignment=Qt.AlignHCenter)
+        page_layout.addSpacing(36)
+        page_layout.addLayout(content_row)
+        page_layout.addStretch(1)
+        page.setLayout(page_layout)
+
+        self.setCentralWidget(page)
 
         self.username_input.setFocus()
+        self._apply_responsive_layout()
+
+    def resizeEvent(self, event) -> None:  # noqa: N802 - Qt override
+        super().resizeEvent(event)
+        self._apply_responsive_layout()
+
+    def _apply_responsive_layout(self) -> None:
+        """The four bold callout cards are decoration, not content - below
+        SIDE_COLUMNS_MIN_WIDTH there isn't room for both columns plus the
+        card without either overlapping or squeezing the card's own
+        breathing room away, so they're dropped rather than shrunk. The
+        credentials card itself never resizes: it's what the screen exists
+        to show, and it already fits down to the window's true minimum
+        size (see setMinimumSize above)."""
+        show_columns = self.width() >= self.SIDE_COLUMNS_MIN_WIDTH
+        self._left_column.setVisible(show_columns)
+        self._right_column.setVisible(show_columns)
 
     def _toggle_password_visibility(self) -> None:
         is_hidden = self.password_input.echoMode() == QLineEdit.Password
@@ -291,6 +347,13 @@ class LoginWindow(QMainWindow):
             self._set_error("Enter both username and password.")
             return
 
+        # Password verification (bcrypt) isn't instant, and the button is
+        # still clickable while it runs - without this, a double-click
+        # fires two concurrent authenticate() calls. Restored in every
+        # exit path below, success included, since login_succeeded may
+        # not swap this window out immediately.
+        self.login_button.setEnabled(False)
+        self.login_button.setText("Signing in…")
         try:
             success, user_data, error = self._auth_service.authenticate(
                 username, password, device_info=get_device_info()
@@ -298,6 +361,9 @@ class LoginWindow(QMainWindow):
         except Exception as exc:  # noqa: BLE001 - last resort so a DB/unexpected error can't crash the login screen
             self._set_error(describe_unexpected_error(exc))
             return
+        finally:
+            self.login_button.setEnabled(True)
+            self.login_button.setText("Sign In →")
 
         if not success:
             self._set_error(error or "Login failed.")
