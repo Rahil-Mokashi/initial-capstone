@@ -335,9 +335,91 @@ QLabel#breadcrumbSeparator {{
     font-size: 13px;
 }}
 
-QLabel#userLabel {{
-    font-size: 14px;
+/* Global search box (top bar, 2026-09-01) - a plain QLineEdit but
+   narrower and without the focus border growing the layout, since it
+   sits inline with fixed-height buttons either side of it. */
+QLineEdit#topBarSearch {{
+    background-color: {color_bg};
+    border: 1.5px solid {color_border};
+    border-radius: {RADIUS_FULL}px;
+    padding: 8px 14px;
+    font-size: 13px;
+}}
+
+QLineEdit#topBarSearch:focus {{
+    border: 1.5px solid {color_text};
+}}
+
+QLabel#topBarClock {{
+    color: {color_text_muted};
+    font-family: {FONT_MONO};
+    font-size: 12px;
     font-weight: 600;
+}}
+
+/* The account control: an initials-avatar icon + name, replacing the
+   old plain "admin" text label - see MainWindow._make_avatar. */
+QPushButton#accountButton {{
+    background-color: {color_surface};
+    color: {color_text};
+    border: 1.5px solid {color_border};
+    border-radius: {RADIUS_FULL}px;
+    padding: 6px 16px 6px 6px;
+    font-weight: 600;
+}}
+
+QPushButton#accountButton:hover {{
+    background-color: {color_surface_hover};
+}}
+
+/* Every dropdown in the app (Account, Alerts, and any future one) gets
+   this same card-like treatment instead of the bare OS-native menu look
+   the account menu previously had by default - hairline border, soft
+   corners, and hover rows that match the rest of the system rather than
+   whatever the platform's native menu theme happens to be. */
+QMenu {{
+    background-color: {color_surface};
+    border: 1px solid {color_border};
+    border-radius: {RADIUS_LG}px;
+    padding: 6px;
+}}
+
+QMenu::item {{
+    padding: 8px 12px;
+    border-radius: {RADIUS_MD}px;
+}}
+
+QMenu::item:selected {{
+    background-color: {color_surface_hover};
+    color: {color_text};
+}}
+
+QMenu::separator {{
+    height: 1px;
+    background-color: {color_border};
+    margin: 6px 4px;
+}}
+
+QWidget#accountMenuHeader {{
+    background-color: transparent;
+}}
+
+QLabel#accountMenuName {{
+    font-size: 14px;
+    font-weight: 700;
+}}
+
+QLabel#accountMenuLastLogin {{
+    color: {color_text_muted};
+    font-size: 12px;
+}}
+
+/* The alerts dropdown reuses AlertCard verbatim (see notification_window.py)
+   inside a QWidgetAction, so it needs no card-specific rules of its own -
+   only a little breathing room around that content. */
+QWidget#alertsMenuPanel {{
+    background-color: transparent;
+    min-width: 320px;
 }}
 
 /* Pill Tag / Badge - white fill, hairline border, uppercase mono text -

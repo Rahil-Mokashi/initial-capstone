@@ -25,6 +25,12 @@ from PySide6.QtWidgets import (
 
 SIDEBAR_WIDTH = 260
 
+# Shared with MainWindow's top bar (see main_window.py) so the brand
+# block and the top bar - two visually separate widgets sitting side by
+# side along the same top edge - line up on an identical bottom border
+# instead of each sizing itself independently off its own font metrics.
+HEADER_HEIGHT = 88
+
 
 class SidebarNavItem(QPushButton):
     """One clickable row in the sidebar: an icon glyph + a label."""
@@ -82,6 +88,7 @@ class Sidebar(QWidget):
         brand_block = QWidget()
         brand_block.setObjectName("sidebarBrandBlock")
         brand_block.setAttribute(Qt.WA_StyledBackground, True)
+        brand_block.setFixedHeight(HEADER_HEIGHT)
         brand_block.setLayout(brand_layout)
 
         nav_layout = QVBoxLayout()
