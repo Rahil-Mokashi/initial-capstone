@@ -1,6 +1,6 @@
 import contextlib
 import platform
-from datetime import datetime
+from datetime import date, datetime
 
 from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtWidgets import (
@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.core.config import settings
-from app.core.constants import Permission
+from app.core.constants import AssignmentStatus, Permission, ShiftStatus
 from app.core.exceptions import SessionExpiredError
 from app.database import connection as db_connection
 from app.repositories.attendance_repository import AttendanceRepository
@@ -76,7 +76,7 @@ from app.ui.background import is_widget_alive
 from app.ui.qt_utils import apply_hard_shadow, describe_unexpected_error
 from app.ui.sidebar import SIDEBAR_WIDTH, Sidebar
 from app.ui.theme import apply_theme, is_dark_mode, set_dark_mode
-from app.ui.widgets import GridBackgroundWidget
+from app.ui.widgets import GridBackgroundWidget, TankGaugeCard
 
 SESSION_CHECK_INTERVAL_MS = 60_000
 
@@ -93,51 +93,18 @@ DASHBOARD_PAGE_MARGIN = 24
 DASHBOARD_CARD_TARGET_WIDTH = 240
 DASHBOARD_MAX_CARD_COLUMNS = 4
 
+# Tank gauges are visually heavier than a stat tile (each carries its own
+# fill gauge), so they cap out at fewer columns than the stat strip does
+# even on a wide window - matches tank_window.py's own GAUGE_COLUMNS.
+DASHBOARD_TANK_GAUGE_MAX_COLUMNS = 3
 
-class DashboardCard(QWidget):
-    """A clickable quick-access tile on the landing dashboard."""
-
-    def __init__(self, icon: str, title: str, subtitle: str, on_click, parent=None):
-        super().__init__(parent)
-        self.setObjectName("dashCard")
-        self.setCursor(Qt.PointingHandCursor)
-        self.setAttribute(Qt.WA_Hover, True)
-        self.setAttribute(Qt.WA_StyledBackground, True)
-        self._on_click = on_click
-
-        icon_label = QLabel(icon)
-        icon_label.setObjectName("dashCardIcon")
-        icon_label.setFixedSize(46, 46)
-
-        title_label = QLabel(title)
-        title_label.setObjectName("dashCardTitle")
-
-        subtitle_label = QLabel(subtitle)
-        subtitle_label.setObjectName("dashCardSubtitle")
-        subtitle_label.setWordWrap(True)
-
-        text_layout = QVBoxLayout()
-        text_layout.setContentsMargins(0, 0, 0, 0)
-        text_layout.setSpacing(2)
-        text_layout.addWidget(title_label)
-        text_layout.addWidget(subtitle_label)
-
-        layout = QHBoxLayout()
-        layout.setContentsMargins(18, 16, 18, 16)
-        layout.setSpacing(14)
-        layout.addWidget(icon_label)
-        layout.addLayout(text_layout, stretch=1)
-        self.setLayout(layout)
-
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.setMinimumHeight(108)
-
-        apply_hard_shadow(self)
-
-    def mousePressEvent(self, event) -> None:  # noqa: N802 - Qt override
-        if event.button() == Qt.LeftButton:
-            self._on_click()
-        super().mousePressEvent(event)
+# How many items the dashboard's own condensed alert list / shift roster
+# show before deferring to their "view all" / "+N more" overflow - the
+# full, uncapped list already exists one click away (the Alerts screen,
+# the Shifts screen), so the dashboard only needs enough to be useful at
+# a glance, not to be a second copy of either screen.
+ALERTS_SHOWN_ON_DASHBOARD = 3
+ROSTER_ROWS_SHOWN_ON_DASHBOARD = 6
 
 
 class StatCard(QWidget):
@@ -355,19 +322,31 @@ class MainWindow(QMainWindow):
         self._stat_tiles = self._build_stat_tiles(user_data["id"])
         self._dashboard_columns = 0  # forces the first _populate_dashboard call to actually build
 
-        self._dynamic_dashboard_layout = QVBoxLayout()
-        self._dynamic_dashboard_layout.setSpacing(28)
+        # Two independent dynamic blocks, not one, so the build-once
+        # sections below (alerts, chart, roster) can sit BETWEEN them in
+        # the page's reading order while both still individually reflow
+        # their own column count on resize (see resizeEvent/_populate_dashboard).
+        self._stats_layout = QVBoxLayout()
+        self._stats_layout.setSpacing(28)
+        self._tank_gauges_layout = QVBoxLayout()
+        self._tank_gauges_layout.setSpacing(28)
 
         body_layout = QVBoxLayout()
         body_layout.setContentsMargins(DASHBOARD_PAGE_MARGIN, DASHBOARD_PAGE_MARGIN, DASHBOARD_PAGE_MARGIN, DASHBOARD_PAGE_MARGIN)
         body_layout.setSpacing(28)
         body_layout.addLayout(header_layout)
+        body_layout.addLayout(self._stats_layout)
 
-        # Built once here (not inside _populate_dashboard, which clears and
-        # rebuilds its own layout on every column-count change during a
-        # resize) so resizing the window never re-fetches or re-renders
-        # the chart's data - same reasoning _stat_tiles is computed once
-        # in __init__ rather than inside _populate_dashboard.
+        # Every section from here down is built once (not inside
+        # _populate_dashboard, which clears and rebuilds the two layouts
+        # above on every column-count change during a resize) so resizing
+        # the window never re-fetches or re-renders their data - same
+        # reasoning _stat_tiles is computed once in __init__ rather than
+        # inside _populate_dashboard.
+        alerts_section = self._build_alerts_section(user_data["id"])
+        if alerts_section is not None:
+            body_layout.addWidget(alerts_section)
+
         if self._is_card_visible(Permission.SALE_VIEW):
             from app.ui.widgets import SalesTrendChart
 
@@ -383,7 +362,12 @@ class MainWindow(QMainWindow):
             apply_hard_shadow(chart_card)
             body_layout.addWidget(chart_card)
 
-        body_layout.addLayout(self._dynamic_dashboard_layout)
+        body_layout.addLayout(self._tank_gauges_layout)
+
+        roster_section = self._build_shift_roster_section(user_data["id"])
+        if roster_section is not None:
+            body_layout.addWidget(roster_section)
+
         body_layout.addStretch()
 
         body = GridBackgroundWidget()
@@ -536,8 +520,22 @@ class MainWindow(QMainWindow):
         return any(self._auth_service.check_permission(self._user_data["id"], p.value) for p in permissions)
 
     def _populate_dashboard(self, columns: int) -> None:
+        """Rebuilds the two column-count-dependent sections (stat tiles,
+        tank gauges) whenever the window is resized across a column-count
+        threshold - see resizeEvent. Every other dashboard section
+        (alerts, sales chart, shift roster) is content that doesn't
+        reflow by column, so it's built once in __init__ instead; see the
+        comment there for why that split matters for a resize's cost.
+
+        Quick-access module tiles used to live here too, duplicating the
+        sidebar's own navigation one scroll below it - removed 2026-08-26
+        so this space goes to the sidebar's sole job (navigation) and the
+        dashboard's own job (a live snapshot of the business), rather than
+        overlapping between the two.
+        """
         self._dashboard_columns = columns
-        self._clear_layout(self._dynamic_dashboard_layout)
+        self._clear_layout(self._stats_layout)
+        self._clear_layout(self._tank_gauges_layout)
 
         if self._stat_tiles:
             stat_columns = min(len(self._stat_tiles), max(columns, 1))
@@ -548,40 +546,167 @@ class MainWindow(QMainWindow):
             for index, (value, label, tone) in enumerate(self._stat_tiles):
                 row, column = divmod(index, stat_columns)
                 stats_grid.addWidget(StatCard(value, label, tone), row, column)
-            self._dynamic_dashboard_layout.addLayout(stats_grid)
+            self._stats_layout.addLayout(stats_grid)
 
-        total_visible_cards = 0
-        for group_label, cards in self._card_groups:
-            visible_cards = [
-                (icon, title, subtitle, handler)
-                for icon, title, subtitle, handler, permission in cards
-                if self._is_card_visible(permission)
-            ]
-            if not visible_cards:
+        if self._is_card_visible(Permission.INVENTORY_VIEW):
+            try:
+                tanks = self._tank_service.list_tanks(self._user_data["id"])
+            except Exception as exc:  # noqa: BLE001 - the dashboard must still load if tank data can't be fetched
+                describe_unexpected_error(exc)
+                tanks = []
+
+            if tanks:
+                tank_label = QLabel("LIVE TANK LEVELS")
+                tank_label.setObjectName("dashGroupLabel")
+
+                tank_columns = max(1, min(columns, DASHBOARD_TANK_GAUGE_MAX_COLUMNS))
+                tank_grid = QGridLayout()
+                tank_grid.setSpacing(16)
+                for column in range(tank_columns):
+                    tank_grid.setColumnStretch(column, 1)
+                for index, tank in enumerate(tanks):
+                    row, column = divmod(index, tank_columns)
+                    tank_grid.addWidget(
+                        TankGaugeCard(
+                            tank.code,
+                            tank.fuel.fuel_type if tank.fuel else "",
+                            tank.status,
+                            tank.current_stock,
+                            tank.capacity,
+                        ),
+                        row,
+                        column,
+                    )
+
+                tank_section = QVBoxLayout()
+                tank_section.setSpacing(10)
+                tank_section.addWidget(tank_label)
+                tank_section.addLayout(tank_grid)
+                self._tank_gauges_layout.addLayout(tank_section)
+
+    def _build_alerts_section(self, actor_user_id: str) -> QWidget | None:
+        """The top few live alerts, inline on the dashboard rather than
+        behind only the Alerts button - reuses NotificationService and
+        AlertCard exactly as the Alerts screen itself does (see
+        notification_window.py), so this can never disagree with that
+        screen about which alerts exist or how they're worded. Returns
+        None only when even the "all clear" line can't be shown (the
+        summary call itself failed) - the dashboard must still load.
+        """
+        from app.ui.notification_window import AlertCard
+
+        try:
+            summary = self._notification_service.get_notifications(actor_user_id)
+        except Exception as exc:  # noqa: BLE001 - the dashboard must still load if alerts can't be computed
+            describe_unexpected_error(exc)
+            return None
+
+        label = QLabel("ATTENTION NEEDED")
+        label.setObjectName("dashGroupLabel")
+
+        section_layout = QVBoxLayout()
+        section_layout.setSpacing(12)
+        section_layout.addWidget(label)
+
+        if summary.total == 0:
+            all_clear = QLabel("All clear — nothing needs attention right now.")
+            all_clear.setObjectName("subtitle")
+            section_layout.addWidget(all_clear)
+        else:
+            # is_summary lines are NotificationService's own "N more of
+            # this category" trailers - skipped here since the dashboard
+            # has its own "view all" link below instead of a second,
+            # differently-worded overflow note.
+            shown = [n for n in summary.notifications if not n.is_summary][:ALERTS_SHOWN_ON_DASHBOARD]
+            for notification in shown:
+                section_layout.addWidget(AlertCard(notification))
+
+            view_all = QPushButton(f"View all {summary.total} alerts →")
+            view_all.setObjectName("secondaryButton")
+            view_all.setCursor(Qt.PointingHandCursor)
+            view_all.clicked.connect(self._open_notifications)
+            link_row = QHBoxLayout()
+            link_row.addWidget(view_all)
+            link_row.addStretch()
+            section_layout.addLayout(link_row)
+
+        wrapper = QWidget()
+        wrapper.setLayout(section_layout)
+        return wrapper
+
+    def _build_shift_roster_section(self, actor_user_id: str) -> QWidget | None:
+        """Who is actually on a nozzle right now, across every shift open
+        today - replaces the old "shifts open now" stat tile's bare count
+        with the roster behind it, the same employee/nozzle/fuel data the
+        Shifts screen's own assignment view already shows (ShiftService,
+        not a duplicated query). Gated on SHIFT_VIEW like every other
+        shift figure on this page; returns None (no card at all) for a
+        role that cannot see shifts, rather than an empty card.
+        """
+        if not self._is_card_visible(Permission.SHIFT_VIEW):
+            return None
+
+        try:
+            todays_shifts = self._shift_service.list_shifts(actor_user_id, date.today(), date.today())
+        except Exception as exc:  # noqa: BLE001 - the dashboard must still load if the roster can't be fetched
+            describe_unexpected_error(exc)
+            todays_shifts = []
+
+        rows: list[tuple[str, str]] = []
+        for shift in todays_shifts:
+            if shift.status != ShiftStatus.OPEN.value:
                 continue
-            total_visible_cards += len(visible_cards)
+            for assignment in shift.nozzle_assignments:
+                if assignment.status != AssignmentStatus.ACTIVE.value:
+                    continue
+                employee = assignment.employee
+                name = f"{employee.first_name} {employee.last_name}" if employee else "Unknown employee"
+                nozzle_code = assignment.nozzle.code if assignment.nozzle else "?"
+                fuel_type = assignment.nozzle.fuel.fuel_type if assignment.nozzle and assignment.nozzle.fuel else ""
+                since = assignment.start_time.strftime("%H:%M") if assignment.start_time else "—"
+                rows.append((name, f"{nozzle_code} · {fuel_type} · {shift.shift_label} · since {since}"))
+        rows.sort(key=lambda row: row[0])
 
-            group_label_widget = QLabel(group_label)
-            group_label_widget.setObjectName("dashGroupLabel")
+        title = QLabel(f"On Shift Now ({len(rows)})" if rows else "On Shift Now")
+        title.setObjectName("sectionTitle")
 
-            group_grid = QGridLayout()
-            group_grid.setSpacing(16)
-            for column in range(columns):
-                group_grid.setColumnStretch(column, 1)
-            for index, (icon, title, subtitle, handler) in enumerate(visible_cards):
-                row, column = divmod(index, columns)
-                group_grid.addWidget(DashboardCard(icon, title, subtitle, handler), row, column)
+        inner = QVBoxLayout()
+        inner.setContentsMargins(20, 18, 20, 18)
+        inner.setSpacing(14)
+        inner.addWidget(title)
 
-            group_layout = QVBoxLayout()
-            group_layout.setSpacing(10)
-            group_layout.addWidget(group_label_widget)
-            group_layout.addLayout(group_grid)
-            self._dynamic_dashboard_layout.addLayout(group_layout)
+        if not rows:
+            empty = QLabel("No attendant is currently assigned to a nozzle.")
+            empty.setObjectName("subtitle")
+            empty.setWordWrap(True)
+            inner.addWidget(empty)
+        else:
+            rows_layout = QVBoxLayout()
+            rows_layout.setSpacing(12)
+            for name, detail in rows[:ROSTER_ROWS_SHOWN_ON_DASHBOARD]:
+                name_label = QLabel(name)
+                name_label.setObjectName("dashCardTitle")
+                detail_label = QLabel(detail)
+                detail_label.setObjectName("subtitle")
+                row_layout = QVBoxLayout()
+                row_layout.setSpacing(2)
+                row_layout.addWidget(name_label)
+                row_layout.addWidget(detail_label)
+                rows_layout.addLayout(row_layout)
+            inner.addLayout(rows_layout)
 
-        if total_visible_cards == 0:
-            empty_state = QLabel("Nothing to show yet — ask an administrator for access to a module.")
-            empty_state.setObjectName("subtitle")
-            self._dynamic_dashboard_layout.addWidget(empty_state)
+            overflow = len(rows) - ROSTER_ROWS_SHOWN_ON_DASHBOARD
+            if overflow > 0:
+                more = QLabel(f"+{overflow} more on shift")
+                more.setObjectName("subtitle")
+                inner.addWidget(more)
+
+        panel = QWidget()
+        panel.setObjectName("card")
+        panel.setAttribute(Qt.WA_StyledBackground, True)
+        panel.setLayout(inner)
+        apply_hard_shadow(panel)
+        return panel
 
     def _build_stat_tiles(self, actor_user_id: str) -> list[tuple[str, str, str]]:
         try:

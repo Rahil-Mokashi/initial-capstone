@@ -136,6 +136,13 @@ def build_stylesheet(dark: bool = False) -> str:
         color_caution = "#fbbf24"
         color_caution_bg = "#3a2a0a"
         color_caution_text = "#fde68a"
+
+        # The login screen's bold side cards invert fill with the page (see
+        # color_primary above) so they read as a strong anchor in either
+        # theme instead of vanishing into a same-tone background. Their
+        # muted/description text needs its own pairing since color_text_muted
+        # is tuned for Graphite, not for a card that's flipped to solid white.
+        color_bold_muted = "#5f5e5e"
     else:
         color_bg = "#f9f9f9"
         color_surface = "#ffffff"
@@ -163,6 +170,8 @@ def build_stylesheet(dark: bool = False) -> str:
         color_caution = COLOR_CAUTION_AMBER
         color_caution_bg = COLOR_CAUTION_BG
         color_caution_text = COLOR_CAUTION_TEXT
+
+        color_bold_muted = COLOR_ASH
 
     return f"""
 * {{
@@ -461,79 +470,66 @@ QLabel#sectionTitle {{
     margin-top: 8px;
 }}
 
-/* --- Login hero panel ---
-   A fixed dark marketing panel independent of the reference mockup (which
-   has no login screen) - kept as a deliberate design choice, still fully
-   consistent with the new black/white palette. */
-
-QWidget#heroPanel {{
-    background-color: {COLOR_CARBON_BLACK};
-}}
-
-QLabel#heroTitle {{
-    color: {COLOR_PAPER_WHITE};
-    font-size: 30px;
-    font-weight: 700;
-}}
-
-QLabel#heroTagline {{
-    color: {COLOR_ASH};
-    font-size: 14px;
-}}
-
-QLabel#heroBullet {{
-    color: {COLOR_PAPER_WHITE};
-    font-size: 13px;
-}}
+/* --- Login screen: centered card, 2026-08-26 ---
+   Replaced the earlier split dark-hero-panel/form layout with a single
+   centered card: the brand mark sits above it, bold callout cards flank
+   it on both sides. The badge keeps a fixed black-on-white treatment
+   (it's a wordmark stamp, not a themed surface); the flanking cards use
+   color_primary/color_primary_text so they invert with the button system
+   itself - carbon-black cards on the light theme's near-white page, and
+   paper-white cards on the dark theme's near-black page - the same "strongest
+   visual anchor" logic the docstring above already applies to buttons,
+   so a card can never fade into a same-tone page in either mode. */
 
 QWidget#heroBadge {{
     background-color: {COLOR_CARBON_BLACK};
     border: 1.5px solid {COLOR_PAPER_WHITE};
-    border-radius: 22px;
+    border-radius: 28px;
 }}
 
 QLabel#heroBadgeGlyph {{
     color: {COLOR_PAPER_WHITE};
-    font-size: 22px;
+    font-size: 26px;
     font-weight: 700;
 }}
 
-/* --- Login redesign (2026-08-25): feature rows with their own icon
-   chip (the same icon-chip + title + description language dashCard
-   already uses, restated here in the hero panel's dark-on-black
-   register), plus a bottom-anchored footer bar so the panel's lower
-   half carries real information (device/date) instead of empty space. */
+QLabel#brandTitle {{
+    color: {color_text};
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+}}
 
-QWidget#heroFeatureIcon {{
-    background-color: {COLOR_GRAPHITE};
-    border: 1px solid {COLOR_STEEL};
+QLabel#brandTagline {{
+    color: {color_text_muted};
+    font-size: 14px;
+}}
+
+QWidget#boldSideCard {{
+    background-color: {color_primary};
     border-radius: {RADIUS_LG}px;
 }}
 
-QLabel#heroFeatureIconGlyph {{
+QWidget#boldSideIcon {{
+    background-color: transparent;
+    border: 1.5px solid {color_primary_text};
+    border-radius: {RADIUS_MD}px;
+}}
+
+QLabel#boldSideIconGlyph {{
     font-size: 16px;
     qproperty-alignment: AlignCenter;
 }}
 
-QLabel#heroFeatureTitle {{
-    color: {COLOR_PAPER_WHITE};
+QLabel#boldSideTitle {{
+    color: {color_primary_text};
     font-size: 14px;
     font-weight: 700;
 }}
 
-QLabel#heroFeatureDesc {{
-    color: {COLOR_ASH};
+QLabel#boldSideDesc {{
+    color: {color_bold_muted};
     font-size: 12px;
-}}
-
-QWidget#heroFooter {{
-    border-top: 1px solid {COLOR_GRAPHITE};
-}}
-
-QLabel#heroFooterText {{
-    color: {COLOR_STEEL};
-    font-size: 11px;
-    font-family: {FONT_MONO};
 }}
 
 /* --- Login form card --- */
@@ -565,26 +561,13 @@ QLabel#loginFootnote {{
     font-size: 12px;
 }}
 
-/* --- Dashboard quick-access cards --- */
-
-QWidget#dashCard {{
-    background-color: {color_surface};
-    border: 1px solid {color_border};
-    border-radius: {RADIUS_XL}px;
-}}
-
-QWidget#dashCard:hover {{
-    border: 1.5px solid {color_text};
-}}
-
-QLabel#dashCardIcon {{
-    background-color: {color_surface_hover};
-    color: {color_text};
-    border-radius: {RADIUS_LG}px;
-    font-size: 18px;
-    font-weight: 700;
-    qproperty-alignment: AlignCenter;
-}}
+/* --- Dashboard cards ---
+   #dashCard/#dashCardIcon (the quick-access tile itself) were removed
+   2026-08-26 when the dashboard's module grid was dropped in favor of
+   the sidebar as the sole navigation surface - #dashCardTitle/
+   #dashCardSubtitle stay because other list rows (tank_window.py's
+   recent transactions, the dashboard's own shift roster, sales_window.py)
+   still use that title/subtitle text pairing on their own containers. */
 
 QLabel#dashCardTitle {{
     font-size: 15px;
