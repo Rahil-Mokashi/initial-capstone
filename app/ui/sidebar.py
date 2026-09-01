@@ -33,12 +33,12 @@ HEADER_HEIGHT = 88
 
 
 class SidebarNavItem(QPushButton):
-    """One clickable row in the sidebar: an icon glyph + a label."""
+    """One clickable row in the sidebar: a plain text label."""
 
-    def __init__(self, icon: str, label: str, on_click, parent=None):
+    def __init__(self, label: str, on_click, parent=None):
         super().__init__(parent)
         self.setObjectName("sidebarNavItem")
-        self.setText(f"{icon}   {label}")
+        self.setText(label)
         self.setCursor(Qt.PointingHandCursor)
         self.setProperty("active", False)
         self.clicked.connect(on_click)
@@ -55,8 +55,8 @@ class SidebarNavItem(QPushButton):
 class Sidebar(QWidget):
     """Fixed-width, full-height navigation dock.
 
-    `groups` is the exact (group_label, [(icon, title, subtitle,
-    handler, permission), ...]) structure MainWindow already builds its
+    `groups` is the exact (group_label, [(title, subtitle, handler,
+    permission), ...]) structure MainWindow already builds its
     dashboard quick-access cards from, passed straight through rather
     than duplicated - the sidebar and the dashboard's own card grid read
     from one source of truth, so a new module can never show up in one
@@ -95,16 +95,16 @@ class Sidebar(QWidget):
         nav_layout.setContentsMargins(12, 16, 12, 16)
         nav_layout.setSpacing(4)
 
-        home_icon, home_title, home_handler = home_action
-        home_item = SidebarNavItem(home_icon, home_title, home_handler)
+        home_title, home_handler = home_action
+        home_item = SidebarNavItem(home_title, home_handler)
         self._nav_items[home_title] = home_item
         nav_layout.addWidget(home_item)
         nav_layout.addSpacing(12)
 
         for group_label, items in groups:
             visible_items = [
-                (icon, title, handler)
-                for icon, title, subtitle, handler, permission in items
+                (title, handler)
+                for title, subtitle, handler, permission in items
                 if is_card_visible(permission)
             ]
             if not visible_items:
@@ -112,8 +112,8 @@ class Sidebar(QWidget):
             group_label_widget = QLabel(group_label)
             group_label_widget.setObjectName("sidebarGroupLabel")
             nav_layout.addWidget(group_label_widget)
-            for icon, title, handler in visible_items:
-                item = SidebarNavItem(icon, title, handler)
+            for title, handler in visible_items:
+                item = SidebarNavItem(title, handler)
                 self._nav_items[title] = item
                 nav_layout.addWidget(item)
             nav_layout.addSpacing(12)
@@ -131,8 +131,8 @@ class Sidebar(QWidget):
         footer_layout = QVBoxLayout()
         footer_layout.setContentsMargins(12, 12, 12, 16)
         footer_layout.setSpacing(4)
-        for icon, title, handler in footer_actions:
-            footer_layout.addWidget(SidebarNavItem(icon, title, handler))
+        for title, handler in footer_actions:
+            footer_layout.addWidget(SidebarNavItem(title, handler))
         footer_block = QWidget()
         footer_block.setObjectName("sidebarFooterBlock")
         footer_block.setAttribute(Qt.WA_StyledBackground, True)

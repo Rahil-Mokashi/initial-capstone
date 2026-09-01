@@ -252,7 +252,7 @@ class MainWindow(QMainWindow):
         self._search_index: dict[str, callable] = {}
         self.search_input = QLineEdit()
         self.search_input.setObjectName("topBarSearch")
-        self.search_input.setPlaceholderText("🔍  Search employees, nozzles, tanks…")
+        self.search_input.setPlaceholderText("Search employees, nozzles, tanks…")
         self.search_input.setFixedWidth(280)
         self.search_input.setClearButtonEnabled(True)
         self._search_completer = QCompleter([])
@@ -338,33 +338,33 @@ class MainWindow(QMainWindow):
             (
                 "DAILY OPERATIONS",
                 [
-                    ("👥", "Employees", "Staff, documents, and status", self._open_employees, Permission.EMPLOYEE_VIEW),
-                    ("🕒", "Attendance", "Mark and review attendance", self._open_attendance, Permission.ATTENDANCE_VIEW),
-                    ("⛽", "Shifts", "Open/close shifts, assign nozzles", self._open_shifts, Permission.SHIFT_VIEW),
-                    ("🪪", "My Shift", "Your current nozzle and fuel assignment", self._open_my_shift, Permission.MY_ASSIGNMENT_VIEW),
-                    ("⚡", "Terminal", "Fast fuel-sale entry at the pump", self._open_terminal, Permission.SALE_MANAGE),
-                    ("💳", "Sales", "Record sales and manage customers", self._open_sales, Permission.SALE_VIEW),
-                    ("🧾", "Credit", "Credit accounts, payments, and balances", self._open_credit, Permission.CREDIT_VIEW),
-                    ("🧮", "Expenses", "Record and approve pump expenses", self._open_expenses, Permission.EXPENSE_VIEW),
-                    ("⚖️", "Reconciliation", "Reconcile cash, UPI, and card per shift", self._open_reconciliation, Permission.RECONCILIATION_VIEW),
-                    ("🔧", "Nozzles", "Manage dispensers and nozzles", self._open_nozzles, Permission.NOZZLE_VIEW),
-                    ("🛢️", "Tanks", "Stock, transactions, reconciliation", self._open_tanks, Permission.INVENTORY_VIEW),
-                    ("🏷️", "Fuel Prices", "Set selling rates, view price history", self._open_fuel_prices, Permission.FUEL_PRICE_VIEW),
-                    ("🚛", "Procurement", "Suppliers, orders, and deliveries", self._open_procurement, Permission.PROCUREMENT_VIEW),
+                    ("Employees", "Staff, documents, and status", self._open_employees, Permission.EMPLOYEE_VIEW),
+                    ("Attendance", "Mark and review attendance", self._open_attendance, Permission.ATTENDANCE_VIEW),
+                    ("Shifts", "Open/close shifts, assign nozzles", self._open_shifts, Permission.SHIFT_VIEW),
+                    ("My Shift", "Your current nozzle and fuel assignment", self._open_my_shift, Permission.MY_ASSIGNMENT_VIEW),
+                    ("Terminal", "Fast fuel-sale entry at the pump", self._open_terminal, Permission.SALE_MANAGE),
+                    ("Sales", "Record sales and manage customers", self._open_sales, Permission.SALE_VIEW),
+                    ("Credit", "Credit accounts, payments, and balances", self._open_credit, Permission.CREDIT_VIEW),
+                    ("Expenses", "Record and approve pump expenses", self._open_expenses, Permission.EXPENSE_VIEW),
+                    ("Reconciliation", "Reconcile cash, UPI, and card per shift", self._open_reconciliation, Permission.RECONCILIATION_VIEW),
+                    ("Nozzles", "Manage dispensers and nozzles", self._open_nozzles, Permission.NOZZLE_VIEW),
+                    ("Tanks", "Stock, transactions, reconciliation", self._open_tanks, Permission.INVENTORY_VIEW),
+                    ("Fuel Prices", "Set selling rates, view price history", self._open_fuel_prices, Permission.FUEL_PRICE_VIEW),
+                    ("Procurement", "Suppliers, orders, and deliveries", self._open_procurement, Permission.PROCUREMENT_VIEW),
                 ],
             ),
             (
                 "REPORTS & ADMINISTRATION",
                 [
                     (
-                        "📊", "Reports", "Sales, payments, credit, expenses, and inventory",
+                        "Reports", "Sales, payments, credit, expenses, and inventory",
                         self._open_reports,
                         (Permission.INVENTORY_VIEW, Permission.SALE_VIEW, Permission.EXPENSE_VIEW, Permission.CREDIT_VIEW, Permission.RECONCILIATION_VIEW, Permission.ANALYTICS_VIEW),
                     ),
-                    ("🔐", "Users", "Create logins and manage roles", self._open_users, Permission.USER_MANAGE),
-                    ("⚙️", "Settings", "Company profile, printing, backups", self._open_settings, Permission.SETTINGS_VIEW),
-                    ("🗄️", "Backups", "Back up or restore the database", self._open_backups, Permission.BACKUP_MANAGE),
-                    ("📜", "Audit Log", "Review every recorded change", self._open_audit_log, Permission.AUDIT_VIEW),
+                    ("Users", "Create logins and manage roles", self._open_users, Permission.USER_MANAGE),
+                    ("Settings", "Company profile, printing, backups", self._open_settings, Permission.SETTINGS_VIEW),
+                    ("Backups", "Back up or restore the database", self._open_backups, Permission.BACKUP_MANAGE),
+                    ("Audit Log", "Review every recorded change", self._open_audit_log, Permission.AUDIT_VIEW),
                 ],
             ),
         ]
@@ -487,11 +487,11 @@ class MainWindow(QMainWindow):
             device_label=platform.node() or "unknown-device",
             groups=self._card_groups,
             is_card_visible=self._is_card_visible,
-            home_action=("🏠", "Dashboard", self._go_home),
+            home_action=("Dashboard", self._go_home),
             footer_actions=[
-                ("🆘", "Support", self._open_support),
-                ("🔑", "Change Password", self._open_change_password),
-                ("🚪", "Logout", self._logout),
+                ("Support", self._open_support),
+                ("Change Password", self._open_change_password),
+                ("Logout", self._logout),
             ],
         )
         self._sidebar.set_active("Dashboard")
@@ -1204,7 +1204,7 @@ class MainWindow(QMainWindow):
         if self._is_card_visible(Permission.EMPLOYEE_VIEW):
             try:
                 for employee in self._employee_service.list_employees(actor_id):
-                    label = f"👥  {employee.first_name} {employee.last_name}  ·  {employee.employee_code}"
+                    label = f"{employee.first_name} {employee.last_name}  ·  {employee.employee_code}"
                     index[label] = self._open_employees
             except Exception:  # noqa: BLE001 - search must not break the top bar
                 pass
@@ -1212,21 +1212,21 @@ class MainWindow(QMainWindow):
         if self._is_card_visible(Permission.NOZZLE_VIEW):
             try:
                 for nozzle in self._nozzle_service.list_nozzles(actor_id):
-                    index[f"🔧  Nozzle {nozzle.code}"] = self._open_nozzles
+                    index[f"Nozzle {nozzle.code}"] = self._open_nozzles
             except Exception:  # noqa: BLE001
                 pass
 
         if self._is_card_visible(Permission.INVENTORY_VIEW):
             try:
                 for tank in self._tank_service.list_tanks(actor_id):
-                    index[f"🛢️  Tank {tank.code}"] = self._open_tanks
+                    index[f"Tank {tank.code}"] = self._open_tanks
             except Exception:  # noqa: BLE001
                 pass
 
         if self._is_card_visible(Permission.USER_MANAGE):
             try:
                 for user in self._user_repo.list_all():
-                    index[f"🔐  {user.username}  ·  user account"] = self._open_users
+                    index[f"{user.username}  ·  user account"] = self._open_users
             except Exception:  # noqa: BLE001
                 pass
 
