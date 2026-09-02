@@ -3,9 +3,9 @@ for the UI layer."""
 
 from datetime import date
 
-from PySide6.QtCore import QDate
-from PySide6.QtGui import QColor
-from PySide6.QtWidgets import QGraphicsDropShadowEffect, QWidget
+from PySide6.QtCore import QDate, QPointF, QRectF, QSize, Qt
+from PySide6.QtGui import QColor, QIcon, QPainter, QPixmap, QPolygonF
+from PySide6.QtWidgets import QGraphicsDropShadowEffect, QPushButton, QWidget
 
 from app.core.logging import logger
 
@@ -83,6 +83,64 @@ def apply_hard_shadow(widget: QWidget, dx: int = 5, dy: int = 5, color: str | No
     shadow.setOffset(0, max(dx, dy) // 2)
     shadow.setColor(shadow_color)
     widget.setGraphicsEffect(shadow)
+
+
+def _draw_pencil_icon(size: int = 16) -> QIcon:
+    """A small pencil pictogram drawn with QPainter rather than an emoji
+    glyph or a bundled icon file - matching the app-wide decision (see
+    the 2026-09-01 emoji-removal commit) to drop colorful emoji pictographs
+    everywhere, and reusing the exact "draw the icon at call time" approach
+    MainWindow._make_avatar already uses for the account badge, so it
+    stays a single flat color that matches the active theme instead of a
+    fixed-color image asset that would look wrong in dark mode.
+    """
+    from app.ui.styles import COLOR_CARBON_BLACK, COLOR_PAPER_WHITE
+    from app.ui.theme import is_dark_mode
+
+    color = QColor(COLOR_PAPER_WHITE if is_dark_mode() else COLOR_CARBON_BLACK)
+
+    pixmap = QPixmap(size, size)
+    pixmap.fill(Qt.transparent)
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.Antialiasing)
+    painter.setPen(Qt.NoPen)
+    painter.setBrush(color)
+
+    painter.translate(size / 2, size / 2)
+    painter.rotate(-45)
+    shaft = QRectF(-size * 0.11, -size * 0.42, size * 0.22, size * 0.62)
+    painter.drawRoundedRect(shaft, size * 0.05, size * 0.05)
+    tip = QPolygonF([
+        QPointF(shaft.left(), shaft.bottom()),
+        QPointF(shaft.right(), shaft.bottom()),
+        QPointF(0, shaft.bottom() + size * 0.22),
+    ])
+    painter.drawPolygon(tip)
+    painter.end()
+    return QIcon(pixmap)
+
+
+def make_edit_icon_button(on_click, tooltip: str = "Edit details") -> QPushButton:
+    """A small pencil-icon button for one table row, used in every list
+    screen's trailing "Actions" column.
+
+    Every module's table used to open its edit/detail dialog on
+    doubleClicked - a hidden gesture with no visible affordance, so
+    there was no way to discover "double-click a row to edit it" without
+    already being told. This button makes that action visible instead:
+    each row gets its own clickable icon, and double-click is dropped
+    entirely (see each *_window.py for the removed doubleClicked
+    connection) so there is exactly one, discoverable way to open a row.
+    """
+    button = QPushButton()
+    button.setIcon(_draw_pencil_icon())
+    button.setIconSize(QSize(15, 15))
+    button.setFixedSize(28, 28)
+    button.setToolTip(tooltip)
+    button.setObjectName("rowIconButton")
+    button.setCursor(Qt.PointingHandCursor)
+    button.clicked.connect(on_click)
+    return button
 
 
 GENERIC_ERROR_MESSAGE = "Something went wrong. Please try again, and contact support if this keeps happening."

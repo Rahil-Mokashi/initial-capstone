@@ -26,11 +26,11 @@ from app.core.constants import NozzleStatus, Permission
 from app.core.exceptions import AppError
 from app.database.base import StatusEnum
 from app.schemas.nozzle import DispenserCreate, NozzleCreate
-from app.ui.qt_utils import describe_unexpected_error
+from app.ui.qt_utils import describe_unexpected_error, make_edit_icon_button
 from app.ui.widgets import GridBackgroundWidget
 
-DISPENSER_HEADERS = ["Code", "Status"]
-NOZZLE_HEADERS = ["Code", "Dispenser", "Fuel Type", "Status"]
+DISPENSER_HEADERS = ["Code", "Status", ""]
+NOZZLE_HEADERS = ["Code", "Dispenser", "Fuel Type", "Status", ""]
 
 
 class NozzleManagementWindow(QWidget):
@@ -96,7 +96,6 @@ class DispenserTab(QWidget):
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
         self.table.verticalHeader().setVisible(False)
         self.table.horizontalHeader().setStretchLastSection(True)
-        self.table.doubleClicked.connect(self._toggle_selected_status)
 
         layout = QVBoxLayout()
         layout.setSpacing(12)
@@ -113,6 +112,13 @@ class DispenserTab(QWidget):
             self.table.setItem(row_index, 0, QTableWidgetItem(dispenser.code))
             self.table.setItem(row_index, 1, QTableWidgetItem(dispenser.status.title()))
             self.table.item(row_index, 0).setData(Qt.UserRole, dispenser.id)
+            if self._can_manage:
+                self.table.setCellWidget(
+                    row_index, 2,
+                    make_edit_icon_button(
+                        lambda _=False, did=dispenser.id: self._toggle_status(did), tooltip="Change status"
+                    ),
+                )
         self.table.resizeColumnsToContents()
         self.table.horizontalHeader().setStretchLastSection(True)
 
@@ -121,14 +127,16 @@ class DispenserTab(QWidget):
         if dialog.exec() == QDialog.Accepted:
             self.refresh()
 
-    def _toggle_selected_status(self) -> None:
+    def _toggle_status(self, dispenser_id: str) -> None:
         if not self._can_manage:
             return
-        rows = self.table.selectionModel().selectedRows()
-        if not rows:
+        current_status = None
+        for row_index in range(self.table.rowCount()):
+            if self.table.item(row_index, 0).data(Qt.UserRole) == dispenser_id:
+                current_status = self.table.item(row_index, 1).text().lower()
+                break
+        if current_status is None:
             return
-        dispenser_id = self.table.item(rows[0].row(), 0).data(Qt.UserRole)
-        current_status = self.table.item(rows[0].row(), 1).text().lower()
         new_status = StatusEnum.INACTIVE if current_status == "active" else StatusEnum.ACTIVE
 
         reason, ok = QInputDialog.getText(self, "Change status", f"Reason to mark {new_status.value}:")
@@ -227,7 +235,6 @@ class NozzleTab(QWidget):
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
         self.table.verticalHeader().setVisible(False)
         self.table.horizontalHeader().setStretchLastSection(True)
-        self.table.doubleClicked.connect(self._change_selected_status)
 
         layout = QVBoxLayout()
         layout.setSpacing(12)
@@ -246,6 +253,13 @@ class NozzleTab(QWidget):
             self.table.setItem(row_index, 2, QTableWidgetItem(nozzle.fuel.fuel_type if nozzle.fuel else ""))
             self.table.setItem(row_index, 3, QTableWidgetItem(nozzle.status.replace("_", " ").title()))
             self.table.item(row_index, 0).setData(Qt.UserRole, nozzle.id)
+            if self._can_manage:
+                self.table.setCellWidget(
+                    row_index, 4,
+                    make_edit_icon_button(
+                        lambda _=False, nid=nozzle.id: self._change_status(nid), tooltip="Change status"
+                    ),
+                )
         self.table.resizeColumnsToContents()
         self.table.horizontalHeader().setStretchLastSection(True)
 
@@ -254,14 +268,9 @@ class NozzleTab(QWidget):
         if dialog.exec() == QDialog.Accepted:
             self.refresh()
 
-    def _change_selected_status(self) -> None:
+    def _change_status(self, nozzle_id: str) -> None:
         if not self._can_manage:
             return
-        rows = self.table.selectionModel().selectedRows()
-        if not rows:
-            return
-        nozzle_id = self.table.item(rows[0].row(), 0).data(Qt.UserRole)
-
         status_names = [s.value for s in NozzleStatus]
         new_status_name, ok = QInputDialog.getItem(self, "Change status", "New status:", status_names, editable=False)
         if not ok:

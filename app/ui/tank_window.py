@@ -27,14 +27,14 @@ from PySide6.QtWidgets import (
 from app.core.constants import Permission, TankStatus, TankTransactionType
 from app.core.exceptions import AppError
 from app.schemas.tank import ReconciliationPerform, TankCreate, TankReadingCreate, TankTransactionCreate
-from app.ui.qt_utils import apply_hard_shadow, chain_enter_to_next_field, describe_unexpected_error, qdate_to_date
+from app.ui.qt_utils import apply_hard_shadow, chain_enter_to_next_field, describe_unexpected_error, make_edit_icon_button, qdate_to_date
 from app.ui.widgets import GridBackgroundWidget, TankGaugeCard, VarianceBarCard
 
 GAUGE_COLUMNS = 3
 RECENT_TRANSACTIONS_PANEL_WIDTH = 300
 RECENT_TRANSACTIONS_SHOWN = 8
 
-TANK_HEADERS = ["Code", "Fuel", "Capacity", "Current Stock", "Status"]
+TANK_HEADERS = ["Code", "Fuel", "Capacity", "Current Stock", "Status", ""]
 TRANSACTION_HEADERS = ["Date", "Type", "Quantity", "Reference", "Recorded By"]
 READING_HEADERS = ["Date", "Physical Stock", "Dip", "Employee"]
 RECONCILIATION_HEADERS = ["Date", "Expected", "Physical", "Variance", "Classification"]
@@ -76,7 +76,6 @@ class TankListWindow(QWidget):
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
         self.table.verticalHeader().setVisible(False)
         self.table.horizontalHeader().setStretchLastSection(True)
-        self.table.doubleClicked.connect(self._open_selected_tank)
 
         main_column = QVBoxLayout()
         main_column.setSpacing(16)
@@ -190,6 +189,9 @@ class TankListWindow(QWidget):
             self.table.setItem(row_index, 3, QTableWidgetItem(f"{tank.current_stock:g}"))
             self.table.setItem(row_index, 4, QTableWidgetItem(tank.status.title()))
             self.table.item(row_index, 0).setData(Qt.UserRole, tank.id)
+            self.table.setCellWidget(
+                row_index, 5, make_edit_icon_button(lambda _=False, tid=tank.id: self._open_tank(tid))
+            )
         self.table.resizeColumnsToContents()
         self.table.horizontalHeader().setStretchLastSection(True)
 
@@ -198,11 +200,7 @@ class TankListWindow(QWidget):
         if dialog.exec() == QDialog.Accepted:
             self.refresh()
 
-    def _open_selected_tank(self) -> None:
-        rows = self.table.selectionModel().selectedRows()
-        if not rows:
-            return
-        tank_id = self.table.item(rows[0].row(), 0).data(Qt.UserRole)
+    def _open_tank(self, tank_id: str) -> None:
         dialog = TankDetailDialog(
             self._tank_service, self._employee_service, self._auth_service, self._actor_user_id, tank_id, self
         )

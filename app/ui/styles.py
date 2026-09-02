@@ -136,13 +136,6 @@ def build_stylesheet(dark: bool = False) -> str:
         color_caution = "#fbbf24"
         color_caution_bg = "#3a2a0a"
         color_caution_text = "#fde68a"
-
-        # The login screen's bold side cards invert fill with the page (see
-        # color_primary above) so they read as a strong anchor in either
-        # theme instead of vanishing into a same-tone background. Their
-        # muted/description text needs its own pairing since color_text_muted
-        # is tuned for Graphite, not for a card that's flipped to solid white.
-        color_bold_muted = "#5f5e5e"
     else:
         color_bg = "#f9f9f9"
         color_surface = "#ffffff"
@@ -170,8 +163,6 @@ def build_stylesheet(dark: bool = False) -> str:
         color_caution = COLOR_CAUTION_AMBER
         color_caution_bg = COLOR_CAUTION_BG
         color_caution_text = COLOR_CAUTION_TEXT
-
-        color_bold_muted = COLOR_ASH
 
     return f"""
 * {{
@@ -271,6 +262,24 @@ QPushButton#secondaryButton:disabled {{
     background-color: {color_surface};
     color: {color_text_faint};
     border: 1.5px solid {color_text_faint};
+}}
+
+/* Per-row pencil-icon button in a table's trailing Actions column -
+   replaces doubleClicked-to-edit everywhere (2026-09-02). Flat and
+   borderless at rest so a row of them doesn't read as a wall of boxes;
+   a hairline border only appears on hover, matching the same
+   "decoration only on interaction" restraint the rest of this system
+   already uses for row-level chrome. */
+QPushButton#rowIconButton {{
+    background-color: transparent;
+    border: 1.5px solid transparent;
+    border-radius: {RADIUS_MD}px;
+    padding: 0px;
+}}
+
+QPushButton#rowIconButton:hover {{
+    background-color: {color_surface_hover};
+    border: 1.5px solid {color_border};
 }}
 
 /* Chip-style toggle button (Terminal quick-sale presets, payment method,
@@ -585,33 +594,6 @@ QLabel#brandTitle {{
 QLabel#brandTagline {{
     color: {color_text_muted};
     font-size: 14px;
-}}
-
-QWidget#boldSideCard {{
-    background-color: {color_primary};
-    border-radius: {RADIUS_LG}px;
-}}
-
-QWidget#boldSideIcon {{
-    background-color: transparent;
-    border: 1.5px solid {color_primary_text};
-    border-radius: {RADIUS_MD}px;
-}}
-
-QLabel#boldSideIconGlyph {{
-    font-size: 16px;
-    qproperty-alignment: AlignCenter;
-}}
-
-QLabel#boldSideTitle {{
-    color: {color_primary_text};
-    font-size: 14px;
-    font-weight: 700;
-}}
-
-QLabel#boldSideDesc {{
-    color: {color_bold_muted};
-    font-size: 12px;
 }}
 
 /* --- Login form card --- */
