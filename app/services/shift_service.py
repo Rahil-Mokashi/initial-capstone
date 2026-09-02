@@ -17,11 +17,15 @@ from app.core.exceptions import ConflictError, NotFoundError
 from app.core.permissions import require_permission
 from app.models.nozzle_assignment import NozzleAssignment
 from app.models.shift import Shift
+from app.repositories.base import session_for, unit_of_work
 from app.schemas.shift import NozzleAssignmentComplete, NozzleAssignmentCreate, ShiftOpen
 
 
 class ShiftService:
-    def __init__(self, shift_repo, assignment_repo, employee_repo, nozzle_repo, user_repo, audit_repo, auth_service):
+    def __init__(
+        self, shift_repo, assignment_repo, employee_repo, nozzle_repo, user_repo, audit_repo, auth_service,
+        sale_service=None,
+    ):
         self._shift_repo = shift_repo
         self._assignment_repo = assignment_repo
         self._employee_repo = employee_repo
@@ -29,6 +33,21 @@ class ShiftService:
         self._user_repo = user_repo
         self._audit_repo = audit_repo
         self._auth_service = auth_service
+        # Optional: SaleService itself depends on TankService/CreditService,
+        # which the composition root (main_window.py) builds after
+        # ShiftService, so this is usually wired in afterwards via
+        # attach_sale_service rather than passed in here directly. None
+        # is a valid, supported state - see complete_nozzle_assignment,
+        # which simply skips the cash auto-settlement step without it
+        # (every other ShiftService behavior is unaffected).
+        self._sale_service = sale_service
+        self._session = session_for(shift_repo)
+
+    def attach_sale_service(self, sale_service) -> None:
+        """Wire in SaleService after both services exist - see the
+        constructor comment on why this can't always happen at
+        construction time."""
+        self._sale_service = sale_service
 
     @require_permission(Permission.SHIFT_MANAGE.value)
     def open_shift(self, actor_user_id: str, data: ShiftOpen) -> Shift:
@@ -100,6 +119,19 @@ class ShiftService:
     def complete_nozzle_assignment(
         self, actor_user_id: str, assignment_id: str, data: NozzleAssignmentComplete
     ) -> NozzleAssignment:
+        """Completing the assignment and auto-settling its remaining cash
+        into one Sale (see SaleService.settle_assignment_cash) are wrapped
+        in one transaction — unit_of_work nests cleanly into the Sale
+        write's own inner one (app/repositories/base.py) — so a failure
+        partway through can never leave the assignment closed with its
+        cash never accounted for.
+        """
+        with unit_of_work(self._session):
+            return self._complete_nozzle_assignment_impl(actor_user_id, assignment_id, data)
+
+    def _complete_nozzle_assignment_impl(
+        self, actor_user_id: str, assignment_id: str, data: NozzleAssignmentComplete
+    ) -> NozzleAssignment:
         assignment = self._get_assignment_or_raise(assignment_id)
         if assignment.status != AssignmentStatus.ACTIVE.value:
             raise ConflictError("Only an active assignment can be completed")
@@ -117,6 +149,10 @@ class ShiftService:
             entity_id=assignment.id,
             description=f"Closing meter {data.closing_meter}",
         )
+
+        if self._sale_service is not None:
+            self._sale_service.settle_assignment_cash(actor_user_id, assignment)
+
         return assignment
 
     @require_permission(Permission.SHIFT_MANAGE.value)

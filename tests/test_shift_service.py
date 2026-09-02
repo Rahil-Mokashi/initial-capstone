@@ -14,6 +14,7 @@ from app.database.seed import seed_initial_data
 from app.models.audit_log import AuditLog
 from app.models.dispenser import Dispenser
 from app.models.nozzle import Nozzle
+from app.models.nozzle_assignment import NozzleAssignment
 from app.models.role import Role
 from app.models.user import User
 from app.repositories.audit_log_repository import AuditLogRepository
@@ -250,6 +251,71 @@ def test_closing_meter_below_opening_meter_rejected(shift_service, admin_id, emp
     assignment = shift_service.assign_nozzle(admin_id, shift.id, NozzleAssignmentCreate(employee_id=employee_id, nozzle_id=nozzle_id, opening_meter=1000.0))
     with pytest.raises(ValueError):
         shift_service.complete_nozzle_assignment(admin_id, assignment.id, NozzleAssignmentComplete(closing_meter=999.0))
+
+
+# --------------------------------------------------------------------
+# attach_sale_service / cash auto-settlement on assignment close
+# (2026-09-02, user-requested: completing a nozzle assignment should
+# auto-settle its remaining cash into one Sale via SaleService, so an
+# attendant never has to manually record cash sales one at a time).
+# A lightweight fake SaleService is used here rather than a real one -
+# SaleService's own settle_assignment_cash logic is already covered in
+# tests/test_sale_service.py; what matters here is that ShiftService
+# actually calls it (or skips it cleanly when nothing is attached), and
+# that the two operations are truly atomic.
+# --------------------------------------------------------------------
+
+class _FakeSaleServiceForAssignmentSettlement:
+    def __init__(self, raise_error: bool = False):
+        self.calls: list[tuple[str, str]] = []
+        self._raise_error = raise_error
+
+    def settle_assignment_cash(self, actor_user_id, assignment):
+        self.calls.append((actor_user_id, assignment.id))
+        if self._raise_error:
+            raise RuntimeError("cash settlement failed")
+
+
+def test_complete_nozzle_assignment_without_attached_sale_service_still_works(shift_service, admin_id, employee_id, nozzle_id):
+    """The default, pre-existing behavior - shift_service here never
+    calls attach_sale_service, so completing an assignment must work
+    exactly as it always has, with the new cash-settlement step simply
+    skipped rather than erroring for lack of a wired SaleService."""
+    shift = shift_service.open_shift(admin_id, ShiftOpen(shift_date=date(2026, 6, 1), shift_label="Morning"))
+    assignment = shift_service.assign_nozzle(admin_id, shift.id, NozzleAssignmentCreate(employee_id=employee_id, nozzle_id=nozzle_id, opening_meter=1000.0))
+    completed = shift_service.complete_nozzle_assignment(admin_id, assignment.id, NozzleAssignmentComplete(closing_meter=1200.0))
+    assert completed.status == "completed"
+
+
+def test_complete_nozzle_assignment_calls_attached_sale_service(shift_service, admin_id, employee_id, nozzle_id):
+    fake_sale_service = _FakeSaleServiceForAssignmentSettlement()
+    shift_service.attach_sale_service(fake_sale_service)
+
+    shift = shift_service.open_shift(admin_id, ShiftOpen(shift_date=date(2026, 6, 1), shift_label="Morning"))
+    assignment = shift_service.assign_nozzle(admin_id, shift.id, NozzleAssignmentCreate(employee_id=employee_id, nozzle_id=nozzle_id, opening_meter=1000.0))
+    completed = shift_service.complete_nozzle_assignment(admin_id, assignment.id, NozzleAssignmentComplete(closing_meter=1200.0))
+
+    assert fake_sale_service.calls == [(admin_id, completed.id)]
+
+
+def test_complete_nozzle_assignment_rolls_back_if_cash_settlement_fails(shift_service, admin_id, employee_id, nozzle_id, db_session):
+    """Proves the unit_of_work wrapping actually does something: a
+    failure in the cash-settlement step must not leave the assignment
+    half-completed (closing meter recorded but its cash unaccounted
+    for) - see CLAUDE.md's "never allow partial financial writes"."""
+    fake_sale_service = _FakeSaleServiceForAssignmentSettlement(raise_error=True)
+    shift_service.attach_sale_service(fake_sale_service)
+
+    shift = shift_service.open_shift(admin_id, ShiftOpen(shift_date=date(2026, 6, 1), shift_label="Morning"))
+    assignment = shift_service.assign_nozzle(admin_id, shift.id, NozzleAssignmentCreate(employee_id=employee_id, nozzle_id=nozzle_id, opening_meter=1000.0))
+
+    with pytest.raises(RuntimeError):
+        shift_service.complete_nozzle_assignment(admin_id, assignment.id, NozzleAssignmentComplete(closing_meter=1200.0))
+
+    db_session.expire_all()
+    refreshed = db_session.query(NozzleAssignment).filter_by(id=assignment.id).first()
+    assert refreshed.status == "active"
+    assert refreshed.closing_meter is None
 
 
 def test_close_shift_blocked_while_assignment_active(shift_service, admin_id, employee_id, nozzle_id):

@@ -20,6 +20,7 @@ exact same moments - the same reasoning already applied to folding
 Customer CRUD in here rather than a standalone CustomerService.
 """
 
+from decimal import Decimal
 from typing import List, Optional
 
 from app.core.constants import PaymentMethod, PaymentStatus, Permission, SaleStatus, ShiftStatus, TankTransactionType
@@ -66,8 +67,84 @@ class SaleService:
         reconciliation. See CLAUDE.md: "Never allow partial financial
         writes."
         """
+        return self._create_sale(actor_user_id, data)
+
+    def create_sale_as_related_action(self, actor_user_id: str, data: SaleCreate) -> Sale:
+        """Unchecked twin of create_sale, for a caller whose own permission
+        check already authorizes this as a side effect of an action it's
+        already doing - the same reasoning as
+        TankService.record_transaction_as_related_action. Used by
+        settle_assignment_cash below, on behalf of
+        ShiftService.complete_nozzle_assignment (SHIFT_MANAGE), so
+        completing an assignment doesn't also require the acting
+        supervisor to separately hold SALE_MANAGE.
+        """
+        return self._create_sale(actor_user_id, data)
+
+    def _create_sale(self, actor_user_id: str, data: SaleCreate) -> Sale:
         with unit_of_work(self._session):
             return self._create_sale_impl(actor_user_id, data)
+
+    def settle_assignment_cash(self, actor_user_id: str, assignment) -> Optional[Sale]:
+        """Auto-aggregate one nozzle assignment's cash sales into a single
+        Sale when the assignment closes, so an attendant never manually
+        enters a cash sale one at a time - only credit/UPI/card sales,
+        where a customer link or a payment reference genuinely matters,
+        still go through Terminal individually (user-requested design,
+        2026-09-02: per-transaction cash entry doesn't scale to a busy
+        forecourt on a single desktop terminal).
+
+        Deliberately undecorated (no @require_permission), matching
+        CreditService.ensure_credit_available's reasoning exactly: this
+        exists only to be called by ShiftService.complete_nozzle_assignment
+        as part of an action the acting supervisor is already authorized
+        (SHIFT_MANAGE) to perform, not as a standalone "record a sale"
+        action that should require its own SALE_MANAGE check.
+
+        total dispensed, per the same opening/closing meter reading fuel
+        reconciliation already trusts, minus whatever was already
+        recorded individually during this assignment - by payment method,
+        cash included, not just credit/UPI/card - is the remaining
+        volume this settles. Cash has to be subtracted too, not just
+        excluded: Terminal still lets anyone manually ring up an
+        individual cash sale (e.g. a customer who wants a receipt), and
+        skipping already-recorded cash here would double-count that
+        volume into the aggregate on top of the individual sale already
+        covering it. Returns None (and records nothing) if the remainder
+        isn't positive - a zero or negative remainder means at least as
+        much was already recorded as the meter says was dispensed at
+        all, which is a discrepancy to investigate, not something to
+        paper over with a fabricated sale (the sales table's own CHECK
+        constraint would reject a non-positive quantity regardless).
+        """
+        if assignment.closing_meter is None:
+            return None
+
+        dispensed = assignment.closing_meter - assignment.opening_meter
+        already_recorded = sum(
+            (
+                sale.quantity
+                for sale in self._sale_repo.list_by_nozzle(assignment.nozzle_id)
+                if sale.shift_id == assignment.shift_id
+                and sale.employee_id == assignment.employee_id
+                and sale.status == SaleStatus.COMPLETED.value
+            ),
+            Decimal("0"),
+        )
+        remaining_cash = dispensed - already_recorded
+        if remaining_cash <= 0:
+            return None
+
+        data = SaleCreate(
+            shift_id=assignment.shift_id,
+            nozzle_id=assignment.nozzle_id,
+            employee_id=assignment.employee_id,
+            quantity=remaining_cash,
+            payment_method=PaymentMethod.CASH,
+            customer_id=None,
+            remarks="Aggregate cash sale - auto-settled on nozzle assignment close",
+        )
+        return self.create_sale_as_related_action(actor_user_id, data)
 
     def _create_sale_impl(self, actor_user_id: str, data: SaleCreate) -> Sale:
         shift = self._shift_repo.get_by_id(data.shift_id)

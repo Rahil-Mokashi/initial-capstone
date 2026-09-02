@@ -1545,6 +1545,12 @@ class AppController:
             payment_repo,
             self._credit_service,
         )
+        # SaleService depends on TankService/CreditService, both built
+        # after ShiftService above, so it can't be passed in at
+        # ShiftService's own construction time - wired in here instead
+        # (see ShiftService.attach_sale_service) so completing a nozzle
+        # assignment can auto-settle its remaining cash into one Sale.
+        self._shift_service.attach_sale_service(self._sale_service)
         self._dashboard_service = DashboardService(
             sale_repo,
             ShiftRepository(self._db_session),
