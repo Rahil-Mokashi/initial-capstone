@@ -37,7 +37,7 @@ from app.core.exceptions import AppError
 from app.database.base import StatusEnum
 from app.schemas.customer import CustomerCreate
 from app.schemas.sale import SaleCreate
-from app.ui.qt_utils import chain_enter_to_next_field, describe_unexpected_error
+from app.ui.qt_utils import chain_enter_to_next_field, describe_unexpected_error, make_edit_icon_button
 from app.ui.widgets import GridBackgroundWidget
 
 # One screenful at a time. The sales table is the highest-volume list in
@@ -48,7 +48,7 @@ from app.ui.widgets import GridBackgroundWidget
 SALES_PAGE_SIZE = 50
 
 SALE_HEADERS = ["Receipt #", "When", "Fuel", "Quantity", "Amount", "Method", "Sale Status", "Payment Status"]
-CUSTOMER_HEADERS = ["Name", "Phone", "Status"]
+CUSTOMER_HEADERS = ["Name", "Phone", "Status", ""]
 
 
 class SalesWindow(QWidget):
@@ -582,7 +582,6 @@ class CustomersTab(QWidget):
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
         self.table.verticalHeader().setVisible(False)
         self.table.horizontalHeader().setStretchLastSection(True)
-        self.table.doubleClicked.connect(self._toggle_selected_status)
 
         layout = QVBoxLayout()
         layout.setSpacing(12)
@@ -600,6 +599,13 @@ class CustomersTab(QWidget):
             self.table.setItem(row_index, 1, QTableWidgetItem(customer.phone or ""))
             self.table.setItem(row_index, 2, QTableWidgetItem(customer.status.title()))
             self.table.item(row_index, 0).setData(Qt.UserRole, customer.id)
+            if self._can_manage:
+                self.table.setCellWidget(
+                    row_index, 3,
+                    make_edit_icon_button(
+                        lambda _=False, cid=customer.id: self._toggle_status(cid), tooltip="Change status"
+                    ),
+                )
         self.table.resizeColumnsToContents()
         self.table.horizontalHeader().setStretchLastSection(True)
 
@@ -608,14 +614,16 @@ class CustomersTab(QWidget):
         if dialog.exec() == QDialog.Accepted:
             self.refresh()
 
-    def _toggle_selected_status(self) -> None:
+    def _toggle_status(self, customer_id: str) -> None:
         if not self._can_manage:
             return
-        rows = self.table.selectionModel().selectedRows()
-        if not rows:
+        current_status = None
+        for row_index in range(self.table.rowCount()):
+            if self.table.item(row_index, 0).data(Qt.UserRole) == customer_id:
+                current_status = self.table.item(row_index, 2).text().lower()
+                break
+        if current_status is None:
             return
-        customer_id = self.table.item(rows[0].row(), 0).data(Qt.UserRole)
-        current_status = self.table.item(rows[0].row(), 2).text().lower()
         new_status = StatusEnum.INACTIVE if current_status == "active" else StatusEnum.ACTIVE
 
         reason, ok = QInputDialog.getText(self, "Change status", f"Reason to mark {new_status.value}:")
@@ -635,6 +643,7 @@ class CustomerFormDialog(QDialog):
         super().__init__(parent)
         self._sale_service = sale_service
         self._actor_user_id = actor_user_id
+        self.created_customer = None  # set on successful save, so a caller (e.g. CreditAccountFormDialog) can select it immediately
 
         self.setWindowTitle("Add Customer")
         self.setMinimumWidth(360)
@@ -684,7 +693,7 @@ class CustomerFormDialog(QDialog):
                 email=self.email_input.text().strip() or None,
                 address=self.address_input.text().strip() or None,
             )
-            self._sale_service.create_customer(self._actor_user_id, data)
+            self.created_customer = self._sale_service.create_customer(self._actor_user_id, data)
         except ValidationError as exc:
             self._show_error("; ".join(err["msg"] for err in exc.errors()))
             return

@@ -31,6 +31,12 @@ from app.schemas.credit import CreditAccountCreate, CustomerPaymentCreate
 from app.ui.qt_utils import describe_unexpected_error
 from app.ui.widgets import GridBackgroundWidget
 
+# Sentinel QComboBox data value for the "+ Add New Customer..." row -
+# distinct from every real customer_id (a UUID string) so it can never
+# collide with one, and distinct from None (used elsewhere for "no
+# selection"/"(none)" rows) so it reads unambiguously as its own case.
+_ADD_NEW_CUSTOMER = object()
+
 ACCOUNT_HEADERS = ["Customer", "Credit Limit", "Outstanding", "Overdue", "Due (days)"]
 
 
@@ -157,11 +163,13 @@ class CreditAccountsTab(QWidget):
         self.refresh()
 
     def _record_selected_payment(self) -> None:
-        customer_id = self._selected_customer_id()
-        if not customer_id:
-            QMessageBox.information(self, "Record payment", "Select a credit account first.")
-            return
-        dialog = CustomerPaymentFormDialog(self._credit_service, customer_id, self._actor_user_id, self)
+        """No longer requires a row to be selected first - the dialog
+        itself now carries a customer dropdown listing every credit
+        account (see CustomerPaymentFormDialog). A selected row, if any,
+        is still used to pre-fill that dropdown as a convenience."""
+        dialog = CustomerPaymentFormDialog(
+            self._credit_service, self._actor_user_id, self, initial_customer_id=self._selected_customer_id()
+        )
         if dialog.exec() == QDialog.Accepted:
             self.refresh()
 
@@ -180,6 +188,7 @@ class CreditAccountFormDialog(QDialog):
     def __init__(self, credit_service, sale_service, actor_user_id: str, parent=None):
         super().__init__(parent)
         self._credit_service = credit_service
+        self._sale_service = sale_service
         self._actor_user_id = actor_user_id
 
         self.setWindowTitle("Open Credit Account")
@@ -188,6 +197,15 @@ class CreditAccountFormDialog(QDialog):
         self.customer_combo = QComboBox()
         for customer in sale_service.list_customers(actor_user_id):
             self.customer_combo.addItem(customer.name, customer.id)
+        self.customer_combo.addItem("+ Add New Customer...", _ADD_NEW_CUSTOMER)
+        self._previous_customer_index = 0
+        # `activated` (not `currentIndexChanged`) - it fires every time the
+        # user picks an item from the popup, even re-picking the one
+        # already selected. That matters here because with zero real
+        # customers, "+ Add New Customer..." is the only row and is
+        # already selected by default; currentIndexChanged would never
+        # fire again in that case since the index never actually changes.
+        self.customer_combo.activated.connect(self._on_customer_combo_changed)
 
         self.limit_input = QDoubleSpinBox()
         self.limit_input.setRange(0.01, 10_000_000)
@@ -225,10 +243,35 @@ class CreditAccountFormDialog(QDialog):
         layout.addLayout(button_row)
         self.setLayout(layout)
 
+    def _on_customer_combo_changed(self, index: int) -> None:
+        """Picking "+ Add New Customer..." opens the same add-customer
+        dialog the Sales screen uses (SaleService.create_customer is the
+        one real place a Customer row gets created - this reuses it
+        rather than a second, parallel customer-creation form), so a
+        brand-new credit customer can be created without leaving this
+        dialog. Cancelling, or the underlying save failing, reverts the
+        combo to whatever was selected before rather than leaving the
+        sentinel row selected as if it were a real customer.
+        """
+        if self.customer_combo.itemData(index) is not _ADD_NEW_CUSTOMER:
+            self._previous_customer_index = index
+            return
+
+        from app.ui.sales_window import CustomerFormDialog
+
+        dialog = CustomerFormDialog(self._sale_service, self._actor_user_id, self)
+        if dialog.exec() == QDialog.Accepted and dialog.created_customer is not None:
+            customer = dialog.created_customer
+            insert_at = self.customer_combo.count() - 1  # before the sentinel row
+            self.customer_combo.insertItem(insert_at, customer.name, customer.id)
+            self.customer_combo.setCurrentIndex(insert_at)
+        else:
+            self.customer_combo.setCurrentIndex(self._previous_customer_index)
+
     def _save(self) -> None:
         self.error_label.hide()
-        if self.customer_combo.count() == 0:
-            self._show_error("No customers available - add one from the Sales screen first.")
+        if self.customer_combo.currentData() is _ADD_NEW_CUSTOMER:
+            self._show_error("Choose a customer, or add a new one, first.")
             return
         try:
             data = CreditAccountCreate(
@@ -255,14 +298,34 @@ class CreditAccountFormDialog(QDialog):
 
 
 class CustomerPaymentFormDialog(QDialog):
-    def __init__(self, credit_service, customer_id: str, actor_user_id: str, parent=None):
+    """Record a payment against any credit customer.
+
+    Used to require a row pre-selected in the accounts table before it
+    could even be opened, with the customer baked in as a fixed
+    constructor argument. Now carries its own customer dropdown (every
+    customer who has a CreditAccount, per the same "record payment
+    dropdown of existing customers" request), so it can be opened
+    directly from the top-row "Record Payment" button with nothing
+    selected - `initial_customer_id` just pre-fills the dropdown as a
+    convenience when a row happens to be selected already.
+    """
+
+    def __init__(self, credit_service, actor_user_id: str, parent=None, initial_customer_id: str | None = None):
         super().__init__(parent)
         self._credit_service = credit_service
-        self._customer_id = customer_id
         self._actor_user_id = actor_user_id
 
         self.setWindowTitle("Record Customer Payment")
         self.setMinimumWidth(360)
+
+        self.customer_combo = QComboBox()
+        for account in credit_service.list_credit_accounts(actor_user_id):
+            if account.customer:
+                self.customer_combo.addItem(account.customer.name, account.customer_id)
+        if initial_customer_id is not None:
+            index = self.customer_combo.findData(initial_customer_id)
+            if index >= 0:
+                self.customer_combo.setCurrentIndex(index)
 
         self.amount_input = QDoubleSpinBox()
         self.amount_input.setRange(0.01, 10_000_000)
@@ -279,6 +342,7 @@ class CustomerPaymentFormDialog(QDialog):
         self.remarks_input.returnPressed.connect(self._save)
 
         form = QFormLayout()
+        form.addRow("Customer", self.customer_combo)
         form.addRow("Amount", self.amount_input)
         form.addRow("Method", self.method_combo)
         form.addRow("Reference", self.reference_input)
@@ -308,9 +372,12 @@ class CustomerPaymentFormDialog(QDialog):
 
     def _save(self) -> None:
         self.error_label.hide()
+        if self.customer_combo.count() == 0:
+            self._show_error("No credit accounts exist yet - open one first.")
+            return
         try:
             data = CustomerPaymentCreate(
-                customer_id=self._customer_id,
+                customer_id=self.customer_combo.currentData(),
                 amount=Decimal(str(self.amount_input.value())),
                 payment_method=self.method_combo.currentData(),
                 reference=self.reference_input.text().strip() or None,

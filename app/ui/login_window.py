@@ -27,16 +27,21 @@ does not touch; scoping it to the login screen keeps the blast radius
 to the one surface that was actually asked about.
 
 Re-laid-out later the same day: the split dark-hero-panel/form-on-the-right
-layout is gone. The credentials card is now centered on the page, the
+layout is gone. The credentials card is now centered on the page, and the
 brand mark (badge + "FuelDesk") sits above it instead of inside a side
-panel, and the same feature/terminal content that used to fill that
-panel is now four standalone bold callout cards flanking the centered
-card - two on each side - so the page still carries real information,
-just distributed around the card instead of stacked beside it.
+panel. That pass also added four standalone bold callout cards flanking
+the centered card - two on each side.
+
+Simplified again (2026-09-02, explicit user request): those four flanking
+cards are gone entirely - "remove those four boxes... i want only the
+login card floating." The page is now just the brand header and the
+credentials card, centered, with nothing else competing for attention.
+get_device_info() itself is kept - it still feeds device_info into
+AuthService.authenticate() below for audit logging - only its on-screen
+display (one of the four removed cards) is gone.
 """
 
 import platform
-from datetime import datetime
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
@@ -58,17 +63,6 @@ from app.ui.widgets import GridBackgroundWidget
 # in the app (main window title, PDF letterhead, installer, docs).
 PRODUCT_NAME = "FuelDesk"
 PRODUCT_MARK = "F"
-
-# (icon, title, description) - the same icon-chip + title + description
-# shape the dashboard's own cards use, restated as standalone bold cards
-# flanking the centered login card instead of rows inside a side panel.
-BOLD_FEATURES = [
-    ("📡", "Works fully offline", "No internet or cloud dependency, ever."),
-    ("🔐", "Role-based access control", "Granular permissions, checked on every action."),
-    ("📜", "Complete audit trail", "Every change is logged and reviewable."),
-]
-
-BOLD_CARD_WIDTH = 200
 
 
 def get_device_info() -> str:
@@ -111,57 +105,6 @@ def _build_brand_header() -> QWidget:
     return wrapper
 
 
-def _build_bold_card(icon: str, title: str, description: str) -> QWidget:
-    """One standalone bold callout card - filled with color_primary, the
-    same "strongest visual anchor" tone the button system already uses,
-    so it stays high-contrast against the page in either theme."""
-    icon_box = QWidget()
-    icon_box.setObjectName("boldSideIcon")
-    icon_box.setFixedSize(34, 34)
-    icon_layout = QVBoxLayout(icon_box)
-    icon_layout.setContentsMargins(0, 0, 0, 0)
-    icon_glyph = QLabel(icon)
-    icon_glyph.setObjectName("boldSideIconGlyph")
-    icon_layout.addWidget(icon_glyph)
-
-    title_label = QLabel(title)
-    title_label.setObjectName("boldSideTitle")
-    title_label.setWordWrap(True)
-
-    desc_label = QLabel(description)
-    desc_label.setObjectName("boldSideDesc")
-    desc_label.setWordWrap(True)
-
-    card_layout = QVBoxLayout()
-    card_layout.setContentsMargins(18, 18, 18, 18)
-    card_layout.setSpacing(12)
-    card_layout.addWidget(icon_box)
-    card_layout.addWidget(title_label)
-    card_layout.addWidget(desc_label)
-
-    card = QWidget()
-    card.setObjectName("boldSideCard")
-    card.setFixedWidth(BOLD_CARD_WIDTH)
-    card.setLayout(card_layout)
-    apply_hard_shadow(card)
-    return card
-
-
-def _build_bold_column(cards: list[QWidget]) -> QWidget:
-    """Vertically centers a stack of bold cards next to the login card."""
-    layout = QVBoxLayout()
-    layout.setSpacing(20)
-    layout.addStretch()
-    for card in cards:
-        layout.addWidget(card)
-    layout.addStretch()
-
-    wrapper = QWidget()
-    wrapper.setFixedWidth(BOLD_CARD_WIDTH)
-    wrapper.setLayout(layout)
-    return wrapper
-
-
 class LoginWindow(QMainWindow):
     """Collects credentials and delegates authentication to AuthService.
 
@@ -172,22 +115,19 @@ class LoginWindow(QMainWindow):
 
     login_succeeded = Signal(dict)
 
-    # Below this window width, the two flanking bold-card columns are
-    # hidden (see _apply_responsive_layout) rather than left to crowd or
-    # clip against the credentials card.
-    SIDE_COLUMNS_MIN_WIDTH = 1360
-
     def __init__(self, auth_service: AuthService):
         super().__init__()
         self._auth_service = auth_service
 
         self.setWindowTitle(f"{PRODUCT_NAME} — Sign In")
-        # The true floor: brand header + card alone, columns hidden - the
-        # card's own vertical content (pill, heading, two fields, button,
-        # error slot, footnote) needs ~740px of height with the header
-        # above it, not the 640 an earlier pass guessed without measuring;
-        # that guess left the footnote overlapping the card's bottom edge
-        # at the window's own declared minimum size.
+        # Brand header + card alone is the whole page now (the four
+        # flanking callout cards this used to also account for are gone,
+        # see module docstring) - the card's own vertical content (pill,
+        # heading, two fields, button, error slot, footnote) needs ~740px
+        # of height with the header above it, not the 640 an earlier pass
+        # guessed without measuring; that guess left the footnote
+        # overlapping the card's bottom edge at the window's own declared
+        # minimum size.
         self.setMinimumSize(640, 780)
 
         page = GridBackgroundWidget()
@@ -281,57 +221,22 @@ class LoginWindow(QMainWindow):
         card_layout.addWidget(footnote)
         card.setLayout(card_layout)
 
-        # Card flanked by two bold callout cards, distributed two-per-side
-        # rather than stacked in a single side panel (see module docstring).
-        this_terminal_card = _build_bold_card(
-            "🖥️",
-            "This terminal",
-            f"{get_device_info()} · {datetime.now().strftime('%A, %d %B %Y')}",
-        )
-        # Kept as attributes so resizeEvent() can show/hide them - the
-        # actual sign-in card must never be the thing that gives way when
-        # the window gets narrow, so these decorative columns are what
-        # drops out instead (see resizeEvent below).
-        self._left_column = _build_bold_column([_build_bold_card(*BOLD_FEATURES[0]), _build_bold_card(*BOLD_FEATURES[1])])
-        self._right_column = _build_bold_column([_build_bold_card(*BOLD_FEATURES[2]), this_terminal_card])
-
-        content_row = QHBoxLayout()
-        content_row.setSpacing(0)
-        content_row.addWidget(self._left_column)
-        content_row.addStretch(1)
-        content_row.addWidget(card)
-        content_row.addStretch(1)
-        content_row.addWidget(self._right_column)
-
+        # Just the brand header above a centered card, floating on the
+        # page - the four flanking callout cards an earlier pass added
+        # here were removed at the user's explicit request (2026-09-02):
+        # "remove those four boxes... i want only the login card floating."
         page_layout = QVBoxLayout()
         page_layout.setContentsMargins(48, 40, 48, 40)
         page_layout.addStretch(1)
         page_layout.addWidget(_build_brand_header(), alignment=Qt.AlignHCenter)
         page_layout.addSpacing(36)
-        page_layout.addLayout(content_row)
+        page_layout.addWidget(card, alignment=Qt.AlignHCenter)
         page_layout.addStretch(1)
         page.setLayout(page_layout)
 
         self.setCentralWidget(page)
 
         self.username_input.setFocus()
-        self._apply_responsive_layout()
-
-    def resizeEvent(self, event) -> None:  # noqa: N802 - Qt override
-        super().resizeEvent(event)
-        self._apply_responsive_layout()
-
-    def _apply_responsive_layout(self) -> None:
-        """The four bold callout cards are decoration, not content - below
-        SIDE_COLUMNS_MIN_WIDTH there isn't room for both columns plus the
-        card without either overlapping or squeezing the card's own
-        breathing room away, so they're dropped rather than shrunk. The
-        credentials card itself never resizes: it's what the screen exists
-        to show, and it already fits down to the window's true minimum
-        size (see setMinimumSize above)."""
-        show_columns = self.width() >= self.SIDE_COLUMNS_MIN_WIDTH
-        self._left_column.setVisible(show_columns)
-        self._right_column.setVisible(show_columns)
 
     def _toggle_password_visibility(self) -> None:
         is_hidden = self.password_input.echoMode() == QLineEdit.Password

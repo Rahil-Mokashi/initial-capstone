@@ -24,10 +24,10 @@ from PySide6.QtWidgets import (
 
 from app.core.exceptions import AppError
 from app.schemas.user import UserCreate
-from app.ui.qt_utils import chain_enter_to_next_field, describe_unexpected_error
+from app.ui.qt_utils import chain_enter_to_next_field, describe_unexpected_error, make_edit_icon_button
 from app.ui.widgets import GridBackgroundWidget
 
-USER_HEADERS = ["Username", "Email", "Role", "Status"]
+USER_HEADERS = ["Username", "Email", "Role", "Status", ""]
 
 
 def _status_text(user) -> str:
@@ -67,7 +67,6 @@ class UserListWindow(QWidget):
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
         self.table.verticalHeader().setVisible(False)
         self.table.horizontalHeader().setStretchLastSection(True)
-        self.table.doubleClicked.connect(self._open_selected_user)
 
         layout = QVBoxLayout()
         layout.setContentsMargins(24, 24, 24, 24)
@@ -93,6 +92,9 @@ class UserListWindow(QWidget):
             self.table.setItem(row_index, 2, QTableWidgetItem(user.role.name if user.role else ""))
             self.table.setItem(row_index, 3, QTableWidgetItem(_status_text(user)))
             self.table.item(row_index, 0).setData(Qt.UserRole, user.id)
+            self.table.setCellWidget(
+                row_index, 4, make_edit_icon_button(lambda _=False, uid=user.id: self._open_user(uid))
+            )
         self.table.resizeColumnsToContents()
         self.table.horizontalHeader().setStretchLastSection(True)
 
@@ -101,11 +103,7 @@ class UserListWindow(QWidget):
         if dialog.exec() == QDialog.Accepted:
             self.refresh()
 
-    def _open_selected_user(self) -> None:
-        rows = self.table.selectionModel().selectedRows()
-        if not rows:
-            return
-        user_id = self.table.item(rows[0].row(), 0).data(Qt.UserRole)
+    def _open_user(self, user_id: str) -> None:
         dialog = UserDetailDialog(self._user_service, self._role_repo, self._actor_user_id, user_id, self)
         dialog.exec()
         self.refresh()

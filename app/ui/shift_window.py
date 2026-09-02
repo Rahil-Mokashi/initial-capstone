@@ -27,11 +27,11 @@ from PySide6.QtWidgets import (
 from app.core.constants import Permission
 from app.core.exceptions import AppError
 from app.schemas.shift import NozzleAssignmentComplete, NozzleAssignmentCreate, ShiftOpen
-from app.ui.qt_utils import describe_unexpected_error, qdate_to_date
+from app.ui.qt_utils import describe_unexpected_error, make_edit_icon_button, qdate_to_date
 from app.ui.widgets import GridBackgroundWidget, confirm_dialog
 
-SHIFT_TABLE_HEADERS = ["Date", "Shift", "Status", "Opened By"]
-ASSIGNMENT_TABLE_HEADERS = ["Employee", "Nozzle", "Opening", "Closing", "Status"]
+SHIFT_TABLE_HEADERS = ["Date", "Shift", "Status", "Opened By", ""]
+ASSIGNMENT_TABLE_HEADERS = ["Employee", "Nozzle", "Opening", "Closing", "Status", ""]
 
 
 class ShiftListWindow(QWidget):
@@ -67,7 +67,6 @@ class ShiftListWindow(QWidget):
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
         self.table.verticalHeader().setVisible(False)
         self.table.horizontalHeader().setStretchLastSection(True)
-        self.table.doubleClicked.connect(self._open_selected_shift)
 
         layout = QVBoxLayout()
         layout.setContentsMargins(24, 24, 24, 24)
@@ -93,6 +92,9 @@ class ShiftListWindow(QWidget):
             self.table.setItem(row_index, 2, QTableWidgetItem(shift.status.title()))
             self.table.setItem(row_index, 3, QTableWidgetItem(shift.opened_by.username if shift.opened_by else ""))
             self.table.item(row_index, 0).setData(Qt.UserRole, shift.id)
+            self.table.setCellWidget(
+                row_index, 4, make_edit_icon_button(lambda _=False, sid=shift.id: self._open_shift(sid))
+            )
         self.table.resizeColumnsToContents()
         self.table.horizontalHeader().setStretchLastSection(True)
 
@@ -101,11 +103,7 @@ class ShiftListWindow(QWidget):
         if dialog.exec() == QDialog.Accepted:
             self.refresh()
 
-    def _open_selected_shift(self) -> None:
-        rows = self.table.selectionModel().selectedRows()
-        if not rows:
-            return
-        shift_id = self.table.item(rows[0].row(), 0).data(Qt.UserRole)
+    def _open_shift(self, shift_id: str) -> None:
         dialog = ShiftDetailDialog(self._shift_service, self._employee_service, self._auth_service, self._actor_user_id, shift_id, self)
         dialog.exec()
         self.refresh()
@@ -225,7 +223,6 @@ class ShiftDetailDialog(QDialog):
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
         self.table.verticalHeader().setVisible(False)
         self.table.horizontalHeader().setStretchLastSection(True)
-        self.table.doubleClicked.connect(self._open_assignment_action)
 
         close_dialog_button = QPushButton("Close")
         close_dialog_button.setObjectName("secondaryButton")
@@ -261,6 +258,11 @@ class ShiftDetailDialog(QDialog):
             self.table.setItem(row_index, 3, QTableWidgetItem(str(assignment.closing_meter) if assignment.closing_meter is not None else ""))
             self.table.setItem(row_index, 4, QTableWidgetItem(assignment.status.title()))
             self.table.item(row_index, 0).setData(Qt.UserRole, assignment.id)
+            if assignment.status == "active" and self._can_manage:
+                self.table.setCellWidget(
+                    row_index, 5,
+                    make_edit_icon_button(lambda _=False, aid=assignment.id: self._open_assignment_action(aid)),
+                )
         self.table.resizeColumnsToContents()
         self.table.horizontalHeader().setStretchLastSection(True)
 
@@ -269,15 +271,7 @@ class ShiftDetailDialog(QDialog):
         if dialog.exec() == QDialog.Accepted:
             self._refresh()
 
-    def _open_assignment_action(self) -> None:
-        rows = self.table.selectionModel().selectedRows()
-        if not rows:
-            return
-        assignment_id = self.table.item(rows[0].row(), 0).data(Qt.UserRole)
-        status = self.table.item(rows[0].row(), 4).text().lower()
-        if status != "active" or not self._can_manage:
-            return
-
+    def _open_assignment_action(self, assignment_id: str) -> None:
         choice = confirm_dialog(
             self,
             "Nozzle assignment",

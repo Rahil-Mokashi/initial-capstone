@@ -26,10 +26,10 @@ from PySide6.QtWidgets import (
 from app.core.constants import AttendanceStatus, Permission
 from app.core.exceptions import AppError
 from app.schemas.attendance import AttendanceCorrection, AttendanceMark
-from app.ui.qt_utils import describe_unexpected_error, qdate_to_date
+from app.ui.qt_utils import describe_unexpected_error, make_edit_icon_button, qdate_to_date
 from app.ui.widgets import GridBackgroundWidget
 
-TABLE_HEADERS = ["Employee", "Status", "Check In", "Check Out", "Overtime (min)", "Corrected"]
+TABLE_HEADERS = ["Employee", "Status", "Check In", "Check Out", "Overtime (min)", "Corrected", ""]
 
 
 class AttendanceWindow(QWidget):
@@ -73,7 +73,6 @@ class AttendanceWindow(QWidget):
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
         self.table.verticalHeader().setVisible(False)
         self.table.horizontalHeader().setStretchLastSection(True)
-        self.table.doubleClicked.connect(self._open_correction_dialog)
 
         layout = QVBoxLayout()
         layout.setContentsMargins(24, 24, 24, 24)
@@ -108,6 +107,9 @@ class AttendanceWindow(QWidget):
             self.table.setItem(row_index, 4, QTableWidgetItem(str(record.overtime_minutes)))
             self.table.setItem(row_index, 5, QTableWidgetItem("Yes" if record.corrected_at else ""))
             self.table.item(row_index, 0).setData(Qt.UserRole, record.id)
+            self.table.setCellWidget(
+                row_index, 6, make_edit_icon_button(lambda _=False, rid=record.id: self._open_correction_dialog(rid))
+            )
 
         self.table.resizeColumnsToContents()
         self.table.horizontalHeader().setStretchLastSection(True)
@@ -119,11 +121,7 @@ class AttendanceWindow(QWidget):
         if dialog.exec() == QDialog.Accepted:
             self.refresh()
 
-    def _open_correction_dialog(self) -> None:
-        rows = self.table.selectionModel().selectedRows()
-        if not rows:
-            return
-        attendance_id = self.table.item(rows[0].row(), 0).data(Qt.UserRole)
+    def _open_correction_dialog(self, attendance_id: str) -> None:
         dialog = AttendanceCorrectionDialog(self._attendance_service, self._actor_user_id, attendance_id, self._can_manage, self)
         dialog.exec()
         self.refresh()

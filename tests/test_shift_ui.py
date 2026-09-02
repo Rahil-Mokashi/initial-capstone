@@ -202,6 +202,7 @@ def test_open_shift_dialog_rejects_duplicate(qapp, shift_service, employee_servi
 
 
 def test_detail_dialog_assign_nozzle_and_close_shift(qapp, shift_service, employee_service, admin_id, employee_id, nozzle_id, monkeypatch):
+    from PySide6.QtCore import Qt
     from PySide6.QtWidgets import QMessageBox
 
     from app.ui.shift_window import NozzleAssignDialog, ShiftDetailDialog
@@ -257,8 +258,8 @@ def test_detail_dialog_assign_nozzle_and_close_shift(qapp, shift_service, employ
     monkeypatch.setattr(
         "app.ui.shift_window.QInputDialog.getDouble", lambda *a, **k: (1200.0, True)
     )
-    detail.table.selectRow(0)
-    detail._open_assignment_action()
+    assignment_id = detail.table.item(0, 0).data(Qt.UserRole)
+    detail._open_assignment_action(assignment_id)
 
     assignments = shift_service.list_nozzle_assignments(admin_id, shift.id)
     assert assignments[0].status == "completed"

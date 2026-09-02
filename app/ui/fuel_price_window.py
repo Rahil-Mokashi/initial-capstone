@@ -35,7 +35,7 @@ from PySide6.QtWidgets import (
 from app.core.constants import Permission
 from app.core.exceptions import AppError
 from app.schemas.fuel import MAX_REASONABLE_RATE_PER_LITER, FuelRateChange
-from app.ui.qt_utils import chain_enter_to_next_field, describe_unexpected_error
+from app.ui.qt_utils import chain_enter_to_next_field, describe_unexpected_error, make_edit_icon_button
 from app.ui.widgets import GridBackgroundWidget
 
 
@@ -89,14 +89,13 @@ class FuelPriceWindow(QWidget):
         self.history_button.setCursor(Qt.PointingHandCursor)
         self.history_button.clicked.connect(self._show_history)
 
-        self.table = QTableWidget(0, 3)
+        self.table = QTableWidget(0, 4)
         self.table.setAlternatingRowColors(True)
-        self.table.setHorizontalHeaderLabels(["Fuel", "Rate per litre", "Status"])
+        self.table.setHorizontalHeaderLabels(["Fuel", "Rate per litre", "Status", ""])
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
         self.table.verticalHeader().setVisible(False)
-        self.table.doubleClicked.connect(self._change_price)
 
         actions = QHBoxLayout()
         actions.addWidget(self.refresh_button)
@@ -164,6 +163,11 @@ class FuelPriceWindow(QWidget):
                 status_item.setForeground(QColor(COLOR_ALERT_RED))
             self.table.setItem(row, 2, status_item)
 
+            if self._can_manage:
+                self.table.setCellWidget(
+                    row, 3, make_edit_icon_button(lambda _=False, f=fuel: self._change_price_for(f), tooltip="Change price")
+                )
+
         if unpriced:
             self.warning_label.setText(
                 f"{unpriced} fuel type(s) have no selling price set and cannot be sold. "
@@ -185,6 +189,11 @@ class FuelPriceWindow(QWidget):
             return
         fuel = self._selected_fuel()
         if fuel is None:
+            return
+        self._change_price_for(fuel)
+
+    def _change_price_for(self, fuel) -> None:
+        if not self._can_manage:
             return
         dialog = FuelRateDialog(fuel, self._actor_user_id, self._fuel_service, self)
         if dialog.exec() == QDialog.Accepted:

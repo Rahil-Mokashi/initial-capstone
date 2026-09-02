@@ -35,11 +35,11 @@ from app.schemas.fuel_delivery import FuelDeliveryArrive, FuelDeliveryDipReading
 from app.schemas.purchase_order import PurchaseOrderCreate, PurchaseOrderItemCreate
 from app.schemas.supplier import SupplierCreate
 from app.schemas.supplier_invoice import SupplierInvoiceCreate, SupplierPaymentCreate
-from app.ui.qt_utils import apply_hard_shadow, chain_enter_to_next_field, describe_unexpected_error, qdate_to_date
+from app.ui.qt_utils import apply_hard_shadow, chain_enter_to_next_field, describe_unexpected_error, make_edit_icon_button, qdate_to_date
 from app.ui.widgets import GridBackgroundWidget
 
-SUPPLIER_HEADERS = ["Name", "Contact", "Phone", "Status"]
-PO_HEADERS = ["PO Number", "Supplier", "Order Date", "Status"]
+SUPPLIER_HEADERS = ["Name", "Contact", "Phone", "Status", ""]
+PO_HEADERS = ["PO Number", "Supplier", "Order Date", "Status", ""]
 
 # The same "still owed to us" statuses DashboardService's own pending-PO
 # count uses - a PO this tab's card row should surface as a delivery
@@ -50,9 +50,9 @@ PENDING_DELIVERY_STATUSES = {
     PurchaseOrderStatus.PARTIALLY_DELIVERED.value,
 }
 PENDING_DELIVERY_CARDS_SHOWN = 3
-INVOICE_HEADERS = ["Invoice #", "Supplier", "Date", "Amount", "Status"]
+INVOICE_HEADERS = ["Invoice #", "Supplier", "Date", "Amount", "Status", ""]
 ITEM_HEADERS = ["Fuel", "Quantity", "Rate/L"]
-DELIVERY_HEADERS = ["Tanker", "Arrived", "Status", "Received"]
+DELIVERY_HEADERS = ["Tanker", "Arrived", "Status", "Received", ""]
 PAYMENT_HEADERS = ["Date", "Amount", "Method", "Reference"]
 
 
@@ -122,7 +122,6 @@ class SupplierTab(QWidget):
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
         self.table.verticalHeader().setVisible(False)
         self.table.horizontalHeader().setStretchLastSection(True)
-        self.table.doubleClicked.connect(self._toggle_selected_status)
 
         layout = QVBoxLayout()
         layout.setSpacing(12)
@@ -141,6 +140,13 @@ class SupplierTab(QWidget):
             self.table.setItem(row_index, 2, QTableWidgetItem(supplier.phone or ""))
             self.table.setItem(row_index, 3, QTableWidgetItem(supplier.status.title()))
             self.table.item(row_index, 0).setData(Qt.UserRole, supplier.id)
+            if self._can_manage:
+                self.table.setCellWidget(
+                    row_index, 4,
+                    make_edit_icon_button(
+                        lambda _=False, sid=supplier.id: self._toggle_status(sid), tooltip="Change status"
+                    ),
+                )
         self.table.resizeColumnsToContents()
         self.table.horizontalHeader().setStretchLastSection(True)
 
@@ -149,14 +155,16 @@ class SupplierTab(QWidget):
         if dialog.exec() == QDialog.Accepted:
             self.refresh()
 
-    def _toggle_selected_status(self) -> None:
+    def _toggle_status(self, supplier_id: str) -> None:
         if not self._can_manage:
             return
-        rows = self.table.selectionModel().selectedRows()
-        if not rows:
+        current_status = None
+        for row_index in range(self.table.rowCount()):
+            if self.table.item(row_index, 0).data(Qt.UserRole) == supplier_id:
+                current_status = self.table.item(row_index, 3).text().lower()
+                break
+        if current_status is None:
             return
-        supplier_id = self.table.item(rows[0].row(), 0).data(Qt.UserRole)
-        current_status = self.table.item(rows[0].row(), 3).text().lower()
         new_status = StatusEnum.INACTIVE if current_status == "active" else StatusEnum.ACTIVE
 
         reason, ok = QInputDialog.getText(self, "Change status", f"Reason to mark {new_status.value}:")
@@ -294,7 +302,6 @@ class PurchaseOrderDetailDialog(QDialog):
         self.deliveries_table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.deliveries_table.setSelectionBehavior(QTableWidget.SelectRows)
         self.deliveries_table.verticalHeader().setVisible(False)
-        self.deliveries_table.doubleClicked.connect(self._open_selected_delivery)
 
         close_button = QPushButton("Close")
         close_button.setObjectName("secondaryButton")
@@ -345,6 +352,9 @@ class PurchaseOrderDetailDialog(QDialog):
             received = f"{delivery.quantity_received:g}" if delivery.quantity_received is not None else ""
             self.deliveries_table.setItem(row_index, 3, QTableWidgetItem(received))
             self.deliveries_table.item(row_index, 0).setData(Qt.UserRole, delivery.id)
+            self.deliveries_table.setCellWidget(
+                row_index, 4, make_edit_icon_button(lambda _=False, did=delivery.id: self._open_delivery(did))
+            )
         self.deliveries_table.resizeColumnsToContents()
 
     def _record_arrival(self) -> None:
@@ -367,11 +377,7 @@ class PurchaseOrderDetailDialog(QDialog):
             QMessageBox.warning(self, "Could not cancel order", describe_unexpected_error(exc))
         self.refresh()
 
-    def _open_selected_delivery(self) -> None:
-        rows = self.deliveries_table.selectionModel().selectedRows()
-        if not rows:
-            return
-        delivery_id = self.deliveries_table.item(rows[0].row(), 0).data(Qt.UserRole)
+    def _open_delivery(self, delivery_id: str) -> None:
         dialog = FuelDeliveryDetailDialog(self._procurement_service, self._actor_user_id, delivery_id, self._can_manage, self)
         dialog.exec()
         self.refresh()
@@ -670,7 +676,6 @@ class PurchaseOrderTab(QWidget):
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
         self.table.verticalHeader().setVisible(False)
         self.table.horizontalHeader().setStretchLastSection(True)
-        self.table.doubleClicked.connect(self._open_selected)
 
         layout = QVBoxLayout()
         layout.setSpacing(12)
@@ -711,6 +716,9 @@ class PurchaseOrderTab(QWidget):
             self.table.setItem(row_index, 2, QTableWidgetItem(po.order_date.strftime("%Y-%m-%d")))
             self.table.setItem(row_index, 3, QTableWidgetItem(po.status.replace("_", " ").title()))
             self.table.item(row_index, 0).setData(Qt.UserRole, po.id)
+            self.table.setCellWidget(
+                row_index, 4, make_edit_icon_button(lambda _=False, poid=po.id: self._open_po(poid))
+            )
         self.table.resizeColumnsToContents()
         self.table.horizontalHeader().setStretchLastSection(True)
 
@@ -719,11 +727,7 @@ class PurchaseOrderTab(QWidget):
         if dialog.exec() == QDialog.Accepted:
             self.refresh()
 
-    def _open_selected(self) -> None:
-        rows = self.table.selectionModel().selectedRows()
-        if not rows:
-            return
-        po_id = self.table.item(rows[0].row(), 0).data(Qt.UserRole)
+    def _open_po(self, po_id: str) -> None:
         dialog = PurchaseOrderDetailDialog(
             self._procurement_service, self._tank_service, self._employee_service,
             self._actor_user_id, po_id, self._can_manage, self,
@@ -892,7 +896,6 @@ class InvoiceTab(QWidget):
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
         self.table.verticalHeader().setVisible(False)
         self.table.horizontalHeader().setStretchLastSection(True)
-        self.table.doubleClicked.connect(self._open_selected)
 
         layout = QVBoxLayout()
         layout.setSpacing(12)
@@ -912,6 +915,9 @@ class InvoiceTab(QWidget):
             self.table.setItem(row_index, 3, QTableWidgetItem(f"{invoice.amount:g}"))
             self.table.setItem(row_index, 4, QTableWidgetItem(invoice.status.replace("_", " ").title()))
             self.table.item(row_index, 0).setData(Qt.UserRole, invoice.id)
+            self.table.setCellWidget(
+                row_index, 5, make_edit_icon_button(lambda _=False, iid=invoice.id: self._open_invoice(iid))
+            )
         self.table.resizeColumnsToContents()
         self.table.horizontalHeader().setStretchLastSection(True)
 
@@ -920,11 +926,7 @@ class InvoiceTab(QWidget):
         if dialog.exec() == QDialog.Accepted:
             self.refresh()
 
-    def _open_selected(self) -> None:
-        rows = self.table.selectionModel().selectedRows()
-        if not rows:
-            return
-        invoice_id = self.table.item(rows[0].row(), 0).data(Qt.UserRole)
+    def _open_invoice(self, invoice_id: str) -> None:
         dialog = InvoiceDetailDialog(self._procurement_service, self._actor_user_id, invoice_id, self._can_manage, self)
         dialog.exec()
         self.refresh()

@@ -32,10 +32,10 @@ from PySide6.QtWidgets import (
 from app.core.constants import EmployeeStatus, Permission
 from app.core.exceptions import AppError
 from app.schemas.employee import EmployeeCreate, EmployeeUpdate
-from app.ui.qt_utils import chain_enter_to_next_field, describe_unexpected_error, qdate_to_date
+from app.ui.qt_utils import chain_enter_to_next_field, describe_unexpected_error, make_edit_icon_button, qdate_to_date
 from app.ui.widgets import GridBackgroundWidget, confirm_dialog
 
-TABLE_HEADERS = ["Code", "Name", "Designation", "Department", "Status", "Joining Date"]
+TABLE_HEADERS = ["Code", "Name", "Designation", "Department", "Status", "Joining Date", ""]
 
 
 class EmployeeListWindow(QWidget):
@@ -77,7 +77,6 @@ class EmployeeListWindow(QWidget):
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
         self.table.verticalHeader().setVisible(False)
         self.table.horizontalHeader().setStretchLastSection(True)
-        self.table.doubleClicked.connect(self._open_selected_employee)
 
         layout = QVBoxLayout()
         layout.setContentsMargins(24, 24, 24, 24)
@@ -114,6 +113,9 @@ class EmployeeListWindow(QWidget):
             self.table.setItem(row_index, 4, QTableWidgetItem(employee.status.replace("_", " ").title()))
             self.table.setItem(row_index, 5, QTableWidgetItem(employee.joining_date.isoformat()))
             self.table.item(row_index, 0).setData(Qt.UserRole, employee.id)
+            self.table.setCellWidget(
+                row_index, 6, make_edit_icon_button(lambda _=False, eid=employee.id: self._open_employee(eid))
+            )
         self.table.resizeColumnsToContents()
         self.table.horizontalHeader().setStretchLastSection(True)
 
@@ -122,11 +124,7 @@ class EmployeeListWindow(QWidget):
         if dialog.exec() == QDialog.Accepted:
             self.refresh()
 
-    def _open_selected_employee(self) -> None:
-        rows = self.table.selectionModel().selectedRows()
-        if not rows:
-            return
-        employee_id = self.table.item(rows[0].row(), 0).data(Qt.UserRole)
+    def _open_employee(self, employee_id: str) -> None:
         dialog = EmployeeDetailDialog(self._employee_service, self._actor_user_id, employee_id, self._can_manage, self)
         dialog.exec()
         self.refresh()

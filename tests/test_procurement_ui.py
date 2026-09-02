@@ -146,7 +146,7 @@ def test_window_shows_tabs_and_is_gated_on_view_permission(qapp, procurement_ser
     from app.ui.procurement_window import ProcurementWindow
 
     window = ProcurementWindow(procurement_service, fuel_repo, tank_service, employee_service, auth_service, admin_id)
-    assert window.supplier_tab.table.columnCount() == 4
+    assert window.supplier_tab.table.columnCount() == 5  # + trailing edit-icon Actions column
     assert window.po_tab.add_button.isHidden() is False
 
 
