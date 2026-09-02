@@ -1,5 +1,6 @@
 from datetime import date, timezone, datetime
 from decimal import Decimal
+from types import SimpleNamespace
 
 import pytest
 from sqlalchemy import create_engine
@@ -420,3 +421,82 @@ def test_set_customer_status_requires_reason(sale_service, admin_id):
     customer = sale_service.create_customer(admin_id, CustomerCreate(name="Ravi Transports"))
     with pytest.raises(ValueError):
         sale_service.set_customer_status(admin_id, customer.id, StatusEnum.INACTIVE, "")
+
+
+# --------------------------------------------------------------------
+# settle_assignment_cash (2026-09-02, user-requested: an attendant should
+# not have to manually record every cash sale one at a time - only
+# credit/UPI/card sales, which need a customer link or a payment
+# reference, go through Terminal individually)
+# --------------------------------------------------------------------
+
+def _fake_assignment(nozzle_id, shift_id, employee_id, opening_meter, closing_meter):
+    """A lightweight stand-in for a NozzleAssignment ORM object -
+    settle_assignment_cash only reads these five attributes, so a real
+    NozzleAssignment (and therefore ShiftService) isn't needed just to
+    exercise SaleService's own logic in isolation. The wiring between
+    ShiftService.complete_nozzle_assignment and this method is covered
+    separately in tests/test_shift_service.py."""
+    return SimpleNamespace(
+        nozzle_id=nozzle_id, shift_id=shift_id, employee_id=employee_id,
+        opening_meter=opening_meter, closing_meter=closing_meter,
+    )
+
+
+def test_settle_assignment_cash_creates_aggregate_sale(sale_service, admin_id, open_shift_id, nozzle_id, employee_id):
+    assignment = _fake_assignment(nozzle_id, open_shift_id, employee_id, Decimal("1000"), Decimal("1050"))
+    sale = sale_service.settle_assignment_cash(admin_id, assignment)
+    assert sale is not None
+    assert sale.payment_method == PaymentMethod.CASH.value
+    assert sale.quantity == Decimal("50")
+    assert sale.customer_id is None
+    assert sale.status == SaleStatus.COMPLETED.value
+
+
+def test_settle_assignment_cash_subtracts_already_recorded_non_cash_sales(sale_service, admin_id, open_shift_id, nozzle_id, employee_id):
+    sale_service.create_sale(
+        admin_id, make_sale_data(shift_id=open_shift_id, nozzle_id=nozzle_id, employee_id=employee_id, quantity=Decimal("20"), payment_method=PaymentMethod.UPI)
+    )
+    assignment = _fake_assignment(nozzle_id, open_shift_id, employee_id, Decimal("1000"), Decimal("1050"))
+    sale = sale_service.settle_assignment_cash(admin_id, assignment)
+    assert sale.quantity == Decimal("30")  # 50 dispensed - 20 already recorded as UPI
+
+
+def test_settle_assignment_cash_subtracts_already_recorded_cash_sales_too(sale_service, admin_id, open_shift_id, nozzle_id, employee_id):
+    """Terminal still allows manually ringing up an individual cash sale
+    (e.g. a customer who wants a receipt) - that volume must not be
+    double-counted by also folding it into the auto-aggregate."""
+    sale_service.create_sale(
+        admin_id, make_sale_data(shift_id=open_shift_id, nozzle_id=nozzle_id, employee_id=employee_id, quantity=Decimal("15"), payment_method=PaymentMethod.CASH)
+    )
+    assignment = _fake_assignment(nozzle_id, open_shift_id, employee_id, Decimal("1000"), Decimal("1050"))
+    sale = sale_service.settle_assignment_cash(admin_id, assignment)
+    assert sale.quantity == Decimal("35")  # 50 dispensed - 15 already recorded as cash
+
+
+def test_settle_assignment_cash_returns_none_when_fully_accounted_for(sale_service, admin_id, open_shift_id, nozzle_id, employee_id):
+    sale_service.create_sale(
+        admin_id, make_sale_data(shift_id=open_shift_id, nozzle_id=nozzle_id, employee_id=employee_id, quantity=Decimal("50"), payment_method=PaymentMethod.UPI)
+    )
+    assignment = _fake_assignment(nozzle_id, open_shift_id, employee_id, Decimal("1000"), Decimal("1050"))
+    assert sale_service.settle_assignment_cash(admin_id, assignment) is None
+
+
+def test_settle_assignment_cash_none_without_a_closing_meter(sale_service, admin_id, open_shift_id, nozzle_id, employee_id):
+    assignment = _fake_assignment(nozzle_id, open_shift_id, employee_id, Decimal("1000"), None)
+    assert sale_service.settle_assignment_cash(admin_id, assignment) is None
+
+
+def test_create_sale_as_related_action_bypasses_sale_manage_check(sale_service, accountant_id, open_shift_id, nozzle_id, employee_id):
+    """Accountant holds SALE_VIEW but not SALE_MANAGE - create_sale itself
+    must still reject this actor, while the related-action twin (used
+    internally by settle_assignment_cash on behalf of a caller whose OWN
+    permission, e.g. ShiftService's SHIFT_MANAGE, already authorized the
+    side effect) must not."""
+    with pytest.raises(PermissionDeniedError):
+        sale_service.create_sale(accountant_id, make_sale_data(shift_id=open_shift_id, nozzle_id=nozzle_id, employee_id=employee_id))
+
+    sale = sale_service.create_sale_as_related_action(
+        accountant_id, make_sale_data(shift_id=open_shift_id, nozzle_id=nozzle_id, employee_id=employee_id)
+    )
+    assert sale.status == SaleStatus.COMPLETED.value
