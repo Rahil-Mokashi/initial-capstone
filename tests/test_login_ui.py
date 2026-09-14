@@ -76,60 +76,65 @@ def test_auth_service_session_timeout_comes_from_settings_not_a_hardcoded_defaul
 
 
 def test_enter_in_username_moves_focus_to_password_instead_of_submitting(controller, qapp):
+    # The login form moved from QWidget to QML (2026-09-02, hybrid QML UI
+    # upgrade Phase A) - there is no username_input/password_input widget
+    # attribute to read anymore. find_qml_object() reaches into the loaded
+    # QML scene by objectName instead (see LoginWindow.find_qml_object),
+    # and QTest.keyClick simulates the real Enter keypress the same way a
+    # user pressing it in the username field would, exercising
+    # LoginScreen.qml's actual onAccepted binding rather than a Python
+    # stand-in for it.
+    from PySide6.QtCore import Qt
+    from PySide6.QtTest import QTest
+
     login_window = controller.login_window
-    # hasFocus() reflects OS-level window activation, not just Qt's
-    # internal focus widget - without this a window that isn't the
-    # foreground OS window can report hasFocus() False even after
-    # setFocus() actually ran, unrelated to whether the code is correct.
     login_window.activateWindow()
     login_window.raise_()
     qapp.processEvents()
 
-    login_window.username_input.setText("admin")
-    login_window.username_input.returnPressed.emit()
+    username_field = login_window.find_qml_object("usernameField")
+    password_field = login_window.find_qml_object("passwordField")
+    assert username_field is not None and password_field is not None
+
+    username_field.setProperty("text", "admin")
+    username_field.forceActiveFocus()
+    qapp.processEvents()
+
+    QTest.keyClick(login_window._quick_widget, Qt.Key_Return)
     qapp.processEvents()
 
     assert controller.main_window is None
-    assert login_window.password_input.hasFocus() is True
+    assert password_field.property("activeFocus") is True
 
 
 def test_wrong_password_shows_generic_error_and_stays_on_login(controller):
-    controller.login_window.username_input.setText("admin")
-    controller.login_window.password_input.setText("wrong-password")
-    controller.login_window._attempt_login()
+    controller.login_window.bridge.attempt_login("admin", "wrong-password")
 
     assert controller.main_window is None
-    assert controller.login_window.error_label.text() == "Invalid username or password"
-    assert controller.login_window.password_input.text() == ""
+    assert controller.login_window.bridge.error == "Invalid username or password"
 
 
 def test_unexpected_error_during_login_shows_generic_message_not_a_crash(controller, monkeypatch):
     def boom(*args, **kwargs):
         raise RuntimeError("simulated DB outage")
 
-    monkeypatch.setattr(controller.login_window._auth_service, "authenticate", boom)
+    monkeypatch.setattr(controller.login_window.bridge._auth_service, "authenticate", boom)
 
-    controller.login_window.username_input.setText("admin")
-    controller.login_window.password_input.setText("whatever")
-    controller.login_window._attempt_login()  # must not raise
+    controller.login_window.bridge.attempt_login("admin", "whatever")  # must not raise
 
     assert controller.main_window is None
-    assert "Something went wrong" in controller.login_window.error_label.text()
+    assert "Something went wrong" in controller.login_window.bridge.error
 
 
 def test_empty_fields_show_validation_message_without_calling_auth(controller):
-    controller.login_window.username_input.setText("")
-    controller.login_window.password_input.setText("")
-    controller.login_window._attempt_login()
+    controller.login_window.bridge.attempt_login("", "")
 
     assert controller.main_window is None
-    assert "Enter both" in controller.login_window.error_label.text()
+    assert "Enter both" in controller.login_window.bridge.error
 
 
 def test_successful_login_shows_main_window_with_user_info(controller):
-    controller.login_window.username_input.setText("admin")
-    controller.login_window.password_input.setText(DEFAULT_ADMIN_PASSWORD)
-    controller.login_window._attempt_login()
+    controller.login_window.bridge.attempt_login("admin", DEFAULT_ADMIN_PASSWORD)
 
     assert controller.login_window is None
     assert controller.main_window is not None
@@ -137,9 +142,7 @@ def test_successful_login_shows_main_window_with_user_info(controller):
 
 
 def test_logout_returns_to_login_window_and_invalidates_session(controller, seeded_db):
-    controller.login_window.username_input.setText("admin")
-    controller.login_window.password_input.setText(DEFAULT_ADMIN_PASSWORD)
-    controller.login_window._attempt_login()
+    controller.login_window.bridge.attempt_login("admin", DEFAULT_ADMIN_PASSWORD)
 
     token = controller.main_window._session_token
     controller.main_window._logout()
@@ -156,9 +159,7 @@ def test_expired_session_triggers_auto_logout(controller, seeded_db, monkeypatch
     # out so this test can't hang waiting for a click that will never come.
     monkeypatch.setattr("app.ui.main_window.QMessageBox.information", lambda *a, **k: None)
 
-    controller.login_window.username_input.setText("admin")
-    controller.login_window.password_input.setText(DEFAULT_ADMIN_PASSWORD)
-    controller.login_window._attempt_login()
+    controller.login_window.bridge.attempt_login("admin", DEFAULT_ADMIN_PASSWORD)
 
     main_window = controller.main_window
     token = main_window._session_token
