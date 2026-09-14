@@ -1,7 +1,7 @@
 from decimal import Decimal
 from typing import Optional
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, model_validator
 
 from app.core.constants import PaymentMethod
 
@@ -25,6 +25,12 @@ class ExpenseCreate(BaseModel):
     shift_id: Optional[str] = None
     receipt_reference: Optional[str] = None
     description: Optional[str] = None
+    # Set together, only when this expense is really fuel drawn from a
+    # tank for internal use (a vehicle, a generator) rather than an
+    # ordinary cash expense - see ExpenseService.create_expense and the
+    # Expense model's own check constraint enforcing "both or neither".
+    tank_id: Optional[str] = None
+    quantity: Optional[Decimal] = None
 
     @field_validator("amount")
     @classmethod
@@ -39,3 +45,16 @@ class ExpenseCreate(BaseModel):
         if value == PaymentMethod.CREDIT:
             raise ValueError("An expense cannot be paid on credit")
         return value
+
+    @field_validator("quantity")
+    @classmethod
+    def positive_quantity(cls, value: Optional[Decimal]) -> Optional[Decimal]:
+        if value is not None and value <= 0:
+            raise ValueError("quantity must be greater than zero")
+        return value
+
+    @model_validator(mode="after")
+    def tank_id_and_quantity_together(self) -> "ExpenseCreate":
+        if (self.tank_id is None) != (self.quantity is None):
+            raise ValueError("tank_id and quantity must be set together, or not at all")
+        return self

@@ -332,6 +332,45 @@ def test_second_reconciliation_uses_first_as_new_opening_stock(tank_service, adm
     assert second.variance == 0.0
 
 
+def test_perform_reconciliation_subtracts_testing_quantity(tank_service, admin_id, fuel_id):
+    """Regression test built from a real petrol pump's paper daily report
+    (docs/daily-report-spec.md, section 2): opening 35,485 L, purchase
+    23,000 L, two shifts dispensing 8,371 L and 8,828 L, and 65 L drawn
+    off for calibration/dip testing - fuel that genuinely left the tank
+    but was never sold to a customer. The paper report's own arithmetic
+    never subtracts Testing at all (opening + purchase - shift1 - shift2
+    = 41,286 exactly matches its own "Total Stock" cell), so the +10
+    variance it reports against a 41,296 L physical dip understates the
+    true unexplained surplus. Once testing is correctly subtracted,
+    expected closing stock is 41,221 L and the real variance is +75 L,
+    not +10 - a difference material enough to change the variance
+    classification, which is the entire point of tracking it separately.
+    """
+    tank = make_tank(tank_service, admin_id, fuel_id, opening_stock=35485.0, capacity=100000.0)
+    tank_service.record_transaction(
+        admin_id, tank.id, TankTransactionType.RECEIPT, TankTransactionCreate(quantity=23000.0)
+    )
+    tank_service.record_transaction(
+        admin_id, tank.id, TankTransactionType.ISSUE, TankTransactionCreate(quantity=8371.0)
+    )
+    tank_service.record_transaction(
+        admin_id, tank.id, TankTransactionType.ISSUE, TankTransactionCreate(quantity=8828.0)
+    )
+    tank_service.record_transaction(
+        admin_id, tank.id, TankTransactionType.TESTING,
+        TankTransactionCreate(quantity=65.0, remarks="Daily dip calibration check"),
+    )
+
+    reconciliation = tank_service.perform_reconciliation(
+        admin_id, tank.id, ReconciliationPerform(reconciliation_date=date.today(), physical_stock=41296.0)
+    )
+
+    assert reconciliation.sold_quantity == Decimal("17199.000")
+    assert reconciliation.testing_quantity == Decimal("65.000")
+    assert reconciliation.expected_closing_stock == Decimal("41221.000")
+    assert reconciliation.variance == Decimal("75.000")
+
+
 def test_set_tank_status_requires_reason(tank_service, admin_id, fuel_id):
     tank = make_tank(tank_service, admin_id, fuel_id)
     with pytest.raises(ValueError):

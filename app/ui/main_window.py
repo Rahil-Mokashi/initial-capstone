@@ -1509,6 +1509,7 @@ class AppController:
             ShiftRepository(self._db_session),
             audit_repo,
             self._auth_service,
+            tank_service=self._tank_service,
         )
         expense_repo = ExpenseRepository(self._db_session)
         shift_reconciliation_repo = ShiftReconciliationRepository(self._db_session)

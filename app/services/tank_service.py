@@ -194,7 +194,17 @@ class TankService:
     ) -> TankTransaction:
         tank = self._get_tank_or_raise(tank_id)
 
-        if transaction_type in (TankTransactionType.RECEIPT, TankTransactionType.ISSUE) and data.quantity <= 0:
+        # ISSUE (a nozzle sale), TESTING (a calibration draw) and
+        # INTERNAL_CONSUMPTION (fuel used by the pump itself, e.g. a
+        # company vehicle) all remove real fuel from the tank the same
+        # way - they differ only in *why*, which is what keeps
+        # FuelReconciliation.sold_quantity meaning "actually sold" (see
+        # TankTransactionType's docstring in app/core/constants.py).
+        stock_decreasing_types = (
+            TankTransactionType.ISSUE, TankTransactionType.TESTING, TankTransactionType.INTERNAL_CONSUMPTION,
+        )
+
+        if transaction_type in (TankTransactionType.RECEIPT,) + stock_decreasing_types and data.quantity <= 0:
             raise ValueError(f"{transaction_type.value} quantity must be positive")
         if transaction_type == TankTransactionType.ADJUSTMENT and (not data.remarks or not data.remarks.strip()):
             raise ValueError("A reason is required to record a stock adjustment")
@@ -206,11 +216,11 @@ class TankService:
                     f"Receiving {data.quantity} would exceed tank capacity ({tank.capacity}); "
                     f"current stock is {tank.current_stock}"
                 )
-        elif transaction_type == TankTransactionType.ISSUE:
+        elif transaction_type in stock_decreasing_types:
             new_stock = tank.current_stock - data.quantity
             if new_stock < 0:
                 raise ConflictError(
-                    f"Cannot issue {data.quantity}; only {tank.current_stock} is currently in stock"
+                    f"Cannot {transaction_type.value} {data.quantity}; only {tank.current_stock} is currently in stock"
                 )
         else:
             new_stock = tank.current_stock + data.quantity
@@ -219,7 +229,7 @@ class TankService:
             if new_stock > tank.capacity:
                 raise ConflictError("This adjustment would exceed the tank's capacity")
 
-        stored_quantity = data.quantity if transaction_type != TankTransactionType.ISSUE else -data.quantity
+        stored_quantity = -data.quantity if transaction_type in stock_decreasing_types else data.quantity
         transaction = TankTransaction(
             tank_id=tank_id,
             transaction_type=transaction_type.value,
@@ -276,8 +286,26 @@ class TankService:
                 tank_id, TankTransactionType.ISSUE.value, date_from=period_start, date_to=data.reconciliation_date
             )
         )
+        testing = abs(
+            self._transaction_repo.sum_for_tank_by_type(
+                tank_id, TankTransactionType.TESTING.value, date_from=period_start, date_to=data.reconciliation_date
+            )
+        )
+        internal_consumption = abs(
+            self._transaction_repo.sum_for_tank_by_type(
+                tank_id, TankTransactionType.INTERNAL_CONSUMPTION.value,
+                date_from=period_start, date_to=data.reconciliation_date,
+            )
+        )
 
-        expected_closing_stock = opening_stock + received - issued
+        # Every litre that actually left the tank must be subtracted here,
+        # or a real, explained draw (a calibration test, fuel put in the
+        # pump's own vehicle) shows up as unexplained variance - exactly
+        # the false-alarm problem this reconciliation exists to avoid.
+        # sold_quantity below stays ISSUE-only, so it keeps meaning
+        # "litres actually sold to a customer" for anything else that
+        # reads it.
+        expected_closing_stock = opening_stock + received - issued - testing - internal_consumption
         variance = data.physical_stock - expected_closing_stock
         variance_percent = (
             (variance / expected_closing_stock) * 100
@@ -292,6 +320,8 @@ class TankService:
             opening_stock=opening_stock,
             received_quantity=received,
             sold_quantity=issued,
+            testing_quantity=testing,
+            internal_consumption_quantity=internal_consumption,
             expected_closing_stock=expected_closing_stock,
             physical_stock=data.physical_stock,
             variance=variance,
