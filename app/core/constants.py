@@ -113,11 +113,31 @@ class TankStatus(str, Enum):
 
 
 class TankTransactionType(str, Enum):
-    """Values stored in TankTransaction.transaction_type (problemstatement.md #13)."""
+    """Values stored in TankTransaction.transaction_type (problemstatement.md #13).
+
+    TESTING and INTERNAL_CONSUMPTION are both new types rather than ISSUE
+    with a reason in remarks, deliberately: FuelReconciliation's expected-
+    stock math (app/services/tank_service.py) sums transactions by exact
+    type, and ISSUE's sum feeds FuelReconciliation.sold_quantity, which
+    other parts of the app are entitled to read as "litres actually sold
+    to a customer". Folding a calibration draw or an internal vehicle
+    fill-up into ISSUE would silently inflate that figure with fuel that
+    generated no sale - the same silent-drift failure mode this pair of
+    types exists to close, just moved into a different field.
+    """
 
     RECEIPT = "receipt"
     ISSUE = "issue"
     ADJUSTMENT = "adjustment"
+    # Fuel drawn from the tank for dip/quality-calibration checks - not a
+    # sale, but real fuel that left the tank (docs/daily-report-spec.md
+    # section 2's "Testing" row).
+    TESTING = "testing"
+    # Fuel drawn from the tank for the pump's own operational use (a
+    # company vehicle, a generator) rather than sold to a customer
+    # (docs/daily-report-spec.md section 6 - these were previously
+    # recorded only as cash expenses, with no stock movement at all).
+    INTERNAL_CONSUMPTION = "internal_consumption"
 
 
 class PurchaseOrderStatus(str, Enum):

@@ -40,6 +40,10 @@ class Expense(Base):
     # the .db file is directly reachable by anyone with the machine.
     __table_args__ = (
         CheckConstraint("amount > 0", name="ck_expenses_amount_positive"),
+        CheckConstraint("quantity IS NULL OR quantity > 0", name="ck_expenses_quantity_positive"),
+        CheckConstraint(
+            "(tank_id IS NULL) = (quantity IS NULL)", name="ck_expenses_tank_id_and_quantity_together"
+        ),
     )
 
 
@@ -51,6 +55,18 @@ class Expense(Base):
     payment_method = Column(String(16), nullable=False)
     receipt_reference = Column(String(128), nullable=True)
     description = Column(Text, nullable=True)
+
+    # Both null for an ordinary cash expense (tea, a vendor invoice).
+    # Both set together (enforced above) when this expense is really
+    # fuel drawn from a tank for the pump's own use - a vehicle, a
+    # generator - rather than money changing hands for something
+    # external. See ExpenseService.create_expense: when set, the same
+    # litres are posted to TankService as an INTERNAL_CONSUMPTION
+    # transaction, through the same audited *_as_related_action path
+    # SaleService and ShiftService already use, so the tank's stock
+    # reflects the draw instead of only a cash line silently ignoring it.
+    tank_id = Column(String(36), ForeignKey("tanks.id"), nullable=True)
+    quantity = Column(Numeric(12, 3), nullable=True)
 
     employee_id = Column(String(36), ForeignKey("employees.id"), nullable=False)
     shift_id = Column(String(36), ForeignKey("shifts.id"), nullable=True)
@@ -66,6 +82,7 @@ class Expense(Base):
     category = relationship("ExpenseCategory")
     employee = relationship("Employee")
     shift = relationship("Shift")
+    tank = relationship("Tank")
     approved_by = relationship("User", foreign_keys=[approved_by_id])
     recorded_by = relationship("User", foreign_keys=[recorded_by_id])
 

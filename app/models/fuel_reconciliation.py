@@ -1,7 +1,8 @@
 import uuid
 from datetime import datetime, timezone
+from decimal import Decimal
 
-from sqlalchemy import Column, Date, ForeignKey, Numeric, String, Text
+from sqlalchemy import CheckConstraint, Column, Date, ForeignKey, Numeric, String, Text
 from sqlalchemy.orm import relationship
 from app.database.types import UtcDateTime
 
@@ -11,14 +12,30 @@ from .base import Base
 class FuelReconciliation(Base):
     """One reconciliation record for one tank on one date (problemstatement.md #14).
 
-    Expected Closing Stock = Opening Stock + Received - Sold. Variance is
-    physical minus expected, classified (never assumed to be theft) using
-    configurable thresholds in app/core/constants.py. Immutable — a
-    reconciliation is never edited after the fact; if it needs revisiting,
-    a new reconciliation record is created.
+    Expected Closing Stock = Opening Stock + Received - Sold - Testing -
+    Internal Consumption. Testing and internal-consumption quantities are
+    summed the same way received/sold already are (from TankTransaction
+    rows of those types, TankService._perform_reconciliation_impl) rather
+    than entered by hand, so they can never silently drift out of sync
+    with the transactions that actually back them - the same
+    recompute-from-scratch discipline this project already applies to
+    CreditAccount's outstanding balance and PurchaseOrder.status. Both
+    default to zero for a tank/period with no such draws, which is the
+    common case. Variance is physical minus expected, classified (never
+    assumed to be theft) using configurable thresholds in
+    app/core/constants.py. Immutable — a reconciliation is never edited
+    after the fact; if it needs revisiting, a new reconciliation record
+    is created.
     """
 
     __tablename__ = "fuel_reconciliations"
+
+    __table_args__ = (
+        CheckConstraint("testing_quantity >= 0", name="ck_fuel_reconciliations_testing_non_negative"),
+        CheckConstraint(
+            "internal_consumption_quantity >= 0", name="ck_fuel_reconciliations_internal_consumption_non_negative"
+        ),
+    )
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     tank_id = Column(String(36), ForeignKey("tanks.id"), nullable=False, index=True)
@@ -27,6 +44,8 @@ class FuelReconciliation(Base):
     opening_stock = Column(Numeric(12, 3), nullable=False)
     received_quantity = Column(Numeric(12, 3), nullable=False)
     sold_quantity = Column(Numeric(12, 3), nullable=False)
+    testing_quantity = Column(Numeric(12, 3), nullable=False, default=Decimal("0"))
+    internal_consumption_quantity = Column(Numeric(12, 3), nullable=False, default=Decimal("0"))
     expected_closing_stock = Column(Numeric(12, 3), nullable=False)
     physical_stock = Column(Numeric(12, 3), nullable=False)
     variance = Column(Numeric(12, 3), nullable=False)
