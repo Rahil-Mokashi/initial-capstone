@@ -29,6 +29,7 @@ class NozzleAssignment(EntityMixin, Base):
         CheckConstraint("opening_meter >= 0", name="ck_nozzle_assignments_opening_meter_non_negative"),
         CheckConstraint("closing_meter IS NULL OR closing_meter >= opening_meter", name="ck_nozzle_assignments_closing_not_before_opening"),
         CheckConstraint("testing_volume >= 0", name="ck_nozzle_assignments_testing_volume_non_negative"),
+        CheckConstraint("internal_consumption_volume >= 0", name="ck_nozzle_assignments_internal_consumption_volume_non_negative"),
     )
 
 
@@ -52,6 +53,22 @@ class NozzleAssignment(EntityMixin, Base):
     # assignment_cash subtracts before billing the remainder as a cash
     # sale - otherwise a test dispense gets silently sold to nobody.
     testing_volume = Column(Numeric(12, 3), nullable=False, default=Decimal("0"))
+    # Litres of this assignment's meter difference that were internal
+    # consumption (genset, vehicle, Omni fills) rather than a real sale
+    # (PROJECT_CONTEXT.md's A5 working assumption: there is no other
+    # metered way to draw fuel from an underground tank, so this volume
+    # sits inside the same meter difference testing_volume is carved out
+    # of). Unlike testing_volume, this fuel genuinely leaves the tank and
+    # is not poured back - that stock effect is recorded separately, on
+    # the Expense that represents this same fill
+    # (TankTransactionType.INTERNAL_CONSUMPTION via ExpenseService.
+    # create_expense). This field's only job is billing accuracy: what
+    # SaleService.settle_assignment_cash subtracts alongside
+    # testing_volume so the fuel isn't also sold to a customer who
+    # doesn't exist. The two are kept as separate columns, not combined
+    # into one "non-sale volume" figure, specifically so a wrong A5 only
+    # requires zeroing this one field out - see PROJECT_CONTEXT.md.
+    internal_consumption_volume = Column(Numeric(12, 3), nullable=False, default=Decimal("0"))
 
     assigned_by_id = Column(String(36), ForeignKey("users.id"), nullable=False)
     remarks = Column(String(512), nullable=True)

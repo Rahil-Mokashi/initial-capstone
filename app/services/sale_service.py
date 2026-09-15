@@ -120,12 +120,19 @@ class SaleService:
         if assignment.closing_meter is None:
             return None
 
-        # testing_volume crossed this nozzle's meter but was poured back
-        # into the tank for a calibration check, not sold to anyone - see
-        # NozzleAssignment.testing_volume. Excluding it here is what
-        # keeps a test dispense from being silently billed as a cash
-        # sale to nobody.
-        dispensed = assignment.closing_meter - assignment.opening_meter - assignment.testing_volume
+        # Both testing_volume and internal_consumption_volume crossed
+        # this nozzle's meter without being sold to a customer - see
+        # NozzleAssignment for what distinguishes them (testing is poured
+        # back into the tank; internal consumption genuinely leaves it,
+        # tracked separately on the tank side via ExpenseService). Both
+        # have to be excluded here, or the pump ends up billing itself a
+        # cash sale for its own test dispense or its own genset diesel.
+        dispensed = (
+            assignment.closing_meter
+            - assignment.opening_meter
+            - assignment.testing_volume
+            - assignment.internal_consumption_volume
+        )
         already_recorded = sum(
             (
                 sale.quantity

@@ -574,6 +574,55 @@ Remaining findings, in the audit's recommended order: the discrepancy/exception 
 - Single location (single pump)
 - No cloud integration in the current phase (see Future Scope)
 
+### WORKING ASSUMPTIONS — NOT confirmed by the owner (2026-09-15)
+Unlike the "Business Rules Confirmed By The User" section above, every item below is this
+project's own working interpretation of `docs/daily-report-spec.md`'s open questions,
+made so the settlement side of the daily report could be built without waiting on the
+owner's answers. Each is designed to be cheap to reverse if the owner answers
+differently — see the specific commit/mechanism named for what would need to change.
+None of these should be read as confirmed, and none should be cited as settled the way
+the 2026-08-18 fuel-only rule is.
+
+- **A1 (Advance/Final are custody transfers, not expenses)**: `Advance` and `Final` move
+  cash between two custody points inside the business (the shift till and the office
+  cash book) — they never leave the business the way an `Expense` does. If the owner
+  says otherwise, only the tender's `settlement_type` (see A3/point 1 below) and how a
+  shift's cash-book construction treats those two rows would need to change - not the
+  underlying `Sale`/`Payment` model.
+- **A2 (cash shortages are a receivable against a named employee)**: a shortage found at
+  reconciliation is booked as an `Expense` at the moment it's found (so the books balance
+  immediately) and simultaneously creates a receivable against the employee named in the
+  shortage, cleared later by a cash repayment from that employee - not written off, not
+  silently absorbed. Reversible unit: whatever repository/service ends up owning that
+  receivable: if the owner says shortages are absorbed differently (payroll deduction,
+  written off entirely), only that one component changes.
+- **A3 (DTP Card settles like a card, as its own scheme)**: `DTP Card` is assumed to be a
+  separate bank-settled card scheme from a plain `CARD` terminal (different settlement
+  timing/reference format), not a data-entry variant of the same thing. Reversible unit:
+  a single seeded `Tender` row's `settlement_type` (point 1 below) - if the owner says
+  DTP Card is actually immediate cash or invoiced credit, no code changes, just that one
+  row's attribute.
+- **A4 (the itemised build-up is authoritative over the headline total)**: where a
+  shift's own transaction-type breakdown sums to a different figure than its own headline
+  total (857,601.467 vs. 857,601.24 - see `docs/daily-report-spec.md`'s flagged
+  discrepancy), this project treats the itemised bills as the source of truth and the
+  headline total as a derived, recomputed figure - never the other way around, and never
+  silently splitting the difference. Every bill is quantized to paise via
+  `app/core/money.py`'s `money()` on the way in specifically so this app's own reports
+  tie out exactly, unlike the paper report's.
+- **A5 (internal consumption crosses a nozzle meter, same as testing)**: genset/vehicle/
+  Omni fills are assumed to be drawn through a nozzle - there is no other metered way to
+  get fuel out of an underground tank, and the report records these in litres - so that
+  volume sits inside the same meter difference `NozzleAssignment.testing_volume` already
+  had to be carved out of. Unlike testing, this fuel genuinely leaves the tank and is not
+  poured back, so it still needs the tank-side `TankTransactionType.INTERNAL_CONSUMPTION`
+  effect (`ExpenseService.create_expense`, existing) in addition to the new meter-side
+  exclusion (`NozzleAssignment.internal_consumption_volume`, this session). Reversible
+  unit: if the owner says these fills happen through an unmetered path (a hand pump, a
+  direct tank valve) instead, `internal_consumption_volume` simply stays 0 on every
+  assignment and the meter-side code becomes dead weight to remove, with no effect on the
+  tank-side accounting already built.
+
 ## Architecture Decisions
 
 ### Encryption at rest: delegated to the OS, not implemented in the app (2026-08-17, audit finding #12)
@@ -804,6 +853,17 @@ The previous entry's fix (`NozzleAssignment.testing_volume`, subtracted in `Sale
 - [x] No table column added to display `testing_volume` in the assignment list (`ASSIGNMENT_TABLE_HEADERS` unchanged) — out of scope for this fix, which was specifically about the *entry point* being missing, not the list view. Worth a follow-up if testing volume needs to be visible at a glance rather than only on the reconciliation record.
 - [x] No migration needed — `nozzle_assignments.testing_volume` already exists from the previous entry's migration `ddb899222f7c`; this entry is UI wiring only.
 - [x] 2 new tests, 1 existing test extended. Full suite green.
+- [x] `dist/PetrolPumpERP.exe` rebuilt after this change per standing project convention.
+
+## Settlement side of the daily report, Step 0: A5 — internal consumption also crosses the meter (2026-09-15, user-requested)
+First of a multi-step build implementing the settlement side of `docs/daily-report-spec.md` (see this file's Assumptions section for A1-A5, all working assumptions not yet confirmed by the owner). This step finishes the previous testing_volume fix, per A5: internal consumption genuinely leaves the tank (unlike testing), but per A5 it is *also* drawn through a nozzle - there is no other metered way to get fuel out of an underground tank - so it sits inside the same meter difference `testing_volume` was already carved out of, and `SaleService.settle_assignment_cash` had no idea to exclude it. Without this fix, completing an assignment after a genset fill would bill that fuel as a cash sale to nobody, the exact bug the previous fix closed for testing but not for this.
+
+- [x] **`NozzleAssignment.internal_consumption_volume`** (`app/models/nozzle_assignment.py`), a second, independently-named column alongside `testing_volume` — deliberately not combined into one "non-sale volume" figure, so that if A5 turns out wrong, only this column needs zeroing out and the testing-side logic is untouched. Comment on the column states the split explicitly: testing is meter-only (no stock effect, poured back), internal consumption is meter *and* stock (the stock side already existed via `Expense.tank_id`/`quantity` → `TankTransactionType.INTERNAL_CONSUMPTION`, built in an earlier session - this column adds only the meter/billing side that was missing).
+- [x] `NozzleAssignmentComplete` (`app/schemas/shift.py`) gained a matching `internal_consumption_volume` field (default 0, non-negative). `ShiftService.complete_nozzle_assignment` now validates `testing_volume + internal_consumption_volume` together against the assignment's own meter difference (not each independently — 25+25 against a 40 difference is exactly as impossible as 50+0 would be), and stores both.
+- [x] **`SaleService.settle_assignment_cash`** now subtracts both from `dispensed` before billing the remainder as a cash sale. Confirmed this doesn't interfere with the pre-existing already-recorded-sales subtraction (Terminal's individual entries) — both deductions apply to the same meter difference independently, pinned by a dedicated test.
+- [x] **UI wired at the same time as the model** (the lesson from `testing_volume` shipping with no UI path, twice now): `ShiftDetailDialog._open_assignment_action` (`app/ui/shift_window.py`) gained a third `QInputDialog.getDouble` prompt, "Internal consumption volume", right after the testing-volume one, same convention (defaults to 0, not bounded in the dialog — `ShiftService`'s server-side check catches an impossible value and surfaces it through the existing `QMessageBox.warning` path). Verified end to end, not just at the service layer: `tests/test_shift_ui.py` renders the real `ShiftDetailDialog` and drives the actual close-assignment flow, asserting the entered value reaches the database (`test_completing_assignment_through_the_real_dialog_persists_internal_consumption_volume`) and that an impossible combined value is rejected and surfaced rather than silently accepted (`test_completing_assignment_rejects_testing_plus_internal_consumption_exceeding_meter_difference`).
+- [x] Migration `85b6bbb9cace` adds `nozzle_assignments.internal_consumption_volume` (+ non-negative CHECK). Verified against a fresh database: migrations apply cleanly, zero autogenerate drift.
+- [x] 10 new tests across `tests/test_sale_service.py` (4), `tests/test_shift_service.py` (2), `tests/test_shift_ui.py` (4, including updating 3 pre-existing stubs that would have silently misfired now that there are three sequential dialog prompts instead of two — each stub now branches on the dialog's exact title rather than a two-way `if/else`). Full suite green.
 - [x] `dist/PetrolPumpERP.exe` rebuilt after this change per standing project convention.
 
 ## Next Task

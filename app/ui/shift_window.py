@@ -296,10 +296,26 @@ class ShiftDetailDialog(QDialog):
             )
             if not ok:
                 return
+            # Optional, defaults to 0: litres of this assignment's meter
+            # difference that were internal consumption (genset/vehicle/
+            # Omni fills) - crosses the meter the same way testing does,
+            # but genuinely leaves the tank rather than being poured back
+            # (NozzleAssignment.internal_consumption_volume). Kept as its
+            # own prompt, not folded into the testing one, so the two
+            # stay independently correctable.
+            internal_consumption_volume, ok = QInputDialog.getDouble(
+                self, "Internal consumption volume",
+                "Litres used for the pump's own vehicle/generator (0 if none):", 0, 0, 10_000_000, 2,
+            )
+            if not ok:
+                return
             try:
                 self._shift_service.complete_nozzle_assignment(
                     self._actor_user_id, assignment_id,
-                    NozzleAssignmentComplete(closing_meter=closing_meter, testing_volume=testing_volume),
+                    NozzleAssignmentComplete(
+                        closing_meter=closing_meter, testing_volume=testing_volume,
+                        internal_consumption_volume=internal_consumption_volume,
+                    ),
                 )
             except (ValidationError, AppError, ValueError) as exc:
                 QMessageBox.warning(self, "Could not complete assignment", str(exc))

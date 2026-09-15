@@ -137,11 +137,16 @@ class ShiftService:
             raise ConflictError("Only an active assignment can be completed")
         if data.closing_meter < assignment.opening_meter:
             raise ValueError("closing_meter cannot be less than opening_meter")
-        if data.testing_volume > data.closing_meter - assignment.opening_meter:
-            raise ValueError("testing_volume cannot exceed this assignment's meter difference")
+        non_sale_volume = data.testing_volume + data.internal_consumption_volume
+        if non_sale_volume > data.closing_meter - assignment.opening_meter:
+            raise ValueError(
+                "testing_volume and internal_consumption_volume together cannot exceed "
+                "this assignment's meter difference"
+            )
 
         assignment.closing_meter = data.closing_meter
         assignment.testing_volume = data.testing_volume
+        assignment.internal_consumption_volume = data.internal_consumption_volume
         assignment.end_time = datetime.now(timezone.utc)
         assignment.status = AssignmentStatus.COMPLETED.value
         assignment = self._assignment_repo.update(assignment)

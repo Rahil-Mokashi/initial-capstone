@@ -256,13 +256,17 @@ def test_detail_dialog_assign_nozzle_and_close_shift(qapp, shift_service, employ
     assert warnings and "assignment" in warnings[0].lower()
 
     # Complete the assignment (simulate choosing "Yes", then entering a
-    # closing meter and a testing volume - two separate prompts now, so
-    # the stub branches on which one is being asked the same way
-    # _stub_confirm branches on title above, rather than one fixed
-    # answer for both.
+    # closing meter, a testing volume, and an internal consumption
+    # volume - three separate prompts now, so the stub branches on which
+    # one is being asked the same way _stub_confirm branches on title
+    # above, rather than one fixed answer for all of them.
     monkeypatch.setattr(
         "app.ui.shift_window.QInputDialog.getDouble",
-        lambda parent, title, *a, **k: (1200.0, True) if title == "Closing meter" else (0.0, True),
+        lambda parent, title, *a, **k: {
+            "Closing meter": (1200.0, True),
+            "Testing volume": (0.0, True),
+            "Internal consumption volume": (0.0, True),
+        }[title],
     )
     assignment_id = detail.table.item(0, 0).data(Qt.UserRole)
     detail._open_assignment_action(assignment_id)
@@ -270,6 +274,7 @@ def test_detail_dialog_assign_nozzle_and_close_shift(qapp, shift_service, employ
     assignments = shift_service.list_nozzle_assignments(admin_id, shift.id)
     assert assignments[0].status == "completed"
     assert assignments[0].testing_volume == Decimal("0")
+    assert assignments[0].internal_consumption_volume == Decimal("0")
 
     detail._close_shift()
     assert shift_service.get_shift(admin_id, shift.id).status == "closed"
@@ -305,7 +310,11 @@ def test_completing_assignment_through_the_real_dialog_persists_testing_volume(
     monkeypatch.setattr("app.ui.shift_window.confirm_dialog", lambda *a, **k: "Complete Assignment")
     monkeypatch.setattr(
         "app.ui.shift_window.QInputDialog.getDouble",
-        lambda parent, title, *a, **k: (1065.0, True) if title == "Closing meter" else (65.0, True),
+        lambda parent, title, *a, **k: {
+            "Closing meter": (1065.0, True),
+            "Testing volume": (65.0, True),
+            "Internal consumption volume": (0.0, True),
+        }[title],
     )
 
     assignment_id = detail.table.item(0, 0).data(Qt.UserRole)
@@ -315,6 +324,47 @@ def test_completing_assignment_through_the_real_dialog_persists_testing_volume(
     assert assignments[0].status == "completed"
     assert assignments[0].closing_meter == Decimal("1065")
     assert assignments[0].testing_volume == Decimal("65")
+    assert assignments[0].internal_consumption_volume == Decimal("0")
+
+
+def test_completing_assignment_through_the_real_dialog_persists_internal_consumption_volume(
+    qapp, shift_service, employee_service, admin_id, employee_id, nozzle_id, monkeypatch,
+):
+    """Same end-to-end proof as the testing_volume test above, for the
+    A5 field: a genset/vehicle/Omni fill entered through the real
+    close-assignment dialog must actually reach
+    NozzleAssignment.internal_consumption_volume in the database - not
+    just be accepted when the service is called directly."""
+    from PySide6.QtCore import Qt
+    from PySide6.QtWidgets import QDialog
+
+    from app.ui.shift_window import NozzleAssignDialog, ShiftDetailDialog
+
+    service, auth_service = employee_service
+    shift = shift_service.open_shift(admin_id, ShiftOpen(shift_date=date(2026, 6, 6), shift_label="Morning"))
+
+    assign_dialog = NozzleAssignDialog(shift_service, service, admin_id, shift.id)
+    assign_dialog.opening_meter_input.setValue(1000.0)
+    assign_dialog._save()
+    assert assign_dialog.result() == QDialog.Accepted
+
+    detail = ShiftDetailDialog(shift_service, service, auth_service, admin_id, shift.id)
+    monkeypatch.setattr("app.ui.shift_window.confirm_dialog", lambda *a, **k: "Complete Assignment")
+    monkeypatch.setattr(
+        "app.ui.shift_window.QInputDialog.getDouble",
+        lambda parent, title, *a, **k: {
+            "Closing meter": (1040.0, True),
+            "Testing volume": (0.0, True),
+            "Internal consumption volume": (40.0, True),
+        }[title],
+    )
+
+    assignment_id = detail.table.item(0, 0).data(Qt.UserRole)
+    detail._open_assignment_action(assignment_id)
+
+    assignments = shift_service.list_nozzle_assignments(admin_id, shift.id)
+    assert assignments[0].status == "completed"
+    assert assignments[0].internal_consumption_volume == Decimal("40")
 
 
 def test_completing_assignment_rejects_testing_volume_exceeding_meter_difference(
@@ -345,7 +395,11 @@ def test_completing_assignment_rejects_testing_volume_exceeding_meter_difference
     # impossible and must be rejected, not silently accepted.
     monkeypatch.setattr(
         "app.ui.shift_window.QInputDialog.getDouble",
-        lambda parent, title, *a, **k: (1050.0, True) if title == "Closing meter" else (200.0, True),
+        lambda parent, title, *a, **k: {
+            "Closing meter": (1050.0, True),
+            "Testing volume": (200.0, True),
+            "Internal consumption volume": (0.0, True),
+        }[title],
     )
     warnings: list[str] = []
     monkeypatch.setattr(
@@ -357,6 +411,48 @@ def test_completing_assignment_rejects_testing_volume_exceeding_meter_difference
     detail._open_assignment_action(assignment_id)
 
     assert warnings and "testing_volume" in warnings[0]
+    assignments = shift_service.list_nozzle_assignments(admin_id, shift.id)
+    assert assignments[0].status == "active"  # rejected, not silently completed
+
+
+def test_completing_assignment_rejects_testing_plus_internal_consumption_exceeding_meter_difference(
+    qapp, shift_service, employee_service, admin_id, employee_id, nozzle_id, monkeypatch,
+):
+    """Neither figure alone exceeds the meter difference, but together
+    they do (25 + 25 > 40) - the combined bound must be enforced through
+    the real dialog too, not just when calling ShiftService directly."""
+    from PySide6.QtCore import Qt
+    from PySide6.QtWidgets import QMessageBox
+
+    from app.ui.shift_window import NozzleAssignDialog, ShiftDetailDialog
+
+    service, auth_service = employee_service
+    shift = shift_service.open_shift(admin_id, ShiftOpen(shift_date=date(2026, 6, 7), shift_label="Morning"))
+
+    assign_dialog = NozzleAssignDialog(shift_service, service, admin_id, shift.id)
+    assign_dialog.opening_meter_input.setValue(1000.0)
+    assign_dialog._save()
+
+    detail = ShiftDetailDialog(shift_service, service, auth_service, admin_id, shift.id)
+    monkeypatch.setattr("app.ui.shift_window.confirm_dialog", lambda *a, **k: "Complete Assignment")
+    monkeypatch.setattr(
+        "app.ui.shift_window.QInputDialog.getDouble",
+        lambda parent, title, *a, **k: {
+            "Closing meter": (1040.0, True),
+            "Testing volume": (25.0, True),
+            "Internal consumption volume": (25.0, True),
+        }[title],
+    )
+    warnings: list[str] = []
+    monkeypatch.setattr(
+        "app.ui.shift_window.QMessageBox.warning",
+        lambda parent, title, text, *a, **k: warnings.append(text) or QMessageBox.Ok,
+    )
+
+    assignment_id = detail.table.item(0, 0).data(Qt.UserRole)
+    detail._open_assignment_action(assignment_id)
+
+    assert warnings
     assignments = shift_service.list_nozzle_assignments(admin_id, shift.id)
     assert assignments[0].status == "active"  # rejected, not silently completed
 

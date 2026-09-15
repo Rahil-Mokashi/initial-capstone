@@ -253,6 +253,31 @@ def test_closing_meter_below_opening_meter_rejected(shift_service, admin_id, emp
         shift_service.complete_nozzle_assignment(admin_id, assignment.id, NozzleAssignmentComplete(closing_meter=999.0))
 
 
+def test_complete_nozzle_assignment_stores_internal_consumption_volume(shift_service, admin_id, employee_id, nozzle_id):
+    shift = shift_service.open_shift(admin_id, ShiftOpen(shift_date=date(2026, 6, 1), shift_label="Morning"))
+    assignment = shift_service.assign_nozzle(admin_id, shift.id, NozzleAssignmentCreate(employee_id=employee_id, nozzle_id=nozzle_id, opening_meter=1000.0))
+    completed = shift_service.complete_nozzle_assignment(
+        admin_id, assignment.id,
+        NozzleAssignmentComplete(closing_meter=1040.0, internal_consumption_volume=40.0),
+    )
+    assert completed.internal_consumption_volume == 40.0
+
+
+def test_testing_and_internal_consumption_volume_together_cannot_exceed_meter_difference(
+    shift_service, admin_id, employee_id, nozzle_id,
+):
+    """Meter difference is 40 (1040 - 1000); 25 tested + 25 consumed = 50
+    is physically impossible and must be rejected, the same way either
+    one alone exceeding the difference already was."""
+    shift = shift_service.open_shift(admin_id, ShiftOpen(shift_date=date(2026, 6, 1), shift_label="Morning"))
+    assignment = shift_service.assign_nozzle(admin_id, shift.id, NozzleAssignmentCreate(employee_id=employee_id, nozzle_id=nozzle_id, opening_meter=1000.0))
+    with pytest.raises(ValueError):
+        shift_service.complete_nozzle_assignment(
+            admin_id, assignment.id,
+            NozzleAssignmentComplete(closing_meter=1040.0, testing_volume=25.0, internal_consumption_volume=25.0),
+        )
+
+
 # --------------------------------------------------------------------
 # attach_sale_service / cash auto-settlement on assignment close
 # (2026-09-02, user-requested: completing a nozzle assignment should
