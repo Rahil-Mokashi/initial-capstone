@@ -284,9 +284,22 @@ class ShiftDetailDialog(QDialog):
             closing_meter, ok = QInputDialog.getDouble(self, "Closing meter", "Closing meter reading:", 0, 0, 10_000_000, 2)
             if not ok:
                 return
+            # Optional, defaults to 0: litres of this assignment's meter
+            # difference that were a calibration test poured back into
+            # the tank rather than sold (NozzleAssignment.testing_volume).
+            # Not bounded to the meter difference here the same way
+            # closing_meter isn't bounded to opening_meter above -
+            # ShiftService.complete_nozzle_assignment validates both and
+            # a rejection surfaces below exactly like any other one does.
+            testing_volume, ok = QInputDialog.getDouble(
+                self, "Testing volume", "Litres tested and poured back into the tank (0 if none):", 0, 0, 10_000_000, 2
+            )
+            if not ok:
+                return
             try:
                 self._shift_service.complete_nozzle_assignment(
-                    self._actor_user_id, assignment_id, NozzleAssignmentComplete(closing_meter=closing_meter)
+                    self._actor_user_id, assignment_id,
+                    NozzleAssignmentComplete(closing_meter=closing_meter, testing_volume=testing_volume),
                 )
             except (ValidationError, AppError, ValueError) as exc:
                 QMessageBox.warning(self, "Could not complete assignment", str(exc))

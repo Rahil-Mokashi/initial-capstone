@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 
 import pytest
 from sqlalchemy import create_engine
@@ -254,18 +255,110 @@ def test_detail_dialog_assign_nozzle_and_close_shift(qapp, shift_service, employ
     # no idea why the shift did not close.
     assert warnings and "assignment" in warnings[0].lower()
 
-    # Complete the assignment (simulate choosing "Yes" then entering a closing meter)
+    # Complete the assignment (simulate choosing "Yes", then entering a
+    # closing meter and a testing volume - two separate prompts now, so
+    # the stub branches on which one is being asked the same way
+    # _stub_confirm branches on title above, rather than one fixed
+    # answer for both.
     monkeypatch.setattr(
-        "app.ui.shift_window.QInputDialog.getDouble", lambda *a, **k: (1200.0, True)
+        "app.ui.shift_window.QInputDialog.getDouble",
+        lambda parent, title, *a, **k: (1200.0, True) if title == "Closing meter" else (0.0, True),
     )
     assignment_id = detail.table.item(0, 0).data(Qt.UserRole)
     detail._open_assignment_action(assignment_id)
 
     assignments = shift_service.list_nozzle_assignments(admin_id, shift.id)
     assert assignments[0].status == "completed"
+    assert assignments[0].testing_volume == Decimal("0")
 
     detail._close_shift()
     assert shift_service.get_shift(admin_id, shift.id).status == "closed"
+
+
+def test_completing_assignment_through_the_real_dialog_persists_testing_volume(
+    qapp, shift_service, employee_service, admin_id, employee_id, nozzle_id, monkeypatch,
+):
+    """End-to-end regression test: a testing_volume field that only ever
+    gets set by tests calling the service directly, with no way for a
+    supervisor to actually enter one through the real close-assignment
+    flow, is worthless in production - settle_assignment_cash would
+    always subtract 0 and the phantom cash sale it exists to prevent
+    would still happen every time. This renders the real
+    ShiftDetailDialog, drives the actual "Complete Assignment" flow
+    exactly as a supervisor would, and asserts the value they entered
+    reaches the database - not just that the service accepts it when
+    called directly."""
+    from PySide6.QtCore import Qt
+    from PySide6.QtWidgets import QDialog
+
+    from app.ui.shift_window import NozzleAssignDialog, ShiftDetailDialog
+
+    service, auth_service = employee_service
+    shift = shift_service.open_shift(admin_id, ShiftOpen(shift_date=date(2026, 6, 4), shift_label="Morning"))
+
+    assign_dialog = NozzleAssignDialog(shift_service, service, admin_id, shift.id)
+    assign_dialog.opening_meter_input.setValue(1000.0)
+    assign_dialog._save()
+    assert assign_dialog.result() == QDialog.Accepted
+
+    detail = ShiftDetailDialog(shift_service, service, auth_service, admin_id, shift.id)
+    monkeypatch.setattr("app.ui.shift_window.confirm_dialog", lambda *a, **k: "Complete Assignment")
+    monkeypatch.setattr(
+        "app.ui.shift_window.QInputDialog.getDouble",
+        lambda parent, title, *a, **k: (1065.0, True) if title == "Closing meter" else (65.0, True),
+    )
+
+    assignment_id = detail.table.item(0, 0).data(Qt.UserRole)
+    detail._open_assignment_action(assignment_id)
+
+    assignments = shift_service.list_nozzle_assignments(admin_id, shift.id)
+    assert assignments[0].status == "completed"
+    assert assignments[0].closing_meter == Decimal("1065")
+    assert assignments[0].testing_volume == Decimal("65")
+
+
+def test_completing_assignment_rejects_testing_volume_exceeding_meter_difference(
+    qapp, shift_service, employee_service, admin_id, employee_id, nozzle_id, monkeypatch,
+):
+    """The dialog doesn't itself bound testing volume to the meter
+    difference - the same convention already used for closing_meter,
+    which isn't bounded to opening_meter in the dialog either -
+    ShiftService does. This proves the rejection actually reaches the
+    supervisor (via the real QMessageBox.warning call site) rather than
+    the assignment silently completing with a bogus value, or the
+    exception escaping and crashing the dialog."""
+    from PySide6.QtCore import Qt
+    from PySide6.QtWidgets import QMessageBox
+
+    from app.ui.shift_window import NozzleAssignDialog, ShiftDetailDialog
+
+    service, auth_service = employee_service
+    shift = shift_service.open_shift(admin_id, ShiftOpen(shift_date=date(2026, 6, 5), shift_label="Morning"))
+
+    assign_dialog = NozzleAssignDialog(shift_service, service, admin_id, shift.id)
+    assign_dialog.opening_meter_input.setValue(1000.0)
+    assign_dialog._save()
+
+    detail = ShiftDetailDialog(shift_service, service, auth_service, admin_id, shift.id)
+    monkeypatch.setattr("app.ui.shift_window.confirm_dialog", lambda *a, **k: "Complete Assignment")
+    # Meter difference is 50 (1050 - 1000); asking for 200L of testing is
+    # impossible and must be rejected, not silently accepted.
+    monkeypatch.setattr(
+        "app.ui.shift_window.QInputDialog.getDouble",
+        lambda parent, title, *a, **k: (1050.0, True) if title == "Closing meter" else (200.0, True),
+    )
+    warnings: list[str] = []
+    monkeypatch.setattr(
+        "app.ui.shift_window.QMessageBox.warning",
+        lambda parent, title, text, *a, **k: warnings.append(text) or QMessageBox.Ok,
+    )
+
+    assignment_id = detail.table.item(0, 0).data(Qt.UserRole)
+    detail._open_assignment_action(assignment_id)
+
+    assert warnings and "testing_volume" in warnings[0]
+    assignments = shift_service.list_nozzle_assignments(admin_id, shift.id)
+    assert assignments[0].status == "active"  # rejected, not silently completed
 
 
 def test_reopen_shift_requires_reason_and_permission(qapp, shift_service, employee_service, admin_id, monkeypatch):
