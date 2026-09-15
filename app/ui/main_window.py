@@ -54,6 +54,7 @@ from app.repositories.supplier_repository import SupplierRepository
 from app.repositories.tank_reading_repository import TankReadingRepository
 from app.repositories.tank_repository import TankRepository
 from app.repositories.tank_transaction_repository import TankTransactionRepository
+from app.repositories.tender_repository import TenderRepository
 from app.repositories.user_repository import UserRepository
 from app.repositories.user_session_repository import UserSessionRepository
 from app.services.analytics_service import AnalyticsService
@@ -1503,6 +1504,7 @@ class AppController:
         sale_repo = SaleRepository(self._db_session)
         purchase_order_repo = PurchaseOrderRepository(self._db_session)
         customer_repo = CustomerRepository(self._db_session)
+        tender_repo = TenderRepository(self._db_session)
         self._expense_service = ExpenseService(
             ExpenseRepository(self._db_session),
             ExpenseCategoryRepository(self._db_session),
@@ -1511,6 +1513,7 @@ class AppController:
             audit_repo,
             self._auth_service,
             tank_service=self._tank_service,
+            tender_repo=tender_repo,
         )
         expense_repo = ExpenseRepository(self._db_session)
         shift_reconciliation_repo = ShiftReconciliationRepository(self._db_session)
@@ -1546,6 +1549,7 @@ class AppController:
             self._auth_service,
             payment_repo,
             self._credit_service,
+            tender_repo=tender_repo,
         )
         # SaleService depends on TankService/CreditService, both built
         # after ShiftService above, so it can't be passed in at

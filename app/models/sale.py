@@ -52,6 +52,13 @@ class Sale(Base):
     amount = Column(Numeric(12, 2), nullable=False)
 
     payment_method = Column(String(16), nullable=False)
+    # Nullable, alongside payment_method rather than replacing it - see
+    # Tender's docstring (app/models/tender.py) and PROJECT_CONTEXT.md's
+    # Step 1 entry for why the two coexist. Set automatically from
+    # payment_method at creation time (SaleService), not user-entered;
+    # backfilled on historical rows by app/database/seed.py's
+    # _backfill_tender_ids.
+    tender_id = Column(String(36), ForeignKey("tenders.id"), nullable=True)
     customer_id = Column(String(36), ForeignKey("customers.id"), nullable=True)
 
     status = Column(String(16), nullable=False)
@@ -68,6 +75,7 @@ class Sale(Base):
     fuel = relationship("Fuel")
     employee = relationship("Employee")
     customer = relationship("Customer")
+    tender = relationship("Tender")
     recorded_by = relationship("User")
     tank_transaction = relationship("TankTransaction", foreign_keys=[tank_transaction_id])
     reversal_transaction = relationship("TankTransaction", foreign_keys=[reversal_transaction_id])

@@ -168,6 +168,22 @@ def sale_service(db_session, tank_service, credit_service):
     )
 
 
+@pytest.fixture()
+def sale_service_with_tenders(db_session, tank_service, credit_service, admin_id):
+    """admin_id is a dependency purely to trigger seed_initial_data()
+    (which seeds Tender rows) before TenderRepository queries them."""
+    from app.repositories.tender_repository import TenderRepository
+
+    audit_repo = AuditLogRepository(db_session)
+    auth_service = AuthService(UserRepository(db_session), audit_repo, UserSessionRepository(db_session))
+    return SaleService(
+        SaleRepository(db_session), ShiftRepository(db_session), NozzleRepository(db_session),
+        FuelRepository(db_session), EmployeeRepository(db_session), CustomerRepository(db_session),
+        TankRepository(db_session), tank_service, audit_repo, auth_service, PaymentRepository(db_session),
+        credit_service, tender_repo=TenderRepository(db_session),
+    )
+
+
 def make_sale_data(**overrides):
     defaults = dict(quantity=Decimal("10"), payment_method=PaymentMethod.CASH)
     defaults.update(overrides)
@@ -188,6 +204,53 @@ def test_create_sale(sale_service, admin_id, open_shift_id, nozzle_id, employee_
     assert sale.amount == Decimal("1000.00")
     assert sale.status == SaleStatus.COMPLETED.value
     assert sale.tank_transaction_id is not None
+
+
+def test_create_sale_without_tender_repo_leaves_tender_id_unset(sale_service, admin_id, open_shift_id, nozzle_id, employee_id):
+    """tender_repo is optional (PROJECT_CONTEXT.md Step 1) - a SaleService
+    without one attached must not fail, it must simply leave tender_id
+    unset, the same as a historical row before the backfill."""
+    sale = sale_service.create_sale(
+        admin_id,
+        SaleCreate(shift_id=open_shift_id, nozzle_id=nozzle_id, employee_id=employee_id, quantity=Decimal("10"), payment_method=PaymentMethod.CASH),
+    )
+    assert sale.tender_id is None
+
+
+def test_create_sale_with_tender_repo_derives_tender_id(sale_service_with_tenders, admin_id, open_shift_id, nozzle_id, employee_id, db_session):
+    from app.models.tender import Tender
+
+    sale = sale_service_with_tenders.create_sale(
+        admin_id,
+        SaleCreate(shift_id=open_shift_id, nozzle_id=nozzle_id, employee_id=employee_id, quantity=Decimal("10"), payment_method=PaymentMethod.CASH),
+    )
+    cash_tender = db_session.query(Tender).filter_by(name="Cash").first()
+    assert sale.tender_id == cash_tender.id
+
+
+def test_create_sale_payment_gets_the_same_tender_id_as_the_sale(sale_service_with_tenders, admin_id, open_shift_id, nozzle_id, employee_id, db_session):
+    from app.models.payment import Payment
+
+    sale = sale_service_with_tenders.create_sale(
+        admin_id,
+        SaleCreate(shift_id=open_shift_id, nozzle_id=nozzle_id, employee_id=employee_id, quantity=Decimal("10"), payment_method=PaymentMethod.CARD),
+    )
+    payment = db_session.query(Payment).filter_by(sale_id=sale.id).first()
+    assert payment.tender_id == sale.tender_id
+
+
+def test_create_sale_upi_derives_the_other_tender_not_a_guessed_app(sale_service_with_tenders, admin_id, open_shift_id, nozzle_id, employee_id, db_session):
+    """Matches app/database/seed.py's historical backfill exactly -
+    PaymentMethod.UPI has never recorded which app was used, so new
+    sales through this same enum can't claim PhonePe/Paytm either."""
+    from app.models.tender import Tender
+
+    sale = sale_service_with_tenders.create_sale(
+        admin_id,
+        SaleCreate(shift_id=open_shift_id, nozzle_id=nozzle_id, employee_id=employee_id, quantity=Decimal("10"), payment_method=PaymentMethod.UPI),
+    )
+    other_tender = db_session.query(Tender).filter_by(name="Other").first()
+    assert sale.tender_id == other_tender.id
 
 
 def test_sale_decrements_tank_stock(sale_service, tank_service, admin_id, open_shift_id, nozzle_id, employee_id, tank_id):

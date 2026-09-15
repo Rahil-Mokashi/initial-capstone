@@ -53,6 +53,11 @@ class Expense(Base):
     amount = Column(Numeric(12, 2), nullable=False)
     expense_date = Column(Date, nullable=False)
     payment_method = Column(String(16), nullable=False)
+    # Nullable, alongside payment_method rather than replacing it - see
+    # Tender's docstring (app/models/tender.py). Set automatically from
+    # payment_method at creation time, not user-entered; backfilled on
+    # historical rows by app/database/seed.py's _backfill_tender_ids.
+    tender_id = Column(String(36), ForeignKey("tenders.id"), nullable=True)
     receipt_reference = Column(String(128), nullable=True)
     description = Column(Text, nullable=True)
 
@@ -83,6 +88,7 @@ class Expense(Base):
     employee = relationship("Employee")
     shift = relationship("Shift")
     tank = relationship("Tank")
+    tender = relationship("Tender")
     approved_by = relationship("User", foreign_keys=[approved_by_id])
     recorded_by = relationship("User", foreign_keys=[recorded_by_id])
 

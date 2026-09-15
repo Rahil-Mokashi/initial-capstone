@@ -41,6 +41,11 @@ class Payment(Base):
 
     amount = Column(Numeric(12, 2), nullable=False)
     method = Column(String(16), nullable=False)
+    # Nullable, alongside method rather than replacing it - see Tender's
+    # docstring (app/models/tender.py). Set automatically from method at
+    # creation time, not user-entered; backfilled on historical rows by
+    # app/database/seed.py's _backfill_tender_ids.
+    tender_id = Column(String(36), ForeignKey("tenders.id"), nullable=True)
     reference_number = Column(String(64), nullable=True)
     status = Column(String(16), nullable=False)
 
@@ -52,6 +57,7 @@ class Payment(Base):
     status_reason = Column(Text, nullable=True)
 
     sale = relationship("Sale")
+    tender = relationship("Tender")
     shift = relationship("Shift")
     attendant = relationship("Employee")
     recorded_by = relationship("User")

@@ -155,6 +155,20 @@ def expense_service_with_tank(db_session, auth_service, tank_service):
     )
 
 
+@pytest.fixture()
+def expense_service_with_tenders(db_session, auth_service, admin_id):
+    """admin_id is a dependency purely to trigger seed_initial_data()
+    (which seeds Tender rows) before TenderRepository queries them."""
+    from app.repositories.tender_repository import TenderRepository
+
+    audit_repo = AuditLogRepository(db_session)
+    return ExpenseService(
+        ExpenseRepository(db_session), ExpenseCategoryRepository(db_session),
+        EmployeeRepository(db_session), ShiftRepository(db_session), audit_repo, auth_service,
+        tender_repo=TenderRepository(db_session),
+    )
+
+
 def make_expense_data(**overrides):
     defaults = dict(amount=Decimal("500"), payment_method=PaymentMethod.CASH)
     defaults.update(overrides)
@@ -189,6 +203,21 @@ def test_create_expense(expense_service, admin_id, category_id, employee_id):
     expense = expense_service.create_expense(admin_id, make_expense_data(category_id=category_id, employee_id=employee_id))
     assert expense.status == ExpenseStatus.PENDING.value
     assert expense.amount == Decimal("500")
+
+
+def test_create_expense_without_tender_repo_leaves_tender_id_unset(expense_service, admin_id, category_id, employee_id):
+    expense = expense_service.create_expense(admin_id, make_expense_data(category_id=category_id, employee_id=employee_id))
+    assert expense.tender_id is None
+
+
+def test_create_expense_with_tender_repo_derives_tender_id(expense_service_with_tenders, admin_id, category_id, employee_id, db_session):
+    from app.models.tender import Tender
+
+    expense = expense_service_with_tenders.create_expense(
+        admin_id, make_expense_data(category_id=category_id, employee_id=employee_id, payment_method=PaymentMethod.CASH)
+    )
+    cash_tender = db_session.query(Tender).filter_by(name="Cash").first()
+    assert expense.tender_id == cash_tender.id
 
 
 def test_create_expense_with_shift(expense_service, admin_id, category_id, employee_id, open_shift_id):

@@ -29,6 +29,7 @@ from .supplier_invoice import SupplierInvoice, SupplierPayment
 from .tank import Tank
 from .tank_reading import TankReading
 from .tank_transaction import TankTransaction
+from .tender import Tender
 from .user import User
 from .user_session import UserSession
 
@@ -64,6 +65,7 @@ __all__ = [
     "Tank",
     "TankReading",
     "TankTransaction",
+    "Tender",
     "User",
     "UserSession",
     "role_permissions",
