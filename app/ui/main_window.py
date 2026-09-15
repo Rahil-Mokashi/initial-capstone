@@ -189,6 +189,8 @@ class MainWindow(QMainWindow):
         credit_service: CreditService,
         expense_service: ExpenseService,
         reconciliation_service: ReconciliationService,
+        cash_book_service: ShiftCashBookService,
+        employee_shortage_service: EmployeeShortageService,
         analytics_service: AnalyticsService,
         dashboard_service: DashboardService,
         fuel_service: FuelService,
@@ -216,6 +218,8 @@ class MainWindow(QMainWindow):
         self._credit_service = credit_service
         self._expense_service = expense_service
         self._reconciliation_service = reconciliation_service
+        self._cash_book_service = cash_book_service
+        self._employee_shortage_service = employee_shortage_service
         self._analytics_service = analytics_service
         self._dashboard_service = dashboard_service
         self._fuel_service = fuel_service
@@ -1682,6 +1686,8 @@ class AppController:
             self._credit_service,
             self._expense_service,
             self._reconciliation_service,
+            self._cash_book_service,
+            self._employee_shortage_service,
             self._analytics_service,
             self._dashboard_service,
             self._fuel_service,
