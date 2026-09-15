@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 
 from app import database as db_package
 from app.core.constants import (
+    CASH_SHORTAGE_EXPENSE_CATEGORY_NAME,
     DEFAULT_FUEL_TYPES,
     DEFAULT_TENDERS,
     PAYMENT_METHOD_TO_TENDER_NAME,
@@ -11,7 +12,8 @@ from app.core.constants import (
     UserRole,
 )
 from app.core.security import hash_password
-from app.models.expense import Expense
+from app.database.base import StatusEnum
+from app.models.expense import Expense, ExpenseCategory
 from app.models.fuel import Fuel
 from app.models.payment import Payment
 from app.models.permission import Permission
@@ -87,6 +89,25 @@ def _backfill_tender_ids(session, tenders_by_name: dict) -> None:
     session.flush()
 
 
+def _seed_expense_categories(session) -> None:
+    """Ensure the one ExpenseCategory this project seeds exists - "Cash
+    Shortage", the category EmployeeShortageService.record_shortage
+    books a reconciliation shortage's Expense side under (A2 in
+    PROJECT_CONTEXT.md's working assumptions). Every other category
+    remains entirely user-created via ExpenseService.create_category;
+    this one exists only because the shortage feature must have
+    somewhere reliable to book to without depending on every deployment
+    having created an identically-named category by hand first."""
+    existing = {c.name for c in session.query(ExpenseCategory).all()}
+    if CASH_SHORTAGE_EXPENSE_CATEGORY_NAME not in existing:
+        session.add(
+            ExpenseCategory(
+                id=str(uuid.uuid4()), name=CASH_SHORTAGE_EXPENSE_CATEGORY_NAME, status=StatusEnum.ACTIVE.value,
+            )
+        )
+    session.flush()
+
+
 def _seed_roles_and_permissions(session) -> dict:
     """Ensure every UserRole and Permission exists, and wire the RBAC matrix.
 
@@ -131,6 +152,7 @@ def seed_initial_data() -> None:
         _seed_fuel_types(session)
         tenders_by_name = _seed_tenders(session)
         _backfill_tender_ids(session, tenders_by_name)
+        _seed_expense_categories(session)
 
         existing_admin = session.query(User).filter_by(username="admin").first()
         if existing_admin:

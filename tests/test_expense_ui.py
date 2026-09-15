@@ -156,4 +156,9 @@ def test_category_form_creates_category(qapp, expense_service, admin_id):
     dialog._save()
 
     assert dialog.result() == QDialog.Accepted
-    assert len(expense_service.list_categories(admin_id)) == 1
+    # 2, not 1: seed_initial_data() also seeds the one ExpenseCategory
+    # this project creates by default ("Cash Shortage" - see
+    # app.database.seed._seed_expense_categories), so this dialog's
+    # "Cleaning" category is the second row, not the first.
+    category_names = {c.name for c in expense_service.list_categories(admin_id)}
+    assert category_names == {"Cash Shortage", "Cleaning"}

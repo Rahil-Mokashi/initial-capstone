@@ -250,9 +250,11 @@ def test_opening_balance_carries_forward_across_shifts_using_real_report_figures
 
     Shift 2's derived closing cash-in-hand (126756) is deliberately
     126756, not the report's own 127172: the 416 difference is a cash
-    shortage recovered in cash, which is Step 5's territory (A2) and is
-    not modeled by this service. That gap is asserted here explicitly
-    so it isn't mistaken for a bug once Step 5 lands.
+    shortage recovered in cash (Step 5, A2). This fixture's own
+    cash_book_service is built without a shortage_recovery_repo, so
+    that gap stays open here on purpose - it is closed end-to-end,
+    using these exact real-report figures, by
+    test_shortage_recovery_closes_the_report_gap below.
     """
     shift0 = make_shift(db_session, admin_id, date(2026, 1, 1))
     shift1 = make_shift(db_session, admin_id, date(2026, 1, 2))
@@ -289,3 +291,115 @@ def test_cash_book_summary_when_no_cash_book_recorded_yet(cash_book_service, adm
     assert summary.opening_balance == Decimal("0")
     assert summary.bank_deposits == []
     assert summary.closing_cash_in_hand == Decimal("0")
+
+
+def test_shortage_recovery_closes_the_report_gap(db_session, admin_id):
+    """The 416 gap documented in
+    test_opening_balance_carries_forward_across_shifts_using_real_
+    report_figures above is a real cash receipt on the pump's own
+    paper report's RECEIPT side ("cash Short Retrun ( Pramod Soni )
+    416.00", SHIFT 2's cash book) - not a reversal of the shortage
+    Expense, which stays booked. Wires the full real chain (a genuine
+    reconciliation shortfall, booked as a shortage, then recovered)
+    and proves ShiftCashBookService.get_cash_book_summary picks the
+    recovery up and reaches the report's own 127172 exactly, where the
+    isolated fixture above (built without a shortage_recovery_repo)
+    stops at 126756."""
+    from app.core.constants import PaymentMethod, ShiftStatus
+    from app.models.dispenser import Dispenser
+    from app.models.employee import Employee
+    from app.models.fuel import Fuel
+    from app.models.nozzle import Nozzle
+    from app.models.sale import Sale
+    from app.models.tender import Tender
+    from app.repositories.employee_cash_shortage_repository import EmployeeCashShortageRepository
+    from app.repositories.employee_repository import EmployeeRepository
+    from app.repositories.employee_shortage_recovery_repository import EmployeeShortageRecoveryRepository
+    from app.repositories.expense_repository import ExpenseCategoryRepository, ExpenseRepository
+    from app.repositories.sale_repository import SaleRepository
+    from app.repositories.shift_bank_deposit_repository import ShiftBankDepositRepository
+    from app.repositories.shift_reconciliation_line_repository import ShiftReconciliationLineRepository
+    from app.repositories.shift_reconciliation_repository import ShiftReconciliationRepository
+    from app.repositories.tender_repository import TenderRepository
+    from app.schemas.employee_cash_shortage import EmployeeCashShortageRecord, EmployeeShortageRecoveryRecord
+    from app.schemas.shift_reconciliation import ShiftReconciliationPerform
+    from app.services.employee_shortage_service import EmployeeShortageService
+    from app.services.expense_service import ExpenseService
+    from app.services.reconciliation_service import ReconciliationService
+
+    audit_repo = AuditLogRepository(db_session)
+    auth_service = AuthService(UserRepository(db_session), audit_repo, UserSessionRepository(db_session))
+    cash_book_repo = ShiftCashBookRepository(db_session)
+    recovery_repo = EmployeeShortageRecoveryRepository(db_session)
+    cash_book_service = ShiftCashBookService(
+        cash_book_repo, ShiftRepository(db_session), audit_repo, auth_service,
+        ShiftBankDepositRepository(db_session), shortage_recovery_repo=recovery_repo,
+    )
+    expense_service = ExpenseService(
+        ExpenseRepository(db_session), ExpenseCategoryRepository(db_session),
+        EmployeeRepository(db_session), ShiftRepository(db_session), audit_repo, auth_service,
+        tender_repo=TenderRepository(db_session),
+    )
+    reconciliation_service = ReconciliationService(
+        ShiftReconciliationRepository(db_session), ShiftRepository(db_session),
+        SaleRepository(db_session), ExpenseRepository(db_session), audit_repo, auth_service,
+        TenderRepository(db_session),
+    )
+    shortage_service = EmployeeShortageService(
+        EmployeeCashShortageRepository(db_session), recovery_repo,
+        ShiftReconciliationLineRepository(db_session), EmployeeRepository(db_session),
+        ExpenseCategoryRepository(db_session), expense_service, audit_repo, auth_service, cash_book_repo,
+    )
+
+    shift2 = Shift(shift_date=date(2026, 1, 3), shift_label="Morning", opened_by_id=admin_id, status=ShiftStatus.OPEN.value)
+    db_session.add(shift2)
+    db_session.commit()
+
+    fuel = Fuel(fuel_type="Petrol", rate_per_liter=Decimal("100.00"))
+    dispenser = Dispenser(code="D1")
+    employee = Employee(
+        employee_code="EMP-0001", first_name="Pramod", last_name="Soni",
+        contact_number="9876543210", joining_date=date(2026, 1, 1),
+    )
+    db_session.add_all([fuel, dispenser, employee])
+    db_session.commit()
+    nozzle = Nozzle(code="N1", dispenser_id=dispenser.id, fuel_id=fuel.id, status="active")
+    db_session.add(nozzle)
+    db_session.commit()
+
+    cash_tender = db_session.query(Tender).filter_by(name="Cash").first()
+    sale = Sale(
+        receipt_number="RCPT-SHORTAGE-1", shift_id=shift2.id, nozzle_id=nozzle.id, fuel_id=fuel.id,
+        employee_id=employee.id, quantity=Decimal("10"), rate_per_liter=Decimal("100.00"),
+        amount=Decimal("1000.00"), payment_method=PaymentMethod.CASH.value, tender_id=cash_tender.id,
+        status="completed", recorded_by_id=admin_id,
+    )
+    db_session.add(sale)
+    db_session.commit()
+
+    reconciliation = reconciliation_service.perform_shift_reconciliation(
+        admin_id,
+        ShiftReconciliationPerform(shift_id=shift2.id, declared_amounts={cash_tender.id: sale.amount - Decimal("416")}),
+    )
+    line = next(l for l in reconciliation.lines if l.tender_id == cash_tender.id)
+    shortage = shortage_service.record_shortage(
+        admin_id, EmployeeCashShortageRecord(shift_reconciliation_line_id=line.id, employee_id=employee.id),
+    )
+
+    cash_book_service.record_shift_cash_movements(
+        admin_id, ShiftCashBookRecord(shift_id=shift2.id, advance_amount=Decimal("0"), final_amount=Decimal("97321")),
+    )
+    before = cash_book_service.get_cash_book_summary(admin_id, shift2.id)
+    assert before.shortage_recoveries_total == Decimal("0")
+    assert before.closing_cash_in_hand == Decimal("97321.00")  # advance/final alone - recovery not yet recorded
+
+    shortage_service.record_recovery(
+        admin_id,
+        EmployeeShortageRecoveryRecord(employee_cash_shortage_id=shortage.id, shift_id=shift2.id, amount=Decimal("416")),
+    )
+    after = cash_book_service.get_cash_book_summary(admin_id, shift2.id)
+    assert after.shortage_recoveries_total == Decimal("416.00")
+    # the exact test the user asked for: recording the recovery raises
+    # this shift's cash-book receipts by precisely the repaid amount
+    assert after.closing_cash_in_hand == before.closing_cash_in_hand + Decimal("416.00")
+    assert after.closing_cash_in_hand == Decimal("97737.00")

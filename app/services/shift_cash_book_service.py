@@ -38,11 +38,20 @@ class ShiftCashBookSummary:
     opening_balance: Decimal
     bank_deposits: List[ShiftBankDeposit] = field(default_factory=list)
     bank_deposits_total: Decimal = Decimal("0")
+    # Employee cash-shortage recoveries posted into this shift's cash
+    # book (Step 5, EmployeeShortageService.record_recovery) - a real
+    # cash receipt, added on the same side as advance/final, not
+    # subtracted like a bank deposit.
+    shortage_recoveries: list = field(default_factory=list)
+    shortage_recoveries_total: Decimal = Decimal("0")
     closing_cash_in_hand: Decimal = Decimal("0")
 
 
 class ShiftCashBookService:
-    def __init__(self, cash_book_repo, shift_repo, audit_repo, auth_service, bank_deposit_repo=None):
+    def __init__(
+        self, cash_book_repo, shift_repo, audit_repo, auth_service, bank_deposit_repo=None,
+        shortage_recovery_repo=None,
+    ):
         self._cash_book_repo = cash_book_repo
         self._shift_repo = shift_repo
         self._audit_repo = audit_repo
@@ -53,6 +62,13 @@ class ShiftCashBookService:
         # and each raises clearly rather than silently mis-deriving a
         # financial figure if it's missing.
         self._bank_deposit_repo = bank_deposit_repo
+        # Optional the same way: only wired where a caller actually
+        # exercises Step 5 (employee cash-shortage recovery). Missing
+        # here means "recoveries aren't part of this computation" for a
+        # caller that genuinely doesn't touch that feature, not a
+        # silent zero for one that does - production wiring
+        # (AppController in app/ui/main_window.py) always passes it.
+        self._shortage_recovery_repo = shortage_recovery_repo
 
     # Reuses RECONCILIATION_MANAGE/RECONCILIATION_VIEW rather than a new
     # permission pair: this is the same actor, at the same workflow
@@ -165,8 +181,19 @@ class ShiftCashBookService:
             deposits_total = sum(
                 (d.amount for d in self._bank_deposit_repo.list_for_cash_book(cash_book.id)), Decimal("0")
             )
-            balance = balance + cash_book.advance_amount + cash_book.final_amount - deposits_total
+            recoveries_total = self._recoveries_total(cash_book)
+            balance = (
+                balance + cash_book.advance_amount + cash_book.final_amount
+                + recoveries_total - deposits_total
+            )
         return balance
+
+    def _recoveries_total(self, cash_book: ShiftCashBook) -> Decimal:
+        if self._shortage_recovery_repo is None:
+            return Decimal("0")
+        return sum(
+            (r.amount for r in self._shortage_recovery_repo.list_for_cash_book(cash_book.id)), Decimal("0")
+        )
 
     @require_permission(Permission.RECONCILIATION_VIEW.value)
     def get_cash_book_summary(self, actor_user_id: str, shift_id: str) -> ShiftCashBookSummary:
@@ -185,8 +212,14 @@ class ShiftCashBookService:
 
         deposits = self._bank_deposit_repo.list_for_cash_book(cash_book.id)
         deposits_total = sum((d.amount for d in deposits), Decimal("0"))
+        recoveries = (
+            self._shortage_recovery_repo.list_for_cash_book(cash_book.id)
+            if self._shortage_recovery_repo is not None else []
+        )
+        recoveries_total = sum((r.amount for r in recoveries), Decimal("0"))
         closing_cash_in_hand = (
-            opening_balance + cash_book.advance_amount + cash_book.final_amount - deposits_total
+            opening_balance + cash_book.advance_amount + cash_book.final_amount
+            + recoveries_total - deposits_total
         )
         return ShiftCashBookSummary(
             shift_id=shift_id,
@@ -194,5 +227,7 @@ class ShiftCashBookService:
             opening_balance=opening_balance,
             bank_deposits=deposits,
             bank_deposits_total=deposits_total,
+            shortage_recoveries=recoveries,
+            shortage_recoveries_total=recoveries_total,
             closing_cash_in_hand=closing_cash_in_hand,
         )

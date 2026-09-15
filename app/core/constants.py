@@ -59,6 +59,28 @@ class Permission(str, Enum):
     RECONCILIATION_MANAGE = "reconciliation.manage"
     ANALYTICS_VIEW = "analytics.view"
     RECONCILIATION_APPROVE = "reconciliation.approve"
+    # A dedicated pair, not a reuse of RECONCILIATION_MANAGE: booking a
+    # shortage and chasing its repayment is a receivable lifecycle, the
+    # same kind of thing CreditAccount/CustomerPayment already is under
+    # CREDIT_MANAGE/CREDIT_VIEW - not the act of reconciling a shift's
+    # tenders itself. SHORTAGE_VIEW is granted the same roles as
+    # CREDIT_VIEW (see ROLE_PERMISSIONS) - seeing an outstanding
+    # shortage isn't the sensitive act.
+    #
+    # SHORTAGE_MANAGE is deliberately narrower than CREDIT_MANAGE
+    # itself, not merely equal to it (2026-09-15, user decision): a
+    # customer receivable is a commercial arrangement, but an employee
+    # cash shortage is an accusation against a named staff member that
+    # follows them until repaid, so booking one sits higher than
+    # routine credit work - Manager and above only, never Shift
+    # Supervisor. Concretely, a supervisor reconciling their own shift
+    # must not be able to both name an attendant they supervise as
+    # responsible for a shortfall AND record that shortfall's own
+    # repayment - the same self-approval shape RECONCILIATION_APPROVE
+    # already exists to guard against for the reconciliation itself.
+    # Pinned by test_shift_supervisor_cannot_record_shortage.
+    SHORTAGE_VIEW = "shortage.view"
+    SHORTAGE_MANAGE = "shortage.manage"
 
 
 class EmployeeStatus(str, Enum):
@@ -250,6 +272,15 @@ PAYMENT_METHOD_TO_TENDER_NAME = {
     PaymentMethod.UPI: "Other",
 }
 
+# The one seeded ExpenseCategory this project creates (app/database/
+# seed.py's _seed_expense_categories) - every other category is entirely
+# user-created via ExpenseService.create_category. This one exists
+# because EmployeeShortageService.record_shortage needs a category to
+# book the Expense side of A2's shortage-as-receivable pattern under,
+# and a fixed, predictable name is safer than trusting every deployment
+# to have created one identically before the feature is first used.
+CASH_SHORTAGE_EXPENSE_CATEGORY_NAME = "Cash Shortage"
+
 
 class SaleStatus(str, Enum):
     """Values stored in Sale.status (problemstatement.md #16: "Completed
@@ -369,6 +400,8 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
         Permission.RECONCILIATION_MANAGE,
         Permission.RECONCILIATION_APPROVE,
         Permission.ANALYTICS_VIEW,
+        Permission.SHORTAGE_VIEW,
+        Permission.SHORTAGE_MANAGE,
     ),
     UserRole.ACCOUNTANT: (
         Permission.INVENTORY_VIEW,

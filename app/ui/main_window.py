@@ -33,7 +33,9 @@ from app.repositories.audit_log_repository import AuditLogRepository
 from app.repositories.credit_account_repository import CreditAccountRepository
 from app.repositories.customer_payment_repository import CustomerPaymentRepository
 from app.repositories.dispenser_repository import DispenserRepository
+from app.repositories.employee_cash_shortage_repository import EmployeeCashShortageRepository
 from app.repositories.employee_document_repository import EmployeeDocumentRepository
+from app.repositories.employee_shortage_recovery_repository import EmployeeShortageRecoveryRepository
 from app.repositories.customer_repository import CustomerRepository
 from app.repositories.employee_repository import EmployeeRepository
 from app.repositories.expense_repository import ExpenseCategoryRepository, ExpenseRepository
@@ -50,6 +52,7 @@ from app.repositories.sale_repository import SaleRepository
 from app.repositories.shift_repository import ShiftRepository
 from app.repositories.shift_bank_deposit_repository import ShiftBankDepositRepository
 from app.repositories.shift_cash_book_repository import ShiftCashBookRepository
+from app.repositories.shift_reconciliation_line_repository import ShiftReconciliationLineRepository
 from app.repositories.shift_reconciliation_repository import ShiftReconciliationRepository
 from app.repositories.supplier_invoice_repository import SupplierInvoiceRepository, SupplierPaymentRepository
 from app.repositories.supplier_repository import SupplierRepository
@@ -72,6 +75,7 @@ from app.services.notification_service import NotificationService
 from app.services.nozzle_service import NozzleService
 from app.services.procurement_service import ProcurementService
 from app.services.reconciliation_service import ReconciliationService
+from app.services.employee_shortage_service import EmployeeShortageService
 from app.services.shift_cash_book_service import ShiftCashBookService
 from app.services.report_service import ReportService
 from app.services.sale_service import SaleService
@@ -1109,6 +1113,8 @@ class MainWindow(QMainWindow):
             lambda: ReconciliationWindow(
                 self._reconciliation_service, self._shift_service, self._auth_service, self._user_data["id"],
                 cash_book_service=self._cash_book_service,
+                employee_shortage_service=self._employee_shortage_service,
+                employee_service=self._employee_service,
             ),
         )
 
@@ -1530,12 +1536,26 @@ class AppController:
             self._auth_service,
             tender_repo,
         )
+        cash_book_repo = ShiftCashBookRepository(self._db_session)
+        employee_shortage_recovery_repo = EmployeeShortageRecoveryRepository(self._db_session)
         self._cash_book_service = ShiftCashBookService(
-            ShiftCashBookRepository(self._db_session),
+            cash_book_repo,
             ShiftRepository(self._db_session),
             audit_repo,
             self._auth_service,
             ShiftBankDepositRepository(self._db_session),
+            shortage_recovery_repo=employee_shortage_recovery_repo,
+        )
+        self._employee_shortage_service = EmployeeShortageService(
+            EmployeeCashShortageRepository(self._db_session),
+            employee_shortage_recovery_repo,
+            ShiftReconciliationLineRepository(self._db_session),
+            employee_repo,
+            ExpenseCategoryRepository(self._db_session),
+            self._expense_service,
+            audit_repo,
+            self._auth_service,
+            cash_book_repo,
         )
         credit_account_repo = CreditAccountRepository(self._db_session)
         customer_payment_repo = CustomerPaymentRepository(self._db_session)
