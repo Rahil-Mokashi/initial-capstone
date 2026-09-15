@@ -35,7 +35,7 @@ from app.core.exceptions import AppError
 from app.schemas.employee_cash_shortage import EmployeeCashShortageRecord, EmployeeShortageRecoveryRecord
 from app.schemas.shift_cash_book import ShiftBankDepositRecord, ShiftCashBookRecord
 from app.schemas.shift_reconciliation import ShiftReconciliationPerform
-from app.ui.qt_utils import describe_unexpected_error
+from app.ui.qt_utils import describe_unexpected_error, money_table_item
 from app.ui.widgets import GridBackgroundWidget
 
 RECONCILIATION_HEADERS = ["Shift", "Variance by Tender", "Classification", "Status"]
@@ -363,11 +363,11 @@ class CashBookTab(QWidget):
             # balance and PurchaseOrder.status.
             summary = self._cash_book_service.get_cash_book_summary(self._actor_user_id, cb.shift_id)
             self.table.setItem(row_index, 0, QTableWidgetItem(shift_label))
-            self.table.setItem(row_index, 1, QTableWidgetItem(f"{summary.opening_balance:.2f}"))
-            self.table.setItem(row_index, 2, QTableWidgetItem(f"{cb.advance_amount:.2f}"))
-            self.table.setItem(row_index, 3, QTableWidgetItem(f"{cb.final_amount:.2f}"))
-            self.table.setItem(row_index, 4, QTableWidgetItem(f"{summary.bank_deposits_total:.2f}"))
-            self.table.setItem(row_index, 5, QTableWidgetItem(f"{summary.closing_cash_in_hand:.2f}"))
+            self.table.setItem(row_index, 1, money_table_item(summary.opening_balance))
+            self.table.setItem(row_index, 2, money_table_item(cb.advance_amount))
+            self.table.setItem(row_index, 3, money_table_item(cb.final_amount))
+            self.table.setItem(row_index, 4, money_table_item(summary.bank_deposits_total))
+            self.table.setItem(row_index, 5, money_table_item(summary.closing_cash_in_hand))
             self.table.setItem(row_index, 6, QTableWidgetItem(recorded_by))
         self.table.resizeColumnsToContents()
         self.table.horizontalHeader().setStretchLastSection(True)
@@ -607,9 +607,9 @@ class EmployeeShortagesTab(QWidget):
             self.table.setItem(row_index, 0, QTableWidgetItem(employee_label))
             self.table.setItem(row_index, 1, QTableWidgetItem(shift_label))
             self.table.setItem(row_index, 2, QTableWidgetItem(tender_label))
-            self.table.setItem(row_index, 3, QTableWidgetItem(f"{shortage.amount:.2f}"))
-            self.table.setItem(row_index, 4, QTableWidgetItem(f"{recovered:.2f}"))
-            self.table.setItem(row_index, 5, QTableWidgetItem(f"{outstanding:.2f}"))
+            self.table.setItem(row_index, 3, money_table_item(shortage.amount))
+            self.table.setItem(row_index, 4, money_table_item(recovered))
+            self.table.setItem(row_index, 5, money_table_item(outstanding))
             self.table.setItem(row_index, 6, QTableWidgetItem(status))
         self.table.resizeColumnsToContents()
         self.table.horizontalHeader().setStretchLastSection(True)
