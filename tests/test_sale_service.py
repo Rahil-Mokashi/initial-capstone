@@ -430,16 +430,16 @@ def test_set_customer_status_requires_reason(sale_service, admin_id):
 # reference, go through Terminal individually)
 # --------------------------------------------------------------------
 
-def _fake_assignment(nozzle_id, shift_id, employee_id, opening_meter, closing_meter):
+def _fake_assignment(nozzle_id, shift_id, employee_id, opening_meter, closing_meter, testing_volume=Decimal("0")):
     """A lightweight stand-in for a NozzleAssignment ORM object -
-    settle_assignment_cash only reads these five attributes, so a real
+    settle_assignment_cash only reads these six attributes, so a real
     NozzleAssignment (and therefore ShiftService) isn't needed just to
     exercise SaleService's own logic in isolation. The wiring between
     ShiftService.complete_nozzle_assignment and this method is covered
     separately in tests/test_shift_service.py."""
     return SimpleNamespace(
         nozzle_id=nozzle_id, shift_id=shift_id, employee_id=employee_id,
-        opening_meter=opening_meter, closing_meter=closing_meter,
+        opening_meter=opening_meter, closing_meter=closing_meter, testing_volume=testing_volume,
     )
 
 
@@ -484,6 +484,28 @@ def test_settle_assignment_cash_returns_none_when_fully_accounted_for(sale_servi
 
 def test_settle_assignment_cash_none_without_a_closing_meter(sale_service, admin_id, open_shift_id, nozzle_id, employee_id):
     assignment = _fake_assignment(nozzle_id, open_shift_id, employee_id, Decimal("1000"), None)
+    assert sale_service.settle_assignment_cash(admin_id, assignment) is None
+
+
+def test_settle_assignment_cash_excludes_testing_volume(sale_service, admin_id, open_shift_id, nozzle_id, employee_id):
+    """Regression test (corrects an earlier wrong turn - see
+    PROJECT_CONTEXT.md): calibration testing crosses this nozzle's meter
+    but the fuel is poured back into the tank, so it must not be billed
+    as a sale to nobody. 65 dispensed - 5 tested = 60 should be sold,
+    not 65."""
+    assignment = _fake_assignment(
+        nozzle_id, open_shift_id, employee_id, Decimal("1000"), Decimal("1065"), testing_volume=Decimal("5")
+    )
+    sale = sale_service.settle_assignment_cash(admin_id, assignment)
+    assert sale.quantity == Decimal("60")
+
+
+def test_settle_assignment_cash_returns_none_when_testing_volume_accounts_for_everything(
+    sale_service, admin_id, open_shift_id, nozzle_id, employee_id,
+):
+    assignment = _fake_assignment(
+        nozzle_id, open_shift_id, employee_id, Decimal("1000"), Decimal("1005"), testing_volume=Decimal("5")
+    )
     assert sale_service.settle_assignment_cash(admin_id, assignment) is None
 
 

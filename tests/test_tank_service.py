@@ -1,3 +1,4 @@
+import uuid
 from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal
 
@@ -7,21 +8,26 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 import app.models  # noqa: F401  (registers all table metadata)
-from app.core.constants import TankStatus, TankTransactionType, UserRole, VarianceClassification
+from app.core.constants import ShiftStatus, TankStatus, TankTransactionType, UserRole, VarianceClassification
 from app.core.exceptions import ConflictError, NotFoundError, PermissionDeniedError
 from app.core.security import hash_password
 from app.database.base import Base
 from app.database.seed import seed_initial_data
 from app.models.audit_log import AuditLog
+from app.models.dispenser import Dispenser
 from app.models.employee import Employee
 from app.models.fuel import Fuel
+from app.models.nozzle import Nozzle
+from app.models.nozzle_assignment import NozzleAssignment
 from app.models.role import Role
+from app.models.shift import Shift
 from app.models.tank_transaction import TankTransaction
 from app.models.user import User
 from app.repositories.audit_log_repository import AuditLogRepository
 from app.repositories.employee_repository import EmployeeRepository
 from app.repositories.fuel_reconciliation_repository import FuelReconciliationRepository
 from app.repositories.fuel_repository import FuelRepository
+from app.repositories.nozzle_assignment_repository import NozzleAssignmentRepository
 from app.repositories.tank_reading_repository import TankReadingRepository
 from app.repositories.tank_repository import TankRepository
 from app.repositories.tank_transaction_repository import TankTransactionRepository
@@ -106,7 +112,38 @@ def tank_service(db_session):
         EmployeeRepository(db_session),
         audit_repo,
         auth_service,
+        assignment_repo=NozzleAssignmentRepository(db_session),
     )
+
+
+def make_completed_testing_assignment(db_session, admin_id, employee_id, fuel_id, tank_id, testing_volume):
+    """A NozzleAssignment whose whole meter difference was a calibration
+    test poured back into the tank - the real-world source of
+    FuelReconciliation.testing_quantity (see TankService.
+    _perform_reconciliation_impl / NozzleAssignmentRepository.
+    sum_testing_volume_for_tank). Built directly rather than through
+    ShiftService/SaleService since this test is only exercising
+    TankService's own reconciliation math."""
+    dispenser = Dispenser(code=f"D-{uuid.uuid4().hex[:8]}")
+    db_session.add(dispenser)
+    db_session.commit()
+    nozzle = Nozzle(code=f"N-{uuid.uuid4().hex[:8]}", dispenser_id=dispenser.id, fuel_id=fuel_id, tank_id=tank_id)
+    db_session.add(nozzle)
+    db_session.commit()
+    shift = Shift(
+        shift_date=date.today(), shift_label=f"Shift-{uuid.uuid4().hex[:8]}",
+        opened_by_id=admin_id, status=ShiftStatus.OPEN.value,
+    )
+    db_session.add(shift)
+    db_session.commit()
+    assignment = NozzleAssignment(
+        employee_id=employee_id, nozzle_id=nozzle.id, shift_id=shift.id,
+        opening_meter=Decimal("0"), closing_meter=testing_volume, testing_volume=testing_volume,
+        end_time=datetime.now(timezone.utc), assigned_by_id=admin_id, status="completed",
+    )
+    db_session.add(assignment)
+    db_session.commit()
+    return assignment
 
 
 def make_tank(tank_service, admin_id, fuel_id, **overrides):
@@ -332,19 +369,25 @@ def test_second_reconciliation_uses_first_as_new_opening_stock(tank_service, adm
     assert second.variance == 0.0
 
 
-def test_perform_reconciliation_subtracts_testing_quantity(tank_service, admin_id, fuel_id):
+def test_perform_reconciliation_testing_does_not_affect_expected_stock(tank_service, admin_id, fuel_id, employee_id, db_session):
     """Regression test built from a real petrol pump's paper daily report
     (docs/daily-report-spec.md, section 2): opening 35,485 L, purchase
     23,000 L, two shifts dispensing 8,371 L and 8,828 L, and 65 L drawn
-    off for calibration/dip testing - fuel that genuinely left the tank
-    but was never sold to a customer. The paper report's own arithmetic
-    never subtracts Testing at all (opening + purchase - shift1 - shift2
-    = 41,286 exactly matches its own "Total Stock" cell), so the +10
-    variance it reports against a 41,296 L physical dip understates the
-    true unexplained surplus. Once testing is correctly subtracted,
-    expected closing stock is 41,221 L and the real variance is +75 L,
-    not +10 - a difference material enough to change the variance
-    classification, which is the entire point of tracking it separately.
+    off for calibration/dip testing.
+
+    An earlier version of this test (and the code it was pinning) got
+    this wrong - see PROJECT_CONTEXT.md's "wrong turn" record. Testing
+    fuel is dispensed through a nozzle's meter into a measured can and
+    poured straight back into the same tank, so it crosses the meter but
+    never actually leaves tank stock; it must NOT be subtracted when
+    computing expected closing stock. The real report's own arithmetic
+    proves this: opening + purchase - shift1 - shift2 = 41,286 exactly
+    matches its own "Total Stock" cell, with testing nowhere subtracted,
+    and its "(+/-)" variance of +10 is computed against that, against a
+    41,296 L physical dip. testing_quantity is still surfaced on the
+    reconciliation record (matching the report's own "Testing" row) -
+    sourced from NozzleAssignment.testing_volume, not from any
+    TankTransaction - but purely for visibility, never for the formula.
     """
     tank = make_tank(tank_service, admin_id, fuel_id, opening_stock=35485.0, capacity=100000.0)
     tank_service.record_transaction(
@@ -356,10 +399,7 @@ def test_perform_reconciliation_subtracts_testing_quantity(tank_service, admin_i
     tank_service.record_transaction(
         admin_id, tank.id, TankTransactionType.ISSUE, TankTransactionCreate(quantity=8828.0)
     )
-    tank_service.record_transaction(
-        admin_id, tank.id, TankTransactionType.TESTING,
-        TankTransactionCreate(quantity=65.0, remarks="Daily dip calibration check"),
-    )
+    make_completed_testing_assignment(db_session, admin_id, employee_id, fuel_id, tank.id, Decimal("65"))
 
     reconciliation = tank_service.perform_reconciliation(
         admin_id, tank.id, ReconciliationPerform(reconciliation_date=date.today(), physical_stock=41296.0)
@@ -367,8 +407,29 @@ def test_perform_reconciliation_subtracts_testing_quantity(tank_service, admin_i
 
     assert reconciliation.sold_quantity == Decimal("17199.000")
     assert reconciliation.testing_quantity == Decimal("65.000")
-    assert reconciliation.expected_closing_stock == Decimal("41221.000")
-    assert reconciliation.variance == Decimal("75.000")
+    assert reconciliation.expected_closing_stock == Decimal("41286.000")
+    assert reconciliation.variance == Decimal("10.000")
+
+
+def test_perform_reconciliation_subtracts_internal_consumption(tank_service, admin_id, fuel_id):
+    """Pins the one figure that IS still subtracted (unlike testing,
+    above): internal consumption is fuel genuinely used by the pump
+    itself (a vehicle, a generator) that never returns to the tank, so
+    it must reduce expected closing stock the same way a real sale
+    does."""
+    tank = make_tank(tank_service, admin_id, fuel_id, opening_stock=1000.0)
+    tank_service.record_transaction(
+        admin_id, tank.id, TankTransactionType.INTERNAL_CONSUMPTION,
+        TankTransactionCreate(quantity=50.0, remarks="Genset diesel"),
+    )
+
+    reconciliation = tank_service.perform_reconciliation(
+        admin_id, tank.id, ReconciliationPerform(reconciliation_date=date.today(), physical_stock=950.0)
+    )
+
+    assert reconciliation.internal_consumption_quantity == Decimal("50.000")
+    assert reconciliation.expected_closing_stock == Decimal("950.000")
+    assert reconciliation.variance == Decimal("0.000")
 
 
 def test_set_tank_status_requires_reason(tank_service, admin_id, fuel_id):

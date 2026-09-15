@@ -12,20 +12,36 @@ from .base import Base
 class FuelReconciliation(Base):
     """One reconciliation record for one tank on one date (problemstatement.md #14).
 
-    Expected Closing Stock = Opening Stock + Received - Sold - Testing -
-    Internal Consumption. Testing and internal-consumption quantities are
-    summed the same way received/sold already are (from TankTransaction
-    rows of those types, TankService._perform_reconciliation_impl) rather
-    than entered by hand, so they can never silently drift out of sync
-    with the transactions that actually back them - the same
-    recompute-from-scratch discipline this project already applies to
-    CreditAccount's outstanding balance and PurchaseOrder.status. Both
-    default to zero for a tank/period with no such draws, which is the
-    common case. Variance is physical minus expected, classified (never
-    assumed to be theft) using configurable thresholds in
-    app/core/constants.py. Immutable — a reconciliation is never edited
-    after the fact; if it needs revisiting, a new reconciliation record
-    is created.
+    Expected Closing Stock = Opening Stock + Received - Sold - Internal
+    Consumption. Both are summed the same way (from TankTransaction rows
+    of those types, TankService._perform_reconciliation_impl) rather than
+    entered by hand, so they can never silently drift out of sync with
+    the transactions that actually back them - the same recompute-from-
+    scratch discipline this project already applies to CreditAccount's
+    outstanding balance and PurchaseOrder.status.
+
+    testing_quantity is NOT part of that formula, despite the name
+    sitting right next to internal_consumption_quantity above - this was
+    wrong in an earlier version of this class and is worth recording why
+    (see PROJECT_CONTEXT.md's "wrong turn" entry). Calibration/dip
+    testing dispenses through a nozzle's meter into a measured can and is
+    poured straight back into the same tank - it crosses the meter but
+    never actually leaves the tank, so it cannot reduce book stock the
+    way a real sale or internal consumption does. A real petrol pump's
+    own daily report proves this arithmetically: opening + purchase -
+    shift1 - shift2 lands exactly on its own "Total Stock" figure, with
+    testing nowhere subtracted. testing_quantity here is purely
+    informational (sourced from NozzleAssignment.testing_volume via
+    TankService, not from any TankTransaction - there is no TESTING
+    transaction type), matching the report's own "Testing" row, which is
+    displayed but likewise never subtracted from Total Stock.
+
+    Both quantities default to zero for a tank/period with no such
+    draws, which is the common case. Variance is physical minus expected,
+    classified (never assumed to be theft) using configurable thresholds
+    in app/core/constants.py. Immutable — a reconciliation is never
+    edited after the fact; if it needs revisiting, a new reconciliation
+    record is created.
     """
 
     __tablename__ = "fuel_reconciliations"

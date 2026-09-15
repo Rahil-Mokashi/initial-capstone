@@ -35,10 +35,23 @@ class NozzleAssignmentCreate(BaseModel):
 
 class NozzleAssignmentComplete(BaseModel):
     closing_meter: Decimal
+    # Litres of the meter difference that were a calibration/dip test,
+    # poured back into the tank rather than sold - see NozzleAssignment.
+    # testing_volume. Whether this can exceed the actual meter difference
+    # depends on opening_meter, which isn't known to this schema; that
+    # cross-field check lives in ShiftService.complete_nozzle_assignment.
+    testing_volume: Decimal = Decimal("0")
 
     @field_validator("closing_meter")
     @classmethod
     def non_negative(cls, value: Decimal) -> Decimal:
         if value < 0:
             raise ValueError("closing_meter cannot be negative")
+        return value
+
+    @field_validator("testing_volume")
+    @classmethod
+    def non_negative_testing_volume(cls, value: Decimal) -> Decimal:
+        if value < 0:
+            raise ValueError("testing_volume cannot be negative")
         return value
