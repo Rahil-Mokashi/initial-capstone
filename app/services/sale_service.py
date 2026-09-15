@@ -120,7 +120,12 @@ class SaleService:
         if assignment.closing_meter is None:
             return None
 
-        dispensed = assignment.closing_meter - assignment.opening_meter
+        # testing_volume crossed this nozzle's meter but was poured back
+        # into the tank for a calibration check, not sold to anyone - see
+        # NozzleAssignment.testing_volume. Excluding it here is what
+        # keeps a test dispense from being silently billed as a cash
+        # sale to nobody.
+        dispensed = assignment.closing_meter - assignment.opening_meter - assignment.testing_volume
         already_recorded = sum(
             (
                 sale.quantity

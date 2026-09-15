@@ -57,27 +57,37 @@ The Sale Details table is a single cross-product-stream reconciliation:
 | O/S | Opening Stock |
 | Purchase | Received that day |
 | Shift1 / Shift2 | Litres dispensed, by shift |
-| **Testing** | Litres drawn off for dip/quality testing |
-| Total Stock | O/S + Purchase − (Shift1+Shift2+Testing) |
+| **Testing** | Litres run through a nozzle for dip/calibration checks |
+| Total Stock | O/S + Purchase − (Shift1+Shift2) |
 | (+/-) | A manual adjustment figure |
 | Closing Stock | Total Stock ± adjustment |
 
-**How this repo models it:** `app/models/fuel_reconciliation.py`
-(`FuelReconciliation`, lines 11-45) is structurally very close — one row per tank per
-date, with `opening_stock`, `received_quantity`, `sold_quantity`,
-`expected_closing_stock`, `physical_stock`, and `variance` (the `physical_stock` /
-`variance` pair *is* this report's `(+/-)` concept, just named and signed differently).
-**Modeled differently, with one real gap**: there is no `testing_quantity` (or any
-"testing" concept at all — confirmed by grep, zero hits for "testing" in
-`app/models/` or `app/services/`). A pump that routinely draws off fuel for dip-testing
-has no way to record that as its own line today; it would currently either vanish into
-`sold_quantity` (wrong — it wasn't sold) or show up entirely as unexplained `variance`
-(alarming and wrong — it isn't a discrepancy, it's a known, deliberate draw). The other
-structural difference: this report reconciles **per fuel stream per day across both
-shifts in one table**, where `FuelReconciliation` is written per tank per date already
-(compatible), but nothing in `app/services/` currently aggregates two shifts' worth of
-`NozzleAssignment` meter deltas into one daily total the way this sheet's Shift1+Shift2
-rows do before comparing against Purchase/Closing Stock.
+**Corrected after this was first published** (see PROJECT_CONTEXT.md's "WRONG TURN,
+CORRECTED" entry): the Total Stock row does **not** subtract Testing, and this table
+originally said it did. The sheet's own arithmetic settles it —
+`35,485 + 23,000 − 8,371 − 8,828 = 41,286`, exactly the sheet's own Total Stock figure,
+with Testing's 65 L nowhere in that sum. The domain reason: this pump's calibration
+testing dispenses into a measured can through a nozzle and pours the fuel straight back
+into the same tank, so it crosses the meter (which is why it's tracked at all) but never
+actually leaves tank stock.
+
+**How this repo models it:** `app/models/fuel_reconciliation.py` (`FuelReconciliation`)
+has `opening_stock`, `received_quantity`, `sold_quantity`, `internal_consumption_quantity`,
+`expected_closing_stock`, `physical_stock`, and `variance` (the `physical_stock`/`variance`
+pair *is* this report's `(+/-)` concept, just named and signed differently) —
+`expected_closing_stock = opening + received − sold − internal_consumption`, matching the
+sheet's own Total Stock arithmetic (Testing correctly excluded). `testing_quantity` also
+exists on the same record, but purely informationally, matching the sheet's own Testing
+row: it never reduces `expected_closing_stock`, sourced from
+`NozzleAssignment.testing_volume` (`app/models/nozzle_assignment.py`) rather than any tank
+transaction, since testing is something that happens at the nozzle meter, not the tank.
+`SaleService.settle_assignment_cash` subtracts that same `testing_volume` before billing
+an assignment's remaining dispensed fuel as a cash sale, so test dispenses aren't silently
+sold to nobody. The other structural difference from the sheet: this report reconciles
+**per fuel stream per day across both shifts in one table**, where `FuelReconciliation` is
+written per tank per date already (compatible), but nothing in `app/services/` currently
+aggregates two shifts' worth of `NozzleAssignment` meter deltas into one daily total the
+way this sheet's Shift1+Shift2 rows do before comparing against Purchase/Closing Stock.
 
 ## 3. Per-shift settlement breakdown: CreditSale / CARD / DTP Card / PHONE PAY / PTM / Expenses / Advance / Final
 
@@ -167,6 +177,15 @@ folded into the same flat expense list as genuine spending (tea, diesel for a ve
 This app's `Expense` has an `ExpenseCategory` foreign key (line 47) that could
 distinguish "genuine expense" from "shortage write-off" if a category existed for the
 latter, but nothing in the current seed data suggests one does.
+
+**Updated since this section was first written**: the "Diesel Exp (MH12VVX5868)40Lit"
+kind of line item — fuel drawn from a tank for the pump's own vehicle/generator rather
+than genuine external spending — is now modeled. `Expense` gained nullable `tank_id`/
+`quantity` columns (enforced together by a database CHECK constraint); when set,
+`ExpenseService.create_expense` posts the draw through `TankService.
+record_transaction_as_related_action` as an `INTERNAL_CONSUMPTION` transaction, atomically
+with the expense row. See open question 10 above for the one thing this still doesn't
+resolve: whether these fills cross a nozzle meter the way Testing does.
 
 ## 7. Oil Sale ledger
 
@@ -323,3 +342,13 @@ report-generation code to — not a defect in `money.py` itself. See Open Questi
    `Total Sale` (857,601.24, in the main Sale Details table) ever meant to be the exact
    same figure computed two different ways, or are they understood internally as two
    genuinely different numbers (e.g. one includes something the other excludes)?
+10. When the genset, the Omni, or a company vehicle is filled from a tank (the
+    internal-consumption expenses in section 6), does that fuel pass through a nozzle's
+    meter the same way a calibration test does, or through a separate hand-pump/dip-and-
+    pour path that never touches a nozzle meter? This matters directly: if it crosses a
+    nozzle meter, it has the same double-count risk Testing did before this document's
+    correction (the litres would need excluding from that nozzle assignment's billed cash
+    sale, the same way `testing_volume` now is) and today's implementation
+    (`TankTransactionType.INTERNAL_CONSUMPTION`, no meter involvement) would need the same
+    fix applied to it. This isn't guessable from the report or the codebase and needs the
+    owner to describe how these fills are actually done at this pump.

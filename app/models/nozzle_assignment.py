@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime, timezone
+from decimal import Decimal
 
 from sqlalchemy import CheckConstraint, Column, ForeignKey, Numeric, String
 from sqlalchemy.orm import relationship
@@ -27,6 +28,7 @@ class NozzleAssignment(EntityMixin, Base):
     __table_args__ = (
         CheckConstraint("opening_meter >= 0", name="ck_nozzle_assignments_opening_meter_non_negative"),
         CheckConstraint("closing_meter IS NULL OR closing_meter >= opening_meter", name="ck_nozzle_assignments_closing_not_before_opening"),
+        CheckConstraint("testing_volume >= 0", name="ck_nozzle_assignments_testing_volume_non_negative"),
     )
 
 
@@ -40,6 +42,16 @@ class NozzleAssignment(EntityMixin, Base):
 
     opening_meter = Column(Numeric(12, 3), nullable=False)
     closing_meter = Column(Numeric(12, 3), nullable=True)
+    # Litres of this assignment's meter difference that were a
+    # calibration/dip test rather than a real sale - the fuel is
+    # dispensed through this nozzle's meter into a measured can and
+    # poured straight back into the tank, so it crosses the meter
+    # without ever leaving tank stock. Lives here, not on TankTransaction
+    # (see TankTransactionType's docstring), because the meter is where
+    # it's actually observed, and it's what SaleService.settle_
+    # assignment_cash subtracts before billing the remainder as a cash
+    # sale - otherwise a test dispense gets silently sold to nobody.
+    testing_volume = Column(Numeric(12, 3), nullable=False, default=Decimal("0"))
 
     assigned_by_id = Column(String(36), ForeignKey("users.id"), nullable=False)
     remarks = Column(String(512), nullable=True)

@@ -1476,6 +1476,7 @@ class AppController:
             employee_repo,
             audit_repo,
             self._auth_service,
+            assignment_repo=nozzle_assignment_repo,
         )
         self._backup_service = BackupService(
             db_connection.DB_PATH,

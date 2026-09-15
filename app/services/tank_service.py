@@ -56,6 +56,7 @@ class TankService:
         employee_repo,
         audit_repo,
         auth_service,
+        assignment_repo=None,
     ):
         self._tank_repo = tank_repo
         self._reading_repo = reading_repo
@@ -65,6 +66,11 @@ class TankService:
         self._employee_repo = employee_repo
         self._audit_repo = audit_repo
         self._auth_service = auth_service
+        # Optional: only needed to surface FuelReconciliation.testing_quantity
+        # (informational - see _perform_reconciliation_impl). None degrades
+        # to reporting 0 rather than failing, since testing never affects
+        # expected_closing_stock either way.
+        self._assignment_repo = assignment_repo
         self._session = session_for(tank_repo)
 
     @require_permission(Permission.INVENTORY_MANAGE.value)
@@ -194,15 +200,15 @@ class TankService:
     ) -> TankTransaction:
         tank = self._get_tank_or_raise(tank_id)
 
-        # ISSUE (a nozzle sale), TESTING (a calibration draw) and
-        # INTERNAL_CONSUMPTION (fuel used by the pump itself, e.g. a
-        # company vehicle) all remove real fuel from the tank the same
-        # way - they differ only in *why*, which is what keeps
-        # FuelReconciliation.sold_quantity meaning "actually sold" (see
-        # TankTransactionType's docstring in app/core/constants.py).
-        stock_decreasing_types = (
-            TankTransactionType.ISSUE, TankTransactionType.TESTING, TankTransactionType.INTERNAL_CONSUMPTION,
-        )
+        # ISSUE (a nozzle sale) and INTERNAL_CONSUMPTION (fuel used by the
+        # pump itself, e.g. a company vehicle) both remove real fuel from
+        # the tank the same way - they differ only in *why*, which is
+        # what keeps FuelReconciliation.sold_quantity meaning "actually
+        # sold" (see TankTransactionType's docstring in
+        # app/core/constants.py). Calibration testing is deliberately not
+        # here - it's poured back into the tank, so it never actually
+        # leaves; see NozzleAssignment.testing_volume instead.
+        stock_decreasing_types = (TankTransactionType.ISSUE, TankTransactionType.INTERNAL_CONSUMPTION)
 
         if transaction_type in (TankTransactionType.RECEIPT,) + stock_decreasing_types and data.quantity <= 0:
             raise ValueError(f"{transaction_type.value} quantity must be positive")
@@ -286,26 +292,42 @@ class TankService:
                 tank_id, TankTransactionType.ISSUE.value, date_from=period_start, date_to=data.reconciliation_date
             )
         )
-        testing = abs(
-            self._transaction_repo.sum_for_tank_by_type(
-                tank_id, TankTransactionType.TESTING.value, date_from=period_start, date_to=data.reconciliation_date
-            )
-        )
         internal_consumption = abs(
             self._transaction_repo.sum_for_tank_by_type(
                 tank_id, TankTransactionType.INTERNAL_CONSUMPTION.value,
                 date_from=period_start, date_to=data.reconciliation_date,
             )
         )
+        # Testing is deliberately NOT summed from tank_transactions and
+        # NOT subtracted below - see TankTransactionType's docstring and
+        # PROJECT_CONTEXT.md's "wrong turn" record. Calibration fuel is
+        # dispensed into a measured can and poured straight back into the
+        # same tank, so it never actually leaves; the real report's own
+        # arithmetic proves this (opening + purchase - shift1 - shift2
+        # lands exactly on its "Total Stock" cell, with testing nowhere
+        # subtracted). It's still worth surfacing on the reconciliation
+        # record for visibility (matching the report's own "Testing"
+        # row), sourced from where it actually happened - the nozzle
+        # meter, via NozzleAssignment.testing_volume - not the tank.
+        # Optional: only populated when this TankService was wired with
+        # an assignment_repo (main_window.py's production wiring always
+        # does); degrades to 0 rather than failing when it wasn't, since
+        # this figure is informational and never feeds expected_closing_stock.
+        testing = (
+            self._assignment_repo.sum_testing_volume_for_tank(
+                tank_id, tank.fuel_id, date_from=period_start, date_to=data.reconciliation_date
+            )
+            if self._assignment_repo is not None
+            else Decimal("0")
+        )
 
         # Every litre that actually left the tank must be subtracted here,
-        # or a real, explained draw (a calibration test, fuel put in the
-        # pump's own vehicle) shows up as unexplained variance - exactly
-        # the false-alarm problem this reconciliation exists to avoid.
-        # sold_quantity below stays ISSUE-only, so it keeps meaning
-        # "litres actually sold to a customer" for anything else that
-        # reads it.
-        expected_closing_stock = opening_stock + received - issued - testing - internal_consumption
+        # or a real, explained draw (fuel put in the pump's own vehicle)
+        # shows up as unexplained variance - exactly the false-alarm
+        # problem this reconciliation exists to avoid. sold_quantity
+        # below stays ISSUE-only, so it keeps meaning "litres actually
+        # sold to a customer" for anything else that reads it.
+        expected_closing_stock = opening_stock + received - issued - internal_consumption
         variance = data.physical_stock - expected_closing_stock
         variance_percent = (
             (variance / expected_closing_stock) * 100
