@@ -37,7 +37,13 @@ from app.core.exceptions import AppError
 from app.database.base import StatusEnum
 from app.schemas.customer import CustomerCreate
 from app.schemas.sale import SaleCreate
-from app.ui.qt_utils import chain_enter_to_next_field, describe_unexpected_error, make_edit_icon_button
+from app.ui.qt_utils import (
+    chain_enter_to_next_field,
+    describe_unexpected_error,
+    make_edit_icon_button,
+    money_table_item,
+    volume_table_item,
+)
 from app.ui.widgets import GridBackgroundWidget
 
 # One screenful at a time. The sales table is the highest-volume list in
@@ -278,8 +284,8 @@ class SalesTab(QWidget):
             self.table.setItem(row_index, 0, QTableWidgetItem(sale.receipt_number))
             self.table.setItem(row_index, 1, QTableWidgetItem(sale.sale_at.strftime("%Y-%m-%d %H:%M")))
             self.table.setItem(row_index, 2, QTableWidgetItem(sale.fuel.fuel_type if sale.fuel else ""))
-            self.table.setItem(row_index, 3, QTableWidgetItem(f"{sale.quantity:g}"))
-            self.table.setItem(row_index, 4, QTableWidgetItem(f"{sale.amount:g}"))
+            self.table.setItem(row_index, 3, volume_table_item(sale.quantity))
+            self.table.setItem(row_index, 4, money_table_item(sale.amount))
             self.table.setItem(row_index, 5, QTableWidgetItem(sale.payment_method.title()))
             self.table.setItem(row_index, 6, QTableWidgetItem(sale.status.title()))
             self.table.setItem(row_index, 7, QTableWidgetItem(payment.status.title() if payment else ""))
