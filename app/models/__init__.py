@@ -23,6 +23,7 @@ from .role import Role
 from .role_permission import role_permissions
 from .sale import Sale
 from .shift import Shift
+from .shift_bank_deposit import ShiftBankDeposit
 from .shift_cash_book import ShiftCashBook
 from .shift_reconciliation import ShiftReconciliation
 from .shift_reconciliation_line import ShiftReconciliationLine
@@ -60,6 +61,7 @@ __all__ = [
     "Role",
     "Sale",
     "Shift",
+    "ShiftBankDeposit",
     "ShiftCashBook",
     "ShiftReconciliation",
     "ShiftReconciliationLine",

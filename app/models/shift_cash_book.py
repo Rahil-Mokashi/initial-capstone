@@ -27,14 +27,14 @@ class ShiftCashBook(Base):
     that never advances cash mid-shift, or has nothing left to hand over
     at close, is a normal, not a missing, case.
 
-    Only these two figures are stored here. Everything else the shift's
-    cash book eventually needs - opening balance (this shift's own
-    ShiftBankDeposit-recording step, Step 4 of the same PROJECT_CONTEXT.md
-    build), closing cash-in-hand, and any shortage-recovery receipts
-    (Step 5) - is derived from this row plus related data at read time,
-    never stored redundantly here: the same "recompute rather than let
-    it drift" discipline this project already applies to CreditAccount's
-    outstanding balance and PurchaseOrder.status.
+    advance_amount/final_amount plus the related ShiftBankDeposit rows
+    (Step 4, one-to-many - a shift can deposit into more than one bank,
+    or make more than one deposit) are the only things actually stored.
+    Opening balance and closing cash-in-hand are never stored anywhere -
+    ShiftCashBookService derives both at read time from this row plus
+    the previous shift's own derived closing balance: the same
+    "recompute rather than let it drift" discipline this project already
+    applies to CreditAccount's outstanding balance and PurchaseOrder.status.
     """
 
     __tablename__ = "shift_cash_books"
@@ -55,6 +55,9 @@ class ShiftCashBook(Base):
 
     shift = relationship("Shift")
     recorded_by = relationship("User")
+    bank_deposits = relationship(
+        "ShiftBankDeposit", back_populates="shift_cash_book", order_by="ShiftBankDeposit.recorded_at"
+    )
 
     def __repr__(self) -> str:
         return f"<ShiftCashBook(shift_id={self.shift_id!r}, advance={self.advance_amount!r}, final={self.final_amount!r})>"

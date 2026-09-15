@@ -19,6 +19,7 @@ from app.repositories.expense_repository import ExpenseRepository
 from app.repositories.nozzle_assignment_repository import NozzleAssignmentRepository
 from app.repositories.nozzle_repository import NozzleRepository
 from app.repositories.sale_repository import SaleRepository
+from app.repositories.shift_bank_deposit_repository import ShiftBankDepositRepository
 from app.repositories.shift_cash_book_repository import ShiftCashBookRepository
 from app.repositories.shift_reconciliation_repository import ShiftReconciliationRepository
 from app.repositories.shift_repository import ShiftRepository
@@ -190,7 +191,11 @@ def test_reconciliation_form_builds_one_input_per_tender_with_activity(
 def cash_book_service(db_session, auth_service):
     audit_repo = AuditLogRepository(db_session)
     return ShiftCashBookService(
-        ShiftCashBookRepository(db_session), ShiftRepository(db_session), audit_repo, auth_service,
+        ShiftCashBookRepository(db_session),
+        ShiftRepository(db_session),
+        audit_repo,
+        auth_service,
+        ShiftBankDepositRepository(db_session),
     )
 
 
@@ -225,3 +230,56 @@ def test_reconciliation_window_renders_cash_book_tab_when_service_attached(
         reconciliation_service, shift_service, auth_service, admin_id, cash_book_service=cash_book_service,
     )
     assert window.cash_book_tab.add_button.isHidden() is False
+    assert window.cash_book_tab.deposit_button.isHidden() is False
+
+
+def test_bank_deposit_form_records_a_deposit_through_the_real_dialog(
+    qapp, cash_book_service, shift_service, admin_id, open_shift_id,
+):
+    """Same end-to-end standard as the cash-movements dialog test above:
+    a bank deposit entered through the real dialog must reach the
+    database and be picked up by the derived summary, not just be
+    accepted when the service is called directly."""
+    from PySide6.QtWidgets import QDialog
+
+    from app.schemas.shift_cash_book import ShiftCashBookRecord
+    from app.ui.reconciliation_window import BankDepositFormDialog
+
+    cash_book_service.record_shift_cash_movements(
+        admin_id, ShiftCashBookRecord(shift_id=open_shift_id, advance_amount=Decimal("500"), final_amount=Decimal("1200")),
+    )
+
+    dialog = BankDepositFormDialog(cash_book_service, shift_service, admin_id)
+    dialog.bank_name_input.setText("HDFC Bank")
+    dialog.amount_input.setValue(1000.00)
+    dialog._save()
+
+    assert dialog.result() == QDialog.Accepted
+    summary = cash_book_service.get_cash_book_summary(admin_id, open_shift_id)
+    assert summary.bank_deposits_total == Decimal("1000.00")
+    assert summary.bank_deposits[0].bank_name == "HDFC Bank"
+    # opening_balance 0 (no earlier shift) + advance 500 + final 1200 - deposits 1000
+    assert summary.closing_cash_in_hand == Decimal("700.00")
+
+
+def test_cash_book_tab_table_shows_derived_opening_and_closing_balances(
+    qapp, reconciliation_service, shift_service, auth_service, cash_book_service, admin_id, open_shift_id,
+):
+    from app.schemas.shift_cash_book import ShiftBankDepositRecord, ShiftCashBookRecord
+    from app.ui.reconciliation_window import ReconciliationWindow
+
+    cash_book_service.record_shift_cash_movements(
+        admin_id, ShiftCashBookRecord(shift_id=open_shift_id, advance_amount=Decimal("500"), final_amount=Decimal("1200")),
+    )
+    cash_book_service.record_bank_deposit(
+        admin_id, ShiftBankDepositRecord(shift_id=open_shift_id, bank_name="HDFC Bank", amount=Decimal("1000")),
+    )
+
+    window = ReconciliationWindow(
+        reconciliation_service, shift_service, auth_service, admin_id, cash_book_service=cash_book_service,
+    )
+    table = window.cash_book_tab.table
+    assert table.rowCount() == 1
+    assert table.item(0, 1).text() == "0.00"  # opening balance
+    assert table.item(0, 4).text() == "1000.00"  # bank deposits
+    assert table.item(0, 5).text() == "700.00"  # closing cash-in-hand

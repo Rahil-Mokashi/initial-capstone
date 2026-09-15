@@ -32,13 +32,21 @@ from PySide6.QtWidgets import (
 
 from app.core.constants import Permission
 from app.core.exceptions import AppError
-from app.schemas.shift_cash_book import ShiftCashBookRecord
+from app.schemas.shift_cash_book import ShiftBankDepositRecord, ShiftCashBookRecord
 from app.schemas.shift_reconciliation import ShiftReconciliationPerform
 from app.ui.qt_utils import describe_unexpected_error
 from app.ui.widgets import GridBackgroundWidget
 
 RECONCILIATION_HEADERS = ["Shift", "Variance by Tender", "Classification", "Status"]
-CASH_BOOK_HEADERS = ["Shift", "Advance", "Final", "Recorded By"]
+CASH_BOOK_HEADERS = [
+    "Shift",
+    "Opening Balance",
+    "Advance",
+    "Final",
+    "Bank Deposits",
+    "Closing Cash-in-Hand",
+    "Recorded By",
+]
 
 
 class ReconciliationWindow(QWidget):
@@ -292,8 +300,14 @@ class CashBookTab(QWidget):
         self.add_button.clicked.connect(self._open_add_dialog)
         self.add_button.setVisible(can_manage)
 
+        self.deposit_button = QPushButton("+ Record Bank Deposit")
+        self.deposit_button.setCursor(Qt.PointingHandCursor)
+        self.deposit_button.clicked.connect(self._open_deposit_dialog)
+        self.deposit_button.setVisible(can_manage)
+
         top_row = QHBoxLayout()
         top_row.addStretch()
+        top_row.addWidget(self.deposit_button)
         top_row.addWidget(self.add_button)
 
         self.table = QTableWidget(0, len(CASH_BOOK_HEADERS))
@@ -318,15 +332,31 @@ class CashBookTab(QWidget):
         for row_index, cb in enumerate(cash_books):
             shift_label = f"{cb.shift.shift_date} {cb.shift.shift_label}" if cb.shift else ""
             recorded_by = cb.recorded_by.username if cb.recorded_by else ""
+            # opening_balance and closing_cash_in_hand are never columns on
+            # ShiftCashBook - they are recomputed here on every refresh from
+            # the previous shift's own cash book plus this shift's bank
+            # deposits (ShiftCashBookService.get_cash_book_summary), the
+            # same "recompute rather than store and drift" rule this
+            # project already applies to CreditAccount's outstanding
+            # balance and PurchaseOrder.status.
+            summary = self._cash_book_service.get_cash_book_summary(self._actor_user_id, cb.shift_id)
             self.table.setItem(row_index, 0, QTableWidgetItem(shift_label))
-            self.table.setItem(row_index, 1, QTableWidgetItem(f"{cb.advance_amount:.2f}"))
-            self.table.setItem(row_index, 2, QTableWidgetItem(f"{cb.final_amount:.2f}"))
-            self.table.setItem(row_index, 3, QTableWidgetItem(recorded_by))
+            self.table.setItem(row_index, 1, QTableWidgetItem(f"{summary.opening_balance:.2f}"))
+            self.table.setItem(row_index, 2, QTableWidgetItem(f"{cb.advance_amount:.2f}"))
+            self.table.setItem(row_index, 3, QTableWidgetItem(f"{cb.final_amount:.2f}"))
+            self.table.setItem(row_index, 4, QTableWidgetItem(f"{summary.bank_deposits_total:.2f}"))
+            self.table.setItem(row_index, 5, QTableWidgetItem(f"{summary.closing_cash_in_hand:.2f}"))
+            self.table.setItem(row_index, 6, QTableWidgetItem(recorded_by))
         self.table.resizeColumnsToContents()
         self.table.horizontalHeader().setStretchLastSection(True)
 
     def _open_add_dialog(self) -> None:
         dialog = CashBookFormDialog(self._cash_book_service, self._shift_service, self._actor_user_id, self)
+        if dialog.exec() == QDialog.Accepted:
+            self.refresh()
+
+    def _open_deposit_dialog(self) -> None:
+        dialog = BankDepositFormDialog(self._cash_book_service, self._shift_service, self._actor_user_id, self)
         if dialog.exec() == QDialog.Accepted:
             self.refresh()
 
@@ -391,6 +421,89 @@ class CashBookFormDialog(QDialog):
                 final_amount=Decimal(str(self.final_input.value())),
             )
             self._cash_book_service.record_shift_cash_movements(self._actor_user_id, data)
+        except ValidationError as exc:
+            self._show_error("; ".join(err["msg"] for err in exc.errors()))
+            return
+        except AppError as exc:
+            self._show_error(str(exc))
+            return
+        except Exception as exc:  # noqa: BLE001
+            self._show_error(describe_unexpected_error(exc))
+            return
+
+        self.accept()
+
+    def _show_error(self, message: str) -> None:
+        self.error_label.setText(message)
+        self.error_label.show()
+
+
+class BankDepositFormDialog(QDialog):
+    """Records one named bank deposit against a shift's cash book
+    (PROJECT_CONTEXT.md Step 4). Only shifts with a cash book already
+    recorded are offered - a deposit is a payment out of that cash
+    book, so there must be one to pay out of."""
+
+    def __init__(self, cash_book_service, shift_service, actor_user_id: str, parent=None):
+        super().__init__(parent)
+        self._cash_book_service = cash_book_service
+        self._actor_user_id = actor_user_id
+
+        self.setWindowTitle("Record Bank Deposit")
+        self.setMinimumWidth(400)
+
+        self.shift_combo = QComboBox()
+        cash_books = cash_book_service.list_all(actor_user_id)
+        for cb in cash_books:
+            label = f"{cb.shift.shift_date} {cb.shift.shift_label}" if cb.shift else cb.shift_id
+            self.shift_combo.addItem(label, cb.shift_id)
+
+        self.bank_name_input = QLineEdit()
+        self.bank_name_input.setPlaceholderText("e.g. HDFC Bank")
+
+        self.amount_input = QDoubleSpinBox()
+        self.amount_input.setRange(0, 10_000_000)
+        self.amount_input.setDecimals(2)
+
+        form = QFormLayout()
+        form.addRow("Shift", self.shift_combo)
+        form.addRow("Bank", self.bank_name_input)
+        form.addRow("Amount deposited", self.amount_input)
+
+        self.error_label = QLabel("")
+        self.error_label.setObjectName("errorLabel")
+        self.error_label.setWordWrap(True)
+        self.error_label.hide()
+
+        save_button = QPushButton("Record")
+        save_button.clicked.connect(self._save)
+        cancel_button = QPushButton("Cancel")
+        cancel_button.setObjectName("secondaryButton")
+        cancel_button.clicked.connect(self.reject)
+
+        button_row = QHBoxLayout()
+        button_row.addStretch()
+        button_row.addWidget(cancel_button)
+        button_row.addWidget(save_button)
+
+        layout = QVBoxLayout()
+        layout.addLayout(form)
+        layout.addWidget(self.error_label)
+        layout.addLayout(button_row)
+        self.setLayout(layout)
+
+    def _save(self) -> None:
+        self.error_label.hide()
+        if self.shift_combo.count() == 0:
+            self._show_error("No shifts with recorded cash movements yet.")
+            return
+        try:
+            data = ShiftBankDepositRecord(
+                shift_id=self.shift_combo.currentData(),
+                bank_name=self.bank_name_input.text(),
+                amount=Decimal(str(self.amount_input.value())),
+            )
+            self._cash_book_service.record_bank_deposit(self._actor_user_id, data)
         except ValidationError as exc:
             self._show_error("; ".join(err["msg"] for err in exc.errors()))
             return
