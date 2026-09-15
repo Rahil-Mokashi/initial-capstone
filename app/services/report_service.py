@@ -19,7 +19,7 @@ service already tracks.
 from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
-from typing import List, Optional
+from typing import FrozenSet, List, Optional
 
 from app.core.constants import (
     AttendanceStatus,
@@ -52,11 +52,25 @@ class TableReport:
     """A generic tabular report - title, column headers, and pre-formatted
     string rows. Shared by every report added for Phase 16 so the UI
     (TableReportWindow) and export layer (report_export.py) only need to
-    be written once, not once per report."""
+    be written once, not once per report.
+
+    money_columns/volume_columns are purely descriptive (2026-09-15
+    presentation pass): the column *index* positions (into headers/each
+    row) that hold a money or a fuel-volume figure, so TableReportWindow
+    can right-align/group/mono-format exactly those cells the same way
+    every other screen's money/volume table columns already are -
+    without this table needing its own type system, and without
+    weakening what's actually exported (report_export.py's PDF/Excel/CSV
+    output reads `rows` exactly as before; these two fields are additive
+    and it doesn't need to know about them). A column left out of both
+    (a count, a composite string like reconciliation's "Variance by
+    Tender", or plain text) renders exactly as it always has."""
 
     title: str
     headers: List[str]
     rows: List[List[str]] = field(default_factory=list)
+    money_columns: FrozenSet[int] = field(default_factory=frozenset)
+    volume_columns: FrozenSet[int] = field(default_factory=frozenset)
 
 
 def _sum_by_type(movements, transaction_type: str) -> Decimal:
@@ -182,7 +196,10 @@ class ReportService:
         total_amount = sum((s.amount for s in sales), Decimal("0"))
         rows.append(["Total", str(len(sales)), f"{total_quantity:.2f}", f"{total_amount:.2f}"])
 
-        return TableReport(title="Sales Report", headers=["Fuel Type", "Sales", "Quantity (L)", "Amount"], rows=rows)
+        return TableReport(
+            title="Sales Report", headers=["Fuel Type", "Sales", "Quantity (L)", "Amount"], rows=rows,
+            volume_columns=frozenset({2}), money_columns=frozenset({3}),
+        )
 
     @require_permission(Permission.SALE_VIEW.value)
     def get_payment_summary_report(self, actor_user_id: str, date_from: Optional[date] = None, date_to: Optional[date] = None) -> TableReport:
@@ -213,6 +230,7 @@ class ReportService:
             title="Payment Summary Report",
             headers=["Method", "Count", "Success", "Pending", "Failed", "Reversed", "Refunded"],
             rows=rows,
+            money_columns=frozenset({2, 3, 4, 5, 6}),
         )
 
     @require_permission(Permission.EXPENSE_VIEW.value)
@@ -239,6 +257,7 @@ class ReportService:
             title="Expense Summary Report",
             headers=["Category", "Count", "Approved", "Pending", "Rejected"],
             rows=rows,
+            money_columns=frozenset({2, 3, 4}),
         )
 
     @require_permission(Permission.RECONCILIATION_VIEW.value)
@@ -299,7 +318,10 @@ class ReportService:
         rows.append(["  Total collected (all fuel types)", "", f"{total_collected:.2f}"])
         rows.append(["  Total outstanding (all fuel types)", "", f"{total_extended - total_collected:.2f}"])
 
-        return TableReport(title="Credit Report by Fuel Type", headers=["Fuel Type", "Credit Sales", "Extended"], rows=rows)
+        return TableReport(
+            title="Credit Report by Fuel Type", headers=["Fuel Type", "Credit Sales", "Extended"], rows=rows,
+            money_columns=frozenset({2}),
+        )
 
     @require_permission(Permission.CREDIT_VIEW.value)
     def get_customer_outstanding_report(self, actor_user_id: str) -> TableReport:
@@ -320,7 +342,10 @@ class ReportService:
             customer_name = account.customer.name if account.customer else ""
             rows.append([customer_name, f"{account.credit_limit:.2f}", f"{outstanding:.2f}"])
 
-        return TableReport(title="Customer Outstanding Report", headers=["Customer", "Credit Limit", "Outstanding"], rows=rows)
+        return TableReport(
+            title="Customer Outstanding Report", headers=["Customer", "Credit Limit", "Outstanding"], rows=rows,
+            money_columns=frozenset({1, 2}),
+        )
 
     # ------------------------------------------------------------------
     # problemstatement.md #25-32: daily, attendant/nozzle, inventory
@@ -435,6 +460,7 @@ class ReportService:
             title="Daily Summary Report",
             headers=["Date", "Sales", "Qty (L)", "Cash", "UPI", "Card", "Credit", "Gross", "Expenses", "Net"],
             rows=rows,
+            volume_columns=frozenset({2}), money_columns=frozenset({3, 4, 5, 6, 7, 8, 9}),
         )
 
     @require_permission(Permission.SALE_VIEW.value)
@@ -505,6 +531,7 @@ class ReportService:
             title="Attendant & Nozzle Report",
             headers=["Attendant", "Nozzle", "Fuel", "Sales", "Quantity (L)", "Amount"],
             rows=rows,
+            volume_columns=frozenset({4}), money_columns=frozenset({5}),
         )
 
     @require_permission(Permission.INVENTORY_VIEW.value)
@@ -552,6 +579,7 @@ class ReportService:
             title="Fuel Movement Report",
             headers=["Tank", "Fuel", "Movements", "Receipts (L)", "Issues (L)", "Adjustments (L)", "Net (L)", "Stock Now (L)"],
             rows=rows,
+            volume_columns=frozenset({3, 4, 5, 6, 7}),
         )
 
     @require_permission(Permission.EXPENSE_VIEW.value)
@@ -625,6 +653,7 @@ class ReportService:
             title="Cash Book",
             headers=["Date", "Received", "Paid Out", "Net", "Running Balance"],
             rows=rows,
+            money_columns=frozenset({1, 2, 3, 4}),
         )
 
     @require_permission(Permission.ATTENDANCE_VIEW.value)

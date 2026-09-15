@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
 
 from app.services.report_export import build_table_report_html, export_table_csv, export_table_excel, export_table_pdf
 from app.ui.print_utils import show_print_preview
-from app.ui.qt_utils import describe_unexpected_error
+from app.ui.qt_utils import describe_unexpected_error, money_table_item, volume_table_item
 from app.ui.widgets import GridBackgroundWidget
 
 
@@ -195,10 +195,18 @@ class TableReportWindow(QWidget):
         self.setWindowTitle(report.title)
         self.table.setColumnCount(len(report.headers))
         self.table.setHorizontalHeaderLabels(report.headers)
+        money_columns = getattr(report, "money_columns", frozenset())
+        volume_columns = getattr(report, "volume_columns", frozenset())
         self.table.setRowCount(len(report.rows))
         for row_index, row in enumerate(report.rows):
             for column_index, value in enumerate(row):
-                self.table.setItem(row_index, column_index, QTableWidgetItem(str(value)))
+                if column_index in money_columns:
+                    item = money_table_item(value)
+                elif column_index in volume_columns:
+                    item = volume_table_item(value)
+                else:
+                    item = QTableWidgetItem(str(value))
+                self.table.setItem(row_index, column_index, item)
         self.table.resizeColumnsToContents()
         self.table.horizontalHeader().setStretchLastSection(True)
 
