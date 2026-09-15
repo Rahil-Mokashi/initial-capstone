@@ -14,19 +14,27 @@ from app.models.role import Role
 from app.models.shift import Shift
 from app.models.user import User
 from app.repositories.audit_log_repository import AuditLogRepository
+from app.repositories.employee_cash_shortage_repository import EmployeeCashShortageRepository
+from app.repositories.employee_document_repository import EmployeeDocumentRepository
 from app.repositories.employee_repository import EmployeeRepository
-from app.repositories.expense_repository import ExpenseRepository
+from app.repositories.employee_shortage_recovery_repository import EmployeeShortageRecoveryRepository
+from app.repositories.expense_repository import ExpenseCategoryRepository, ExpenseRepository
 from app.repositories.nozzle_assignment_repository import NozzleAssignmentRepository
 from app.repositories.nozzle_repository import NozzleRepository
+from app.repositories.role_repository import RoleRepository
 from app.repositories.sale_repository import SaleRepository
 from app.repositories.shift_bank_deposit_repository import ShiftBankDepositRepository
 from app.repositories.shift_cash_book_repository import ShiftCashBookRepository
+from app.repositories.shift_reconciliation_line_repository import ShiftReconciliationLineRepository
 from app.repositories.shift_reconciliation_repository import ShiftReconciliationRepository
 from app.repositories.shift_repository import ShiftRepository
 from app.repositories.tender_repository import TenderRepository
 from app.repositories.user_repository import UserRepository
 from app.repositories.user_session_repository import UserSessionRepository
 from app.services.auth_service import AuthService
+from app.services.employee_service import EmployeeService
+from app.services.employee_shortage_service import EmployeeShortageService
+from app.services.expense_service import ExpenseService
 from app.services.reconciliation_service import ReconciliationService
 from app.services.shift_cash_book_service import ShiftCashBookService
 from app.services.shift_service import ShiftService
@@ -109,6 +117,41 @@ def reconciliation_service(db_session, auth_service):
         ShiftReconciliationRepository(db_session), ShiftRepository(db_session),
         SaleRepository(db_session), ExpenseRepository(db_session), audit_repo, auth_service,
         TenderRepository(db_session),
+    )
+
+
+@pytest.fixture()
+def expense_service(db_session, auth_service):
+    audit_repo = AuditLogRepository(db_session)
+    return ExpenseService(
+        ExpenseRepository(db_session), ExpenseCategoryRepository(db_session),
+        EmployeeRepository(db_session), ShiftRepository(db_session), audit_repo, auth_service,
+        tender_repo=TenderRepository(db_session),
+    )
+
+
+@pytest.fixture()
+def employee_service(db_session, auth_service):
+    audit_repo = AuditLogRepository(db_session)
+    return EmployeeService(
+        EmployeeRepository(db_session), EmployeeDocumentRepository(db_session),
+        UserRepository(db_session), RoleRepository(db_session), audit_repo, auth_service,
+    )
+
+
+@pytest.fixture()
+def employee_shortage_service(db_session, auth_service, expense_service):
+    audit_repo = AuditLogRepository(db_session)
+    return EmployeeShortageService(
+        EmployeeCashShortageRepository(db_session),
+        EmployeeShortageRecoveryRepository(db_session),
+        ShiftReconciliationLineRepository(db_session),
+        EmployeeRepository(db_session),
+        ExpenseCategoryRepository(db_session),
+        expense_service,
+        audit_repo,
+        auth_service,
+        ShiftCashBookRepository(db_session),
     )
 
 
@@ -196,6 +239,7 @@ def cash_book_service(db_session, auth_service):
         audit_repo,
         auth_service,
         ShiftBankDepositRepository(db_session),
+        shortage_recovery_repo=EmployeeShortageRecoveryRepository(db_session),
     )
 
 
@@ -283,3 +327,158 @@ def test_cash_book_tab_table_shows_derived_opening_and_closing_balances(
     assert table.item(0, 1).text() == "0.00"  # opening balance
     assert table.item(0, 4).text() == "1000.00"  # bank deposits
     assert table.item(0, 5).text() == "700.00"  # closing cash-in-hand
+
+
+def make_cash_shortage_line(reconciliation_service, admin_id, open_shift_id, db_session, shortfall=Decimal("100")):
+    """Mirrors test_reconciliation_form_builds_one_input_per_tender_with_
+    activity's direct-row approach above (no sale_service wired into
+    this UI test file) - inserts a real Sale against the Cash tender,
+    then reconciles with less declared than expected, producing a
+    genuine, unbooked cash-shortage line."""
+    from app.models.dispenser import Dispenser
+    from app.models.employee import Employee
+    from app.models.fuel import Fuel
+    from app.models.nozzle import Nozzle
+    from app.models.sale import Sale
+    from app.models.tender import Tender
+    from app.schemas.shift_reconciliation import ShiftReconciliationPerform
+
+    fuel = Fuel(fuel_type="Petrol", rate_per_liter=Decimal("100.00"))
+    dispenser = Dispenser(code="D1")
+    employee = Employee(
+        employee_code="EMP-0001", first_name="Ravi", last_name="Kumar",
+        contact_number="9876543210", joining_date=date(2026, 1, 1),
+    )
+    db_session.add_all([fuel, dispenser, employee])
+    db_session.commit()
+    nozzle = Nozzle(code="N1", dispenser_id=dispenser.id, fuel_id=fuel.id, status="active")
+    db_session.add(nozzle)
+    db_session.commit()
+
+    cash_tender = db_session.query(Tender).filter_by(name="Cash").first()
+    sale = Sale(
+        receipt_number="RCPT-SHORTAGE-1", shift_id=open_shift_id, nozzle_id=nozzle.id, fuel_id=fuel.id,
+        employee_id=employee.id, quantity=Decimal("10"), rate_per_liter=Decimal("100.00"),
+        amount=Decimal("1000.00"), payment_method="cash", tender_id=cash_tender.id,
+        status="completed", recorded_by_id=admin_id,
+    )
+    db_session.add(sale)
+    db_session.commit()
+
+    reconciliation = reconciliation_service.perform_shift_reconciliation(
+        admin_id,
+        ShiftReconciliationPerform(shift_id=open_shift_id, declared_amounts={cash_tender.id: sale.amount - shortfall}),
+    )
+    line = next(l for l in reconciliation.lines if l.tender_id == cash_tender.id)
+    return line, employee
+
+
+def test_reconciliation_window_renders_shortages_tab_when_service_attached(
+    qapp, reconciliation_service, shift_service, auth_service, employee_shortage_service, employee_service, admin_id,
+):
+    from app.ui.reconciliation_window import ReconciliationWindow
+
+    window = ReconciliationWindow(
+        reconciliation_service, shift_service, auth_service, admin_id,
+        employee_shortage_service=employee_shortage_service, employee_service=employee_service,
+    )
+    assert window.shortages_tab.add_shortage_button.isHidden() is False
+    assert window.shortages_tab.add_recovery_button.isHidden() is False
+
+
+def test_record_shortage_dialog_records_a_shortage_through_the_real_dialog(
+    qapp, reconciliation_service, employee_shortage_service, employee_service, admin_id, open_shift_id, db_session,
+):
+    """Same end-to-end standard as the cash-book dialog tests above: a
+    shortage recorded through the real dialog must reach the database -
+    including the Expense it books automatically - not just be accepted
+    when the service is called directly."""
+    from PySide6.QtWidgets import QDialog
+
+    from app.ui.reconciliation_window import RecordShortageDialog
+
+    line, employee = make_cash_shortage_line(reconciliation_service, admin_id, open_shift_id, db_session)
+
+    dialog = RecordShortageDialog(employee_shortage_service, employee_service, admin_id)
+    assert dialog.line_combo.count() == 1
+    assert dialog.line_combo.currentData() == line.id
+    index = dialog.employee_combo.findData(employee.id)
+    assert index != -1
+    dialog.employee_combo.setCurrentIndex(index)
+    dialog._save()
+
+    assert dialog.result() == QDialog.Accepted
+    shortages = employee_shortage_service.list_all(admin_id)
+    assert len(shortages) == 1
+    assert shortages[0].amount == Decimal("100.00")
+    assert shortages[0].employee_id == employee.id
+    assert shortages[0].expense.amount == Decimal("100.00")
+
+
+def test_record_recovery_dialog_records_a_recovery_through_the_real_dialog(
+    qapp, reconciliation_service, shift_service, employee_shortage_service, employee_service, cash_book_service,
+    admin_id, open_shift_id, db_session,
+):
+    from PySide6.QtWidgets import QDialog
+
+    from app.schemas.employee_cash_shortage import EmployeeCashShortageRecord
+    from app.schemas.shift_cash_book import ShiftCashBookRecord
+    from app.ui.reconciliation_window import RecordRecoveryDialog
+
+    line, employee = make_cash_shortage_line(reconciliation_service, admin_id, open_shift_id, db_session)
+    shortage = employee_shortage_service.record_shortage(
+        admin_id, EmployeeCashShortageRecord(shift_reconciliation_line_id=line.id, employee_id=employee.id),
+    )
+    # A recovery is a real cash receipt - it needs somewhere to land,
+    # the same requirement a bank deposit has (record advance/final
+    # first).
+    cash_book_service.record_shift_cash_movements(
+        admin_id, ShiftCashBookRecord(shift_id=open_shift_id, advance_amount=Decimal("0"), final_amount=Decimal("0")),
+    )
+
+    dialog = RecordRecoveryDialog(employee_shortage_service, shift_service, admin_id)
+    assert dialog.shortage_combo.count() == 1
+    dialog.amount_input.setValue(60.00)
+    dialog._save()
+
+    assert dialog.result() == QDialog.Accepted
+    assert employee_shortage_service.get_outstanding_balance(admin_id, shortage.id) == Decimal("40.00")
+    # And it must actually reach the shift's cash book, not just reduce
+    # the receivable - see PROJECT_CONTEXT.md's cash-book-on-recovery
+    # note (the pump's own paper report shows this on the RECEIPT side).
+    summary = cash_book_service.get_cash_book_summary(admin_id, open_shift_id)
+    assert summary.shortage_recoveries_total == Decimal("60.00")
+
+
+def test_shortages_tab_table_shows_amount_recovered_and_outstanding(
+    qapp, reconciliation_service, shift_service, auth_service, employee_shortage_service, employee_service,
+    cash_book_service, admin_id, open_shift_id, db_session,
+):
+    from app.schemas.employee_cash_shortage import EmployeeCashShortageRecord, EmployeeShortageRecoveryRecord
+    from app.schemas.shift_cash_book import ShiftCashBookRecord
+    from app.ui.reconciliation_window import ReconciliationWindow
+
+    line, employee = make_cash_shortage_line(reconciliation_service, admin_id, open_shift_id, db_session)
+    shortage = employee_shortage_service.record_shortage(
+        admin_id, EmployeeCashShortageRecord(shift_reconciliation_line_id=line.id, employee_id=employee.id),
+    )
+    cash_book_service.record_shift_cash_movements(
+        admin_id, ShiftCashBookRecord(shift_id=open_shift_id, advance_amount=Decimal("0"), final_amount=Decimal("0")),
+    )
+    employee_shortage_service.record_recovery(
+        admin_id,
+        EmployeeShortageRecoveryRecord(
+            employee_cash_shortage_id=shortage.id, shift_id=open_shift_id, amount=Decimal("60"),
+        ),
+    )
+
+    window = ReconciliationWindow(
+        reconciliation_service, shift_service, auth_service, admin_id,
+        employee_shortage_service=employee_shortage_service, employee_service=employee_service,
+    )
+    table = window.shortages_tab.table
+    assert table.rowCount() == 1
+    assert table.item(0, 3).text() == "100.00"  # amount
+    assert table.item(0, 4).text() == "60.00"  # recovered
+    assert table.item(0, 5).text() == "40.00"  # outstanding
+    assert table.item(0, 6).text() == "Outstanding"

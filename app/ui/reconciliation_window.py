@@ -32,6 +32,7 @@ from PySide6.QtWidgets import (
 
 from app.core.constants import Permission
 from app.core.exceptions import AppError
+from app.schemas.employee_cash_shortage import EmployeeCashShortageRecord, EmployeeShortageRecoveryRecord
 from app.schemas.shift_cash_book import ShiftBankDepositRecord, ShiftCashBookRecord
 from app.schemas.shift_reconciliation import ShiftReconciliationPerform
 from app.ui.qt_utils import describe_unexpected_error
@@ -47,10 +48,20 @@ CASH_BOOK_HEADERS = [
     "Closing Cash-in-Hand",
     "Recorded By",
 ]
+SHORTAGE_HEADERS = ["Employee", "Shift", "Tender", "Amount", "Recovered", "Outstanding", "Status"]
 
 
 class ReconciliationWindow(QWidget):
-    def __init__(self, reconciliation_service, shift_service, auth_service, actor_user_id: str, cash_book_service=None):
+    def __init__(
+        self,
+        reconciliation_service,
+        shift_service,
+        auth_service,
+        actor_user_id: str,
+        cash_book_service=None,
+        employee_shortage_service=None,
+        employee_service=None,
+    ):
         super().__init__()
         self.setWindowTitle("Shift Reconciliation")
         self.setMinimumSize(880, 700)
@@ -78,6 +89,17 @@ class ReconciliationWindow(QWidget):
             self.cash_book_tab = CashBookTab(cash_book_service, shift_service, auth_service, actor_user_id, can_manage)
             layout.addWidget(cash_book_title)
             layout.addWidget(self.cash_book_tab)
+
+        # Optional, same reasoning as cash_book_service above.
+        if employee_shortage_service is not None:
+            can_manage_shortages = auth_service.check_permission(actor_user_id, Permission.SHORTAGE_MANAGE.value)
+            shortages_title = QLabel("Employee Cash Shortages")
+            shortages_title.setObjectName("sectionTitle")
+            self.shortages_tab = EmployeeShortagesTab(
+                employee_shortage_service, employee_service, shift_service, actor_user_id, can_manage_shortages,
+            )
+            layout.addWidget(shortages_title)
+            layout.addWidget(self.shortages_tab)
 
         container = GridBackgroundWidget()
         container.setObjectName("background")
@@ -504,6 +526,271 @@ class BankDepositFormDialog(QDialog):
                 amount=Decimal(str(self.amount_input.value())),
             )
             self._cash_book_service.record_bank_deposit(self._actor_user_id, data)
+        except ValidationError as exc:
+            self._show_error("; ".join(err["msg"] for err in exc.errors()))
+            return
+        except AppError as exc:
+            self._show_error(str(exc))
+            return
+        except Exception as exc:  # noqa: BLE001
+            self._show_error(describe_unexpected_error(exc))
+            return
+
+        self.accept()
+
+    def _show_error(self, message: str) -> None:
+        self.error_label.setText(message)
+        self.error_label.show()
+
+
+class EmployeeShortagesTab(QWidget):
+    """A cash shortage found at reconciliation, and its recovery
+    (PROJECT_CONTEXT.md Step 5, A2). Booking a shortage names which
+    employee is responsible - a human judgement call, not something
+    this screen derives on its own - and books the Expense side of it
+    automatically (EmployeeShortageService.record_shortage). Outstanding
+    is always recomputed from the shortage's own recoveries, never
+    stored (see EmployeeCashShortage's docstring)."""
+
+    def __init__(self, employee_shortage_service, employee_service, shift_service, actor_user_id: str, can_manage: bool):
+        super().__init__()
+        self._employee_shortage_service = employee_shortage_service
+        self._employee_service = employee_service
+        self._shift_service = shift_service
+        self._actor_user_id = actor_user_id
+
+        self.add_shortage_button = QPushButton("+ Record Shortage")
+        self.add_shortage_button.setCursor(Qt.PointingHandCursor)
+        self.add_shortage_button.clicked.connect(self._open_shortage_dialog)
+        self.add_shortage_button.setVisible(can_manage)
+
+        self.add_recovery_button = QPushButton("+ Record Recovery")
+        self.add_recovery_button.setCursor(Qt.PointingHandCursor)
+        self.add_recovery_button.clicked.connect(self._open_recovery_dialog)
+        self.add_recovery_button.setVisible(can_manage)
+
+        top_row = QHBoxLayout()
+        top_row.addStretch()
+        top_row.addWidget(self.add_recovery_button)
+        top_row.addWidget(self.add_shortage_button)
+
+        self.table = QTableWidget(0, len(SHORTAGE_HEADERS))
+        self.table.setAlternatingRowColors(True)
+        self.table.setHorizontalHeaderLabels(SHORTAGE_HEADERS)
+        self.table.setEditTriggers(QTableWidget.NoEditTriggers)
+        self.table.setSelectionBehavior(QTableWidget.SelectRows)
+        self.table.verticalHeader().setVisible(False)
+        self.table.horizontalHeader().setStretchLastSection(True)
+
+        layout = QVBoxLayout()
+        layout.setSpacing(12)
+        layout.addLayout(top_row)
+        layout.addWidget(self.table)
+        self.setLayout(layout)
+
+        self.refresh()
+
+    def refresh(self) -> None:
+        shortages = self._employee_shortage_service.list_all(self._actor_user_id)
+        self.table.setRowCount(len(shortages))
+        for row_index, shortage in enumerate(shortages):
+            employee = shortage.employee
+            employee_label = f"{employee.first_name} {employee.last_name}" if employee else ""
+            line = shortage.shift_reconciliation_line
+            shift = line.shift_reconciliation.shift if line and line.shift_reconciliation else None
+            shift_label = f"{shift.shift_date} {shift.shift_label}" if shift else ""
+            tender_label = line.tender.name if line and line.tender else ""
+            outstanding = self._employee_shortage_service.get_outstanding_balance(self._actor_user_id, shortage.id)
+            recovered = shortage.amount - outstanding
+            status = "Recovered" if outstanding <= 0 else "Outstanding"
+
+            self.table.setItem(row_index, 0, QTableWidgetItem(employee_label))
+            self.table.setItem(row_index, 1, QTableWidgetItem(shift_label))
+            self.table.setItem(row_index, 2, QTableWidgetItem(tender_label))
+            self.table.setItem(row_index, 3, QTableWidgetItem(f"{shortage.amount:.2f}"))
+            self.table.setItem(row_index, 4, QTableWidgetItem(f"{recovered:.2f}"))
+            self.table.setItem(row_index, 5, QTableWidgetItem(f"{outstanding:.2f}"))
+            self.table.setItem(row_index, 6, QTableWidgetItem(status))
+        self.table.resizeColumnsToContents()
+        self.table.horizontalHeader().setStretchLastSection(True)
+
+    def _open_shortage_dialog(self) -> None:
+        dialog = RecordShortageDialog(
+            self._employee_shortage_service, self._employee_service, self._actor_user_id, self,
+        )
+        if dialog.exec() == QDialog.Accepted:
+            self.refresh()
+
+    def _open_recovery_dialog(self) -> None:
+        dialog = RecordRecoveryDialog(
+            self._employee_shortage_service, self._shift_service, self._actor_user_id, self,
+        )
+        if dialog.exec() == QDialog.Accepted:
+            self.refresh()
+
+
+class RecordShortageDialog(QDialog):
+    def __init__(self, employee_shortage_service, employee_service, actor_user_id: str, parent=None):
+        super().__init__(parent)
+        self._employee_shortage_service = employee_shortage_service
+        self._actor_user_id = actor_user_id
+
+        self.setWindowTitle("Record Cash Shortage")
+        self.setMinimumWidth(440)
+
+        self.line_combo = QComboBox()
+        for line in employee_shortage_service.list_unbooked_shortage_lines(actor_user_id):
+            shift = line.shift_reconciliation.shift if line.shift_reconciliation else None
+            shift_label = f"{shift.shift_date} {shift.shift_label}" if shift else line.shift_reconciliation_id
+            tender_name = line.tender.name if line.tender else ""
+            label = f"{shift_label} - {tender_name} short {abs(line.variance):.2f}"
+            self.line_combo.addItem(label, line.id)
+
+        self.employee_combo = QComboBox()
+        for employee in employee_service.list_employees(actor_user_id):
+            self.employee_combo.addItem(f"{employee.employee_code} - {employee.first_name} {employee.last_name}", employee.id)
+
+        self.notes_input = QLineEdit()
+        self.notes_input.setPlaceholderText("Optional notes")
+
+        form = QFormLayout()
+        form.addRow("Reconciliation line", self.line_combo)
+        form.addRow("Responsible employee", self.employee_combo)
+        form.addRow("Notes", self.notes_input)
+
+        self.error_label = QLabel("")
+        self.error_label.setObjectName("errorLabel")
+        self.error_label.setWordWrap(True)
+        self.error_label.hide()
+
+        save_button = QPushButton("Record")
+        save_button.clicked.connect(self._save)
+        cancel_button = QPushButton("Cancel")
+        cancel_button.setObjectName("secondaryButton")
+        cancel_button.clicked.connect(self.reject)
+
+        button_row = QHBoxLayout()
+        button_row.addStretch()
+        button_row.addWidget(cancel_button)
+        button_row.addWidget(save_button)
+
+        layout = QVBoxLayout()
+        layout.addLayout(form)
+        layout.addWidget(self.error_label)
+        layout.addLayout(button_row)
+        self.setLayout(layout)
+
+    def _save(self) -> None:
+        self.error_label.hide()
+        if self.line_combo.count() == 0:
+            self._show_error("No unbooked cash shortages to record.")
+            return
+        if self.employee_combo.count() == 0:
+            self._show_error("No employees available.")
+            return
+        try:
+            data = EmployeeCashShortageRecord(
+                shift_reconciliation_line_id=self.line_combo.currentData(),
+                employee_id=self.employee_combo.currentData(),
+                notes=self.notes_input.text().strip() or None,
+            )
+            self._employee_shortage_service.record_shortage(self._actor_user_id, data)
+        except ValidationError as exc:
+            self._show_error("; ".join(err["msg"] for err in exc.errors()))
+            return
+        except AppError as exc:
+            self._show_error(str(exc))
+            return
+        except Exception as exc:  # noqa: BLE001
+            self._show_error(describe_unexpected_error(exc))
+            return
+
+        self.accept()
+
+    def _show_error(self, message: str) -> None:
+        self.error_label.setText(message)
+        self.error_label.show()
+
+
+class RecordRecoveryDialog(QDialog):
+    def __init__(self, employee_shortage_service, shift_service, actor_user_id: str, parent=None):
+        super().__init__(parent)
+        self._employee_shortage_service = employee_shortage_service
+        self._actor_user_id = actor_user_id
+
+        self.setWindowTitle("Record Shortage Recovery")
+        self.setMinimumWidth(400)
+
+        self.shortage_combo = QComboBox()
+        for shortage in employee_shortage_service.list_all(actor_user_id):
+            outstanding = employee_shortage_service.get_outstanding_balance(actor_user_id, shortage.id)
+            if outstanding <= 0:
+                continue
+            employee = shortage.employee
+            employee_label = f"{employee.first_name} {employee.last_name}" if employee else shortage.employee_id
+            label = f"{employee_label} - outstanding {outstanding:.2f}"
+            self.shortage_combo.addItem(label, shortage.id)
+
+        # Which shift's cash book physically receives this repayment -
+        # not necessarily the shift the shortage was found in (see
+        # EmployeeShortageRecovery's own docstring). That shift must
+        # already have its cash book recorded (Advance/Final), the same
+        # requirement a bank deposit has.
+        self.shift_combo = QComboBox()
+        for shift in shift_service.list_shifts(actor_user_id):
+            self.shift_combo.addItem(f"{shift.shift_date} {shift.shift_label} ({shift.status})", shift.id)
+
+        self.amount_input = QDoubleSpinBox()
+        self.amount_input.setRange(0, 10_000_000)
+        self.amount_input.setDecimals(2)
+
+        self.notes_input = QLineEdit()
+        self.notes_input.setPlaceholderText("Optional notes")
+
+        form = QFormLayout()
+        form.addRow("Shortage", self.shortage_combo)
+        form.addRow("Repaid into shift", self.shift_combo)
+        form.addRow("Amount recovered", self.amount_input)
+        form.addRow("Notes", self.notes_input)
+
+        self.error_label = QLabel("")
+        self.error_label.setObjectName("errorLabel")
+        self.error_label.setWordWrap(True)
+        self.error_label.hide()
+
+        save_button = QPushButton("Record")
+        save_button.clicked.connect(self._save)
+        cancel_button = QPushButton("Cancel")
+        cancel_button.setObjectName("secondaryButton")
+        cancel_button.clicked.connect(self.reject)
+
+        button_row = QHBoxLayout()
+        button_row.addStretch()
+        button_row.addWidget(cancel_button)
+        button_row.addWidget(save_button)
+
+        layout = QVBoxLayout()
+        layout.addLayout(form)
+        layout.addWidget(self.error_label)
+        layout.addLayout(button_row)
+        self.setLayout(layout)
+
+    def _save(self) -> None:
+        self.error_label.hide()
+        if self.shortage_combo.count() == 0:
+            self._show_error("No outstanding shortages to record a recovery against.")
+            return
+        if self.shift_combo.count() == 0:
+            self._show_error("No shifts available.")
+            return
+        try:
+            data = EmployeeShortageRecoveryRecord(
+                employee_cash_shortage_id=self.shortage_combo.currentData(),
+                shift_id=self.shift_combo.currentData(),
+                amount=Decimal(str(self.amount_input.value())),
+                notes=self.notes_input.text().strip() or None,
+            )
+            self._employee_shortage_service.record_recovery(self._actor_user_id, data)
         except ValidationError as exc:
             self._show_error("; ".join(err["msg"] for err in exc.errors()))
             return

@@ -86,6 +86,15 @@ class ExpenseService:
         with unit_of_work(self._session):
             return self._create_expense_impl(actor_user_id, data)
 
+    def create_expense_as_related_action(self, actor_user_id: str, data: ExpenseCreate) -> Expense:
+        """For other services (EmployeeShortageService booking a
+        reconciliation shortage's Expense side) recording an expense as
+        a natural step of an action they've already authorized under
+        their own permission - see TankService.
+        record_transaction_as_related_action for the same reasoning."""
+        with unit_of_work(self._session):
+            return self._create_expense_impl(actor_user_id, data)
+
     def _create_expense_impl(self, actor_user_id: str, data: ExpenseCreate) -> Expense:
         category = self._category_repo.get_by_id(data.category_id)
         if not category:
