@@ -32,18 +32,20 @@ from PySide6.QtWidgets import (
 
 from app.core.constants import Permission
 from app.core.exceptions import AppError
+from app.schemas.shift_cash_book import ShiftCashBookRecord
 from app.schemas.shift_reconciliation import ShiftReconciliationPerform
 from app.ui.qt_utils import describe_unexpected_error
 from app.ui.widgets import GridBackgroundWidget
 
 RECONCILIATION_HEADERS = ["Shift", "Variance by Tender", "Classification", "Status"]
+CASH_BOOK_HEADERS = ["Shift", "Advance", "Final", "Recorded By"]
 
 
 class ReconciliationWindow(QWidget):
-    def __init__(self, reconciliation_service, shift_service, auth_service, actor_user_id: str):
+    def __init__(self, reconciliation_service, shift_service, auth_service, actor_user_id: str, cash_book_service=None):
         super().__init__()
         self.setWindowTitle("Shift Reconciliation")
-        self.setMinimumSize(880, 600)
+        self.setMinimumSize(880, 700)
 
         title = QLabel("Shift Reconciliation")
         title.setObjectName("title")
@@ -59,6 +61,15 @@ class ReconciliationWindow(QWidget):
         layout.setSpacing(16)
         layout.addWidget(title)
         layout.addWidget(self.reconciliations_tab)
+
+        # Optional: main_window.py always wires this, but a test or an
+        # older caller can still build a reconciliation-only screen.
+        if cash_book_service is not None:
+            cash_book_title = QLabel("Shift Cash Custody (Advance / Final)")
+            cash_book_title.setObjectName("sectionTitle")
+            self.cash_book_tab = CashBookTab(cash_book_service, shift_service, auth_service, actor_user_id, can_manage)
+            layout.addWidget(cash_book_title)
+            layout.addWidget(self.cash_book_tab)
 
         container = GridBackgroundWidget()
         container.setObjectName("background")
@@ -247,6 +258,139 @@ class ReconciliationFormDialog(QDialog):
                 remarks=self.remarks_input.text().strip() or None,
             )
             self._reconciliation_service.perform_shift_reconciliation(self._actor_user_id, data)
+        except ValidationError as exc:
+            self._show_error("; ".join(err["msg"] for err in exc.errors()))
+            return
+        except AppError as exc:
+            self._show_error(str(exc))
+            return
+        except Exception as exc:  # noqa: BLE001
+            self._show_error(describe_unexpected_error(exc))
+            return
+
+        self.accept()
+
+    def _show_error(self, message: str) -> None:
+        self.error_label.setText(message)
+        self.error_label.show()
+
+
+class CashBookTab(QWidget):
+    """Records Advance/Final custody transfers per shift (PROJECT_CONTEXT.md
+    Step 3, A1). Opening balance / bank deposits / derived closing
+    cash-in-hand are Step 4 - this only records the two figures Step 4
+    builds the rest of the cash book on top of."""
+
+    def __init__(self, cash_book_service, shift_service, auth_service, actor_user_id: str, can_manage: bool):
+        super().__init__()
+        self._cash_book_service = cash_book_service
+        self._shift_service = shift_service
+        self._actor_user_id = actor_user_id
+
+        self.add_button = QPushButton("+ Record Cash Movements")
+        self.add_button.setCursor(Qt.PointingHandCursor)
+        self.add_button.clicked.connect(self._open_add_dialog)
+        self.add_button.setVisible(can_manage)
+
+        top_row = QHBoxLayout()
+        top_row.addStretch()
+        top_row.addWidget(self.add_button)
+
+        self.table = QTableWidget(0, len(CASH_BOOK_HEADERS))
+        self.table.setAlternatingRowColors(True)
+        self.table.setHorizontalHeaderLabels(CASH_BOOK_HEADERS)
+        self.table.setEditTriggers(QTableWidget.NoEditTriggers)
+        self.table.setSelectionBehavior(QTableWidget.SelectRows)
+        self.table.verticalHeader().setVisible(False)
+        self.table.horizontalHeader().setStretchLastSection(True)
+
+        layout = QVBoxLayout()
+        layout.setSpacing(12)
+        layout.addLayout(top_row)
+        layout.addWidget(self.table)
+        self.setLayout(layout)
+
+        self.refresh()
+
+    def refresh(self) -> None:
+        cash_books = self._cash_book_service.list_all(self._actor_user_id)
+        self.table.setRowCount(len(cash_books))
+        for row_index, cb in enumerate(cash_books):
+            shift_label = f"{cb.shift.shift_date} {cb.shift.shift_label}" if cb.shift else ""
+            recorded_by = cb.recorded_by.username if cb.recorded_by else ""
+            self.table.setItem(row_index, 0, QTableWidgetItem(shift_label))
+            self.table.setItem(row_index, 1, QTableWidgetItem(f"{cb.advance_amount:.2f}"))
+            self.table.setItem(row_index, 2, QTableWidgetItem(f"{cb.final_amount:.2f}"))
+            self.table.setItem(row_index, 3, QTableWidgetItem(recorded_by))
+        self.table.resizeColumnsToContents()
+        self.table.horizontalHeader().setStretchLastSection(True)
+
+    def _open_add_dialog(self) -> None:
+        dialog = CashBookFormDialog(self._cash_book_service, self._shift_service, self._actor_user_id, self)
+        if dialog.exec() == QDialog.Accepted:
+            self.refresh()
+
+
+class CashBookFormDialog(QDialog):
+    def __init__(self, cash_book_service, shift_service, actor_user_id: str, parent=None):
+        super().__init__(parent)
+        self._cash_book_service = cash_book_service
+        self._actor_user_id = actor_user_id
+
+        self.setWindowTitle("Record Shift Cash Movements")
+        self.setMinimumWidth(400)
+
+        self.shift_combo = QComboBox()
+        for shift in shift_service.list_shifts(actor_user_id):
+            self.shift_combo.addItem(f"{shift.shift_date} {shift.shift_label} ({shift.status})", shift.id)
+
+        self.advance_input = QDoubleSpinBox()
+        self.advance_input.setRange(0, 10_000_000)
+        self.advance_input.setDecimals(2)
+
+        self.final_input = QDoubleSpinBox()
+        self.final_input.setRange(0, 10_000_000)
+        self.final_input.setDecimals(2)
+
+        form = QFormLayout()
+        form.addRow("Shift", self.shift_combo)
+        form.addRow("Advance handed over", self.advance_input)
+        form.addRow("Final handed over", self.final_input)
+
+        self.error_label = QLabel("")
+        self.error_label.setObjectName("errorLabel")
+        self.error_label.setWordWrap(True)
+        self.error_label.hide()
+
+        save_button = QPushButton("Record")
+        save_button.clicked.connect(self._save)
+        cancel_button = QPushButton("Cancel")
+        cancel_button.setObjectName("secondaryButton")
+        cancel_button.clicked.connect(self.reject)
+
+        button_row = QHBoxLayout()
+        button_row.addStretch()
+        button_row.addWidget(cancel_button)
+        button_row.addWidget(save_button)
+
+        layout = QVBoxLayout()
+        layout.addLayout(form)
+        layout.addWidget(self.error_label)
+        layout.addLayout(button_row)
+        self.setLayout(layout)
+
+    def _save(self) -> None:
+        self.error_label.hide()
+        if self.shift_combo.count() == 0:
+            self._show_error("No shifts available.")
+            return
+        try:
+            data = ShiftCashBookRecord(
+                shift_id=self.shift_combo.currentData(),
+                advance_amount=Decimal(str(self.advance_input.value())),
+                final_amount=Decimal(str(self.final_input.value())),
+            )
+            self._cash_book_service.record_shift_cash_movements(self._actor_user_id, data)
         except ValidationError as exc:
             self._show_error("; ".join(err["msg"] for err in exc.errors()))
             return

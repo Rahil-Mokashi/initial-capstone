@@ -48,6 +48,7 @@ from app.repositories.role_repository import RoleRepository
 from app.repositories.fuel_reconciliation_repository import FuelReconciliationRepository
 from app.repositories.sale_repository import SaleRepository
 from app.repositories.shift_repository import ShiftRepository
+from app.repositories.shift_cash_book_repository import ShiftCashBookRepository
 from app.repositories.shift_reconciliation_repository import ShiftReconciliationRepository
 from app.repositories.supplier_invoice_repository import SupplierInvoiceRepository, SupplierPaymentRepository
 from app.repositories.supplier_repository import SupplierRepository
@@ -70,6 +71,7 @@ from app.services.notification_service import NotificationService
 from app.services.nozzle_service import NozzleService
 from app.services.procurement_service import ProcurementService
 from app.services.reconciliation_service import ReconciliationService
+from app.services.shift_cash_book_service import ShiftCashBookService
 from app.services.report_service import ReportService
 from app.services.sale_service import SaleService
 from app.services.shift_service import ShiftService
@@ -1104,7 +1106,8 @@ class MainWindow(QMainWindow):
         self._open_module_page(
             "Reconciliation",
             lambda: ReconciliationWindow(
-                self._reconciliation_service, self._shift_service, self._auth_service, self._user_data["id"]
+                self._reconciliation_service, self._shift_service, self._auth_service, self._user_data["id"],
+                cash_book_service=self._cash_book_service,
             ),
         )
 
@@ -1525,6 +1528,12 @@ class AppController:
             audit_repo,
             self._auth_service,
             tender_repo,
+        )
+        self._cash_book_service = ShiftCashBookService(
+            ShiftCashBookRepository(self._db_session),
+            ShiftRepository(self._db_session),
+            audit_repo,
+            self._auth_service,
         )
         credit_account_repo = CreditAccountRepository(self._db_session)
         customer_payment_repo = CustomerPaymentRepository(self._db_session)

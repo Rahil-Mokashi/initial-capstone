@@ -19,6 +19,7 @@ from app.repositories.expense_repository import ExpenseRepository
 from app.repositories.nozzle_assignment_repository import NozzleAssignmentRepository
 from app.repositories.nozzle_repository import NozzleRepository
 from app.repositories.sale_repository import SaleRepository
+from app.repositories.shift_cash_book_repository import ShiftCashBookRepository
 from app.repositories.shift_reconciliation_repository import ShiftReconciliationRepository
 from app.repositories.shift_repository import ShiftRepository
 from app.repositories.tender_repository import TenderRepository
@@ -26,6 +27,7 @@ from app.repositories.user_repository import UserRepository
 from app.repositories.user_session_repository import UserSessionRepository
 from app.services.auth_service import AuthService
 from app.services.reconciliation_service import ReconciliationService
+from app.services.shift_cash_book_service import ShiftCashBookService
 from app.services.shift_service import ShiftService
 
 
@@ -182,3 +184,44 @@ def test_reconciliation_form_builds_one_input_per_tender_with_activity(
     assert len(reconciliation.lines) == 1
     assert reconciliation.lines[0].tender_id == cash_tender.id
     assert reconciliation.lines[0].variance == Decimal("0.00")
+
+
+@pytest.fixture()
+def cash_book_service(db_session, auth_service):
+    audit_repo = AuditLogRepository(db_session)
+    return ShiftCashBookService(
+        ShiftCashBookRepository(db_session), ShiftRepository(db_session), audit_repo, auth_service,
+    )
+
+
+def test_cash_book_form_records_advance_and_final_through_the_real_dialog(
+    qapp, cash_book_service, shift_service, admin_id, open_shift_id,
+):
+    """End-to-end proof, the same standard set for testing_volume earlier
+    in this session: a value entered through the real dialog must reach
+    the database, not just be accepted when the service is called
+    directly."""
+    from PySide6.QtWidgets import QDialog
+
+    from app.ui.reconciliation_window import CashBookFormDialog
+
+    dialog = CashBookFormDialog(cash_book_service, shift_service, admin_id)
+    dialog.advance_input.setValue(500.00)
+    dialog.final_input.setValue(1200.00)
+    dialog._save()
+
+    assert dialog.result() == QDialog.Accepted
+    cash_book = cash_book_service.get_for_shift(admin_id, open_shift_id)
+    assert cash_book.advance_amount == Decimal("500.00")
+    assert cash_book.final_amount == Decimal("1200.00")
+
+
+def test_reconciliation_window_renders_cash_book_tab_when_service_attached(
+    qapp, reconciliation_service, shift_service, auth_service, cash_book_service, admin_id,
+):
+    from app.ui.reconciliation_window import ReconciliationWindow
+
+    window = ReconciliationWindow(
+        reconciliation_service, shift_service, auth_service, admin_id, cash_book_service=cash_book_service,
+    )
+    assert window.cash_book_tab.add_button.isHidden() is False
