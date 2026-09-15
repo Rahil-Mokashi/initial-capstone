@@ -324,9 +324,9 @@ def test_cash_book_tab_table_shows_derived_opening_and_closing_balances(
     )
     table = window.cash_book_tab.table
     assert table.rowCount() == 1
-    assert table.item(0, 1).text() == "0.00"  # opening balance
-    assert table.item(0, 4).text() == "1000.00"  # bank deposits
-    assert table.item(0, 5).text() == "700.00"  # closing cash-in-hand
+    assert table.item(0, 1).text() == " 0.00"  # opening balance
+    assert table.item(0, 4).text() == " 1,000.00"  # bank deposits
+    assert table.item(0, 5).text() == " 700.00"  # closing cash-in-hand
 
 
 def make_cash_shortage_line(reconciliation_service, admin_id, open_shift_id, db_session, shortfall=Decimal("100")):
@@ -478,7 +478,7 @@ def test_shortages_tab_table_shows_amount_recovered_and_outstanding(
     )
     table = window.shortages_tab.table
     assert table.rowCount() == 1
-    assert table.item(0, 3).text() == "100.00"  # amount
-    assert table.item(0, 4).text() == "60.00"  # recovered
-    assert table.item(0, 5).text() == "40.00"  # outstanding
+    assert table.item(0, 3).text() == " 100.00"  # amount
+    assert table.item(0, 4).text() == " 60.00"  # recovered
+    assert table.item(0, 5).text() == " 40.00"  # outstanding
     assert table.item(0, 6).text() == "Outstanding"
