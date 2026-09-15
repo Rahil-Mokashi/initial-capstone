@@ -27,7 +27,14 @@ from PySide6.QtWidgets import (
 from app.core.constants import Permission, TankStatus, TankTransactionType
 from app.core.exceptions import AppError
 from app.schemas.tank import ReconciliationPerform, TankCreate, TankReadingCreate, TankTransactionCreate
-from app.ui.qt_utils import apply_hard_shadow, chain_enter_to_next_field, describe_unexpected_error, make_edit_icon_button, qdate_to_date
+from app.ui.qt_utils import (
+    apply_hard_shadow,
+    chain_enter_to_next_field,
+    describe_unexpected_error,
+    make_edit_icon_button,
+    qdate_to_date,
+    volume_table_item,
+)
 from app.ui.widgets import GridBackgroundWidget, TankGaugeCard, VarianceBarCard
 
 GAUGE_COLUMNS = 3
@@ -185,8 +192,8 @@ class TankListWindow(QWidget):
         for row_index, tank in enumerate(tanks):
             self.table.setItem(row_index, 0, QTableWidgetItem(tank.code))
             self.table.setItem(row_index, 1, QTableWidgetItem(tank.fuel.fuel_type if tank.fuel else ""))
-            self.table.setItem(row_index, 2, QTableWidgetItem(f"{tank.capacity:g}"))
-            self.table.setItem(row_index, 3, QTableWidgetItem(f"{tank.current_stock:g}"))
+            self.table.setItem(row_index, 2, volume_table_item(tank.capacity))
+            self.table.setItem(row_index, 3, volume_table_item(tank.current_stock))
             self.table.setItem(row_index, 4, QTableWidgetItem(tank.status.title()))
             self.table.item(row_index, 0).setData(Qt.UserRole, tank.id)
             self.table.setCellWidget(
@@ -413,7 +420,7 @@ class TankDetailDialog(QDialog):
         for row_index, txn in enumerate(transactions):
             self.transactions_table.setItem(row_index, 0, QTableWidgetItem(txn.transaction_at.strftime("%Y-%m-%d %H:%M")))
             self.transactions_table.setItem(row_index, 1, QTableWidgetItem(txn.transaction_type.title()))
-            self.transactions_table.setItem(row_index, 2, QTableWidgetItem(f"{txn.quantity:+g}"))
+            self.transactions_table.setItem(row_index, 2, volume_table_item(txn.quantity))
             self.transactions_table.setItem(row_index, 3, QTableWidgetItem(txn.reference or ""))
             self.transactions_table.setItem(row_index, 4, QTableWidgetItem(txn.recorded_by.username if txn.recorded_by else ""))
         self.transactions_table.resizeColumnsToContents()
@@ -422,8 +429,11 @@ class TankDetailDialog(QDialog):
         self.readings_table.setRowCount(len(readings))
         for row_index, reading in enumerate(readings):
             self.readings_table.setItem(row_index, 0, QTableWidgetItem(reading.reading_at.strftime("%Y-%m-%d %H:%M")))
-            self.readings_table.setItem(row_index, 1, QTableWidgetItem(f"{reading.physical_stock:g}"))
-            self.readings_table.setItem(row_index, 2, QTableWidgetItem(f"{reading.dip_value:g}" if reading.dip_value is not None else ""))
+            self.readings_table.setItem(row_index, 1, volume_table_item(reading.physical_stock))
+            self.readings_table.setItem(
+                row_index, 2,
+                volume_table_item(reading.dip_value) if reading.dip_value is not None else QTableWidgetItem(""),
+            )
             self.readings_table.setItem(row_index, 3, QTableWidgetItem(f"{reading.employee.first_name} {reading.employee.last_name}" if reading.employee else ""))
         self.readings_table.resizeColumnsToContents()
 
@@ -431,9 +441,9 @@ class TankDetailDialog(QDialog):
         self.reconciliations_table.setRowCount(len(reconciliations))
         for row_index, rec in enumerate(reconciliations):
             self.reconciliations_table.setItem(row_index, 0, QTableWidgetItem(rec.reconciliation_date.isoformat()))
-            self.reconciliations_table.setItem(row_index, 1, QTableWidgetItem(f"{rec.expected_closing_stock:g}"))
-            self.reconciliations_table.setItem(row_index, 2, QTableWidgetItem(f"{rec.physical_stock:g}"))
-            self.reconciliations_table.setItem(row_index, 3, QTableWidgetItem(f"{rec.variance:+g}"))
+            self.reconciliations_table.setItem(row_index, 1, volume_table_item(rec.expected_closing_stock))
+            self.reconciliations_table.setItem(row_index, 2, volume_table_item(rec.physical_stock))
+            self.reconciliations_table.setItem(row_index, 3, volume_table_item(rec.variance))
             self.reconciliations_table.setItem(row_index, 4, QTableWidgetItem(rec.classification.replace("_", " ").title()))
         self.reconciliations_table.resizeColumnsToContents()
 
