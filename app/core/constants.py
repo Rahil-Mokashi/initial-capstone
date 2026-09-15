@@ -208,10 +208,17 @@ class TenderSettlementType(str, Enum):
 
 # The eight tenders docs/daily-report-spec.md's reference report actually
 # shows (section 3), seeded via app/database/seed.py's _seed_tenders the
-# same way DEFAULT_FUEL_TYPES is. "Expenses" and "Other" are classified
-# IMMEDIATE_CASH: neither involves a multi-day bank settlement or a
-# customer's invoiced-credit cycle, so of the three settlement types
-# they're closest to Cash's own timing.
+# same way DEFAULT_FUEL_TYPES is. "Expenses" is classified IMMEDIATE_CASH:
+# it involves neither a multi-day bank settlement nor a customer's
+# invoiced-credit cycle, so of the three settlement types it's closest to
+# Cash's own timing. "Other" is BANK_SETTLED, not IMMEDIATE_CASH -
+# corrected during Step 2 (PROJECT_CONTEXT.md) after a reconciliation-
+# notification test caught the original classification behaving wrongly:
+# "Other" exists specifically as PaymentMethod.UPI's fallback (see
+# PAYMENT_METHOD_TO_TENDER_NAME below), and UPI is a digital payment
+# that settles like a card, not physical cash in a till - a variance on
+# it should read as a payment-mismatch warning, not a critical cash
+# shortage.
 DEFAULT_TENDERS = [
     ("Cash", TenderSettlementType.IMMEDIATE_CASH),
     ("Credit", TenderSettlementType.INVOICED_CREDIT),
@@ -220,7 +227,7 @@ DEFAULT_TENDERS = [
     ("PhonePe", TenderSettlementType.BANK_SETTLED),
     ("Paytm", TenderSettlementType.BANK_SETTLED),
     ("Expenses", TenderSettlementType.IMMEDIATE_CASH),
-    ("Other", TenderSettlementType.IMMEDIATE_CASH),
+    ("Other", TenderSettlementType.BANK_SETTLED),
 ]
 
 # How an existing PaymentMethod value maps onto one of the seeded

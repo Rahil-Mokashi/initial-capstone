@@ -64,6 +64,23 @@ def test_seed_tenders_is_idempotent(db_session):
     assert db_session.query(Tender).count() == 8
 
 
+def test_seed_tenders_corrects_a_drifted_settlement_type(db_session):
+    """Regression test for a real incident, not a hypothetical: "Other"
+    shipped with the wrong settlement_type for one commit (see
+    DEFAULT_TENDERS's own comment in app/core/constants.py) - a database
+    that had already seeded the wrong value must self-correct on the
+    next startup once the code is fixed, not stay wrong forever."""
+    seed_initial_data()
+    other = db_session.query(Tender).filter_by(name="Other").first()
+    other.settlement_type = "immediate_cash"  # simulate the old, wrong seed
+    db_session.commit()
+
+    seed_initial_data()
+
+    db_session.refresh(other)
+    assert other.settlement_type == TenderSettlementType.BANK_SETTLED.value
+
+
 def _make_historical_prereqs(db_session, admin_id):
     """A minimal, valid set of parent rows so a raw Sale/Payment/Expense
     insert satisfies every foreign key - mirroring what a real service

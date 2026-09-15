@@ -39,13 +39,27 @@ def _seed_tenders(session) -> dict:
     report shows exist (Tender, app/models/tender.py) - the same
     "seeded master data, not a hardcoded enum" pattern _seed_fuel_types
     already established for Fuel. Returns name -> Tender for
-    _backfill_tender_ids to use without a second query."""
+    _backfill_tender_ids to use without a second query.
+
+    Also reconciles an existing tender's settlement_type against
+    DEFAULT_TENDERS's current value, rather than only inserting once and
+    leaving it be - the same "recompute rather than let it drift"
+    discipline this project already applies to CreditAccount's
+    outstanding balance and PurchaseOrder.status. This existed for a
+    concrete reason, not hypothetically: "Other"'s settlement_type was
+    wrong for one commit (IMMEDIATE_CASH, corrected to BANK_SETTLED -
+    see DEFAULT_TENDERS's own comment), and without this reconciliation
+    step, a database that had already run the old seed once would have
+    stayed wrong forever even after the code was fixed.
+    """
     existing = {t.name: t for t in session.query(Tender).all()}
     for name, settlement_type in DEFAULT_TENDERS:
         if name not in existing:
             tender = Tender(id=str(uuid.uuid4()), name=name, settlement_type=settlement_type.value)
             session.add(tender)
             existing[name] = tender
+        elif existing[name].settlement_type != settlement_type.value:
+            existing[name].settlement_type = settlement_type.value
     session.flush()
     return existing
 

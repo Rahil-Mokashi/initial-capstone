@@ -37,6 +37,7 @@ from app.repositories.payment_repository import PaymentRepository
 from app.repositories.sale_repository import SaleRepository
 from app.repositories.shift_reconciliation_repository import ShiftReconciliationRepository
 from app.repositories.shift_repository import ShiftRepository
+from app.repositories.tender_repository import TenderRepository
 from app.repositories.tank_reading_repository import TankReadingRepository
 from app.repositories.tank_repository import TankRepository
 from app.repositories.tank_transaction_repository import TankTransactionRepository
@@ -169,13 +170,22 @@ def credit_service(db_session, auth_service):
 
 
 @pytest.fixture()
+def cash_tender_id(db_session, admin_id):
+    return TenderRepository(db_session).get_by_name("Cash").id
+
+
+def get_line(reconciliation, tender_name: str):
+    return next(l for l in reconciliation.lines if l.tender.name == tender_name)
+
+
+@pytest.fixture()
 def sale_service(db_session, tank_service, credit_service, auth_service):
     audit_repo = AuditLogRepository(db_session)
     return SaleService(
         SaleRepository(db_session), ShiftRepository(db_session), NozzleRepository(db_session),
         FuelRepository(db_session), EmployeeRepository(db_session), CustomerRepository(db_session),
         TankRepository(db_session), tank_service, audit_repo, auth_service, PaymentRepository(db_session),
-        credit_service,
+        credit_service, tender_repo=TenderRepository(db_session),
     )
 
 
@@ -185,6 +195,7 @@ def expense_service(db_session, auth_service):
     return ExpenseService(
         ExpenseRepository(db_session), ExpenseCategoryRepository(db_session),
         EmployeeRepository(db_session), ShiftRepository(db_session), audit_repo, auth_service,
+        tender_repo=TenderRepository(db_session),
     )
 
 
@@ -194,6 +205,7 @@ def reconciliation_service(db_session, auth_service):
     return ReconciliationService(
         ShiftReconciliationRepository(db_session), ShiftRepository(db_session),
         SaleRepository(db_session), ExpenseRepository(db_session), audit_repo, auth_service,
+        TenderRepository(db_session),
     )
 
 
@@ -211,35 +223,37 @@ def make_sale(sale_service, admin_id, shift_id, nozzle_id, employee_id, quantity
 def test_reconciliation_with_no_activity_and_no_declared_amounts_is_accepted(reconciliation_service, admin_id, open_shift_id):
     reconciliation = reconciliation_service.perform_shift_reconciliation(
         admin_id,
-        ShiftReconciliationPerform(shift_id=open_shift_id, declared_cash=Decimal("0"), declared_upi=Decimal("0"), declared_card=Decimal("0")),
+        ShiftReconciliationPerform(shift_id=open_shift_id, declared_amounts={}),
     )
     assert reconciliation.status == ReconciliationStatus.ACCEPTED.value
     assert reconciliation.classification == VarianceClassification.NORMAL.value
+    assert reconciliation.lines == []
 
 
-def test_matching_cash_sale_reconciles_cleanly(reconciliation_service, sale_service, admin_id, open_shift_id, nozzle_id, employee_id):
+def test_matching_cash_sale_reconciles_cleanly(reconciliation_service, sale_service, admin_id, open_shift_id, nozzle_id, employee_id, cash_tender_id):
     sale = make_sale(sale_service, admin_id, open_shift_id, nozzle_id, employee_id, quantity=Decimal("10"))
     reconciliation = reconciliation_service.perform_shift_reconciliation(
         admin_id,
-        ShiftReconciliationPerform(shift_id=open_shift_id, declared_cash=sale.amount, declared_upi=Decimal("0"), declared_card=Decimal("0")),
+        ShiftReconciliationPerform(shift_id=open_shift_id, declared_amounts={cash_tender_id: sale.amount}),
     )
-    assert reconciliation.expected_cash == sale.amount
-    assert reconciliation.cash_variance == Decimal("0")
+    line = get_line(reconciliation, "Cash")
+    assert line.expected == sale.amount
+    assert line.variance == Decimal("0")
     assert reconciliation.status == ReconciliationStatus.ACCEPTED.value
 
 
-def test_large_cash_shortfall_requires_approval(reconciliation_service, sale_service, admin_id, open_shift_id, nozzle_id, employee_id):
+def test_large_cash_shortfall_requires_approval(reconciliation_service, sale_service, admin_id, open_shift_id, nozzle_id, employee_id, cash_tender_id):
     make_sale(sale_service, admin_id, open_shift_id, nozzle_id, employee_id, quantity=Decimal("10"))
     reconciliation = reconciliation_service.perform_shift_reconciliation(
         admin_id,
-        ShiftReconciliationPerform(shift_id=open_shift_id, declared_cash=Decimal("800"), declared_upi=Decimal("0"), declared_card=Decimal("0")),
+        ShiftReconciliationPerform(shift_id=open_shift_id, declared_amounts={cash_tender_id: Decimal("800")}),
     )
     assert reconciliation.classification == VarianceClassification.APPROVAL_REQUIRED.value
     assert reconciliation.status == ReconciliationStatus.PENDING_APPROVAL.value
 
 
 def test_approved_cash_expense_reduces_expected_cash(
-    reconciliation_service, sale_service, expense_service, admin_id, open_shift_id, nozzle_id, employee_id
+    reconciliation_service, sale_service, expense_service, admin_id, open_shift_id, nozzle_id, employee_id, cash_tender_id
 ):
     sale = make_sale(sale_service, admin_id, open_shift_id, nozzle_id, employee_id, quantity=Decimal("10"))
     category = expense_service.create_category(admin_id, ExpenseCategoryCreate(name="Cleaning"))
@@ -251,14 +265,15 @@ def test_approved_cash_expense_reduces_expected_cash(
 
     reconciliation = reconciliation_service.perform_shift_reconciliation(
         admin_id,
-        ShiftReconciliationPerform(shift_id=open_shift_id, declared_cash=sale.amount - Decimal("200"), declared_upi=Decimal("0"), declared_card=Decimal("0")),
+        ShiftReconciliationPerform(shift_id=open_shift_id, declared_amounts={cash_tender_id: sale.amount - Decimal("200")}),
     )
-    assert reconciliation.expected_cash == sale.amount - Decimal("200")
-    assert reconciliation.cash_variance == Decimal("0")
+    line = get_line(reconciliation, "Cash")
+    assert line.expected == sale.amount - Decimal("200")
+    assert line.variance == Decimal("0")
 
 
 def test_pending_expense_does_not_affect_expected_cash(
-    reconciliation_service, sale_service, expense_service, admin_id, open_shift_id, nozzle_id, employee_id
+    reconciliation_service, sale_service, expense_service, admin_id, open_shift_id, nozzle_id, employee_id, cash_tender_id
 ):
     sale = make_sale(sale_service, admin_id, open_shift_id, nozzle_id, employee_id, quantity=Decimal("10"))
     category = expense_service.create_category(admin_id, ExpenseCategoryCreate(name="Cleaning"))
@@ -269,20 +284,20 @@ def test_pending_expense_does_not_affect_expected_cash(
 
     reconciliation = reconciliation_service.perform_shift_reconciliation(
         admin_id,
-        ShiftReconciliationPerform(shift_id=open_shift_id, declared_cash=sale.amount, declared_upi=Decimal("0"), declared_card=Decimal("0")),
+        ShiftReconciliationPerform(shift_id=open_shift_id, declared_amounts={cash_tender_id: sale.amount}),
     )
-    assert reconciliation.expected_cash == sale.amount
+    assert get_line(reconciliation, "Cash").expected == sale.amount
 
 
 def test_cannot_reconcile_the_same_shift_twice(reconciliation_service, admin_id, open_shift_id):
     reconciliation_service.perform_shift_reconciliation(
         admin_id,
-        ShiftReconciliationPerform(shift_id=open_shift_id, declared_cash=Decimal("0"), declared_upi=Decimal("0"), declared_card=Decimal("0")),
+        ShiftReconciliationPerform(shift_id=open_shift_id, declared_amounts={}),
     )
     with pytest.raises(ConflictError):
         reconciliation_service.perform_shift_reconciliation(
             admin_id,
-            ShiftReconciliationPerform(shift_id=open_shift_id, declared_cash=Decimal("0"), declared_upi=Decimal("0"), declared_card=Decimal("0")),
+            ShiftReconciliationPerform(shift_id=open_shift_id, declared_amounts={}),
         )
 
 
@@ -290,7 +305,51 @@ def test_reconcile_unknown_shift_raises_not_found(reconciliation_service, admin_
     with pytest.raises(NotFoundError):
         reconciliation_service.perform_shift_reconciliation(
             admin_id,
-            ShiftReconciliationPerform(shift_id="does-not-exist", declared_cash=Decimal("0"), declared_upi=Decimal("0"), declared_card=Decimal("0")),
+            ShiftReconciliationPerform(shift_id="does-not-exist", declared_amounts={}),
+        )
+
+
+def test_multi_tender_reconciliation_classifies_by_the_worst_line(
+    reconciliation_service, sale_service, admin_id, open_shift_id, nozzle_id, employee_id, cash_tender_id, db_session,
+):
+    """The core new capability this step exists for: a shift with both
+    a cash sale and a card sale gets two lines, and classification is
+    the worst of the two - the same "worst wins" rule the old fixed
+    cash/upi/card columns used, now generalized to however many tenders
+    actually had activity."""
+    from app.repositories.tender_repository import TenderRepository
+
+    card_tender_id = TenderRepository(db_session).get_by_name("Card").id
+    cash_sale = make_sale(sale_service, admin_id, open_shift_id, nozzle_id, employee_id, quantity=Decimal("10"), method=PaymentMethod.CASH)
+    card_sale = make_sale(sale_service, admin_id, open_shift_id, nozzle_id, employee_id, quantity=Decimal("5"), method=PaymentMethod.CARD)
+
+    reconciliation = reconciliation_service.perform_shift_reconciliation(
+        admin_id,
+        ShiftReconciliationPerform(
+            shift_id=open_shift_id,
+            # Cash matches exactly (normal); Card is wildly short (approval required).
+            declared_amounts={cash_tender_id: cash_sale.amount, card_tender_id: Decimal("1")},
+        ),
+    )
+
+    assert len(reconciliation.lines) == 2
+    assert get_line(reconciliation, "Cash").variance == Decimal("0")
+    assert get_line(reconciliation, "Card").expected == card_sale.amount
+    assert reconciliation.classification == VarianceClassification.APPROVAL_REQUIRED.value
+    assert reconciliation.status == ReconciliationStatus.PENDING_APPROVAL.value
+
+
+def test_missing_declared_amount_for_a_tender_with_activity_is_rejected(
+    reconciliation_service, sale_service, admin_id, open_shift_id, nozzle_id, employee_id,
+):
+    """A tender with real expected activity that the caller didn't
+    declare an amount for must be rejected, not silently treated as a
+    zero declaration - that would understate a real shortfall."""
+    make_sale(sale_service, admin_id, open_shift_id, nozzle_id, employee_id, quantity=Decimal("10"))
+    with pytest.raises(ValueError):
+        reconciliation_service.perform_shift_reconciliation(
+            admin_id,
+            ShiftReconciliationPerform(shift_id=open_shift_id, declared_amounts={}),
         )
 
 
@@ -298,14 +357,14 @@ def test_accountant_cannot_perform_reconciliation(reconciliation_service, accoun
     with pytest.raises(PermissionDeniedError):
         reconciliation_service.perform_shift_reconciliation(
             accountant_id,
-            ShiftReconciliationPerform(shift_id=open_shift_id, declared_cash=Decimal("0"), declared_upi=Decimal("0"), declared_card=Decimal("0")),
+            ShiftReconciliationPerform(shift_id=open_shift_id, declared_amounts={}),
         )
 
 
 def test_supervisor_can_perform_reconciliation(reconciliation_service, supervisor_id, open_shift_id):
     reconciliation = reconciliation_service.perform_shift_reconciliation(
         supervisor_id,
-        ShiftReconciliationPerform(shift_id=open_shift_id, declared_cash=Decimal("0"), declared_upi=Decimal("0"), declared_card=Decimal("0")),
+        ShiftReconciliationPerform(shift_id=open_shift_id, declared_amounts={}),
     )
     assert reconciliation.performed_by_id == supervisor_id
 
@@ -314,11 +373,11 @@ def test_supervisor_can_perform_reconciliation(reconciliation_service, superviso
 # Approval workflow
 # --------------------------------------------------------------------
 
-def test_approve_reconciliation(reconciliation_service, sale_service, admin_id, open_shift_id, nozzle_id, employee_id):
+def test_approve_reconciliation(reconciliation_service, sale_service, admin_id, open_shift_id, nozzle_id, employee_id, cash_tender_id):
     make_sale(sale_service, admin_id, open_shift_id, nozzle_id, employee_id, quantity=Decimal("10"))
     reconciliation = reconciliation_service.perform_shift_reconciliation(
         admin_id,
-        ShiftReconciliationPerform(shift_id=open_shift_id, declared_cash=Decimal("800"), declared_upi=Decimal("0"), declared_card=Decimal("0")),
+        ShiftReconciliationPerform(shift_id=open_shift_id, declared_amounts={cash_tender_id: Decimal("800")}),
     )
     approved = reconciliation_service.approve_shift_reconciliation(admin_id, reconciliation.id, "Investigated, cash was miscounted")
     assert approved.status == ReconciliationStatus.APPROVED.value
@@ -328,17 +387,17 @@ def test_approve_reconciliation(reconciliation_service, sale_service, admin_id, 
 def test_cannot_approve_an_already_accepted_reconciliation(reconciliation_service, admin_id, open_shift_id):
     reconciliation = reconciliation_service.perform_shift_reconciliation(
         admin_id,
-        ShiftReconciliationPerform(shift_id=open_shift_id, declared_cash=Decimal("0"), declared_upi=Decimal("0"), declared_card=Decimal("0")),
+        ShiftReconciliationPerform(shift_id=open_shift_id, declared_amounts={}),
     )
     with pytest.raises(ConflictError):
         reconciliation_service.approve_shift_reconciliation(admin_id, reconciliation.id)
 
 
-def test_supervisor_cannot_approve_reconciliation(reconciliation_service, sale_service, supervisor_id, admin_id, open_shift_id, nozzle_id, employee_id):
+def test_supervisor_cannot_approve_reconciliation(reconciliation_service, sale_service, supervisor_id, admin_id, open_shift_id, nozzle_id, employee_id, cash_tender_id):
     make_sale(sale_service, admin_id, open_shift_id, nozzle_id, employee_id, quantity=Decimal("10"))
     reconciliation = reconciliation_service.perform_shift_reconciliation(
         supervisor_id,
-        ShiftReconciliationPerform(shift_id=open_shift_id, declared_cash=Decimal("800"), declared_upi=Decimal("0"), declared_card=Decimal("0")),
+        ShiftReconciliationPerform(shift_id=open_shift_id, declared_amounts={cash_tender_id: Decimal("800")}),
     )
     with pytest.raises(PermissionDeniedError):
         reconciliation_service.approve_shift_reconciliation(supervisor_id, reconciliation.id)

@@ -42,6 +42,7 @@ from app.repositories.payment_repository import PaymentRepository
 from app.repositories.sale_repository import SaleRepository
 from app.repositories.shift_reconciliation_repository import ShiftReconciliationRepository
 from app.repositories.shift_repository import ShiftRepository
+from app.repositories.tender_repository import TenderRepository
 from app.repositories.tank_reading_repository import TankReadingRepository
 from app.repositories.tank_repository import TankRepository
 from app.repositories.tank_transaction_repository import TankTransactionRepository
@@ -131,17 +132,19 @@ def services(db_session):
         CreditAccountRepository(db_session), CustomerPaymentRepository(db_session),
         customer_repo, sale_repo, audit_repo, auth_service,
     )
+    tender_repo = TenderRepository(db_session)
     sale_service = SaleService(
         sale_repo, shift_repo, nozzle_repo, fuel_repo, employee_repo, customer_repo,
         tank_repo, tank_service, audit_repo, auth_service, PaymentRepository(db_session), credit_service,
+        tender_repo=tender_repo,
     )
     expense_service = ExpenseService(
         ExpenseRepository(db_session), ExpenseCategoryRepository(db_session),
-        employee_repo, shift_repo, audit_repo, auth_service,
+        employee_repo, shift_repo, audit_repo, auth_service, tender_repo=tender_repo,
     )
     reconciliation_service = ReconciliationService(
         ShiftReconciliationRepository(db_session), shift_repo, sale_repo,
-        ExpenseRepository(db_session), audit_repo, auth_service,
+        ExpenseRepository(db_session), audit_repo, auth_service, tender_repo,
     )
     report_service = ReportService(
         fuel_repo, tank_repo, nozzle_repo, FuelReconciliationRepository(db_session), auth_service,
@@ -202,13 +205,20 @@ def test_full_shift_lifecycle(db_session, admin_id, employee_id, fuel_id, servic
     assert closed_shift.status == "closed"
 
     # 6. Reconcile: expected cash = 2000 (cash sale) - 100 (cash expense) = 1900.
-    #    The attendant declares exactly that - no variance expected.
+    #    The attendant declares exactly that - no variance expected. The
+    #    credit sale never enters this at all - Credit's settlement_type
+    #    (INVOICED_CREDIT) excludes it, matching the old fixed cash/upi/
+    #    card columns, which never included credit either.
+    cash_tender_id = TenderRepository(db_session).get_by_name("Cash").id
     reconciliation = services["reconciliation"].perform_shift_reconciliation(
         admin_id,
-        ShiftReconciliationPerform(shift_id=shift.id, declared_cash=Decimal("1900"), declared_upi=Decimal("0"), declared_card=Decimal("0")),
+        ShiftReconciliationPerform(shift_id=shift.id, declared_amounts={cash_tender_id: Decimal("1900")}),
     )
-    assert reconciliation.expected_cash == Decimal("1900.00")
-    assert reconciliation.cash_variance == Decimal("0")
+    assert len(reconciliation.lines) == 1
+    cash_line = reconciliation.lines[0]
+    assert cash_line.tender_id == cash_tender_id
+    assert cash_line.expected == Decimal("1900.00")
+    assert cash_line.variance == Decimal("0")
     assert reconciliation.classification == VarianceClassification.NORMAL.value
     assert reconciliation.status == ReconciliationStatus.ACCEPTED.value
 

@@ -31,6 +31,7 @@ from app.repositories.payment_repository import PaymentRepository
 from app.repositories.sale_repository import SaleRepository
 from app.repositories.shift_reconciliation_repository import ShiftReconciliationRepository
 from app.repositories.shift_repository import ShiftRepository
+from app.repositories.tender_repository import TenderRepository
 from app.repositories.tank_reading_repository import TankReadingRepository
 from app.repositories.tank_repository import TankRepository
 from app.repositories.tank_transaction_repository import TankTransactionRepository
@@ -167,7 +168,7 @@ def sale_service(db_session, tank_service, credit_service, auth_service):
         SaleRepository(db_session), ShiftRepository(db_session), NozzleRepository(db_session),
         FuelRepository(db_session), EmployeeRepository(db_session), CustomerRepository(db_session),
         TankRepository(db_session), tank_service, audit_repo, auth_service, PaymentRepository(db_session),
-        credit_service,
+        credit_service, tender_repo=TenderRepository(db_session),
     )
 
 
@@ -186,6 +187,7 @@ def reconciliation_service(db_session, auth_service):
     return ReconciliationService(
         ShiftReconciliationRepository(db_session), ShiftRepository(db_session),
         SaleRepository(db_session), ExpenseRepository(db_session), audit_repo, auth_service,
+        TenderRepository(db_session),
     )
 
 
@@ -290,11 +292,12 @@ def test_customer_outstanding_report(report_service, sale_service, credit_servic
 def test_reconciliation_report_lists_reconciliations(report_service, reconciliation_service, admin_id, open_shift_id):
     reconciliation_service.perform_shift_reconciliation(
         admin_id,
-        ShiftReconciliationPerform(shift_id=open_shift_id, declared_cash=Decimal("0"), declared_upi=Decimal("0"), declared_card=Decimal("0")),
+        ShiftReconciliationPerform(shift_id=open_shift_id, declared_amounts={}),
     )
     report = report_service.get_reconciliation_report(admin_id)
     assert len(report.rows) == 1
-    assert report.rows[0][4] == "Normal"
+    assert report.headers == ["Shift", "Variance by Tender", "Classification", "Status"]
+    assert report.rows[0][2] == "Normal"
 
 
 # --------------------------------------------------------------------
