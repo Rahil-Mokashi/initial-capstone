@@ -179,12 +179,69 @@ class SupplierInvoiceStatus(str, Enum):
 
 
 class PaymentMethod(str, Enum):
-    """Values stored in Sale.payment_method (problemstatement.md #16/#17)."""
+    """Values stored in Sale.payment_method (problemstatement.md #16/#17).
+
+    Deliberately frozen at these four rather than extended to match
+    docs/daily-report-spec.md's eight real tenders (Cash/Credit/Card/DTP
+    Card/PhonePe/Paytm/Expenses/Other) - see Tender (app/models/tender.py)
+    for why new tenders are seeded rows from here on, not new enum
+    members. This enum stays exactly as-is (still driving Sale/Payment/
+    Expense's existing payment_method columns, credit checks, reports,
+    and UI dropdowns) while Tender/tender_id is the new, separate
+    reference the settlement/reconciliation feature uses going forward -
+    see PAYMENT_METHOD_TO_TENDER_NAME below for how the two relate.
+    """
 
     CASH = "cash"
     UPI = "upi"
     CARD = "card"
     CREDIT = "credit"
+
+
+class TenderSettlementType(str, Enum):
+    """Values stored in Tender.settlement_type - see that model."""
+
+    IMMEDIATE_CASH = "immediate_cash"
+    BANK_SETTLED = "bank_settled"
+    INVOICED_CREDIT = "invoiced_credit"
+
+
+# The eight tenders docs/daily-report-spec.md's reference report actually
+# shows (section 3), seeded via app/database/seed.py's _seed_tenders the
+# same way DEFAULT_FUEL_TYPES is. "Expenses" and "Other" are classified
+# IMMEDIATE_CASH: neither involves a multi-day bank settlement or a
+# customer's invoiced-credit cycle, so of the three settlement types
+# they're closest to Cash's own timing.
+DEFAULT_TENDERS = [
+    ("Cash", TenderSettlementType.IMMEDIATE_CASH),
+    ("Credit", TenderSettlementType.INVOICED_CREDIT),
+    ("Card", TenderSettlementType.BANK_SETTLED),
+    ("DTP Card", TenderSettlementType.BANK_SETTLED),
+    ("PhonePe", TenderSettlementType.BANK_SETTLED),
+    ("Paytm", TenderSettlementType.BANK_SETTLED),
+    ("Expenses", TenderSettlementType.IMMEDIATE_CASH),
+    ("Other", TenderSettlementType.IMMEDIATE_CASH),
+]
+
+# How an existing PaymentMethod value maps onto one of the seeded
+# tenders above - used both to backfill Sale/Payment/Expense.tender_id
+# on historical rows (app/database/seed.py's _backfill_tender_ids) and
+# to set tender_id on every new one going forward (SaleService,
+# ExpenseService), so the two never drift apart. UPI maps to "Other",
+# not "PhonePe" or "Paytm" - PaymentMethod.UPI has never recorded which
+# app was actually used, historically or going forward through this
+# same enum, so claiming either specific app would be a fabricated
+# precision this project doesn't actually have. A future UI that lets
+# an attendant pick a specific UPI tender by name (rather than the
+# generic PaymentMethod.UPI) is what would let PhonePe/Paytm be
+# attributed correctly - not implemented here (out of scope: this app
+# doesn't touch Sale/Payment/Expense's existing UI entry points).
+PAYMENT_METHOD_TO_TENDER_NAME = {
+    PaymentMethod.CASH: "Cash",
+    PaymentMethod.CARD: "Card",
+    PaymentMethod.CREDIT: "Credit",
+    PaymentMethod.UPI: "Other",
+}
 
 
 class SaleStatus(str, Enum):

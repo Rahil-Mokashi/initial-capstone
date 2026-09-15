@@ -23,7 +23,15 @@ Customer CRUD in here rather than a standalone CustomerService.
 from decimal import Decimal
 from typing import List, Optional
 
-from app.core.constants import PaymentMethod, PaymentStatus, Permission, SaleStatus, ShiftStatus, TankTransactionType
+from app.core.constants import (
+    PAYMENT_METHOD_TO_TENDER_NAME,
+    PaymentMethod,
+    PaymentStatus,
+    Permission,
+    SaleStatus,
+    ShiftStatus,
+    TankTransactionType,
+)
 from app.core.exceptions import ConflictError, NotFoundError
 from app.core.money import money
 from app.core.permissions import require_permission
@@ -39,7 +47,10 @@ from app.services.fuel_service import FuelService
 
 
 class SaleService:
-    def __init__(self, sale_repo, shift_repo, nozzle_repo, fuel_repo, employee_repo, customer_repo, tank_repo, tank_service, audit_repo, auth_service, payment_repo, credit_service):
+    def __init__(
+        self, sale_repo, shift_repo, nozzle_repo, fuel_repo, employee_repo, customer_repo, tank_repo, tank_service,
+        audit_repo, auth_service, payment_repo, credit_service, tender_repo=None,
+    ):
         self._sale_repo = sale_repo
         self._shift_repo = shift_repo
         self._nozzle_repo = nozzle_repo
@@ -52,7 +63,24 @@ class SaleService:
         self._auth_service = auth_service
         self._payment_repo = payment_repo
         self._credit_service = credit_service
+        # Optional: resolves Sale.tender_id/Payment.tender_id from
+        # payment_method at creation time (see PAYMENT_METHOD_TO_TENDER_NAME,
+        # app/core/constants.py). None leaves tender_id unset on new rows,
+        # the same way it's left unset on historical ones until
+        # app/database/seed.py's backfill catches up - never a hard
+        # dependency, since payment_method alone remains fully sufficient
+        # for every existing feature.
+        self._tender_repo = tender_repo
         self._session = session_for(sale_repo)
+
+    def _resolve_tender_id(self, payment_method) -> Optional[str]:
+        if self._tender_repo is None:
+            return None
+        tender_name = PAYMENT_METHOD_TO_TENDER_NAME.get(payment_method)
+        if not tender_name:
+            return None
+        tender = self._tender_repo.get_by_name(tender_name)
+        return tender.id if tender else None
 
     @require_permission(Permission.SALE_MANAGE.value)
     def create_sale(self, actor_user_id: str, data: SaleCreate) -> Sale:
@@ -200,6 +228,7 @@ class SaleService:
         if data.payment_method == PaymentMethod.CREDIT:
             self._credit_service.ensure_credit_available(data.customer_id, amount)
 
+        tender_id = self._resolve_tender_id(data.payment_method)
         receipt_number = self._sale_repo.next_receipt_number()
         sale = Sale(
             receipt_number=receipt_number,
@@ -211,6 +240,7 @@ class SaleService:
             rate_per_liter=rate_per_liter,
             amount=amount,
             payment_method=data.payment_method.value,
+            tender_id=tender_id,
             customer_id=data.customer_id,
             status=SaleStatus.COMPLETED.value,
             recorded_by_id=actor_user_id,
@@ -232,6 +262,7 @@ class SaleService:
             sale_id=sale.id,
             amount=amount,
             method=data.payment_method.value,
+            tender_id=tender_id,
             reference_number=data.reference_number,
             status=payment_status.value,
             shift_id=data.shift_id,

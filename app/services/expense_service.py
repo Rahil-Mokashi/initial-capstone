@@ -12,7 +12,7 @@ VOID/REVERSE/ADJUST-not-DELETE rule for financial records.
 from datetime import date, datetime, timezone
 from typing import List
 
-from app.core.constants import ExpenseStatus, Permission, TankTransactionType
+from app.core.constants import PAYMENT_METHOD_TO_TENDER_NAME, ExpenseStatus, Permission, TankTransactionType
 from app.core.exceptions import ConflictError, NotFoundError
 from app.core.permissions import require_permission
 from app.database.base import StatusEnum
@@ -25,6 +25,7 @@ from app.schemas.tank import TankTransactionCreate
 class ExpenseService:
     def __init__(
         self, expense_repo, category_repo, employee_repo, shift_repo, audit_repo, auth_service, tank_service=None,
+        tender_repo=None,
     ):
         self._expense_repo = expense_repo
         self._category_repo = category_repo
@@ -39,6 +40,10 @@ class ExpenseService:
         # create_expense, which only ever reaches for this when the
         # caller actually asked for a stock movement.
         self._tank_service = tank_service
+        # Optional: resolves Expense.tender_id from payment_method at
+        # creation time - see SaleService._resolve_tender_id, same
+        # reasoning. None simply leaves tender_id unset.
+        self._tender_repo = tender_repo
         self._session = session_for(expense_repo)
 
     def attach_tank_service(self, tank_service) -> None:
@@ -46,6 +51,15 @@ class ExpenseService:
         roots that build them in the other order - see the constructor
         comment on why this is optional."""
         self._tank_service = tank_service
+
+    def _resolve_tender_id(self, payment_method):
+        if self._tender_repo is None:
+            return None
+        tender_name = PAYMENT_METHOD_TO_TENDER_NAME.get(payment_method)
+        if not tender_name:
+            return None
+        tender = self._tender_repo.get_by_name(tender_name)
+        return tender.id if tender else None
 
     @require_permission(Permission.EXPENSE_MANAGE.value)
     def create_category(self, actor_user_id: str, data: ExpenseCategoryCreate) -> ExpenseCategory:
@@ -94,6 +108,7 @@ class ExpenseService:
             amount=data.amount,
             expense_date=date.today(),
             payment_method=data.payment_method.value,
+            tender_id=self._resolve_tender_id(data.payment_method),
             receipt_reference=data.receipt_reference,
             description=data.description,
             tank_id=data.tank_id,

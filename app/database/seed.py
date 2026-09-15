@@ -2,11 +2,22 @@ import uuid
 from datetime import datetime, timezone
 
 from app import database as db_package
-from app.core.constants import DEFAULT_FUEL_TYPES, ROLE_PERMISSIONS, Permission as PermissionName, UserRole
+from app.core.constants import (
+    DEFAULT_FUEL_TYPES,
+    DEFAULT_TENDERS,
+    PAYMENT_METHOD_TO_TENDER_NAME,
+    ROLE_PERMISSIONS,
+    Permission as PermissionName,
+    UserRole,
+)
 from app.core.security import hash_password
+from app.models.expense import Expense
 from app.models.fuel import Fuel
+from app.models.payment import Payment
 from app.models.permission import Permission
 from app.models.role import Role
+from app.models.sale import Sale
+from app.models.tender import Tender
 from app.models.user import User
 
 DEFAULT_ADMIN_PASSWORD = "Admin@123"
@@ -20,6 +31,45 @@ def _seed_fuel_types(session) -> None:
     for fuel_type in DEFAULT_FUEL_TYPES:
         if fuel_type not in existing_names:
             session.add(Fuel(id=str(uuid.uuid4()), fuel_type=fuel_type, rate_per_liter=0.0))
+    session.flush()
+
+
+def _seed_tenders(session) -> dict:
+    """Ensure the eight tenders docs/daily-report-spec.md's reference
+    report shows exist (Tender, app/models/tender.py) - the same
+    "seeded master data, not a hardcoded enum" pattern _seed_fuel_types
+    already established for Fuel. Returns name -> Tender for
+    _backfill_tender_ids to use without a second query."""
+    existing = {t.name: t for t in session.query(Tender).all()}
+    for name, settlement_type in DEFAULT_TENDERS:
+        if name not in existing:
+            tender = Tender(id=str(uuid.uuid4()), name=name, settlement_type=settlement_type.value)
+            session.add(tender)
+            existing[name] = tender
+    session.flush()
+    return existing
+
+
+def _backfill_tender_ids(session, tenders_by_name: dict) -> None:
+    """One-time-per-row backfill for historical Sale/Payment/Expense rows
+    recorded before Tender existed, plus a safety net for any row a
+    future code path forgets to set tender_id on directly. Idempotent by
+    construction (only ever touches rows where tender_id IS NULL), so
+    running it on every startup is cheap once caught up.
+
+    UPI rows map to "Other", not "PhonePe" or "Paytm" - PaymentMethod.UPI
+    has never recorded which app was actually used, so this backfill
+    cannot honestly claim either specific one. See
+    PAYMENT_METHOD_TO_TENDER_NAME's own comment (app/core/constants.py)
+    for the same reasoning applied going forward to new rows.
+    """
+    for model, method_column in ((Sale, "payment_method"), (Payment, "method"), (Expense, "payment_method")):
+        rows = session.query(model).filter_by(tender_id=None).all()
+        for row in rows:
+            method_value = getattr(row, method_column)
+            tender_name = PAYMENT_METHOD_TO_TENDER_NAME.get(method_value)
+            if tender_name and tender_name in tenders_by_name:
+                row.tender_id = tenders_by_name[tender_name].id
     session.flush()
 
 
@@ -65,6 +115,8 @@ def seed_initial_data() -> None:
     try:
         roles_by_name = _seed_roles_and_permissions(session)
         _seed_fuel_types(session)
+        tenders_by_name = _seed_tenders(session)
+        _backfill_tender_ids(session, tenders_by_name)
 
         existing_admin = session.query(User).filter_by(username="admin").first()
         if existing_admin:
