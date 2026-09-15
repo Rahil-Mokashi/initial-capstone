@@ -251,12 +251,13 @@ class ReportService:
         rows = []
         for reconciliation in reconciliations:
             shift_label = f"{reconciliation.shift.shift_date} {reconciliation.shift.shift_label}" if reconciliation.shift else ""
+            variance_by_tender = ", ".join(
+                f"{line.tender.name}: {line.variance:+.2f}" for line in reconciliation.lines if line.tender
+            ) or "No tenders had activity"
             rows.append(
                 [
                     shift_label,
-                    f"{reconciliation.cash_variance:.2f}",
-                    f"{reconciliation.upi_variance:.2f}",
-                    f"{reconciliation.card_variance:.2f}",
+                    variance_by_tender,
                     reconciliation.classification.replace("_", " ").title(),
                     reconciliation.status.replace("_", " ").title(),
                 ]
@@ -264,7 +265,7 @@ class ReportService:
 
         return TableReport(
             title="Shift Reconciliation Report",
-            headers=["Shift", "Cash Var.", "UPI Var.", "Card Var.", "Classification", "Status"],
+            headers=["Shift", "Variance by Tender", "Classification", "Status"],
             rows=rows,
         )
 

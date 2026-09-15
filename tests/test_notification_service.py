@@ -255,6 +255,15 @@ def add_reconciliation(
     status=ReconciliationStatus.ACCEPTED.value,
     classification=VarianceClassification.NORMAL.value,
 ) -> ShiftReconciliation:
+    """cash_variance/upi_variance/card_variance kwargs kept as the
+    calling convention every existing test here already uses - internally
+    each becomes one ShiftReconciliationLine against the matching tender
+    (PROJECT_CONTEXT.md's Step 2), "upi_variance" mapping to the "Other"
+    tender the same way historical UPI data does everywhere else in this
+    project (PAYMENT_METHOD_TO_TENDER_NAME)."""
+    from app.models.shift_reconciliation_line import ShiftReconciliationLine
+    from app.models.tender import Tender
+
     shift = Shift(
         shift_date=date.today(),
         shift_label=f"Shift-{db_session.query(Shift).count() + 1}",
@@ -266,18 +275,25 @@ def add_reconciliation(
 
     reconciliation = ShiftReconciliation(
         shift_id=shift.id,
-        expected_cash=Decimal("1000"), declared_cash=Decimal("1000") + Decimal(cash_variance),
-        cash_variance=Decimal(cash_variance),
-        expected_upi=Decimal("500"), declared_upi=Decimal("500") + Decimal(upi_variance),
-        upi_variance=Decimal(upi_variance),
-        expected_card=Decimal("500"), declared_card=Decimal("500") + Decimal(card_variance),
-        card_variance=Decimal(card_variance),
         classification=classification,
         status=status,
         performed_by_id=performed_by_id,
     )
     db_session.add(reconciliation)
     db_session.commit()
+
+    tenders_by_name = {t.name: t for t in db_session.query(Tender).all()}
+    for tender_name, variance in (("Cash", cash_variance), ("Other", upi_variance), ("Card", card_variance)):
+        expected = Decimal("1000") if tender_name == "Cash" else Decimal("500")
+        db_session.add(ShiftReconciliationLine(
+            shift_reconciliation_id=reconciliation.id,
+            tender_id=tenders_by_name[tender_name].id,
+            expected=expected,
+            declared=expected + Decimal(variance),
+            variance=Decimal(variance),
+        ))
+    db_session.commit()
+    db_session.refresh(reconciliation)
     return reconciliation
 
 

@@ -1,4 +1,13 @@
-"""Shift Reconciliation UI (Phase 15). One tab: reconciliations."""
+"""Shift Reconciliation UI (Phase 15). One tab: reconciliations.
+
+Reshaped for per-tender lines (PROJECT_CONTEXT.md's Step 2): the form
+dialog no longer has three fixed cash/UPI/card inputs - it asks
+ReconciliationService which tenders actually had expected activity for
+the chosen shift, then builds one declared-amount input per tender
+dynamically, since that set varies shift to shift (a typical shift
+today still shows ~3 - Cash, Card, Other - but a future shift with a
+DTP Card sale would show a fourth, with no code change needed).
+"""
 
 from decimal import Decimal
 
@@ -27,7 +36,7 @@ from app.schemas.shift_reconciliation import ShiftReconciliationPerform
 from app.ui.qt_utils import describe_unexpected_error
 from app.ui.widgets import GridBackgroundWidget
 
-RECONCILIATION_HEADERS = ["Shift", "Cash Var.", "UPI Var.", "Card Var.", "Classification", "Status"]
+RECONCILIATION_HEADERS = ["Shift", "Variance by Tender", "Classification", "Status"]
 
 
 class ReconciliationWindow(QWidget):
@@ -103,12 +112,13 @@ class ReconciliationsTab(QWidget):
         self.table.setRowCount(len(reconciliations))
         for row_index, recon in enumerate(reconciliations):
             shift_label = f"{recon.shift.shift_date} {recon.shift.shift_label}" if recon.shift else ""
+            variance_summary = ", ".join(
+                f"{line.tender.name}: {line.variance:+.2f}" for line in recon.lines if line.tender
+            ) or "No tenders had activity"
             self.table.setItem(row_index, 0, QTableWidgetItem(shift_label))
-            self.table.setItem(row_index, 1, QTableWidgetItem(f"{recon.cash_variance:g}"))
-            self.table.setItem(row_index, 2, QTableWidgetItem(f"{recon.upi_variance:g}"))
-            self.table.setItem(row_index, 3, QTableWidgetItem(f"{recon.card_variance:g}"))
-            self.table.setItem(row_index, 4, QTableWidgetItem(recon.classification.replace("_", " ").title()))
-            self.table.setItem(row_index, 5, QTableWidgetItem(recon.status.replace("_", " ").title()))
+            self.table.setItem(row_index, 1, QTableWidgetItem(variance_summary))
+            self.table.setItem(row_index, 2, QTableWidgetItem(recon.classification.replace("_", " ").title()))
+            self.table.setItem(row_index, 3, QTableWidgetItem(recon.status.replace("_", " ").title()))
             self.table.item(row_index, 0).setData(Qt.UserRole, recon.id)
         self.table.resizeColumnsToContents()
         self.table.horizontalHeader().setStretchLastSection(True)
@@ -142,35 +152,32 @@ class ReconciliationFormDialog(QDialog):
         super().__init__(parent)
         self._reconciliation_service = reconciliation_service
         self._actor_user_id = actor_user_id
+        self._tender_inputs: dict = {}  # tender_id -> QDoubleSpinBox
 
         self.setWindowTitle("Reconcile Shift")
-        self.setMinimumWidth(400)
+        self.setMinimumWidth(420)
 
         self.shift_combo = QComboBox()
         for shift in shift_service.list_shifts(actor_user_id):
             self.shift_combo.addItem(f"{shift.shift_date} {shift.shift_label} ({shift.status})", shift.id)
+        self.shift_combo.currentIndexChanged.connect(self._reload_tender_inputs)
 
-        self.cash_input = QDoubleSpinBox()
-        self.cash_input.setRange(0, 10_000_000)
-        self.cash_input.setDecimals(2)
+        self.top_form = QFormLayout()
+        self.top_form.addRow("Shift", self.shift_combo)
 
-        self.upi_input = QDoubleSpinBox()
-        self.upi_input.setRange(0, 10_000_000)
-        self.upi_input.setDecimals(2)
-
-        self.card_input = QDoubleSpinBox()
-        self.card_input.setRange(0, 10_000_000)
-        self.card_input.setDecimals(2)
+        # Rebuilt every time the selected shift changes - see
+        # _reload_tender_inputs. A dedicated layout so it can be cleared
+        # and repopulated without touching top_form/bottom_form.
+        self.tender_form = QFormLayout()
 
         self.remarks_input = QLineEdit()
         self.remarks_input.returnPressed.connect(self._save)
+        self.bottom_form = QFormLayout()
+        self.bottom_form.addRow("Remarks", self.remarks_input)
 
-        form = QFormLayout()
-        form.addRow("Shift", self.shift_combo)
-        form.addRow("Declared cash", self.cash_input)
-        form.addRow("Declared UPI", self.upi_input)
-        form.addRow("Declared card", self.card_input)
-        form.addRow("Remarks", self.remarks_input)
+        self.no_activity_label = QLabel("This shift has no reconcilable tender activity.")
+        self.no_activity_label.setWordWrap(True)
+        self.no_activity_label.hide()
 
         self.error_label = QLabel("")
         self.error_label.setObjectName("errorLabel")
@@ -189,10 +196,42 @@ class ReconciliationFormDialog(QDialog):
         button_row.addWidget(save_button)
 
         layout = QVBoxLayout()
-        layout.addLayout(form)
+        layout.addLayout(self.top_form)
+        layout.addLayout(self.tender_form)
+        layout.addWidget(self.no_activity_label)
+        layout.addLayout(self.bottom_form)
         layout.addWidget(self.error_label)
         layout.addLayout(button_row)
         self.setLayout(layout)
+
+        self._reload_tender_inputs()
+
+    def _clear_tender_inputs(self) -> None:
+        while self.tender_form.rowCount():
+            self.tender_form.removeRow(0)
+        self._tender_inputs = {}
+
+    def _reload_tender_inputs(self) -> None:
+        self.error_label.hide()
+        self._clear_tender_inputs()
+        if self.shift_combo.count() == 0:
+            self.no_activity_label.show()
+            return
+
+        shift_id = self.shift_combo.currentData()
+        try:
+            expected_amounts = self._reconciliation_service.get_expected_amounts_for_shift(self._actor_user_id, shift_id)
+        except AppError as exc:
+            self._show_error(str(exc))
+            return
+
+        self.no_activity_label.setVisible(len(expected_amounts) == 0)
+        for tender, expected in sorted(expected_amounts, key=lambda pair: pair[0].name):
+            spin = QDoubleSpinBox()
+            spin.setRange(0, 10_000_000)
+            spin.setDecimals(2)
+            self.tender_form.addRow(f"Declared {tender.name} (expected {expected:.2f})", spin)
+            self._tender_inputs[tender.id] = spin
 
     def _save(self) -> None:
         self.error_label.hide()
@@ -202,9 +241,9 @@ class ReconciliationFormDialog(QDialog):
         try:
             data = ShiftReconciliationPerform(
                 shift_id=self.shift_combo.currentData(),
-                declared_cash=Decimal(str(self.cash_input.value())),
-                declared_upi=Decimal(str(self.upi_input.value())),
-                declared_card=Decimal(str(self.card_input.value())),
+                declared_amounts={
+                    tender_id: Decimal(str(spin.value())) for tender_id, spin in self._tender_inputs.items()
+                },
                 remarks=self.remarks_input.text().strip() or None,
             )
             self._reconciliation_service.perform_shift_reconciliation(self._actor_user_id, data)

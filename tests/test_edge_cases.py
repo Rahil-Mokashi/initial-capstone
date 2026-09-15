@@ -43,6 +43,7 @@ from app.repositories.payment_repository import PaymentRepository
 from app.repositories.sale_repository import SaleRepository
 from app.repositories.shift_reconciliation_repository import ShiftReconciliationRepository
 from app.repositories.shift_repository import ShiftRepository
+from app.repositories.tender_repository import TenderRepository
 from app.repositories.tank_reading_repository import TankReadingRepository
 from app.repositories.tank_repository import TankRepository
 from app.repositories.tank_transaction_repository import TankTransactionRepository
@@ -93,10 +94,10 @@ def env(db):
     sale_service = SaleService(
         SaleRepository(db), ShiftRepository(db), NozzleRepository(db), FuelRepository(db),
         EmployeeRepository(db), CustomerRepository(db), TankRepository(db), tank_service,
-        audit, auth, payment_repo, credit_service)
+        audit, auth, payment_repo, credit_service, tender_repo=TenderRepository(db))
     reconciliation_service = ReconciliationService(
         ShiftReconciliationRepository(db), ShiftRepository(db), SaleRepository(db),
-        ExpenseRepository(db), audit, auth)
+        ExpenseRepository(db), audit, auth, TenderRepository(db))
 
     fuel = db.query(Fuel).filter_by(fuel_type="Petrol").first()
     fuel.rate_per_liter = Decimal("100.00")
@@ -243,13 +244,16 @@ def test_a_cancelled_sale_is_excluded_from_shift_reconciliation(env):
     env["db"].query(Shift).filter_by(id=env["shift_id"]).update({"status": ShiftStatus.CLOSED.value})
     env["db"].commit()
 
-    result = env["recon"].perform_shift_reconciliation(env["user_id"], ShiftReconciliationPerform(
-        shift_id=env["shift_id"], declared_cash=Decimal("1000"),
-        declared_upi=Decimal("0"), declared_card=Decimal("0")))
+    from app.repositories.tender_repository import TenderRepository
+    cash_tender_id = TenderRepository(env["db"]).get_by_name("Cash").id
 
-    assert Decimal(str(result.expected_cash)) == Decimal("1000"), (
+    result = env["recon"].perform_shift_reconciliation(env["user_id"], ShiftReconciliationPerform(
+        shift_id=env["shift_id"], declared_amounts={cash_tender_id: Decimal("1000")}))
+
+    line = next(l for l in result.lines if l.tender_id == cash_tender_id)
+    assert Decimal(str(line.expected)) == Decimal("1000"), (
         "the cancelled sale still counted toward expected cash")
-    assert Decimal(str(result.cash_variance)) == Decimal("0")
+    assert Decimal(str(line.variance)) == Decimal("0")
     assert keep.status == SaleStatus.COMPLETED.value
 
 
@@ -258,8 +262,7 @@ def test_a_shift_cannot_be_reconciled_twice(env):
 
     env["db"].query(Shift).filter_by(id=env["shift_id"]).update({"status": ShiftStatus.CLOSED.value})
     env["db"].commit()
-    data = ShiftReconciliationPerform(shift_id=env["shift_id"], declared_cash=Decimal("0"),
-                                      declared_upi=Decimal("0"), declared_card=Decimal("0"))
+    data = ShiftReconciliationPerform(shift_id=env["shift_id"], declared_amounts={})
     env["recon"].perform_shift_reconciliation(env["user_id"], data)
     with pytest.raises(ConflictError):
         env["recon"].perform_shift_reconciliation(env["user_id"], data)

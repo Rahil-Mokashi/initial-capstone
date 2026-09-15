@@ -1524,6 +1524,7 @@ class AppController:
             expense_repo,
             audit_repo,
             self._auth_service,
+            tender_repo,
         )
         credit_account_repo = CreditAccountRepository(self._db_session)
         customer_payment_repo = CustomerPaymentRepository(self._db_session)

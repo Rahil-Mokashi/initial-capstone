@@ -24,6 +24,7 @@ from .role_permission import role_permissions
 from .sale import Sale
 from .shift import Shift
 from .shift_reconciliation import ShiftReconciliation
+from .shift_reconciliation_line import ShiftReconciliationLine
 from .supplier import Supplier
 from .supplier_invoice import SupplierInvoice, SupplierPayment
 from .tank import Tank
@@ -59,6 +60,7 @@ __all__ = [
     "Sale",
     "Shift",
     "ShiftReconciliation",
+    "ShiftReconciliationLine",
     "Supplier",
     "SupplierInvoice",
     "SupplierPayment",

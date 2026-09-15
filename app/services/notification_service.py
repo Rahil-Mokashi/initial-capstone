@@ -71,6 +71,7 @@ from app.core.constants import (
     Permission,
     ReconciliationStatus,
     SupplierInvoiceStatus,
+    TenderSettlementType,
     VarianceClassification,
 )
 from app.core.dates import local_date_of
@@ -383,46 +384,59 @@ class NotificationService:
 
             label = f"shift reconciliation of {performed_on}"
 
-            if reconciliation.cash_variance < 0:
-                found.append(
-                    Notification(
-                        category=NotificationCategory.CASH_SHORTAGE,
-                        severity=NotificationSeverity.CRITICAL,
-                        title=f"Cash short by {abs(reconciliation.cash_variance):.2f}",
-                        detail=(
-                            f"The {label} declared {reconciliation.declared_cash:.2f} against an expected "
-                            f"{reconciliation.expected_cash:.2f}."
-                        ),
-                        entity_id=reconciliation.id,
-                    )
-                )
-            elif reconciliation.cash_variance > 0:
-                # An excess is a discrepancy too - money that cannot be
-                # accounted for usually means a sale went unrecorded - but
-                # it is not a loss, so it does not carry the same weight.
-                found.append(
-                    Notification(
-                        category=NotificationCategory.CASH_EXCESS,
-                        severity=NotificationSeverity.WARNING,
-                        title=f"Cash over by {reconciliation.cash_variance:.2f}",
-                        detail=(
-                            f"The {label} declared {reconciliation.declared_cash:.2f} against an expected "
-                            f"{reconciliation.expected_cash:.2f}. An excess usually means a sale was not recorded."
-                        ),
-                        entity_id=reconciliation.id,
-                    )
-                )
+            # Per-line now (PROJECT_CONTEXT.md's Step 2), keyed by each
+            # tender's settlement_type rather than hardcoded cash/upi/
+            # card fields - IMMEDIATE_CASH tenders (Cash, and today also
+            # Expenses/Other - see Tender's own seed comment) get the
+            # same shortage/excess treatment "cash" always got; anything
+            # else (BANK_SETTLED) is grouped into one payment-mismatch
+            # alert exactly like UPI+card used to be.
+            bank_settled_mismatches = []
+            for line in reconciliation.lines:
+                if not line.tender:
+                    continue
+                if line.tender.settlement_type == TenderSettlementType.IMMEDIATE_CASH.value:
+                    if line.variance < 0:
+                        found.append(
+                            Notification(
+                                category=NotificationCategory.CASH_SHORTAGE,
+                                severity=NotificationSeverity.CRITICAL,
+                                title=f"{line.tender.name} short by {abs(line.variance):.2f}",
+                                detail=(
+                                    f"The {label} declared {line.declared:.2f} against an expected "
+                                    f"{line.expected:.2f} for {line.tender.name}."
+                                ),
+                                entity_id=reconciliation.id,
+                            )
+                        )
+                    elif line.variance > 0:
+                        # An excess is a discrepancy too - money that
+                        # cannot be accounted for usually means a sale
+                        # went unrecorded - but it is not a loss, so it
+                        # does not carry the same weight.
+                        found.append(
+                            Notification(
+                                category=NotificationCategory.CASH_EXCESS,
+                                severity=NotificationSeverity.WARNING,
+                                title=f"{line.tender.name} over by {line.variance:.2f}",
+                                detail=(
+                                    f"The {label} declared {line.declared:.2f} against an expected "
+                                    f"{line.expected:.2f} for {line.tender.name}. An excess usually means a "
+                                    f"sale was not recorded."
+                                ),
+                                entity_id=reconciliation.id,
+                            )
+                        )
+                elif line.variance != 0:
+                    bank_settled_mismatches.append(f"{line.tender.name} variance of {line.variance:.2f}")
 
-            if reconciliation.upi_variance != 0 or reconciliation.card_variance != 0:
+            if bank_settled_mismatches:
                 found.append(
                     Notification(
                         category=NotificationCategory.PAYMENT_MISMATCH,
                         severity=NotificationSeverity.WARNING,
                         title="Digital payments do not match",
-                        detail=(
-                            f"The {label} shows a UPI variance of {reconciliation.upi_variance:.2f} and a card "
-                            f"variance of {reconciliation.card_variance:.2f}."
-                        ),
+                        detail=f"The {label} shows a {' and a '.join(bank_settled_mismatches)}.",
                         entity_id=reconciliation.id,
                     )
                 )
