@@ -28,7 +28,7 @@ from app.core.constants import PaymentMethod, Permission
 from app.core.exceptions import AppError
 from app.services.report_export import export_table_excel, export_table_pdf
 from app.schemas.credit import CreditAccountCreate, CustomerPaymentCreate
-from app.ui.qt_utils import describe_unexpected_error
+from app.ui.qt_utils import describe_unexpected_error, money_table_item
 from app.ui.widgets import GridBackgroundWidget
 
 # Sentinel QComboBox data value for the "+ Add New Customer..." row -
@@ -123,8 +123,8 @@ class CreditAccountsTab(QWidget):
             outstanding = self._credit_service.get_outstanding_balance(self._actor_user_id, account.customer_id)
             overdue = self._credit_service.is_overdue(self._actor_user_id, account.customer_id)
             self.table.setItem(row_index, 0, QTableWidgetItem(account.customer.name if account.customer else ""))
-            self.table.setItem(row_index, 1, QTableWidgetItem(f"{account.credit_limit:g}"))
-            self.table.setItem(row_index, 2, QTableWidgetItem(f"{outstanding:g}"))
+            self.table.setItem(row_index, 1, money_table_item(account.credit_limit))
+            self.table.setItem(row_index, 2, money_table_item(outstanding))
             self.table.setItem(row_index, 3, QTableWidgetItem("Yes" if overdue else "No"))
             self.table.setItem(row_index, 4, QTableWidgetItem(str(account.payment_due_days)))
             self.table.item(row_index, 0).setData(Qt.UserRole, account.customer_id)
@@ -418,8 +418,8 @@ class CustomerStatementDialog(QDialog):
         for row_index, entry in enumerate(entries):
             table.setItem(row_index, 0, QTableWidgetItem(entry.entry_date.strftime("%Y-%m-%d")))
             table.setItem(row_index, 1, QTableWidgetItem(entry.description))
-            table.setItem(row_index, 2, QTableWidgetItem(f"{entry.debit:g}" if entry.debit else ""))
-            table.setItem(row_index, 3, QTableWidgetItem(f"{entry.credit:g}" if entry.credit else ""))
+            table.setItem(row_index, 2, money_table_item(entry.debit) if entry.debit else QTableWidgetItem(""))
+            table.setItem(row_index, 3, money_table_item(entry.credit) if entry.credit else QTableWidgetItem(""))
         table.resizeColumnsToContents()
         table.horizontalHeader().setStretchLastSection(True)
 
