@@ -41,6 +41,11 @@ class NozzleAssignmentComplete(BaseModel):
     # depends on opening_meter, which isn't known to this schema; that
     # cross-field check lives in ShiftService.complete_nozzle_assignment.
     testing_volume: Decimal = Decimal("0")
+    # Litres of the meter difference that were internal consumption
+    # (genset/vehicle/Omni fills) - see NozzleAssignment.
+    # internal_consumption_volume. Kept separate from testing_volume,
+    # not combined, so the two can be validated/reversed independently.
+    internal_consumption_volume: Decimal = Decimal("0")
 
     @field_validator("closing_meter")
     @classmethod
@@ -54,4 +59,11 @@ class NozzleAssignmentComplete(BaseModel):
     def non_negative_testing_volume(cls, value: Decimal) -> Decimal:
         if value < 0:
             raise ValueError("testing_volume cannot be negative")
+        return value
+
+    @field_validator("internal_consumption_volume")
+    @classmethod
+    def non_negative_internal_consumption_volume(cls, value: Decimal) -> Decimal:
+        if value < 0:
+            raise ValueError("internal_consumption_volume cannot be negative")
         return value

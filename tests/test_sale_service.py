@@ -430,16 +430,20 @@ def test_set_customer_status_requires_reason(sale_service, admin_id):
 # reference, go through Terminal individually)
 # --------------------------------------------------------------------
 
-def _fake_assignment(nozzle_id, shift_id, employee_id, opening_meter, closing_meter, testing_volume=Decimal("0")):
+def _fake_assignment(
+    nozzle_id, shift_id, employee_id, opening_meter, closing_meter,
+    testing_volume=Decimal("0"), internal_consumption_volume=Decimal("0"),
+):
     """A lightweight stand-in for a NozzleAssignment ORM object -
-    settle_assignment_cash only reads these six attributes, so a real
+    settle_assignment_cash only reads these seven attributes, so a real
     NozzleAssignment (and therefore ShiftService) isn't needed just to
     exercise SaleService's own logic in isolation. The wiring between
     ShiftService.complete_nozzle_assignment and this method is covered
     separately in tests/test_shift_service.py."""
     return SimpleNamespace(
         nozzle_id=nozzle_id, shift_id=shift_id, employee_id=employee_id,
-        opening_meter=opening_meter, closing_meter=closing_meter, testing_volume=testing_volume,
+        opening_meter=opening_meter, closing_meter=closing_meter,
+        testing_volume=testing_volume, internal_consumption_volume=internal_consumption_volume,
     )
 
 
@@ -507,6 +511,57 @@ def test_settle_assignment_cash_returns_none_when_testing_volume_accounts_for_ev
         nozzle_id, open_shift_id, employee_id, Decimal("1000"), Decimal("1005"), testing_volume=Decimal("5")
     )
     assert sale_service.settle_assignment_cash(admin_id, assignment) is None
+
+
+def test_settle_assignment_cash_excludes_internal_consumption_volume(
+    sale_service, admin_id, open_shift_id, nozzle_id, employee_id,
+):
+    """A5 working assumption (PROJECT_CONTEXT.md): a genset/vehicle/Omni
+    fill is drawn through a nozzle the same way a calibration test is, so
+    it crosses this assignment's meter without being sold to a customer.
+    Unlike testing, this fuel genuinely leaves the tank (tracked
+    separately via ExpenseService/TankService) - but it must still be
+    excluded here, or the pump ends up billing itself a cash sale for
+    its own genset diesel. 40 dispensed - 40 consumed by the genset = 0
+    sold."""
+    assignment = _fake_assignment(
+        nozzle_id, open_shift_id, employee_id, Decimal("1000"), Decimal("1040"),
+        internal_consumption_volume=Decimal("40"),
+    )
+    assert sale_service.settle_assignment_cash(admin_id, assignment) is None
+
+
+def test_settle_assignment_cash_excludes_testing_and_internal_consumption_together(
+    sale_service, admin_id, open_shift_id, nozzle_id, employee_id,
+):
+    """The two exclusions are independent and additive: 100 dispensed -
+    5 tested - 40 consumed by the genset = 55 actually sold."""
+    assignment = _fake_assignment(
+        nozzle_id, open_shift_id, employee_id, Decimal("1000"), Decimal("1100"),
+        testing_volume=Decimal("5"), internal_consumption_volume=Decimal("40"),
+    )
+    sale = sale_service.settle_assignment_cash(admin_id, assignment)
+    assert sale.quantity == Decimal("55")
+
+
+def test_settle_assignment_cash_still_subtracts_already_recorded_sales_alongside_internal_consumption(
+    sale_service, admin_id, open_shift_id, nozzle_id, employee_id,
+):
+    """Internal-consumption exclusion must not interfere with the
+    existing already-recorded-sales subtraction (the mechanism that
+    stops Terminal's individual cash/UPI/card entries from being
+    double-counted into the aggregate) - the two are independent
+    deductions from the same meter difference."""
+    sale_service.create_sale(
+        admin_id, make_sale_data(shift_id=open_shift_id, nozzle_id=nozzle_id, employee_id=employee_id, quantity=Decimal("10"), payment_method=PaymentMethod.UPI)
+    )
+    assignment = _fake_assignment(
+        nozzle_id, open_shift_id, employee_id, Decimal("1000"), Decimal("1060"),
+        internal_consumption_volume=Decimal("40"),
+    )
+    sale = sale_service.settle_assignment_cash(admin_id, assignment)
+    # 60 dispensed - 40 consumed by the genset - 10 already recorded as UPI = 10
+    assert sale.quantity == Decimal("10")
 
 
 def test_create_sale_as_related_action_bypasses_sale_manage_check(sale_service, accountant_id, open_shift_id, nozzle_id, employee_id):
