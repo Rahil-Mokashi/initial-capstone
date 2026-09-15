@@ -25,6 +25,22 @@ class ShiftRepository:
             query = query.filter(Shift.shift_date <= date_to)
         return query.order_by(Shift.shift_date.desc()).all()
 
+    def get_immediately_before(self, shift: Shift) -> Optional[Shift]:
+        """The one shift chronologically closest before this one, ordered
+        by (shift_date, created_at) - two shifts can share a date
+        (Morning/Afternoon), so created_at is the deterministic tiebreak.
+        Used by ShiftCashBookService to walk the cash-custody chain
+        backward one shift at a time when deriving an opening balance."""
+        return (
+            self._session.query(Shift)
+            .filter(
+                (Shift.shift_date < shift.shift_date)
+                | ((Shift.shift_date == shift.shift_date) & (Shift.created_at < shift.created_at))
+            )
+            .order_by(Shift.shift_date.desc(), Shift.created_at.desc())
+            .first()
+        )
+
     def add(self, shift: Shift) -> Shift:
         self._session.add(shift)
         safe_commit(self._session)

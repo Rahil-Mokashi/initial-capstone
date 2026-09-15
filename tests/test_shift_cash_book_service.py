@@ -15,11 +15,12 @@ from app.models.role import Role
 from app.models.shift import Shift
 from app.models.user import User
 from app.repositories.audit_log_repository import AuditLogRepository
+from app.repositories.shift_bank_deposit_repository import ShiftBankDepositRepository
 from app.repositories.shift_cash_book_repository import ShiftCashBookRepository
 from app.repositories.shift_repository import ShiftRepository
 from app.repositories.user_repository import UserRepository
 from app.repositories.user_session_repository import UserSessionRepository
-from app.schemas.shift_cash_book import ShiftCashBookRecord
+from app.schemas.shift_cash_book import ShiftBankDepositRecord, ShiftCashBookRecord
 from app.services.auth_service import AuthService
 from app.services.shift_cash_book_service import ShiftCashBookService
 
@@ -81,8 +82,30 @@ def auth_service(db_session):
 def cash_book_service(db_session, auth_service):
     audit_repo = AuditLogRepository(db_session)
     return ShiftCashBookService(
+        ShiftCashBookRepository(db_session),
+        ShiftRepository(db_session),
+        audit_repo,
+        auth_service,
+        ShiftBankDepositRepository(db_session),
+    )
+
+
+@pytest.fixture()
+def cash_book_service_without_bank_deposit_repo(db_session, auth_service):
+    """Mirrors Step 3's original constructor shape (bank_deposit_repo
+    omitted) - the Step 4 methods must refuse clearly rather than
+    silently mis-deriving a financial figure."""
+    audit_repo = AuditLogRepository(db_session)
+    return ShiftCashBookService(
         ShiftCashBookRepository(db_session), ShiftRepository(db_session), audit_repo, auth_service,
     )
+
+
+def make_shift(db_session, admin_id, shift_date, shift_label="Morning"):
+    shift = Shift(shift_date=shift_date, shift_label=shift_label, opened_by_id=admin_id, status=ShiftStatus.OPEN.value)
+    db_session.add(shift)
+    db_session.commit()
+    return shift
 
 
 def test_record_shift_cash_movements(cash_book_service, admin_id, open_shift_id):
@@ -156,3 +179,113 @@ def test_list_all_includes_every_recorded_cash_book(cash_book_service, admin_id,
     cash_book_service.record_shift_cash_movements(admin_id, ShiftCashBookRecord(shift_id=other_shift.id))
 
     assert len(cash_book_service.list_all(admin_id)) == 2
+
+
+# ----------------------------------------------------------------------
+# Step 4: bank deposits and the derived opening/closing balance
+# ----------------------------------------------------------------------
+
+def test_record_bank_deposit(cash_book_service, admin_id, open_shift_id):
+    cash_book_service.record_shift_cash_movements(admin_id, ShiftCashBookRecord(shift_id=open_shift_id))
+    deposit = cash_book_service.record_bank_deposit(
+        admin_id, ShiftBankDepositRecord(shift_id=open_shift_id, bank_name="HDFC Bank", amount=Decimal("1000")),
+    )
+    assert deposit.bank_name == "HDFC Bank"
+    assert deposit.amount == Decimal("1000.00")
+    assert deposit.recorded_by_id == admin_id
+
+
+def test_bank_deposit_rejected_when_cash_book_not_yet_recorded(cash_book_service, admin_id, open_shift_id):
+    with pytest.raises(NotFoundError):
+        cash_book_service.record_bank_deposit(
+            admin_id, ShiftBankDepositRecord(shift_id=open_shift_id, bank_name="HDFC Bank", amount=Decimal("1000")),
+        )
+
+
+def test_bank_deposit_amount_must_be_positive():
+    with pytest.raises(ValueError):
+        ShiftBankDepositRecord(shift_id="x", bank_name="HDFC Bank", amount=Decimal("0"))
+
+
+def test_bank_deposit_bank_name_must_not_be_blank():
+    with pytest.raises(ValueError):
+        ShiftBankDepositRecord(shift_id="x", bank_name="   ", amount=Decimal("1000"))
+
+
+def test_opening_balance_is_zero_for_the_first_shift(cash_book_service, admin_id, open_shift_id):
+    assert cash_book_service.get_opening_balance(admin_id, open_shift_id) == Decimal("0")
+
+
+def test_step4_methods_require_a_bank_deposit_repo(cash_book_service_without_bank_deposit_repo, admin_id, open_shift_id):
+    """Step 3 built ShiftCashBookService with bank_deposit_repo defaulting
+    to None; a caller still on that shape must get a clear error from the
+    Step 4 methods, not a wrong balance."""
+    with pytest.raises(ConflictError):
+        cash_book_service_without_bank_deposit_repo.get_opening_balance(admin_id, open_shift_id)
+
+
+def test_opening_balance_stops_at_a_shift_with_no_cash_book_recorded(cash_book_service, admin_id, db_session):
+    """A gap in the chain (a shift nobody recorded cash movements for)
+    stops the backward walk there rather than assuming zero further
+    back than the gap - see ShiftCashBookService._opening_balance."""
+    shift_a = make_shift(db_session, admin_id, date(2026, 1, 1))
+    shift_b = make_shift(db_session, admin_id, date(2026, 1, 2))  # no cash book recorded - the gap
+    shift_c = make_shift(db_session, admin_id, date(2026, 1, 3))
+
+    cash_book_service.record_shift_cash_movements(
+        admin_id, ShiftCashBookRecord(shift_id=shift_a.id, advance_amount=Decimal("5000")),
+    )
+
+    assert cash_book_service.get_opening_balance(admin_id, shift_c.id) == Decimal("0")
+
+
+def test_opening_balance_carries_forward_across_shifts_using_real_report_figures(
+    cash_book_service, admin_id, db_session,
+):
+    """Reproduces the real daily report (docs/daily-report-spec.md) used
+    throughout this session's settlement-side build. shift0 is a
+    synthetic predecessor that establishes Shift 1's opening balance
+    (the report photo itself does not show where Shift 1's cash came
+    from - only that it opened with 321334 already in hand).
+
+    Shift 2's derived closing cash-in-hand (126756) is deliberately
+    126756, not the report's own 127172: the 416 difference is a cash
+    shortage recovered in cash, which is Step 5's territory (A2) and is
+    not modeled by this service. That gap is asserted here explicitly
+    so it isn't mistaken for a bug once Step 5 lands.
+    """
+    shift0 = make_shift(db_session, admin_id, date(2026, 1, 1))
+    shift1 = make_shift(db_session, admin_id, date(2026, 1, 2))
+    shift2 = make_shift(db_session, admin_id, date(2026, 1, 3))
+
+    cash_book_service.record_shift_cash_movements(
+        admin_id, ShiftCashBookRecord(shift_id=shift0.id, advance_amount=Decimal("321334"), final_amount=Decimal("0")),
+    )
+    assert cash_book_service.get_opening_balance(admin_id, shift1.id) == Decimal("321334")
+
+    cash_book_service.record_shift_cash_movements(
+        admin_id, ShiftCashBookRecord(shift_id=shift1.id, advance_amount=Decimal("67700"), final_amount=Decimal("39241")),
+    )
+    cash_book_service.record_bank_deposit(
+        admin_id, ShiftBankDepositRecord(shift_id=shift1.id, bank_name="SBI", amount=Decimal("398840")),
+    )
+    shift1_summary = cash_book_service.get_cash_book_summary(admin_id, shift1.id)
+    assert shift1_summary.opening_balance == Decimal("321334")
+    assert shift1_summary.closing_cash_in_hand == Decimal("29435")  # matches the report exactly
+
+    assert cash_book_service.get_opening_balance(admin_id, shift2.id) == Decimal("29435")
+
+    cash_book_service.record_shift_cash_movements(
+        admin_id, ShiftCashBookRecord(shift_id=shift2.id, advance_amount=Decimal("0"), final_amount=Decimal("97321")),
+    )
+    shift2_summary = cash_book_service.get_cash_book_summary(admin_id, shift2.id)
+    assert shift2_summary.opening_balance == Decimal("29435")
+    assert shift2_summary.closing_cash_in_hand == Decimal("126756")  # report says 127172 - see docstring above
+
+
+def test_cash_book_summary_when_no_cash_book_recorded_yet(cash_book_service, admin_id, open_shift_id):
+    summary = cash_book_service.get_cash_book_summary(admin_id, open_shift_id)
+    assert summary.cash_book is None
+    assert summary.opening_balance == Decimal("0")
+    assert summary.bank_deposits == []
+    assert summary.closing_cash_in_hand == Decimal("0")

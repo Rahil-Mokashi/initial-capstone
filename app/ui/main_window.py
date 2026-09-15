@@ -48,6 +48,7 @@ from app.repositories.role_repository import RoleRepository
 from app.repositories.fuel_reconciliation_repository import FuelReconciliationRepository
 from app.repositories.sale_repository import SaleRepository
 from app.repositories.shift_repository import ShiftRepository
+from app.repositories.shift_bank_deposit_repository import ShiftBankDepositRepository
 from app.repositories.shift_cash_book_repository import ShiftCashBookRepository
 from app.repositories.shift_reconciliation_repository import ShiftReconciliationRepository
 from app.repositories.supplier_invoice_repository import SupplierInvoiceRepository, SupplierPaymentRepository
@@ -1534,6 +1535,7 @@ class AppController:
             ShiftRepository(self._db_session),
             audit_repo,
             self._auth_service,
+            ShiftBankDepositRepository(self._db_session),
         )
         credit_account_repo = CreditAccountRepository(self._db_session)
         customer_payment_repo = CustomerPaymentRepository(self._db_session)
