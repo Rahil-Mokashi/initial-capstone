@@ -189,7 +189,7 @@ def test_credit_window_shows_account_with_outstanding_balance(
     window = CreditWindow(credit_service, sale_service, auth_service, admin_id)
     assert window.accounts_tab.table.rowCount() == 1
     assert window.accounts_tab.table.item(0, 0).text() == "Ravi Transports"
-    assert window.accounts_tab.table.item(0, 2).text() == "1000.00"
+    assert window.accounts_tab.table.item(0, 2).text() == " 1,000.00"
 
 
 @pytest.fixture()
