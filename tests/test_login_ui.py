@@ -107,8 +107,86 @@ def test_enter_in_username_moves_focus_to_password_instead_of_submitting(control
     assert password_field.property("activeFocus") is True
 
 
+def test_real_return_keypress_in_password_field_logs_in_without_crashing(controller, qapp):
+    """The actual regression test for the 2026-09-16 crash: every other
+    login test in this file (and in test_login_bridge.py) drives
+    LoginBridge directly, which never exercises the real path a user's
+    keypress takes - QML's Return-key handling -> submitTrigger ->
+    Qt.QueuedConnection -> bridge.submit(). That real path is exactly
+    what reliably crashed with a native stack overflow before this fix
+    (see LoginScreen.qml's and login_window.py's own long comments).
+    qapp.processEvents() is required here, unlike _login()'s direct
+    calls - the whole point of the fix is that this path is now
+    genuinely asynchronous, dispatched only once the event loop gets
+    back to its own outermost frame.
+    """
+    from PySide6.QtCore import Qt
+    from PySide6.QtTest import QTest
+
+    login_window = controller.login_window
+    login_window.activateWindow()
+    login_window.raise_()
+    qapp.processEvents()
+
+    username_field = login_window.find_qml_object("usernameField")
+    password_field = login_window.find_qml_object("passwordField")
+
+    username_field.setProperty("text", "admin")
+    password_field.setProperty("text", DEFAULT_ADMIN_PASSWORD)
+    password_field.forceActiveFocus()
+    qapp.processEvents()
+
+    QTest.keyClick(login_window._quick_widget, Qt.Key_Return)
+    qapp.processEvents()
+
+    assert controller.main_window is not None
+    assert controller.login_window is None
+
+
+def test_real_sign_in_button_click_logs_in_without_crashing(controller, qapp):
+    """Same regression coverage as the Return-key test above, for the
+    other real submit path (signInButton.onClicked)."""
+    from PySide6.QtCore import QPoint, Qt
+    from PySide6.QtTest import QTest
+
+    login_window = controller.login_window
+    login_window.activateWindow()
+    login_window.raise_()
+    qapp.processEvents()
+
+    username_field = login_window.find_qml_object("usernameField")
+    password_field = login_window.find_qml_object("passwordField")
+    sign_in_button = login_window.find_qml_object("signInButton")
+
+    username_field.setProperty("text", "admin")
+    password_field.setProperty("text", DEFAULT_ADMIN_PASSWORD)
+    qapp.processEvents()
+
+    center = sign_in_button.mapToScene(sign_in_button.boundingRect().center())
+    QTest.mouseClick(
+        login_window._quick_widget, Qt.LeftButton, Qt.NoModifier, QPoint(int(center.x()), int(center.y())),
+    )
+    qapp.processEvents()
+
+    assert controller.main_window is not None
+    assert controller.login_window is None
+
+
+def _login(controller, username: str, password: str) -> None:
+    """Mirrors what LoginScreen.qml's onTextChanged handlers do as the
+    user types, then submits directly - equivalent to what actually
+    happens once LoginWindow's Qt.QueuedConnection has dispatched a
+    real QML submit (2026-09-16 fix: see LoginBridge.submit's and
+    LoginScreen.qml's own comments for why QML never calls bridge
+    methods directly from onAccepted/onClicked any more)."""
+    bridge = controller.login_window.bridge
+    bridge.username = username
+    bridge.password = password
+    bridge.submit()
+
+
 def test_wrong_password_shows_generic_error_and_stays_on_login(controller):
-    controller.login_window.bridge.attempt_login("admin", "wrong-password")
+    _login(controller, "admin", "wrong-password")
 
     assert controller.main_window is None
     assert controller.login_window.bridge.error == "Invalid username or password"
@@ -120,21 +198,21 @@ def test_unexpected_error_during_login_shows_generic_message_not_a_crash(control
 
     monkeypatch.setattr(controller.login_window.bridge._auth_service, "authenticate", boom)
 
-    controller.login_window.bridge.attempt_login("admin", "whatever")  # must not raise
+    _login(controller, "admin", "whatever")  # must not raise
 
     assert controller.main_window is None
     assert "Something went wrong" in controller.login_window.bridge.error
 
 
 def test_empty_fields_show_validation_message_without_calling_auth(controller):
-    controller.login_window.bridge.attempt_login("", "")
+    _login(controller, "", "")
 
     assert controller.main_window is None
     assert "Enter both" in controller.login_window.bridge.error
 
 
 def test_successful_login_shows_main_window_with_user_info(controller):
-    controller.login_window.bridge.attempt_login("admin", DEFAULT_ADMIN_PASSWORD)
+    _login(controller, "admin", DEFAULT_ADMIN_PASSWORD)
 
     assert controller.login_window is None
     assert controller.main_window is not None
@@ -142,7 +220,7 @@ def test_successful_login_shows_main_window_with_user_info(controller):
 
 
 def test_logout_returns_to_login_window_and_invalidates_session(controller, seeded_db):
-    controller.login_window.bridge.attempt_login("admin", DEFAULT_ADMIN_PASSWORD)
+    _login(controller, "admin", DEFAULT_ADMIN_PASSWORD)
 
     token = controller.main_window._session_token
     controller.main_window._logout()
@@ -159,7 +237,7 @@ def test_expired_session_triggers_auto_logout(controller, seeded_db, monkeypatch
     # out so this test can't hang waiting for a click that will never come.
     monkeypatch.setattr("app.ui.main_window.QMessageBox.information", lambda *a, **k: None)
 
-    controller.login_window.bridge.attempt_login("admin", DEFAULT_ADMIN_PASSWORD)
+    _login(controller, "admin", DEFAULT_ADMIN_PASSWORD)
 
     main_window = controller.main_window
     token = main_window._session_token
