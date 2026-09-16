@@ -55,18 +55,28 @@ class SidebarNavItem(QPushButton):
 class Sidebar(QWidget):
     """Fixed-width, full-height navigation dock.
 
-    `groups` is the exact (group_label, [(title, subtitle, handler,
-    permission), ...]) structure MainWindow already builds its
-    dashboard quick-access cards from, passed straight through rather
-    than duplicated - the sidebar and the dashboard's own card grid read
-    from one source of truth, so a new module can never show up in one
-    without the other.
+    Shows exactly one row per top-level group (Masters, Operations,
+    Reports, Settings - the 2026-09-16 restructure), not one row per
+    individual module: clicking a group opens its landing page (or, for
+    Reports, the existing ReportsHubWindow, which already fills that
+    same role). Individual modules are reached one level down, from
+    inside that landing page - see app/ui/group_landing_window.py.
 
-    `is_card_visible` is MainWindow's existing permission check
-    (accepts a single Permission or a tuple), reused as-is.
+    `nav_groups` is `[(label, handler, permissions), ...]`: `handler` is
+    what a click on that row runs, `permissions` is every Permission (or
+    Permission tuple, for an item gated on more than one) belonging to
+    that group, used only to decide whether the row is shown at all -
+    the same "an empty group renders nothing" rule the old per-item
+    sidebar enforced, now applied one level up. This list is built by
+    MainWindow directly from its own `_card_groups` (for Masters/
+    Operations/Settings) plus the Reports entry, never a second,
+    separately maintained list.
+
+    `is_card_visible` is MainWindow's existing permission check (accepts
+    a single Permission or a tuple), reused as-is.
     """
 
-    def __init__(self, app_name: str, device_label: str, groups, is_card_visible, footer_actions, home_action, parent=None):
+    def __init__(self, app_name: str, device_label: str, nav_groups, is_card_visible, footer_actions, home_action, parent=None):
         super().__init__(parent)
         self.setObjectName("sidebar")
         self.setFixedWidth(SIDEBAR_WIDTH)
@@ -101,22 +111,13 @@ class Sidebar(QWidget):
         nav_layout.addWidget(home_item)
         nav_layout.addSpacing(12)
 
-        for group_label, items in groups:
-            visible_items = [
-                (title, handler)
-                for title, subtitle, handler, permission in items
-                if is_card_visible(permission)
-            ]
-            if not visible_items:
+        for label, handler, permissions in nav_groups:
+            if not any(is_card_visible(permission) for permission in permissions):
                 continue
-            group_label_widget = QLabel(group_label)
-            group_label_widget.setObjectName("sidebarGroupLabel")
-            nav_layout.addWidget(group_label_widget)
-            for title, handler in visible_items:
-                item = SidebarNavItem(title, handler)
-                self._nav_items[title] = item
-                nav_layout.addWidget(item)
-            nav_layout.addSpacing(12)
+            item = SidebarNavItem(label, handler)
+            self._nav_items[label] = item
+            nav_layout.addWidget(item)
+        nav_layout.addSpacing(12)
         nav_layout.addStretch()
 
         nav_content = QWidget()

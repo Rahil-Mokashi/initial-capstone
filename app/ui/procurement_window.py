@@ -57,7 +57,16 @@ PAYMENT_HEADERS = ["Date", "Amount", "Method", "Reference"]
 
 
 class ProcurementWindow(QWidget):
-    def __init__(self, procurement_service, fuel_repo, tank_service, employee_service, auth_service, actor_user_id: str):
+    def __init__(
+        self,
+        procurement_service,
+        fuel_repo,
+        tank_service,
+        employee_service,
+        auth_service,
+        actor_user_id: str,
+        initial_tab: int = 0,
+    ):
         super().__init__()
         self._procurement_service = procurement_service
         self._can_manage = auth_service.check_permission(actor_user_id, Permission.PROCUREMENT_MANAGE.value)
@@ -79,6 +88,12 @@ class ProcurementWindow(QWidget):
         tabs.addTab(self.po_tab, "Purchase Orders")
         tabs.addTab(self.invoice_tab, "Invoices")
         tabs.currentChanged.connect(lambda _: (self.po_tab.refresh(), self.invoice_tab.refresh()))
+        # The Masters landing page's "Suppliers" tile and the Operations
+        # landing page's "Procurement" tile both open this same window
+        # (2026-09-16 navigation restructure) - they differ only in which
+        # tab a visit should land on, since master (supplier) and
+        # transactional (order/invoice) data already live together here.
+        tabs.setCurrentIndex(initial_tab)
 
         layout = QVBoxLayout()
         layout.setContentsMargins(24, 24, 24, 24)
@@ -109,7 +124,6 @@ class SupplierTab(QWidget):
         self.add_button = QPushButton("+ Add Supplier")
         self.add_button.setCursor(Qt.PointingHandCursor)
         self.add_button.clicked.connect(self._open_add_dialog)
-        self.add_button.setVisible(can_manage)
 
         top_row = QHBoxLayout()
         top_row.addStretch()
@@ -128,6 +142,11 @@ class SupplierTab(QWidget):
         layout.addLayout(top_row)
         layout.addWidget(self.table)
         self.setLayout(layout)
+
+        # Deferred until add_button is actually parented (2026-09-16,
+        # user-reported flicker) - see app/ui/sales_window.py's
+        # SalesTab.__init__ for the full explanation.
+        self.add_button.setVisible(can_manage)
 
         self.refresh()
 
@@ -658,7 +677,6 @@ class PurchaseOrderTab(QWidget):
         self.add_button = QPushButton("+ Create Purchase Order")
         self.add_button.setCursor(Qt.PointingHandCursor)
         self.add_button.clicked.connect(self._open_add_dialog)
-        self.add_button.setVisible(can_manage)
 
         top_row = QHBoxLayout()
         top_row.addStretch()
@@ -684,6 +702,11 @@ class PurchaseOrderTab(QWidget):
         layout.addLayout(self._pending_cards_layout)
         layout.addWidget(self.table)
         self.setLayout(layout)
+
+        # Deferred until add_button is actually parented (2026-09-16,
+        # user-reported flicker) - see app/ui/sales_window.py's
+        # SalesTab.__init__ for the full explanation.
+        self.add_button.setVisible(can_manage)
 
         self.refresh()
 
@@ -883,7 +906,6 @@ class InvoiceTab(QWidget):
         self.add_button = QPushButton("+ Record Invoice")
         self.add_button.setCursor(Qt.PointingHandCursor)
         self.add_button.clicked.connect(self._open_add_dialog)
-        self.add_button.setVisible(can_manage)
 
         top_row = QHBoxLayout()
         top_row.addStretch()
@@ -902,6 +924,11 @@ class InvoiceTab(QWidget):
         layout.addLayout(top_row)
         layout.addWidget(self.table)
         self.setLayout(layout)
+
+        # Deferred until add_button is actually parented (2026-09-16,
+        # user-reported flicker) - see app/ui/sales_window.py's
+        # SalesTab.__init__ for the full explanation.
+        self.add_button.setVisible(can_manage)
 
         self.refresh()
 
@@ -1048,7 +1075,6 @@ class InvoiceDetailDialog(QDialog):
 
         self.record_payment_button = QPushButton("Record Payment")
         self.record_payment_button.clicked.connect(self._record_payment)
-        self.record_payment_button.setVisible(can_manage)
 
         self.payments_table = QTableWidget(0, len(PAYMENT_HEADERS))
         self.payments_table.setAlternatingRowColors(True)
@@ -1070,6 +1096,13 @@ class InvoiceDetailDialog(QDialog):
         layout.addWidget(self.payments_table)
         layout.addLayout(bottom_row)
         self.setLayout(layout)
+
+        # Deferred until record_payment_button is actually parented
+        # (2026-09-16, user-reported flicker) - see
+        # app/ui/sales_window.py's SalesTab.__init__ for the full
+        # explanation; applies inside a QDialog exactly the same way it
+        # does inside an embedded page.
+        self.record_payment_button.setVisible(can_manage)
 
         self.refresh()
 
