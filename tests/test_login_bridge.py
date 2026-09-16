@@ -57,13 +57,27 @@ def bridge(qapp, db_session):
     return LoginBridge(auth_service)
 
 
+def _fill(bridge, username: str, password: str) -> None:
+    """Mirrors what LoginScreen.qml's onTextChanged handlers do as the
+    user types - setting these properties directly, then calling
+    submit() synchronously, is exactly how a real QML-driven call
+    behaves once LoginWindow's Qt.QueuedConnection has already
+    dispatched it (see LoginBridge.submit's own docstring: submit()
+    itself no longer needs to defer anything - the boundary that used
+    to crash is now upstream of this class entirely, in how QML/
+    LoginWindow reach it)."""
+    bridge.username = username
+    bridge.password = password
+
+
 def test_empty_fields_set_validation_error_without_calling_auth(bridge, monkeypatch):
     def boom(*args, **kwargs):
         raise AssertionError("authenticate() must not be called for empty fields")
 
     monkeypatch.setattr(bridge._auth_service, "authenticate", boom)
 
-    bridge.attempt_login("", "")
+    _fill(bridge, "", "")
+    bridge.submit()
 
     assert "Enter both" in bridge.error
 
@@ -72,7 +86,8 @@ def test_wrong_password_sets_generic_error(bridge):
     succeeded = []
     bridge.loginSucceeded.connect(lambda data: succeeded.append(data))
 
-    bridge.attempt_login("admin", "wrong-password")
+    _fill(bridge, "admin", "wrong-password")
+    bridge.submit()
 
     assert bridge.error == "Invalid username or password"
     assert succeeded == []
@@ -84,7 +99,8 @@ def test_unexpected_error_during_login_sets_generic_message_not_a_crash(bridge, 
 
     monkeypatch.setattr(bridge._auth_service, "authenticate", boom)
 
-    bridge.attempt_login("admin", "whatever")  # must not raise
+    _fill(bridge, "admin", "whatever")
+    bridge.submit()  # must not raise
 
     assert "Something went wrong" in bridge.error
 
@@ -93,7 +109,8 @@ def test_successful_login_clears_error_and_emits_user_data(bridge):
     received = []
     bridge.loginSucceeded.connect(lambda data: received.append(data))
 
-    bridge.attempt_login("admin", DEFAULT_ADMIN_PASSWORD)
+    _fill(bridge, "admin", DEFAULT_ADMIN_PASSWORD)
+    bridge.submit()
 
     assert bridge.error == ""
     assert len(received) == 1
@@ -103,16 +120,41 @@ def test_successful_login_clears_error_and_emits_user_data(bridge):
 
 def test_busy_flag_is_false_before_and_after_a_login_attempt(bridge):
     # busy toggles true only during the AuthService.authenticate() call
-    # itself; by the time attempt_login() returns it must be back to
-    # false, or the QML Sign In button would stay disabled forever.
+    # itself; by the time submit() returns it must be back to false, or
+    # the QML Sign In button would stay disabled forever.
     assert bridge.busy is False
-    bridge.attempt_login("admin", DEFAULT_ADMIN_PASSWORD)
+    _fill(bridge, "admin", DEFAULT_ADMIN_PASSWORD)
+    bridge.submit()
     assert bridge.busy is False
 
 
 def test_error_is_cleared_at_the_start_of_a_new_attempt(bridge):
-    bridge.attempt_login("admin", "wrong-password")
+    _fill(bridge, "admin", "wrong-password")
+    bridge.submit()
     assert bridge.error != ""
 
-    bridge.attempt_login("admin", DEFAULT_ADMIN_PASSWORD)
+    _fill(bridge, "admin", DEFAULT_ADMIN_PASSWORD)
+    bridge.submit()
     assert bridge.error == ""
+
+
+def test_username_and_password_properties_stay_in_sync_with_qml_typing():
+    """Not fixture-dependent on auth - just proves the properties
+    themselves round-trip and emit their notify signals, the same
+    contract LoginScreen.qml's two-way onTextChanged binding relies on."""
+    from unittest.mock import MagicMock
+
+    from app.ui.login_bridge import LoginBridge
+
+    bridge = LoginBridge(MagicMock())
+    username_changes = []
+    password_changes = []
+    bridge.usernameChanged.connect(lambda: username_changes.append(bridge.username))
+    bridge.passwordChanged.connect(lambda: password_changes.append(bridge.password))
+
+    bridge.username = "a"
+    bridge.username = "ad"
+    bridge.password = "p"
+
+    assert username_changes == ["a", "ad"]
+    assert password_changes == ["p"]

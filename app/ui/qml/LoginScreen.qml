@@ -16,6 +16,43 @@ Rectangle {
         dark: bridge.darkMode
     }
 
+    // 2026-09-16, user-reported crash: a genuine native
+    // STATUS_STACK_OVERFLOW (confirmed in the Windows Application event
+    // log, faulting inside pyside6.abi3.dll), reproduced reliably -
+    // with real interactive keyboard/mouse input, not just a test
+    // harness, run repeatedly - by pressing Return in EITHER text
+    // field or clicking Sign In. Isolated by exhaustive testing to one
+    // exact fact: calling ANY Python-registered Slot synchronously
+    // from inside this QML while its own input-event delivery (a
+    // TextField's Return keypress, a Button's click) is still live on
+    // the native call stack crashes, regardless of which field, which
+    // Slot, or what that Slot's own body does - even a truly empty one
+    // crashes. Four different attempts to defer the call past that
+    // live event all failed identically (Python-side
+    // QTimer.singleShot, twice, at two different points in the call
+    // chain; QML-side Qt.callLater, twice, deferring first just the
+    // error-handling side effect below, then the login call itself) -
+    // which is what ruled out re-entrancy/timing as the mechanism and
+    // pointed at the call boundary itself: entering Python at all from
+    // this exact native context is unsafe, no matter when.
+    //
+    // The fix is therefore structural, not another deferral: this file
+    // never calls into Python from onAccepted/onClicked at all.
+    // usernameField/passwordField push their text to bridge.username/
+    // bridge.password continuously as the user types (onTextChanged -
+    // a different, unrelated native code path from Return/click
+    // handling, and not implicated by any of the crashes above).
+    // Submitting only ever touches submitTrigger, a plain QML
+    // property with no Python involvement - LoginWindow.py is what
+    // actually calls bridge.submit(), connected to this property's
+    // own auto-generated submitTriggerChanged signal with an explicit
+    // Qt.QueuedConnection, which Qt guarantees only dispatches once
+    // the event loop is back at its own outermost frame - genuinely
+    // after the input event has finished, not just deferred within
+    // the same QML update cycle the way Qt.callLater is.
+    property int submitTrigger: 0
+    function requestSubmit() { submitTrigger++ }
+
     Column {
         id: centerColumn
         anchors.centerIn: parent
@@ -160,6 +197,7 @@ Rectangle {
                     selectByMouse: true
                     KeyNavigation.tab: passwordField
                     onAccepted: passwordField.forceActiveFocus()
+                    onTextChanged: bridge.username = text
 
                     background: Rectangle {
                         radius: theme.radiusMd
@@ -191,7 +229,8 @@ Rectangle {
                         color: theme.colorText
                         selectByMouse: true
                         echoMode: toggleButton.checked ? TextInput.Normal : TextInput.Password
-                        onAccepted: bridge.attemptLogin(usernameField.text, passwordField.text)
+                        onAccepted: root.requestSubmit()
+                        onTextChanged: bridge.password = text
 
                         background: Rectangle {
                             radius: theme.radiusMd
@@ -236,7 +275,7 @@ Rectangle {
                     height: 44
                     enabled: !bridge.busy
                     text: bridge.busy ? "Signing in…" : "Sign In →"
-                    onClicked: bridge.attemptLogin(usernameField.text, passwordField.text)
+                    onClicked: root.requestSubmit()
 
                     background: Rectangle {
                         radius: theme.radiusFull
@@ -303,6 +342,12 @@ Rectangle {
     Connections {
         target: bridge
         function onErrorChanged() {
+            // Safe to run directly, no deferral needed: errorChanged
+            // only ever fires from inside bridge.submit(), which
+            // LoginWindow.py only ever invokes via a Qt.QueuedConnection
+            // (see this file's own long comment on submitTrigger above)
+            // - by the time this handler runs, the original Return/click
+            // event has already finished being delivered.
             if (bridge.error.length > 0) {
                 passwordField.text = ""
                 passwordField.forceActiveFocus()

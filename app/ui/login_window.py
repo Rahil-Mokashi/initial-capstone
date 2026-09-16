@@ -19,7 +19,7 @@ QML file; see app/ui/qml/LoginScreen.qml for the current layout.
 import os
 import sys
 
-from PySide6.QtCore import QObject, QUrl, Signal
+from PySide6.QtCore import QObject, Qt, QUrl, Signal
 from PySide6.QtQuickWidgets import QQuickWidget
 from PySide6.QtWidgets import QMainWindow
 
@@ -76,6 +76,27 @@ class LoginWindow(QMainWindow):
         if self._quick_widget.status() == QQuickWidget.Status.Error:
             for error in self._quick_widget.errors():
                 logger.error("Failed to load LoginScreen.qml: %s", error.toString())
+
+        # Qt.QueuedConnection is load-bearing here, not a style choice
+        # (2026-09-16, user-reported crash - see LoginScreen.qml's own
+        # long comment on submitTrigger, and LoginBridge.submit's
+        # docstring): LoginScreen.qml never calls into Python from
+        # inside its own onAccepted/onClicked handlers - doing so
+        # reliably crashed with a genuine native stack overflow, for
+        # every field, every Slot, regardless of deferring the call in
+        # four different ways. submitTrigger is a plain QML property
+        # those handlers touch instead; connecting its own auto-
+        # generated submitTriggerChanged signal to bridge.submit with
+        # an explicit queued connection is what actually calls into
+        # Python - Qt guarantees a queued connection's slot only runs
+        # once the event loop is back at its own outermost frame, which
+        # is a genuinely different guarantee from QML's own
+        # Qt.callLater (tried first; it did not stop the crash, since
+        # its callback can still run within the same QML update cycle
+        # that delivered the original event).
+        root = self._quick_widget.rootObject()
+        if root is not None:
+            root.submitTriggerChanged.connect(self.bridge.submit, Qt.QueuedConnection)
 
         self.setCentralWidget(self._quick_widget)
 
