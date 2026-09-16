@@ -57,7 +57,6 @@ class AttendanceWindow(QWidget):
         self.mark_button = QPushButton("+ Mark Attendance")
         self.mark_button.setCursor(Qt.PointingHandCursor)
         self.mark_button.clicked.connect(self._open_mark_dialog)
-        self.mark_button.setVisible(self._can_manage)
 
         top_row = QHBoxLayout()
         top_row.addWidget(title)
@@ -86,6 +85,16 @@ class AttendanceWindow(QWidget):
         _page_layout = QVBoxLayout(self)
         _page_layout.setContentsMargins(0, 0, 0, 0)
         _page_layout.addWidget(container)
+
+        # Deferred until mark_button is actually parented (2026-09-16,
+        # user-reported flicker): a QPushButton constructed with no
+        # parent is its own independent top-level window as far as Qt
+        # is concerned until something reparents it - here that happens
+        # the moment container.setLayout(layout) runs above. Calling
+        # setVisible(True) any earlier genuinely shows it as a real,
+        # separate OS window for however long it takes Qt to get to
+        # that point, long enough to be visibly seen.
+        self.mark_button.setVisible(self._can_manage)
 
         self.refresh()
 

@@ -53,7 +53,6 @@ class ShiftListWindow(QWidget):
         self.open_button = QPushButton("+ Open Shift")
         self.open_button.setCursor(Qt.PointingHandCursor)
         self.open_button.clicked.connect(self._open_shift_dialog)
-        self.open_button.setVisible(self._can_manage)
 
         top_row = QHBoxLayout()
         top_row.addWidget(title)
@@ -80,6 +79,11 @@ class ShiftListWindow(QWidget):
         _page_layout = QVBoxLayout(self)
         _page_layout.setContentsMargins(0, 0, 0, 0)
         _page_layout.addWidget(container)
+
+        # Deferred until open_button is actually parented (2026-09-16,
+        # user-reported flicker) - see app/ui/sales_window.py's
+        # SalesTab.__init__ for the full explanation.
+        self.open_button.setVisible(self._can_manage)
 
         self.refresh()
 
