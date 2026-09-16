@@ -228,7 +228,6 @@ class TerminalWindow(QWidget):
             self._payment_group.addButton(chip)
             payment_row.addWidget(chip)
             self._payment_chips[method] = chip
-        self._payment_chips[PaymentMethod.CASH].setChecked(True)
         payment_row.addStretch()
 
         form = QFormLayout()
@@ -253,6 +252,20 @@ class TerminalWindow(QWidget):
 
         card.setLayout(layout)
         apply_hard_shadow(card)
+
+        # Checking the default Cash chip fires _on_payment_method_changed
+        # synchronously (Qt signals are not deferred to "after
+        # construction"), and that handler calls setVisible(True)
+        # unconditionally on _customer_label/_customer_combo (2026-09-16,
+        # user-reported flicker: a widget with no parent is its own
+        # independent top-level window as far as Qt is concerned, so
+        # doing this before form.addRow(...)/card.setLayout(...) above
+        # have actually parented them briefly showed both as real,
+        # separate OS windows). Deferred to here, after the card - and
+        # everything in it - is fully built and parented, so the
+        # widgets those setVisible(True) calls target are already safe.
+        self._payment_chips[PaymentMethod.CASH].setChecked(True)
+
         return card
 
     def _build_confirmation_card(self) -> QWidget:

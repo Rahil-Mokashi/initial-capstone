@@ -77,17 +77,14 @@ class CreditAccountsTab(QWidget):
         self.open_button = QPushButton("+ Open Credit Account")
         self.open_button.setCursor(Qt.PointingHandCursor)
         self.open_button.clicked.connect(self._open_account_dialog)
-        self.open_button.setVisible(can_manage)
 
         self.limit_button = QPushButton("Change Limit")
         self.limit_button.setObjectName("secondaryButton")
         self.limit_button.clicked.connect(self._change_selected_limit)
-        self.limit_button.setVisible(can_manage)
 
         self.payment_button = QPushButton("Record Payment")
         self.payment_button.setObjectName("secondaryButton")
         self.payment_button.clicked.connect(self._record_selected_payment)
-        self.payment_button.setVisible(can_manage)
 
         self.statement_button = QPushButton("View Statement")
         self.statement_button.setObjectName("secondaryButton")
@@ -113,6 +110,17 @@ class CreditAccountsTab(QWidget):
         layout.addLayout(top_row)
         layout.addWidget(self.table)
         self.setLayout(layout)
+
+        # Deferred until every button above is actually parented
+        # (2026-09-16, user-reported flicker): a QPushButton constructed
+        # with no parent is its own independent top-level window as far
+        # as Qt is concerned - calling setVisible(True) on one before
+        # it's added to a layout installed via setLayout() genuinely
+        # shows it as a real, separate OS window for however long it
+        # takes Qt to reparent it, long enough to be visibly seen.
+        self.open_button.setVisible(can_manage)
+        self.limit_button.setVisible(can_manage)
+        self.payment_button.setVisible(can_manage)
 
         self.refresh()
 

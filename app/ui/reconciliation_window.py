@@ -120,12 +120,10 @@ class ReconciliationsTab(QWidget):
         self.add_button = QPushButton("+ Reconcile Shift")
         self.add_button.setCursor(Qt.PointingHandCursor)
         self.add_button.clicked.connect(self._open_add_dialog)
-        self.add_button.setVisible(can_manage)
 
         self.approve_button = QPushButton("Approve Selected")
         self.approve_button.setObjectName("secondaryButton")
         self.approve_button.clicked.connect(self._approve_selected)
-        self.approve_button.setVisible(can_approve)
 
         top_row = QHBoxLayout()
         top_row.addStretch()
@@ -145,6 +143,13 @@ class ReconciliationsTab(QWidget):
         layout.addLayout(top_row)
         layout.addWidget(self.table)
         self.setLayout(layout)
+
+        # Deferred until both buttons above are actually parented
+        # (2026-09-16, user-reported flicker) - see
+        # app/ui/sales_window.py's SalesTab.__init__ for the full
+        # explanation.
+        self.add_button.setVisible(can_manage)
+        self.approve_button.setVisible(can_approve)
 
         self.refresh()
 
@@ -320,12 +325,10 @@ class CashBookTab(QWidget):
         self.add_button = QPushButton("+ Record Cash Movements")
         self.add_button.setCursor(Qt.PointingHandCursor)
         self.add_button.clicked.connect(self._open_add_dialog)
-        self.add_button.setVisible(can_manage)
 
         self.deposit_button = QPushButton("+ Record Bank Deposit")
         self.deposit_button.setCursor(Qt.PointingHandCursor)
         self.deposit_button.clicked.connect(self._open_deposit_dialog)
-        self.deposit_button.setVisible(can_manage)
 
         top_row = QHBoxLayout()
         top_row.addStretch()
@@ -345,6 +348,13 @@ class CashBookTab(QWidget):
         layout.addLayout(top_row)
         layout.addWidget(self.table)
         self.setLayout(layout)
+
+        # Deferred until both buttons above are actually parented
+        # (2026-09-16, user-reported flicker) - see
+        # app/ui/sales_window.py's SalesTab.__init__ for the full
+        # explanation.
+        self.add_button.setVisible(can_manage)
+        self.deposit_button.setVisible(can_manage)
 
         self.refresh()
 
@@ -562,12 +572,10 @@ class EmployeeShortagesTab(QWidget):
         self.add_shortage_button = QPushButton("+ Record Shortage")
         self.add_shortage_button.setCursor(Qt.PointingHandCursor)
         self.add_shortage_button.clicked.connect(self._open_shortage_dialog)
-        self.add_shortage_button.setVisible(can_manage)
 
         self.add_recovery_button = QPushButton("+ Record Recovery")
         self.add_recovery_button.setCursor(Qt.PointingHandCursor)
         self.add_recovery_button.clicked.connect(self._open_recovery_dialog)
-        self.add_recovery_button.setVisible(can_manage)
 
         top_row = QHBoxLayout()
         top_row.addStretch()
@@ -587,6 +595,13 @@ class EmployeeShortagesTab(QWidget):
         layout.addLayout(top_row)
         layout.addWidget(self.table)
         self.setLayout(layout)
+
+        # Deferred until both buttons above are actually parented
+        # (2026-09-16, user-reported flicker) - see
+        # app/ui/sales_window.py's SalesTab.__init__ for the full
+        # explanation.
+        self.add_shortage_button.setVisible(can_manage)
+        self.add_recovery_button.setVisible(can_manage)
 
         self.refresh()
 

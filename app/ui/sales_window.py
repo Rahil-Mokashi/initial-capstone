@@ -177,22 +177,18 @@ class SalesTab(QWidget):
         self.add_button = QPushButton("+ Record Sale")
         self.add_button.setCursor(Qt.PointingHandCursor)
         self.add_button.clicked.connect(self._open_add_dialog)
-        self.add_button.setVisible(can_manage)
 
         self.cancel_button = QPushButton("Cancel Selected")
         self.cancel_button.setObjectName("dangerButton")
         self.cancel_button.clicked.connect(self._cancel_selected)
-        self.cancel_button.setVisible(can_manage)
 
         self.mark_failed_button = QPushButton("Mark Payment Failed")
         self.mark_failed_button.setObjectName("secondaryButton")
         self.mark_failed_button.clicked.connect(self._mark_selected_payment_failed)
-        self.mark_failed_button.setVisible(can_manage)
 
         self.refund_button = QPushButton("Refund Payment")
         self.refund_button.setObjectName("secondaryButton")
         self.refund_button.clicked.connect(self._refund_selected_payment)
-        self.refund_button.setVisible(can_manage)
 
         self.print_receipt_button = QPushButton("Print Receipt")
         self.print_receipt_button.setObjectName("secondaryButton")
@@ -245,6 +241,26 @@ class SalesTab(QWidget):
         layout.addWidget(self.table)
         layout.addLayout(self._pager_row)
         self.setLayout(layout)
+
+        # setVisible() deliberately deferred until every button above is
+        # actually parented (2026-09-16, user-reported flicker): a
+        # QPushButton constructed with no parent is, as far as Qt is
+        # concerned, its own independent top-level window - calling
+        # setVisible(True) on one *before* it's added to a layout that's
+        # been installed via setLayout() genuinely shows it as a real,
+        # separate OS window (confirmed directly: QPushButton().
+        # setVisible(True) with no parent reports isWindow()=True,
+        # isVisible()=True, a real screen-centered geometry) for however
+        # long it takes Qt to get around to reparenting it - long enough
+        # to be visibly seen, which is exactly the "multiple windows
+        # flash briefly" bug reported. Setting visibility only after
+        # setLayout() means every button here already has a parent by
+        # the time it might become visible, so it can never be its own
+        # window.
+        self.add_button.setVisible(can_manage)
+        self.cancel_button.setVisible(can_manage)
+        self.mark_failed_button.setVisible(can_manage)
+        self.refund_button.setVisible(can_manage)
 
         self.refresh()
 
@@ -575,7 +591,6 @@ class CustomersTab(QWidget):
         self.add_button = QPushButton("+ Add Customer")
         self.add_button.setCursor(Qt.PointingHandCursor)
         self.add_button.clicked.connect(self._open_add_dialog)
-        self.add_button.setVisible(can_manage)
 
         top_row = QHBoxLayout()
         top_row.addStretch()
@@ -594,6 +609,11 @@ class CustomersTab(QWidget):
         layout.addLayout(top_row)
         layout.addWidget(self.table)
         self.setLayout(layout)
+
+        # Deferred until after setLayout() - see SalesTab's own comment
+        # above for why (a parentless widget briefly becomes its own
+        # visible top-level window).
+        self.add_button.setVisible(can_manage)
 
         self.refresh()
 

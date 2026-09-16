@@ -83,7 +83,6 @@ class DispenserTab(QWidget):
         self.add_button = QPushButton("+ Add Dispenser")
         self.add_button.setCursor(Qt.PointingHandCursor)
         self.add_button.clicked.connect(self._open_add_dialog)
-        self.add_button.setVisible(can_manage)
 
         top_row = QHBoxLayout()
         top_row.addStretch()
@@ -102,6 +101,11 @@ class DispenserTab(QWidget):
         layout.addLayout(top_row)
         layout.addWidget(self.table)
         self.setLayout(layout)
+
+        # Deferred until add_button is actually parented (2026-09-16,
+        # user-reported flicker) - see app/ui/sales_window.py's
+        # SalesTab.__init__ for the full explanation.
+        self.add_button.setVisible(can_manage)
 
         self.refresh()
 
@@ -222,7 +226,6 @@ class NozzleTab(QWidget):
         self.add_button = QPushButton("+ Add Nozzle")
         self.add_button.setCursor(Qt.PointingHandCursor)
         self.add_button.clicked.connect(self._open_add_dialog)
-        self.add_button.setVisible(can_manage)
 
         top_row = QHBoxLayout()
         top_row.addStretch()
@@ -241,6 +244,11 @@ class NozzleTab(QWidget):
         layout.addLayout(top_row)
         layout.addWidget(self.table)
         self.setLayout(layout)
+
+        # Deferred until add_button is actually parented (2026-09-16,
+        # user-reported flicker) - see app/ui/sales_window.py's
+        # SalesTab.__init__ for the full explanation.
+        self.add_button.setVisible(can_manage)
 
         self.refresh()
 
