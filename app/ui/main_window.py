@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.core.config import settings
-from app.core.constants import AssignmentStatus, Permission, ShiftStatus
+from app.core.constants import AssignmentStatus, NotificationCategory, Permission, ShiftStatus
 from app.core.exceptions import SessionExpiredError
 from app.database import connection as db_connection
 from app.repositories.attendance_repository import AttendanceRepository
@@ -346,40 +346,230 @@ class MainWindow(QMainWindow):
         header_layout.addWidget(greeting)
         header_layout.addWidget(today_label)
 
+        # Imported here, once, rather than inside each factory lambda below
+        # (a lambda body cannot contain an import statement) - this keeps
+        # every module's UI class import deferred until a real login
+        # reaches this point (same lazy-import spirit the old per-module
+        # _open_* methods had), just resolved together instead of one at a
+        # time on first visit.
+        from app.ui.attendance_window import AttendanceWindow
+        from app.ui.audit_log_window import AuditLogWindow
+        from app.ui.backup_window import BackupWindow
+        from app.ui.credit_window import CreditWindow
+        from app.ui.employee_window import EmployeeListWindow
+        from app.ui.expense_window import ExpenseWindow
+        from app.ui.fuel_price_window import FuelPriceWindow
+        from app.ui.my_shift_window import MyShiftWindow
+        from app.ui.nozzle_window import NozzleManagementWindow
+        from app.ui.procurement_window import ProcurementWindow
+        from app.ui.reconciliation_window import ReconciliationWindow
+        from app.ui.sales_window import SalesWindow
+        from app.ui.settings_window import SettingsWindow
+        from app.ui.shift_window import ShiftListWindow
+        from app.ui.tank_window import TankListWindow
+        from app.ui.terminal_window import TerminalWindow
+        from app.ui.user_management_window import UserListWindow
+
+        # Driven entirely from this one structure (2026-09-16 navigation
+        # restructure, matching the client-supplied Morex reference): the
+        # sidebar shows one row per top-level group, and each group's
+        # landing page (app/ui/group_landing_window.py) renders these same
+        # subgroups/items as tiles - neither is a second, separately
+        # maintained list. Shape: (GROUP_LABEL, [(subheading, [(title,
+        # subtitle, factory, permission), ...])]).
+        #
+        # Reports is deliberately NOT part of this structure: it is
+        # already its own landing page (ReportsHubWindow), so it is wired
+        # directly as a fourth sidebar entry below rather than wrapped in
+        # a redundant outer landing page of its own.
+        #
+        # Customers, Expense Categories, and a standalone Dispensers
+        # screen have no dedicated window yet (see PROJECT_CONTEXT.md,
+        # 2026-09-16) and are deliberately left out rather than given a
+        # tile with nowhere real to go: customer records live inside
+        # Credit, expense categories are fixed/seeded data with no CRUD
+        # screen, and dispensers are already managed together with
+        # nozzles below. Bowser is out of scope until it exists.
         self._card_groups = [
             (
-                "DAILY OPERATIONS",
+                "MASTERS",
                 [
-                    ("Employees", "Staff, documents, and status", self._open_employees, Permission.EMPLOYEE_VIEW),
-                    ("Attendance", "Mark and review attendance", self._open_attendance, Permission.ATTENDANCE_VIEW),
-                    ("Shifts", "Open/close shifts, assign nozzles", self._open_shifts, Permission.SHIFT_VIEW),
-                    ("My Shift", "Your current nozzle and fuel assignment", self._open_my_shift, Permission.MY_ASSIGNMENT_VIEW),
-                    ("Terminal", "Fast fuel-sale entry at the pump", self._open_terminal, Permission.SALE_MANAGE),
-                    ("Sales", "Record sales and manage customers", self._open_sales, Permission.SALE_VIEW),
-                    ("Credit", "Credit accounts, payments, and balances", self._open_credit, Permission.CREDIT_VIEW),
-                    ("Expenses", "Record and approve pump expenses", self._open_expenses, Permission.EXPENSE_VIEW),
-                    ("Reconciliation", "Reconcile cash, UPI, and card per shift", self._open_reconciliation, Permission.RECONCILIATION_VIEW),
-                    ("Nozzles", "Manage dispensers and nozzles", self._open_nozzles, Permission.NOZZLE_VIEW),
-                    ("Tanks", "Stock, transactions, reconciliation", self._open_tanks, Permission.INVENTORY_VIEW),
-                    ("Fuel Prices", "Set selling rates, view price history", self._open_fuel_prices, Permission.FUEL_PRICE_VIEW),
-                    ("Procurement", "Suppliers, orders, and deliveries", self._open_procurement, Permission.PROCUREMENT_VIEW),
+                    (
+                        "People",
+                        [
+                            (
+                                "Employees", "Add staff, track documents, and set active/inactive status.",
+                                lambda: EmployeeListWindow(self._employee_service, self._auth_service, self._user_data["id"]),
+                                Permission.EMPLOYEE_VIEW,
+                            ),
+                            (
+                                "Users", "Create logins, assign roles, and unlock or deactivate accounts.",
+                                lambda: UserListWindow(self._user_service, self._role_repo, self._user_data["id"]),
+                                Permission.USER_MANAGE,
+                            ),
+                        ],
+                    ),
+                    (
+                        "Fuel & Inventory",
+                        [
+                            (
+                                "Fuel Prices", "Set today's selling rate per fuel and view its price history.",
+                                lambda: FuelPriceWindow(self._user_data["id"], self._fuel_service, self._auth_service),
+                                Permission.FUEL_PRICE_VIEW,
+                            ),
+                            (
+                                "Tanks", "Register tanks, record dip readings, and reconcile physical stock.",
+                                lambda: TankListWindow(
+                                    self._tank_service, self._employee_service, self._fuel_repo, self._auth_service, self._user_data["id"]
+                                ),
+                                Permission.INVENTORY_VIEW,
+                            ),
+                            (
+                                "Nozzles & Dispensers", "Register dispensers and their nozzles, and assign a fuel to each.",
+                                lambda: NozzleManagementWindow(
+                                    self._nozzle_service, self._fuel_repo, self._tank_repo, self._auth_service, self._user_data["id"]
+                                ),
+                                Permission.NOZZLE_VIEW,
+                            ),
+                        ],
+                    ),
+                    (
+                        "Procurement",
+                        [
+                            (
+                                "Suppliers", "Add suppliers and view what has been ordered from each.",
+                                lambda: ProcurementWindow(
+                                    self._procurement_service, self._fuel_repo, self._tank_service,
+                                    self._employee_service, self._auth_service, self._user_data["id"], initial_tab=0,
+                                ),
+                                Permission.PROCUREMENT_VIEW,
+                            ),
+                        ],
+                    ),
+                    (
+                        "System",
+                        [
+                            (
+                                "Company Profile", "Set the company name, address, and GSTIN printed on receipts and reports.",
+                                lambda: SettingsWindow(self._settings_service, self._user_data["id"], self._auth_service),
+                                Permission.SETTINGS_VIEW,
+                            ),
+                        ],
+                    ),
                 ],
             ),
             (
-                "REPORTS & ADMINISTRATION",
+                "OPERATIONS",
                 [
                     (
-                        "Reports", "Sales, payments, credit, expenses, and inventory",
-                        self._open_reports,
-                        (Permission.INVENTORY_VIEW, Permission.SALE_VIEW, Permission.EXPENSE_VIEW, Permission.CREDIT_VIEW, Permission.RECONCILIATION_VIEW, Permission.ANALYTICS_VIEW),
+                        "Sales & Shifts",
+                        [
+                            (
+                                "Terminal", "Fast fuel-sale entry at the pump during a live shift.",
+                                lambda: TerminalWindow(
+                                    self._sale_service, self._shift_service, self._employee_service, self._auth_service, self._user_data["id"]
+                                ),
+                                Permission.SALE_MANAGE,
+                            ),
+                            (
+                                "Sales", "Look up past sales and manage customer records.",
+                                lambda: SalesWindow(
+                                    self._sale_service, self._shift_service, self._employee_service,
+                                    self._auth_service, self._user_data["id"], self._report_service,
+                                ),
+                                Permission.SALE_VIEW,
+                            ),
+                            (
+                                "Shifts", "Open and close shifts, and assign attendants to nozzles.",
+                                lambda: ShiftListWindow(
+                                    self._shift_service, self._employee_service, self._auth_service, self._user_data["id"]
+                                ),
+                                Permission.SHIFT_VIEW,
+                            ),
+                            (
+                                "My Shift", "See your own current nozzle and fuel assignment.",
+                                lambda: MyShiftWindow(self._shift_service, self._auth_service, self._user_data["id"]),
+                                Permission.MY_ASSIGNMENT_VIEW,
+                            ),
+                            (
+                                "Attendance", "Mark today's attendance and review past records.",
+                                lambda: AttendanceWindow(
+                                    self._attendance_service, self._employee_service, self._auth_service, self._user_data["id"]
+                                ),
+                                Permission.ATTENDANCE_VIEW,
+                            ),
+                        ],
                     ),
-                    ("Users", "Create logins and manage roles", self._open_users, Permission.USER_MANAGE),
-                    ("Settings", "Company profile, printing, backups", self._open_settings, Permission.SETTINGS_VIEW),
-                    ("Backups", "Back up or restore the database", self._open_backups, Permission.BACKUP_MANAGE),
-                    ("Audit Log", "Review every recorded change", self._open_audit_log, Permission.AUDIT_VIEW),
+                    (
+                        "Money",
+                        [
+                            (
+                                "Credit", "Open credit accounts, record customer payments, and track balances.",
+                                lambda: CreditWindow(self._credit_service, self._sale_service, self._auth_service, self._user_data["id"]),
+                                Permission.CREDIT_VIEW,
+                            ),
+                            (
+                                "Expenses", "Record pump expenses and approve the ones awaiting sign-off.",
+                                lambda: ExpenseWindow(
+                                    self._expense_service, self._employee_service, self._shift_service, self._auth_service, self._user_data["id"]
+                                ),
+                                Permission.EXPENSE_VIEW,
+                            ),
+                            (
+                                "Reconciliation", "Reconcile cash, UPI, and card totals against each shift.",
+                                lambda: ReconciliationWindow(
+                                    self._reconciliation_service, self._shift_service, self._auth_service, self._user_data["id"],
+                                    cash_book_service=self._cash_book_service,
+                                    employee_shortage_service=self._employee_shortage_service,
+                                    employee_service=self._employee_service,
+                                ),
+                                Permission.RECONCILIATION_VIEW,
+                            ),
+                        ],
+                    ),
+                    (
+                        "Procurement",
+                        [
+                            (
+                                "Procurement", "Raise purchase orders, receive deliveries, and record supplier invoices.",
+                                lambda: ProcurementWindow(
+                                    self._procurement_service, self._fuel_repo, self._tank_service,
+                                    self._employee_service, self._auth_service, self._user_data["id"], initial_tab=1,
+                                ),
+                                Permission.PROCUREMENT_VIEW,
+                            ),
+                        ],
+                    ),
+                ],
+            ),
+            (
+                "SETTINGS",
+                [
+                    (
+                        "Administration",
+                        [
+                            (
+                                "Backups", "Back up the database now, or restore from an earlier backup.",
+                                lambda: BackupWindow(self._backup_service, self._user_data["id"], self._settings_service),
+                                Permission.BACKUP_MANAGE,
+                            ),
+                            (
+                                "Audit Log", "Review every recorded change, by whom and when.",
+                                lambda: AuditLogWindow(self._audit_service, self._user_repo, self._user_data["id"]),
+                                Permission.AUDIT_VIEW,
+                            ),
+                        ],
+                    ),
                 ],
             ),
         ]
+        # Reports' own multi-permission gate (any of these lets the group
+        # row show at all - ReportsHubWindow gates each report inside it
+        # individually the same way it always has).
+        self._reports_permissions = (
+            Permission.INVENTORY_VIEW, Permission.SALE_VIEW, Permission.EXPENSE_VIEW,
+            Permission.CREDIT_VIEW, Permission.RECONCILIATION_VIEW, Permission.ANALYTICS_VIEW,
+        )
         self._stat_tiles = self._build_stat_tiles(user_data["id"])
         self._dashboard_columns = 0  # forces the first _populate_dashboard call to actually build
 
@@ -484,10 +674,23 @@ class MainWindow(QMainWindow):
         self._content_stack = QStackedWidget()
         self._content_stack.addWidget(scroll)
 
+        from app.ui.alert_strip import AlertStrip
+
+        # Always visible above the content area, never hidden behind a
+        # click (Part B, 2026-09-16) - a sibling of top_bar/breadcrumb_bar/
+        # content_stack in this same layout, not something an individual
+        # module page owns, so it stays on screen no matter which page is
+        # open. Built empty here (no data fetch - see AlertStrip's own
+        # docstring for the documented crash that constraint avoids) and
+        # populated by the same deferred timer tick that already fills in
+        # the Alerts button's badge; see refresh_alert_badge.
+        self._alert_strip = AlertStrip(on_navigate=self._navigate_to_notification)
+
         content_layout = QVBoxLayout()
         content_layout.setContentsMargins(0, 0, 0, 0)
         content_layout.setSpacing(0)
         content_layout.addWidget(top_bar)
+        content_layout.addWidget(self._alert_strip)
         content_layout.addWidget(self._breadcrumb_bar)
         content_layout.addWidget(self._content_stack, stretch=1)
 
@@ -497,7 +700,12 @@ class MainWindow(QMainWindow):
         self._sidebar = Sidebar(
             app_name="Petrol Pump ERP",
             device_label=platform.node() or "unknown-device",
-            groups=self._card_groups,
+            nav_groups=[
+                ("Masters", self._open_masters_landing, self._group_permissions("MASTERS")),
+                ("Operations", self._open_operations_landing, self._group_permissions("OPERATIONS")),
+                ("Reports", self._open_reports, self._reports_permissions),
+                ("Settings", self._open_settings_landing, self._group_permissions("SETTINGS")),
+            ],
             is_card_visible=self._is_card_visible,
             home_action=("Dashboard", self._go_home),
             footer_actions=[
@@ -579,6 +787,13 @@ class MainWindow(QMainWindow):
         of modules to the same logged-in user."""
         permissions = permission if isinstance(permission, tuple) else (permission,)
         return any(self._auth_service.check_permission(self._user_data["id"], p.value) for p in permissions)
+
+    def _group_permissions(self, label: str) -> list:
+        """Every permission (or permission tuple) belonging to one
+        _card_groups group, flattened across its subheadings - used only
+        to decide whether that group's sidebar row should show at all."""
+        subgroups = next(items for group_label, items in self._card_groups if group_label == label)
+        return [permission for _subheading, entries in subgroups for *_rest, permission in entries]
 
     def _populate_dashboard(self, columns: int) -> None:
         """Rebuilds the two column-count-dependent sections (stat tiles,
@@ -810,7 +1025,15 @@ class MainWindow(QMainWindow):
         except Exception:  # noqa: BLE001
             self.alerts_button.setText("Alerts")
             self._set_alert_tone("")
+            self._alert_strip.set_summary(None)
             return
+
+        # One fetch, two consumers (the badge here and the persistent
+        # strip) - the strip is the alert screen's THIRD consumer of this
+        # same NotificationService call (after the dashboard's own
+        # "Attention Needed" section and the Alerts dropdown), never a
+        # separate query.
+        self._alert_strip.set_summary(summary)
 
         if summary.total == 0:
             self.alerts_button.setText("Alerts")
@@ -853,6 +1076,75 @@ class MainWindow(QMainWindow):
             self.refresh_alert_badge()
         except Exception as exc:  # noqa: BLE001
             QMessageBox.warning(self, "Could not open alerts", describe_unexpected_error(exc))
+
+    # Category -> (group, the exact module tile to open). Deliberately a
+    # screen, not a specific row within it: going further (e.g. opening
+    # Tanks with the exact low tank's detail dialog already showing)
+    # would mean threading a "focus on this record" parameter through
+    # several more module windows, which is module-internals work this
+    # pass was explicitly scoped to avoid (see PROJECT_CONTEXT.md,
+    # 2026-09-16) - recorded as a follow-up, not silently dropped.
+    _NOTIFICATION_TARGETS = {
+        NotificationCategory.LOW_FUEL: ("MASTERS", "Tanks"),
+        NotificationCategory.FUEL_VARIANCE: ("MASTERS", "Tanks"),
+        NotificationCategory.CASH_SHORTAGE: ("OPERATIONS", "Reconciliation"),
+        NotificationCategory.CASH_EXCESS: ("OPERATIONS", "Reconciliation"),
+        NotificationCategory.PAYMENT_MISMATCH: ("OPERATIONS", "Reconciliation"),
+        NotificationCategory.FAILED_RECONCILIATION: ("OPERATIONS", "Reconciliation"),
+        NotificationCategory.ATTENDANCE_ISSUE: ("OPERATIONS", "Attendance"),
+        NotificationCategory.OUTSTANDING_CREDIT: ("OPERATIONS", "Credit"),
+        NotificationCategory.SUPPLIER_PAYMENT_DUE: ("OPERATIONS", "Procurement"),
+        NotificationCategory.UNAUTHORIZED_ACTION: ("SETTINGS", "Audit Log"),
+        NotificationCategory.DATABASE_ERROR: ("SETTINGS", "Audit Log"),
+        NotificationCategory.BACKUP_FAILURE: ("SETTINGS", "Backups"),
+    }
+
+    def _find_module_factory(self, group_label: str, item_title: str):
+        """Looks up one module's window factory straight out of
+        _card_groups by (group, title) - the alert strip's click-to-
+        navigate reuses the exact same factories the landing pages
+        render as tiles, never a second list of "how to open X"."""
+        subgroups = next(items for label, items in self._card_groups if label == group_label)
+        for _subheading, entries in subgroups:
+            for title, _subtitle, factory, _permission in entries:
+                if title == item_title:
+                    return factory
+        return None
+
+    def _navigate_to_notification(self, notification) -> None:
+        """The alert strip's click-to-navigate: opens the exact screen
+        an alert is about, not just the general dashboard. Named apart
+        from the _open_* family on purpose - it takes a required
+        argument, so it must not be swept up by the reflection-based
+        "call every _open_* opener with no arguments" tests in
+        test_main_window_open_paths.py. PENDING_APPROVAL
+        covers two different screens (expenses and reconciliation), so it
+        is resolved from the notification's own title rather than a
+        single fixed target."""
+        if notification.category == NotificationCategory.PENDING_APPROVAL:
+            target = ("OPERATIONS", "Expenses" if "expense" in notification.title.lower() else "Reconciliation")
+        else:
+            target = self._NOTIFICATION_TARGETS.get(notification.category)
+        if target is None:
+            return
+
+        group_label, item_title = target
+        factory = self._find_module_factory(group_label, item_title)
+        if factory is None:
+            return
+
+        group_openers = {
+            "MASTERS": self._open_masters_landing,
+            "OPERATIONS": self._open_operations_landing,
+            "SETTINGS": self._open_settings_landing,
+        }
+        # Opens the real landing page first (exactly the page a click on
+        # the sidebar group would show) and then drills in - the same
+        # two-step path a user's own click takes, so the breadcrumb reads
+        # "Masters > Tanks" and Back returns to the landing page, not a
+        # shortcut that skips straight to the module with no way back.
+        group_openers[group_label]()
+        self._push_subpage(item_title, factory)
 
     def _check_session(self) -> None:
         try:
@@ -920,12 +1212,29 @@ class MainWindow(QMainWindow):
         self._page_stack.append((widget, title, None))
         self._update_breadcrumb()
 
+    @staticmethod
+    def _remove_page(content_stack, widget) -> None:
+        """Removes and schedules deletion of one page. QStackedWidget's
+        own removeWidget() does NOT clear the page's Qt parent - it stays
+        a real child of the stack (confirmed directly: even several
+        processEvents() calls after removeWidget()+deleteLater() alone
+        never destroy it, since a still-parented object is never actually
+        idle-collected) - the same behaviour _clear_layout's own comment
+        already documents for a plain layout removal. Without the
+        explicit setParent(None) here, every module a user ever navigates
+        away from stays alive and parented to _content_stack forever:
+        found via test_opening_the_same_module_twice_leaves_only_one_
+        instance_embedded, which kept finding old instances still in the
+        widget tree (2026-09-16)."""
+        content_stack.removeWidget(widget)
+        widget.setParent(None)
+        widget.deleteLater()
+
     def _go_back(self) -> None:
         if not self._page_stack:
             return
         widget, _title, _key = self._page_stack.pop()
-        self._content_stack.removeWidget(widget)
-        widget.deleteLater()
+        self._remove_page(self._content_stack, widget)
         if not self._page_stack:
             self._go_home()
             return
@@ -939,8 +1248,7 @@ class MainWindow(QMainWindow):
         if index >= len(self._page_stack) - 1:
             return
         for widget, _title, _key in self._page_stack[index + 1 :]:
-            self._content_stack.removeWidget(widget)
-            widget.deleteLater()
+            self._remove_page(self._content_stack, widget)
         self._page_stack = self._page_stack[: index + 1]
         self._content_stack.setCurrentWidget(self._page_stack[-1][0])
         self._sidebar.set_active(self._page_stack[0][2])
@@ -954,8 +1262,7 @@ class MainWindow(QMainWindow):
 
     def _clear_page_stack(self) -> None:
         for widget, _title, _key in self._page_stack:
-            self._content_stack.removeWidget(widget)
-            widget.deleteLater()
+            self._remove_page(self._content_stack, widget)
         self._page_stack = []
 
     def _update_breadcrumb(self) -> None:
@@ -983,151 +1290,58 @@ class MainWindow(QMainWindow):
                 separator.setObjectName("breadcrumbSeparator")
                 self._breadcrumb_segments_layout.addWidget(separator)
 
-    def _open_employees(self) -> None:
-        from app.ui.employee_window import EmployeeListWindow
+    def _open_masters_landing(self) -> None:
+        """Opens the Masters group's landing page - see _card_groups for
+        the tiles it renders and group_landing_window.py for the page
+        itself. Individual modules (Employees, Tanks, ...) have no
+        sidebar row or _open_* method of their own any more; they are
+        reached one level down, by clicking a tile here."""
+        from app.ui.group_landing_window import GroupLandingWindow
 
+        subgroups = next(items for label, items in self._card_groups if label == "MASTERS")
         self._open_module_page(
-            "Employees",
-            lambda: EmployeeListWindow(self._employee_service, self._auth_service, self._user_data["id"]),
-        )
-
-    def _open_attendance(self) -> None:
-        from app.ui.attendance_window import AttendanceWindow
-
-        self._open_module_page(
-            "Attendance",
-            lambda: AttendanceWindow(
-                self._attendance_service, self._employee_service, self._auth_service, self._user_data["id"]
+            "Masters",
+            lambda: GroupLandingWindow(
+                "Masters",
+                "Reference data used across every other module - staff, logins, suppliers, fuel, tanks, and nozzles.",
+                subgroups,
+                self._is_card_visible,
+                open_subpage=self._push_subpage,
             ),
         )
 
-    def _open_shifts(self) -> None:
-        from app.ui.shift_window import ShiftListWindow
+    def _open_operations_landing(self) -> None:
+        """Opens the Operations group's landing page - see _card_groups
+        and _open_masters_landing's docstring for the pattern."""
+        from app.ui.group_landing_window import GroupLandingWindow
 
+        subgroups = next(items for label, items in self._card_groups if label == "OPERATIONS")
         self._open_module_page(
-            "Shifts",
-            lambda: ShiftListWindow(
-                self._shift_service, self._employee_service, self._auth_service, self._user_data["id"]
+            "Operations",
+            lambda: GroupLandingWindow(
+                "Operations",
+                "The day-to-day business: sales, shifts, money in and out, and procurement.",
+                subgroups,
+                self._is_card_visible,
+                open_subpage=self._push_subpage,
             ),
         )
 
-    def _open_nozzles(self) -> None:
-        from app.ui.nozzle_window import NozzleManagementWindow
+    def _open_settings_landing(self) -> None:
+        """Opens the Settings group's landing page - see _card_groups
+        and _open_masters_landing's docstring for the pattern."""
+        from app.ui.group_landing_window import GroupLandingWindow
 
-        self._open_module_page(
-            "Nozzles",
-            lambda: NozzleManagementWindow(
-                self._nozzle_service, self._fuel_repo, self._tank_repo, self._auth_service, self._user_data["id"]
-            ),
-        )
-
-    def _open_settings(self) -> None:
-        from app.ui.settings_window import SettingsWindow
-
+        subgroups = next(items for label, items in self._card_groups if label == "SETTINGS")
         self._open_module_page(
             "Settings",
-            lambda: SettingsWindow(self._settings_service, self._user_data["id"], self._auth_service),
-        )
-
-    def _open_fuel_prices(self) -> None:
-        from app.ui.fuel_price_window import FuelPriceWindow
-
-        self._open_module_page(
-            "Fuel Prices",
-            lambda: FuelPriceWindow(self._user_data["id"], self._fuel_service, self._auth_service),
-        )
-
-    def _open_tanks(self) -> None:
-        from app.ui.tank_window import TankListWindow
-
-        self._open_module_page(
-            "Tanks",
-            lambda: TankListWindow(
-                self._tank_service, self._employee_service, self._fuel_repo, self._auth_service, self._user_data["id"]
+            lambda: GroupLandingWindow(
+                "Settings",
+                "System administration and maintenance - not day-to-day business data.",
+                subgroups,
+                self._is_card_visible,
+                open_subpage=self._push_subpage,
             ),
-        )
-
-    def _open_procurement(self) -> None:
-        from app.ui.procurement_window import ProcurementWindow
-
-        self._open_module_page(
-            "Procurement",
-            lambda: ProcurementWindow(
-                self._procurement_service,
-                self._fuel_repo,
-                self._tank_service,
-                self._employee_service,
-                self._auth_service,
-                self._user_data["id"],
-            ),
-        )
-
-    def _open_terminal(self) -> None:
-        from app.ui.terminal_window import TerminalWindow
-
-        self._open_module_page(
-            "Terminal",
-            lambda: TerminalWindow(
-                self._sale_service,
-                self._shift_service,
-                self._employee_service,
-                self._auth_service,
-                self._user_data["id"],
-            ),
-        )
-
-    def _open_sales(self) -> None:
-        from app.ui.sales_window import SalesWindow
-
-        self._open_module_page(
-            "Sales",
-            lambda: SalesWindow(
-                self._sale_service,
-                self._shift_service,
-                self._employee_service,
-                self._auth_service,
-                self._user_data["id"],
-                self._report_service,
-            ),
-        )
-
-    def _open_credit(self) -> None:
-        from app.ui.credit_window import CreditWindow
-
-        self._open_module_page(
-            "Credit",
-            lambda: CreditWindow(self._credit_service, self._sale_service, self._auth_service, self._user_data["id"]),
-        )
-
-    def _open_expenses(self) -> None:
-        from app.ui.expense_window import ExpenseWindow
-
-        self._open_module_page(
-            "Expenses",
-            lambda: ExpenseWindow(
-                self._expense_service, self._employee_service, self._shift_service, self._auth_service, self._user_data["id"]
-            ),
-        )
-
-    def _open_reconciliation(self) -> None:
-        from app.ui.reconciliation_window import ReconciliationWindow
-
-        self._open_module_page(
-            "Reconciliation",
-            lambda: ReconciliationWindow(
-                self._reconciliation_service, self._shift_service, self._auth_service, self._user_data["id"],
-                cash_book_service=self._cash_book_service,
-                employee_shortage_service=self._employee_shortage_service,
-                employee_service=self._employee_service,
-            ),
-        )
-
-    def _open_my_shift(self) -> None:
-        from app.ui.my_shift_window import MyShiftWindow
-
-        self._open_module_page(
-            "My Shift",
-            lambda: MyShiftWindow(self._shift_service, self._auth_service, self._user_data["id"]),
         )
 
     def _open_reports(self) -> None:
