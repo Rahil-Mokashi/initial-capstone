@@ -108,6 +108,13 @@ class Notification:
     # customer). Carried so a future "take me there" action has something
     # to navigate with; nothing depends on it today.
     entity_id: Optional[str] = None
+    # The concrete next step, in plain language ("Place a purchase order
+    # before end of shift.") - the third part of the WHAT/WHERE/WHAT-TO-DO
+    # shape the alert strip renders as one sentence (app/ui/alert_strip.py).
+    # A blank default rather than a required field: it is set on every
+    # real producer below, but a category added later without one degrades
+    # to a two-part sentence instead of raising.
+    action: str = ""
     # True for the "N more..." line that stands in for items trimmed by
     # the per-category cap. It exists so the final sort can keep that
     # line at the END of its group: sorting it by title instead would
@@ -308,6 +315,11 @@ class NotificationService:
                     title=f"{tank.code} is low on fuel",
                     detail=f"{tank.current_stock:.2f} of {tank.capacity:.2f} litres remaining ({percent:.0f}% of capacity).",
                     entity_id=tank.id,
+                    action=(
+                        "Reorder now — sales may have to stop once this tank runs out."
+                        if severity == NotificationSeverity.CRITICAL
+                        else "Place a purchase order before the next shift."
+                    ),
                 )
             )
         found.sort(key=lambda n: _SEVERITY_ORDER[n.severity])
@@ -348,6 +360,7 @@ class NotificationService:
                         f"(variance {latest.variance:.3f} litres). A variance is a review signal, not an accusation."
                     ),
                     entity_id=tank.id,
+                    action="Open Tanks and review this tank's reconciliation to investigate the cause.",
                 )
             )
         return self._cap(found, NotificationCategory.FUEL_VARIANCE, "tanks with a fuel variance")
@@ -407,6 +420,7 @@ class NotificationService:
                                     f"{line.expected:.2f} for {line.tender.name}."
                                 ),
                                 entity_id=reconciliation.id,
+                                action="Open Reconciliation to investigate the shortfall with the attendant.",
                             )
                         )
                     elif line.variance > 0:
@@ -425,6 +439,7 @@ class NotificationService:
                                     f"sale was not recorded."
                                 ),
                                 entity_id=reconciliation.id,
+                                action="Open Reconciliation and check for a sale that was not recorded.",
                             )
                         )
                 elif line.variance != 0:
@@ -438,6 +453,7 @@ class NotificationService:
                         title="Digital payments do not match",
                         detail=f"The {label} shows a {' and a '.join(bank_settled_mismatches)}.",
                         entity_id=reconciliation.id,
+                        action="Open Reconciliation to review the UPI/card totals against the bank statement.",
                     )
                 )
 
@@ -454,6 +470,7 @@ class NotificationService:
                         title="A shift reconciliation needs approval",
                         detail=f"The {label} is classified {reconciliation.classification.replace('_', ' ')} and is awaiting sign-off.",
                         entity_id=reconciliation.id,
+                        action="Go to Reconciliation to review and approve or reject it.",
                     )
                 )
 
@@ -483,6 +500,7 @@ class NotificationService:
                 title=f"No attendance recorded for {employee.first_name} {employee.last_name}",
                 detail=f"{employee.employee_code} has no attendance entry for {today}.",
                 entity_id=employee.id,
+                action="Mark their attendance in Attendance, or confirm they are off today.",
             )
             for employee in self._employee_repo.list_active()
             if employee.id not in marked
@@ -516,6 +534,7 @@ class NotificationService:
                             f"{total:.2f} in total is pending. Until approved, these do not reduce the expected "
                             "cash in any shift reconciliation."
                         ),
+                        action="Open Expenses to review and approve the queue.",
                     )
                 )
 
@@ -532,6 +551,7 @@ class NotificationService:
                         severity=NotificationSeverity.WARNING,
                         title=f"{len(pending_reconciliations)} shift reconciliation(s) awaiting approval",
                         detail="A high-variance reconciliation stays pending until a manager or owner signs it off.",
+                        action="Go to Reconciliation to review and approve.",
                     )
                 )
 
@@ -571,6 +591,7 @@ class NotificationService:
                         "Overdue is a signal to follow up, not an accusation."
                     ),
                     entity_id=account.customer_id,
+                    action="Follow up with the customer, or open Credit to record a payment.",
                 )
             )
         found.sort(key=lambda n: n.title)
@@ -606,6 +627,7 @@ class NotificationService:
                         f"{f' ({days_late} days ago)' if days_late else ''}."
                     ),
                     entity_id=invoice.id,
+                    action="Open Procurement to record a payment before it falls further behind.",
                 )
             )
         found.sort(key=lambda n: _SEVERITY_ORDER[n.severity])
@@ -644,6 +666,7 @@ class NotificationService:
                     f"Involving {len(actors)} user account(s). Occasional refusals are normal; a burst from one "
                     "account is worth looking at in the Audit Log."
                 ),
+                action="Review the Audit Log to see which account and what was attempted.",
             )
         ]
 
@@ -670,10 +693,8 @@ class NotificationService:
                     category=NotificationCategory.DATABASE_ERROR,
                     severity=NotificationSeverity.CRITICAL,
                     title="The database failed an integrity check",
-                    detail=(
-                        f"Most recently: {integrity_failures[0].description}. "
-                        "Restore from a verified backup - see the recovery guide."
-                    ),
+                    detail=f"Most recently: {integrity_failures[0].description}.",
+                    action="Open Backups and restore from a verified backup - see the recovery guide.",
                 )
             )
 
@@ -690,6 +711,7 @@ class NotificationService:
                         f"{tamper_events[0].description} The trail was modified outside the application, "
                         "which the hash chain is designed to make impossible to hide."
                     ),
+                    action="Open the Audit Log to review exactly what changed.",
                 )
             )
 
@@ -720,7 +742,8 @@ class NotificationService:
                     category=NotificationCategory.BACKUP_FAILURE,
                     severity=NotificationSeverity.CRITICAL,
                     title="No backup has ever been taken",
-                    detail="There is nothing to restore from if this database is lost. Open Backups and take one now.",
+                    detail="There is nothing to restore from if this database is lost.",
+                    action="Open Backups and take one now.",
                 )
             ]
 
@@ -739,9 +762,7 @@ class NotificationService:
                 category=NotificationCategory.BACKUP_FAILURE,
                 severity=NotificationSeverity.CRITICAL,
                 title=f"The newest backup is {age_hours / 24:.0f} days old",
-                detail=(
-                    "Automatic backups run at startup and should never fall this far behind. "
-                    "Check that the disk is not full and that the backups folder is writable."
-                ),
+                detail="Automatic backups run at startup and should never fall this far behind.",
+                action="Open Backups, and check that the disk is not full and the backups folder is writable.",
             )
         ]

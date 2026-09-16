@@ -261,10 +261,17 @@ Everything below is implemented, tested, and running — not planned. Each modul
 - A sales forecast projects next week's sales per fuel type from recent weekly trends (simple, explainable linear regression - no black-box ML, no new heavy dependencies) and classifies it as a likely hike, a possible dip, or stable, with the reasoning spelled out; shows "not enough data yet" rather than a fake-confident guess when history is too short
 - Both views support Print, Print Preview, PDF, and Excel export, reached from the Reports hub as "Business Insights"
 
-### Dashboard redesign (2026-08-16, user-requested)
-- Dashboard cards are grouped into labeled sections ("Daily Operations", "Reports & Administration") instead of one flat grid, now that there are 12 modules
-- The top bar was decluttered to just the user's name/role and a single "Account" menu — every module is reachable from its own dashboard card, so duplicating them as top-bar buttons was redundant and was the actual cause of the button crowding a prior audit flagged
-- A live KPI strip sits above the cards — today's sale count/revenue, shifts open right now, tanks running low on stock, pending purchase orders — each figure gated on the same permission its own module already uses, so the dashboard surfaces what actually needs attention today, not just navigation tiles
+### Navigation: a persistent sidebar grouped into Masters / Operations / Reports / Settings (2026-08-24, retheme 2026-08-25, restructured 2026-09-16)
+- A permanent left-hand sidebar (`app/ui/sidebar.py`) replaced the earlier "the dashboard is the only place to navigate from" model — every module page renders embedded inside `MainWindow`'s own content area (with a browser-style back button and breadcrumb trail for drill-downs) rather than as its own top-level window
+- The sidebar itself shows exactly four top-level rows — **Masters**, **Operations**, **Reports**, **Settings** — matching the client-supplied Morex ERP reference, not one row per individual module. Clicking a group opens its own landing page: a title, a one-line description of what the group covers, and every module the acting role can reach as a titled tile with a real, specific one-line description (`app/ui/group_landing_window.py`) — grouped under subheadings (e.g. Operations splits into "Sales & Shifts" / "Money" / "Procurement") rather than one undifferentiated wall of a dozen-plus tiles
+- Reports keeps its own existing hub screen (unchanged) as the fourth group, since it already listed every report the user could open the same way; Masters/Operations/Settings are newly built to match
+- Every tile is driven from one shared structure (`MainWindow._card_groups`) read by both the sidebar's visibility check and the landing pages — a module can never show up in one without the other, and a group with nothing the current role can see renders no row at all
+- A live KPI strip sits on the dashboard above everything else — today's sale count/revenue, shifts open right now, tanks running low on stock, pending purchase orders — each figure gated on the same permission its own module already uses
+
+### Persistent alert strip (2026-09-16, user-requested)
+- A strip above the content area, always visible (not hidden behind a click) on every screen, sourced from the existing `NotificationService` — the same computed alert list the dashboard's own "Attention Needed" section and the Alerts dropdown already read, never a second query path
+- Every alert renders as one self-contained, plain-language sentence: **what** went wrong, **where** (the real tank/customer/employee/shift name, never a bare id or enum name), and **what to do about it** — e.g. "MS-16 is low on fuel. 450.00 of 10000.00 litres remaining (4% of capacity). Reorder now — sales may have to stop once this tank runs out." A single alert shows its full sentence directly; several collapse to a count plus the single most urgent one named by name, expandable to a scrollable list
+- Clicking an alert opens the exact screen it concerns (e.g. a low-fuel alert opens Tanks, an overdue-credit alert opens Credit), not just the general dashboard
 
 ### Database integrity & exception handling (cross-cutting, hardened 2026-08-15)
 - SQLite foreign-key enforcement (`PRAGMA foreign_keys=ON`) and WAL mode (`PRAGMA journal_mode=WAL`) are enabled on every connection — every `ForeignKey()` declared in the models is actually enforced by the database, not just by application code
@@ -286,7 +293,7 @@ Not yet built: Payments (dedicated reconciliation reporting beyond what Sale alr
 | ORM | SQLAlchemy 2.x | in use |
 | Validation | Pydantic v2 | in use |
 | Configuration | pydantic-settings | in use |
-| Testing | pytest | in use — 459 tests |
+| Testing | pytest | in use — 875 tests |
 | Logging | Python standard `logging` | in use — console + a rotating file colocated with the database |
 | Migrations | Alembic | in use — `init_db()` runs `alembic upgrade head`, not `Base.metadata.create_all()` |
 | PDF reports | ReportLab | in use — fuel-type summary report, more reports to follow in Phase 16 |
@@ -378,7 +385,7 @@ On first run this will:
 pytest
 ```
 
-All 459 tests should pass, in well under a minute. To run a single module's tests:
+All 875 tests should pass, in about 5-6 minutes (most of that is PySide6 widget construction across the UI test modules, not business logic). To run a single module's tests:
 
 ```bash
 pytest tests/test_auth_rbac.py -v
@@ -438,7 +445,7 @@ PySide6 UI  →  Service Layer  →  Repository Layer  →  SQLAlchemy  →  SQL
 - Single-file SQLite database (`app/petrol_pump.db`), zero configuration, fully offline
 - **WAL mode** and **foreign-key enforcement** are turned on for every connection via a SQLAlchemy `connect` event listener (`app/database/connection.py`) — this is deliberately verified by `tests/test_database_integrity.py`, which checks the PRAGMAs are active and that an invalid foreign key is actually rejected by SQLite, not just by application-level checks
 - UUID (string) primary keys throughout
-- No migration tool wired up yet (Alembic is planned); schema is currently created via `Base.metadata.create_all()`
+- Schema changes go through real Alembic migrations (`app/database/migrations.py`) — `init_db()` runs `alembic upgrade head` on every launch, including the very first one, not a blunt `Base.metadata.create_all()`
 
 ## Two-phase plan
 
