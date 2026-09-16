@@ -782,6 +782,83 @@ QPushButton#alertsButton[tone="warning"] {{
     border: 1.5px solid {color_caution};
 }}
 
+/* --- Persistent alert strip (Part B, 2026-09-16) --- Same tone
+   vocabulary as alertCard/alertsButton above (critical=red, warning=
+   amber, plain=achromatic) so this, the dashboard's own alert cards, and
+   the alerts screen never look like they disagree about severity. */
+QWidget#alertStrip {{
+    background-color: {color_surface};
+    border-bottom: 1px solid {color_border};
+}}
+
+QWidget#alertStrip[tone="critical"] {{
+    background-color: {color_danger_bg};
+    border-bottom: 1px solid {color_danger};
+}}
+
+QWidget#alertStrip[tone="warning"] {{
+    background-color: {color_caution_bg};
+    border-bottom: 1px solid {color_caution};
+}}
+
+QLabel#alertStripSummary {{
+    font-size: 14px;
+    font-weight: 600;
+    color: {color_text};
+}}
+
+QPushButton#alertStripToggle {{
+    background-color: transparent;
+    color: {color_text};
+    border: 1.5px solid {color_border};
+    border-radius: {RADIUS_FULL}px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 700;
+}}
+
+QPushButton#alertStripToggle:hover {{
+    background-color: {color_surface_hover};
+}}
+
+QWidget#alertStripLine {{
+    background-color: {color_surface};
+    border: 1px solid {color_border};
+    border-left: 4px solid {color_text};
+    border-radius: {RADIUS_LG}px;
+}}
+
+QWidget#alertStripLine:hover {{
+    background-color: {color_surface_hover};
+}}
+
+QWidget#alertStripLine[tone="critical"] {{
+    border-left: 4px solid {color_danger};
+}}
+
+QWidget#alertStripLine[tone="warning"] {{
+    border-left: 4px solid {color_caution};
+}}
+
+QLabel#alertStripLineText {{
+    font-size: 13px;
+    color: {color_text};
+}}
+
+/* --- Group landing page tiles (Masters/Operations/Settings, 2026-09-16
+   navigation restructure) --- Same card look as every other #card, plus
+   a hover treatment since this one, unlike most, is clickable. */
+QWidget#moduleTileCard {{
+    background-color: {color_surface};
+    border: 1px solid {color_border};
+    border-radius: {RADIUS_XL}px;
+}}
+
+QWidget#moduleTileCard:hover {{
+    background-color: {color_surface_hover};
+    border: 1px solid {color_text_faint};
+}}
+
 /* --- Persistent left sidebar (2026-08-24, retheme 2026-08-25) ---
    Was a permanently-dark surface regardless of app theme (matching an
    earlier client reference); the PetrolStream reference's own sidebar is
