@@ -134,8 +134,63 @@ def test_window_shows_records_marked_for_selected_date(qapp, attendance_service,
     assert window.table.rowCount() == 1
     assert window.table.item(0, 1).text() == "Present"
 
+    # The roster still lists every active employee on a date with no
+    # records at all - that's the whole point of inline marking - just
+    # unmarked, with quick-mark buttons instead of a status.
     window.date_input.setDate(date_to_qdate(date(2026, 4, 2)))
-    assert window.table.rowCount() == 0
+    assert window.table.rowCount() == 1
+    assert window.table.cellWidget(0, 1) is not None
+    assert window.table.item(0, 1) is None
+
+
+def test_inline_present_button_marks_attendance_without_a_dialog(qapp, attendance_service, employee_service, admin_id, employee_id):
+    from PySide6.QtWidgets import QPushButton
+
+    from app.ui.attendance_window import AttendanceWindow
+
+    service, auth_service = employee_service
+    window = AttendanceWindow(attendance_service, service, auth_service, admin_id)
+    window.date_input.setDate(date_to_qdate(date(2026, 4, 3)))
+
+    quick_mark_widget = window.table.cellWidget(0, 1)
+    present_button = quick_mark_widget.findChildren(QPushButton)[0]
+    present_button.click()
+
+    records = attendance_service.list_for_date(admin_id, date(2026, 4, 3))
+    assert len(records) == 1
+    assert records[0].status == AttendanceStatus.PRESENT.value
+    # And the row now shows the marked status instead of the buttons.
+    assert window.table.item(0, 1).text() == "Present"
+    assert window.table.cellWidget(0, 1) is None
+
+
+def test_inline_absent_button_marks_attendance(qapp, attendance_service, employee_service, admin_id, employee_id):
+    from PySide6.QtWidgets import QPushButton
+
+    from app.ui.attendance_window import AttendanceWindow
+
+    service, auth_service = employee_service
+    window = AttendanceWindow(attendance_service, service, auth_service, admin_id)
+    window.date_input.setDate(date_to_qdate(date(2026, 4, 4)))
+
+    quick_mark_widget = window.table.cellWidget(0, 1)
+    absent_button = quick_mark_widget.findChildren(QPushButton)[1]
+    absent_button.click()
+
+    records = attendance_service.list_for_date(admin_id, date(2026, 4, 4))
+    assert len(records) == 1
+    assert records[0].status == AttendanceStatus.ABSENT.value
+
+
+def test_inline_quick_mark_hidden_for_view_only_role(qapp, attendance_service, employee_service, admin_id, accountant_id, employee_id):
+    from app.ui.attendance_window import AttendanceWindow
+
+    service, auth_service = employee_service
+    window = AttendanceWindow(attendance_service, service, auth_service, accountant_id)
+    window.date_input.setDate(date_to_qdate(date(2026, 4, 5)))
+
+    assert window.table.cellWidget(0, 1) is None
+    assert window.table.item(0, 1).text() == "Not marked"
 
 
 def test_mark_dialog_saves_valid_attendance(qapp, attendance_service, employee_service, admin_id, employee_id):

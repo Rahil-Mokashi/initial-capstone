@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QMessageBox,
     QPushButton,
     QSpinBox,
     QTableWidget,
@@ -23,7 +24,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from app.core.constants import AttendanceStatus, Permission
+from app.core.constants import AttendanceStatus, EmployeeStatus, Permission
 from app.core.exceptions import AppError
 from app.schemas.attendance import AttendanceCorrection, AttendanceMark
 from app.ui.qt_utils import describe_unexpected_error, make_edit_icon_button, qdate_to_date
@@ -101,27 +102,92 @@ class AttendanceWindow(QWidget):
     def refresh(self) -> None:
         attendance_date = qdate_to_date(self.date_input.date())
         self._records = self._attendance_service.list_for_date(self._actor_user_id, attendance_date)
+        records_by_employee = {record.employee_id: record for record in self._records}
 
-        employees_by_id = {e.id: e for e in self._employee_service.list_employees(self._actor_user_id)}
+        # The roster is every active employee, not just those already
+        # marked - this is what lets Present/Absent be marked inline
+        # per row below, instead of only through "+ Mark Attendance".
+        employees = [
+            e
+            for e in self._employee_service.list_employees(self._actor_user_id)
+            if e.status == EmployeeStatus.ACTIVE.value
+        ]
+        employees.sort(key=lambda e: (e.first_name, e.last_name))
 
-        self.table.setRowCount(len(self._records))
-        for row_index, record in enumerate(self._records):
-            employee = employees_by_id.get(record.employee_id)
-            name = f"{employee.first_name} {employee.last_name}" if employee else record.employee_id
+        self.table.setRowCount(len(employees))
+        for row_index, employee in enumerate(employees):
+            record = records_by_employee.get(employee.id)
 
-            self.table.setItem(row_index, 0, QTableWidgetItem(name))
-            self.table.setItem(row_index, 1, QTableWidgetItem(record.status.replace("_", " ").title()))
-            self.table.setItem(row_index, 2, QTableWidgetItem(record.check_in_time.strftime("%H:%M") if record.check_in_time else ""))
-            self.table.setItem(row_index, 3, QTableWidgetItem(record.check_out_time.strftime("%H:%M") if record.check_out_time else ""))
-            self.table.setItem(row_index, 4, QTableWidgetItem(str(record.overtime_minutes)))
-            self.table.setItem(row_index, 5, QTableWidgetItem("Yes" if record.corrected_at else ""))
-            self.table.item(row_index, 0).setData(Qt.UserRole, record.id)
-            self.table.setCellWidget(
-                row_index, 6, make_edit_icon_button(lambda _=False, rid=record.id: self._open_correction_dialog(rid))
-            )
+            name_item = QTableWidgetItem(f"{employee.first_name} {employee.last_name}")
+            name_item.setData(Qt.UserRole, employee.id)
+            self.table.setItem(row_index, 0, name_item)
+
+            for col in (1, 2, 3, 4, 5, 6):
+                self.table.setCellWidget(row_index, col, None)
+                self.table.setItem(row_index, col, None)
+
+            if record:
+                self.table.setItem(row_index, 1, QTableWidgetItem(record.status.replace("_", " ").title()))
+                self.table.setItem(row_index, 2, QTableWidgetItem(record.check_in_time.strftime("%H:%M") if record.check_in_time else ""))
+                self.table.setItem(row_index, 3, QTableWidgetItem(record.check_out_time.strftime("%H:%M") if record.check_out_time else ""))
+                self.table.setItem(row_index, 4, QTableWidgetItem(str(record.overtime_minutes)))
+                self.table.setItem(row_index, 5, QTableWidgetItem("Yes" if record.corrected_at else ""))
+                if self._can_manage:
+                    self.table.setCellWidget(
+                        row_index, 6, make_edit_icon_button(lambda _=False, rid=record.id: self._open_correction_dialog(rid))
+                    )
+            elif self._can_manage:
+                self.table.setCellWidget(row_index, 1, self._make_quick_mark_widget(employee.id))
+            else:
+                self.table.setItem(row_index, 1, QTableWidgetItem("Not marked"))
 
         self.table.resizeColumnsToContents()
         self.table.horizontalHeader().setStretchLastSection(True)
+
+    def _make_quick_mark_widget(self, employee_id: str) -> QWidget:
+        """Present/Absent, one click each - the inline path for the
+        everyday case. Anything else (Late, Half Day, Leave, Holiday) or
+        a correction to an already-marked row still goes through the
+        dialogs below.
+        """
+        widget = QWidget()
+        row = QHBoxLayout(widget)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(6)
+
+        present_button = QPushButton("Present")
+        present_button.setCursor(Qt.PointingHandCursor)
+        present_button.clicked.connect(lambda _=False, eid=employee_id: self._quick_mark(eid, AttendanceStatus.PRESENT))
+
+        absent_button = QPushButton("Absent")
+        absent_button.setObjectName("secondaryButton")
+        absent_button.setCursor(Qt.PointingHandCursor)
+        absent_button.clicked.connect(lambda _=False, eid=employee_id: self._quick_mark(eid, AttendanceStatus.ABSENT))
+
+        row.addWidget(present_button)
+        row.addWidget(absent_button)
+        row.addStretch()
+        return widget
+
+    def _quick_mark(self, employee_id: str, status: AttendanceStatus) -> None:
+        try:
+            data = AttendanceMark(
+                employee_id=employee_id,
+                attendance_date=qdate_to_date(self.date_input.date()),
+                status=status,
+            )
+            self._attendance_service.mark_attendance(self._actor_user_id, data)
+        except ValidationError as exc:
+            QMessageBox.warning(self, "Could not mark attendance", "; ".join(err["msg"] for err in exc.errors()))
+            return
+        except AppError as exc:
+            QMessageBox.warning(self, "Could not mark attendance", str(exc))
+            return
+        except Exception as exc:  # noqa: BLE001 - last resort so a DB/unexpected error can't crash the window
+            QMessageBox.warning(self, "Could not mark attendance", describe_unexpected_error(exc))
+            return
+
+        self.refresh()
 
     def _open_mark_dialog(self) -> None:
         dialog = AttendanceMarkDialog(
