@@ -15,13 +15,17 @@ from app.repositories.attendance_repository import AttendanceRepository
 from app.repositories.audit_log_repository import AuditLogRepository
 from app.repositories.employee_document_repository import EmployeeDocumentRepository
 from app.repositories.employee_repository import EmployeeRepository
+from app.repositories.nozzle_assignment_repository import NozzleAssignmentRepository
+from app.repositories.nozzle_repository import NozzleRepository
 from app.repositories.role_repository import RoleRepository
+from app.repositories.shift_repository import ShiftRepository
 from app.repositories.user_repository import UserRepository
 from app.repositories.user_session_repository import UserSessionRepository
 from app.schemas.employee import EmployeeCreate
 from app.services.attendance_service import AttendanceService
 from app.services.auth_service import AuthService
 from app.services.employee_service import EmployeeService
+from app.services.shift_service import ShiftService
 from app.ui.qt_utils import date_to_qdate
 
 
@@ -94,7 +98,25 @@ def employee_service(db_session):
 def attendance_service(db_session, employee_service):
     service, auth_service = employee_service
     audit_repo = AuditLogRepository(db_session)
-    return AttendanceService(AttendanceRepository(db_session), EmployeeRepository(db_session), audit_repo, auth_service)
+    return AttendanceService(
+        AttendanceRepository(db_session), EmployeeRepository(db_session), ShiftRepository(db_session), audit_repo, auth_service
+    )
+
+
+@pytest.fixture()
+def shift_service(db_session, employee_service):
+    _, auth_service = employee_service
+    user_repo = UserRepository(db_session)
+    audit_repo = AuditLogRepository(db_session)
+    return ShiftService(
+        ShiftRepository(db_session),
+        NozzleAssignmentRepository(db_session),
+        EmployeeRepository(db_session),
+        NozzleRepository(db_session),
+        user_repo,
+        audit_repo,
+        auth_service,
+    )
 
 
 @pytest.fixture()
@@ -107,19 +129,23 @@ def employee_id(employee_service, admin_id):
     return employee.id
 
 
-def test_mark_button_visible_for_manager_hidden_for_view_only(qapp, attendance_service, employee_service, admin_id, accountant_id):
+def test_mark_button_visible_for_manager_hidden_for_view_only(
+    qapp, attendance_service, employee_service, shift_service, admin_id, accountant_id
+):
     from app.ui.attendance_window import AttendanceWindow
 
     service, auth_service = employee_service
 
-    admin_window = AttendanceWindow(attendance_service, service, auth_service, admin_id)
+    admin_window = AttendanceWindow(attendance_service, service, shift_service, auth_service, admin_id)
     assert admin_window.mark_button.isHidden() is False
 
-    accountant_window = AttendanceWindow(attendance_service, service, auth_service, accountant_id)
+    accountant_window = AttendanceWindow(attendance_service, service, shift_service, auth_service, accountant_id)
     assert accountant_window.mark_button.isHidden() is True
 
 
-def test_window_shows_records_marked_for_selected_date(qapp, attendance_service, employee_service, admin_id, employee_id):
+def test_window_shows_records_marked_for_selected_date(
+    qapp, attendance_service, employee_service, shift_service, admin_id, employee_id
+):
     from app.ui.attendance_window import AttendanceWindow
     from app.schemas.attendance import AttendanceMark
 
@@ -129,7 +155,7 @@ def test_window_shows_records_marked_for_selected_date(qapp, attendance_service,
         AttendanceMark(employee_id=employee_id, attendance_date=date(2026, 4, 1), status=AttendanceStatus.PRESENT),
     )
 
-    window = AttendanceWindow(attendance_service, service, auth_service, admin_id)
+    window = AttendanceWindow(attendance_service, service, shift_service, auth_service, admin_id)
     window.date_input.setDate(date_to_qdate(date(2026, 4, 1)))
     assert window.table.rowCount() == 1
     assert window.table.item(0, 1).text() == "Present"
@@ -143,13 +169,15 @@ def test_window_shows_records_marked_for_selected_date(qapp, attendance_service,
     assert window.table.item(0, 1) is None
 
 
-def test_inline_present_button_marks_attendance_without_a_dialog(qapp, attendance_service, employee_service, admin_id, employee_id):
+def test_inline_present_button_marks_attendance_without_a_dialog(
+    qapp, attendance_service, employee_service, shift_service, admin_id, employee_id
+):
     from PySide6.QtWidgets import QPushButton
 
     from app.ui.attendance_window import AttendanceWindow
 
     service, auth_service = employee_service
-    window = AttendanceWindow(attendance_service, service, auth_service, admin_id)
+    window = AttendanceWindow(attendance_service, service, shift_service, auth_service, admin_id)
     window.date_input.setDate(date_to_qdate(date(2026, 4, 3)))
 
     quick_mark_widget = window.table.cellWidget(0, 1)
@@ -164,13 +192,13 @@ def test_inline_present_button_marks_attendance_without_a_dialog(qapp, attendanc
     assert window.table.cellWidget(0, 1) is None
 
 
-def test_inline_absent_button_marks_attendance(qapp, attendance_service, employee_service, admin_id, employee_id):
+def test_inline_absent_button_marks_attendance(qapp, attendance_service, employee_service, shift_service, admin_id, employee_id):
     from PySide6.QtWidgets import QPushButton
 
     from app.ui.attendance_window import AttendanceWindow
 
     service, auth_service = employee_service
-    window = AttendanceWindow(attendance_service, service, auth_service, admin_id)
+    window = AttendanceWindow(attendance_service, service, shift_service, auth_service, admin_id)
     window.date_input.setDate(date_to_qdate(date(2026, 4, 4)))
 
     quick_mark_widget = window.table.cellWidget(0, 1)
@@ -182,23 +210,25 @@ def test_inline_absent_button_marks_attendance(qapp, attendance_service, employe
     assert records[0].status == AttendanceStatus.ABSENT.value
 
 
-def test_inline_quick_mark_hidden_for_view_only_role(qapp, attendance_service, employee_service, admin_id, accountant_id, employee_id):
+def test_inline_quick_mark_hidden_for_view_only_role(
+    qapp, attendance_service, employee_service, shift_service, admin_id, accountant_id, employee_id
+):
     from app.ui.attendance_window import AttendanceWindow
 
     service, auth_service = employee_service
-    window = AttendanceWindow(attendance_service, service, auth_service, accountant_id)
+    window = AttendanceWindow(attendance_service, service, shift_service, auth_service, accountant_id)
     window.date_input.setDate(date_to_qdate(date(2026, 4, 5)))
 
     assert window.table.cellWidget(0, 1) is None
     assert window.table.item(0, 1).text() == "Not marked"
 
 
-def test_mark_dialog_saves_valid_attendance(qapp, attendance_service, employee_service, admin_id, employee_id):
+def test_mark_dialog_saves_valid_attendance(qapp, attendance_service, employee_service, shift_service, admin_id, employee_id):
     from app.ui.attendance_window import AttendanceMarkDialog
     from PySide6.QtWidgets import QDialog
 
     service, _ = employee_service
-    dialog = AttendanceMarkDialog(attendance_service, service, admin_id, date_to_qdate(date(2026, 5, 1)))
+    dialog = AttendanceMarkDialog(attendance_service, service, shift_service, admin_id, date_to_qdate(date(2026, 5, 1)))
     dialog.status_combo.setCurrentText(AttendanceStatus.ABSENT.value)
 
     dialog._save()
@@ -209,7 +239,9 @@ def test_mark_dialog_saves_valid_attendance(qapp, attendance_service, employee_s
     assert records[0].status == AttendanceStatus.ABSENT.value
 
 
-def test_mark_dialog_shows_generic_message_on_unexpected_error(qapp, attendance_service, employee_service, admin_id, employee_id, monkeypatch):
+def test_mark_dialog_shows_generic_message_on_unexpected_error(
+    qapp, attendance_service, employee_service, shift_service, admin_id, employee_id, monkeypatch
+):
     from app.ui.attendance_window import AttendanceMarkDialog
 
     service, _ = employee_service
@@ -219,13 +251,15 @@ def test_mark_dialog_shows_generic_message_on_unexpected_error(qapp, attendance_
 
     monkeypatch.setattr(attendance_service, "mark_attendance", boom)
 
-    dialog = AttendanceMarkDialog(attendance_service, service, admin_id, date_to_qdate(date(2026, 5, 1)))
+    dialog = AttendanceMarkDialog(attendance_service, service, shift_service, admin_id, date_to_qdate(date(2026, 5, 1)))
     dialog._save()  # must not raise
 
     assert "Something went wrong" in dialog.error_label.text()
 
 
-def test_mark_dialog_rejects_duplicate_for_same_day(qapp, attendance_service, employee_service, admin_id, employee_id):
+def test_mark_dialog_rejects_duplicate_for_same_day(
+    qapp, attendance_service, employee_service, shift_service, admin_id, employee_id
+):
     from app.ui.attendance_window import AttendanceMarkDialog
     from app.schemas.attendance import AttendanceMark
 
@@ -235,13 +269,13 @@ def test_mark_dialog_rejects_duplicate_for_same_day(qapp, attendance_service, em
     )
 
     service, _ = employee_service
-    dialog = AttendanceMarkDialog(attendance_service, service, admin_id, date_to_qdate(date(2026, 5, 2)))
+    dialog = AttendanceMarkDialog(attendance_service, service, shift_service, admin_id, date_to_qdate(date(2026, 5, 2)))
     dialog._save()
 
     assert dialog.error_label.isHidden() is False
 
 
-def test_correction_dialog_requires_reason(qapp, attendance_service, employee_service, admin_id, employee_id):
+def test_correction_dialog_requires_reason(qapp, attendance_service, employee_service, shift_service, admin_id, employee_id):
     from app.ui.attendance_window import AttendanceCorrectionDialog
     from app.schemas.attendance import AttendanceMark
 
@@ -250,7 +284,7 @@ def test_correction_dialog_requires_reason(qapp, attendance_service, employee_se
         AttendanceMark(employee_id=employee_id, attendance_date=date(2026, 5, 3), status=AttendanceStatus.ABSENT),
     )
 
-    dialog = AttendanceCorrectionDialog(attendance_service, admin_id, record.id, True)
+    dialog = AttendanceCorrectionDialog(attendance_service, shift_service, admin_id, record.id, True)
     dialog.status_combo.setCurrentText(AttendanceStatus.PRESENT.value)
     dialog.reason_input.setPlainText("")
     dialog._save()
@@ -259,7 +293,7 @@ def test_correction_dialog_requires_reason(qapp, attendance_service, employee_se
     assert attendance_service.get_attendance(admin_id, record.id).status == AttendanceStatus.ABSENT.value
 
 
-def test_correction_dialog_saves_with_reason(qapp, attendance_service, employee_service, admin_id, employee_id):
+def test_correction_dialog_saves_with_reason(qapp, attendance_service, employee_service, shift_service, admin_id, employee_id):
     from app.ui.attendance_window import AttendanceCorrectionDialog
     from app.schemas.attendance import AttendanceMark
     from PySide6.QtWidgets import QDialog
@@ -269,7 +303,7 @@ def test_correction_dialog_saves_with_reason(qapp, attendance_service, employee_
         AttendanceMark(employee_id=employee_id, attendance_date=date(2026, 5, 4), status=AttendanceStatus.ABSENT),
     )
 
-    dialog = AttendanceCorrectionDialog(attendance_service, admin_id, record.id, True)
+    dialog = AttendanceCorrectionDialog(attendance_service, shift_service, admin_id, record.id, True)
     dialog.status_combo.setCurrentText(AttendanceStatus.PRESENT.value)
     dialog.reason_input.setPlainText("Was actually present")
     dialog._save()
@@ -278,7 +312,9 @@ def test_correction_dialog_saves_with_reason(qapp, attendance_service, employee_
     assert attendance_service.get_attendance(admin_id, record.id).status == AttendanceStatus.PRESENT.value
 
 
-def test_correction_dialog_disables_editing_for_view_only(qapp, attendance_service, employee_service, admin_id, employee_id):
+def test_correction_dialog_disables_editing_for_view_only(
+    qapp, attendance_service, employee_service, shift_service, admin_id, employee_id
+):
     from app.ui.attendance_window import AttendanceCorrectionDialog
     from app.schemas.attendance import AttendanceMark
 
@@ -287,8 +323,49 @@ def test_correction_dialog_disables_editing_for_view_only(qapp, attendance_servi
         AttendanceMark(employee_id=employee_id, attendance_date=date(2026, 5, 5), status=AttendanceStatus.PRESENT),
     )
 
-    dialog = AttendanceCorrectionDialog(attendance_service, admin_id, record.id, can_manage=False)
+    dialog = AttendanceCorrectionDialog(attendance_service, shift_service, admin_id, record.id, can_manage=False)
     assert dialog.status_combo.isEnabled() is False
+    assert dialog.shift_combo.isEnabled() is False
     assert dialog.overtime_input.isEnabled() is False
     assert dialog.reason_input.isEnabled() is False
     assert dialog.save_button.isEnabled() is False
+
+
+def test_mark_dialog_saves_selected_shift(qapp, attendance_service, employee_service, shift_service, admin_id, employee_id):
+    """The dialog now offers a real Shift to pick, not free text - this
+    is the core of the 2026-09-23 shift_label -> shift_id migration.
+    """
+    from app.ui.attendance_window import AttendanceMarkDialog
+    from app.schemas.shift import ShiftOpen
+
+    shift = shift_service.open_shift(admin_id, ShiftOpen(shift_date=date(2026, 5, 6), shift_label="Morning"))
+
+    service, _ = employee_service
+    dialog = AttendanceMarkDialog(attendance_service, service, shift_service, admin_id, date_to_qdate(date(2026, 5, 6)))
+
+    index = dialog.shift_combo.findData(shift.id)
+    assert index >= 0
+    dialog.shift_combo.setCurrentIndex(index)
+    dialog._save()
+
+    records = attendance_service.list_for_date(admin_id, date(2026, 5, 6))
+    assert len(records) == 1
+    assert records[0].shift_id == shift.id
+    assert records[0].shift_label == "Morning"
+
+
+def test_correction_dialog_preselects_existing_shift(qapp, attendance_service, employee_service, shift_service, admin_id, employee_id):
+    from app.ui.attendance_window import AttendanceCorrectionDialog
+    from app.schemas.attendance import AttendanceMark
+    from app.schemas.shift import ShiftOpen
+
+    shift = shift_service.open_shift(admin_id, ShiftOpen(shift_date=date(2026, 5, 7), shift_label="Evening"))
+    record = attendance_service.mark_attendance(
+        admin_id,
+        AttendanceMark(
+            employee_id=employee_id, attendance_date=date(2026, 5, 7), status=AttendanceStatus.PRESENT, shift_id=shift.id
+        ),
+    )
+
+    dialog = AttendanceCorrectionDialog(attendance_service, shift_service, admin_id, record.id, True)
+    assert dialog.shift_combo.currentData() == shift.id

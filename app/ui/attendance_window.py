@@ -13,7 +13,6 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
     QMessageBox,
     QPushButton,
     QSpinBox,
@@ -36,10 +35,11 @@ TABLE_HEADERS = ["Employee", "Status", "Check In", "Check Out", "Overtime (min)"
 class AttendanceWindow(QWidget):
     """Daily attendance roster: pick a date, view who's marked, mark/correct entries."""
 
-    def __init__(self, attendance_service, employee_service, auth_service, actor_user_id: str):
+    def __init__(self, attendance_service, employee_service, shift_service, auth_service, actor_user_id: str):
         super().__init__()
         self._attendance_service = attendance_service
         self._employee_service = employee_service
+        self._shift_service = shift_service
         self._auth_service = auth_service
         self._actor_user_id = actor_user_id
         self._can_manage = auth_service.check_permission(actor_user_id, Permission.ATTENDANCE_MANAGE.value)
@@ -191,13 +191,20 @@ class AttendanceWindow(QWidget):
 
     def _open_mark_dialog(self) -> None:
         dialog = AttendanceMarkDialog(
-            self._attendance_service, self._employee_service, self._actor_user_id, self.date_input.date(), self
+            self._attendance_service,
+            self._employee_service,
+            self._shift_service,
+            self._actor_user_id,
+            self.date_input.date(),
+            self,
         )
         if dialog.exec() == QDialog.Accepted:
             self.refresh()
 
     def _open_correction_dialog(self, attendance_id: str) -> None:
-        dialog = AttendanceCorrectionDialog(self._attendance_service, self._actor_user_id, attendance_id, self._can_manage, self)
+        dialog = AttendanceCorrectionDialog(
+            self._attendance_service, self._shift_service, self._actor_user_id, attendance_id, self._can_manage, self
+        )
         dialog.exec()
         self.refresh()
 
@@ -205,9 +212,10 @@ class AttendanceWindow(QWidget):
 class AttendanceMarkDialog(QDialog):
     """Mark a new attendance record for one employee on one date."""
 
-    def __init__(self, attendance_service, employee_service, actor_user_id: str, default_date: QDate, parent=None):
+    def __init__(self, attendance_service, employee_service, shift_service, actor_user_id: str, default_date: QDate, parent=None):
         super().__init__(parent)
         self._attendance_service = attendance_service
+        self._shift_service = shift_service
         self._actor_user_id = actor_user_id
 
         self.setWindowTitle("Mark Attendance")
@@ -220,13 +228,16 @@ class AttendanceMarkDialog(QDialog):
 
         self.date_input = QDateEdit(default_date)
         self.date_input.setCalendarPopup(True)
+        self.date_input.dateChanged.connect(self._reload_shift_options)
 
         self.status_combo = QComboBox()
         self.status_combo.addItems([s.value for s in AttendanceStatus])
 
-        self.shift_input = QLineEdit()
-        self.shift_input.setPlaceholderText("e.g. Morning")
-        self.shift_input.returnPressed.connect(self._save)
+        # A real Shift, not free text (2026-09-23 migration) - the
+        # dropdown is rebuilt for whichever date is currently picked
+        # above, since which shifts exist depends on the date.
+        self.shift_combo = QComboBox()
+        self._reload_shift_options(default_date)
 
         self.overtime_input = QSpinBox()
         self.overtime_input.setRange(0, 1440)
@@ -236,7 +247,7 @@ class AttendanceMarkDialog(QDialog):
         form.addRow("Employee", self.employee_combo)
         form.addRow("Date", self.date_input)
         form.addRow("Status", self.status_combo)
-        form.addRow("Shift", self.shift_input)
+        form.addRow("Shift", self.shift_combo)
         form.addRow("Overtime", self.overtime_input)
 
         self.error_label = QLabel("")
@@ -261,6 +272,13 @@ class AttendanceMarkDialog(QDialog):
         layout.addLayout(button_row)
         self.setLayout(layout)
 
+    def _reload_shift_options(self, qdate: QDate) -> None:
+        selected_date = qdate_to_date(qdate)
+        self.shift_combo.clear()
+        self.shift_combo.addItem("No shift", None)
+        for shift in self._shift_service.list_shifts(self._actor_user_id, date_from=selected_date, date_to=selected_date):
+            self.shift_combo.addItem(shift.shift_label, shift.id)
+
     def _save(self) -> None:
         self.error_label.hide()
         if self.employee_combo.count() == 0:
@@ -271,7 +289,8 @@ class AttendanceMarkDialog(QDialog):
                 employee_id=self.employee_combo.currentData(),
                 attendance_date=qdate_to_date(self.date_input.date()),
                 status=AttendanceStatus(self.status_combo.currentText()),
-                shift_label=self.shift_input.text().strip() or None,
+                shift_id=self.shift_combo.currentData(),
+                shift_label=self.shift_combo.currentText() if self.shift_combo.currentData() else None,
                 overtime_minutes=self.overtime_input.value(),
             )
             self._attendance_service.mark_attendance(self._actor_user_id, data)
@@ -295,7 +314,7 @@ class AttendanceMarkDialog(QDialog):
 class AttendanceCorrectionDialog(QDialog):
     """Correct an existing attendance record. Requires a reason; audit-logged by the service."""
 
-    def __init__(self, attendance_service, actor_user_id: str, attendance_id: str, can_manage: bool, parent=None):
+    def __init__(self, attendance_service, shift_service, actor_user_id: str, attendance_id: str, can_manage: bool, parent=None):
         super().__init__(parent)
         self._attendance_service = attendance_service
         self._actor_user_id = actor_user_id
@@ -310,6 +329,18 @@ class AttendanceCorrectionDialog(QDialog):
         self.status_combo.setCurrentText(self._record.status)
         self.status_combo.setEnabled(can_manage)
 
+        self.shift_combo = QComboBox()
+        self.shift_combo.addItem("No shift", None)
+        for shift in shift_service.list_shifts(
+            actor_user_id, date_from=self._record.attendance_date, date_to=self._record.attendance_date
+        ):
+            self.shift_combo.addItem(shift.shift_label, shift.id)
+        if self._record.shift_id:
+            index = self.shift_combo.findData(self._record.shift_id)
+            if index >= 0:
+                self.shift_combo.setCurrentIndex(index)
+        self.shift_combo.setEnabled(can_manage)
+
         self.overtime_input = QSpinBox()
         self.overtime_input.setRange(0, 1440)
         self.overtime_input.setSuffix(" min")
@@ -323,6 +354,7 @@ class AttendanceCorrectionDialog(QDialog):
 
         form = QFormLayout()
         form.addRow("Status", self.status_combo)
+        form.addRow("Shift", self.shift_combo)
         form.addRow("Overtime", self.overtime_input)
         form.addRow("Correction reason", self.reason_input)
 
@@ -355,6 +387,7 @@ class AttendanceCorrectionDialog(QDialog):
         try:
             data = AttendanceCorrection(
                 status=AttendanceStatus(self.status_combo.currentText()),
+                shift_id=self.shift_combo.currentData(),
                 overtime_minutes=self.overtime_input.value(),
             )
             self._attendance_service.correct_attendance(
