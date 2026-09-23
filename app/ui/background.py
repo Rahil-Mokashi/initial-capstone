@@ -47,6 +47,38 @@ A second rule specific to this app: a SQLAlchemy Session is not
 thread-safe, so a worker doing database work needs its own Session and
 must return plain data - never live ORM instances, which would lazy-load
 from the wrong thread's session the moment the GUI touched them.
+
+THE SINGLE-WORKER-THREAD RULE (added 2026-09-23)
+
+This app does not follow the "own Session per worker" half of that rule -
+MainWindow builds exactly one SQLAlchemy Session at startup
+(`self._db_session = db_connection.SessionLocal()`) and every service for
+the rest of the run, on every screen, shares it. That was a reasonable,
+simple choice for a single-operator desktop app talking to local SQLite,
+and rewiring every service to open its own Session per call is a much
+larger change than the freeze this module exists to fix.
+
+But it means every worker function passed to run_in_background still
+touches that one shared Session, so two of them must never run at the
+same time - a Session used concurrently by two threads corrupts its
+in-progress reads (SQLAlchemy's cursor/result-row state is not
+reentrant), which surfaces as confusing, intermittent errors far from the
+real cause, exactly the class of bug an isolated per-window test won't
+catch (each report window disables its own buttons while a task runs, so
+a single window can't fire two overlapping tasks - but nothing stopped a
+*different* window, or an automatic background backup, from firing one
+at the same moment, since they don't know about each other's buttons).
+
+The fix is that every worker submitted here runs on ONE dedicated worker
+thread - never Qt's QThreadPool.globalInstance(), which is shared
+app-wide and happily runs several tasks in parallel. A dedicated
+single-thread pool makes "only one background DB task in flight at a
+time" true by construction, for every current and future caller, without
+touching how any service is built. This costs nothing real: SQLite
+already serializes writes internally, and the shared Session forbids true
+concurrent use anyway, so there was never real parallelism to lose - the
+only goal was ever getting the work off the GUI thread, which a
+single-worker pool still does exactly as well as a multi-threaded one.
 """
 
 from collections.abc import Callable, Sequence
@@ -55,6 +87,16 @@ from PySide6.QtCore import QObject, QRunnable, Qt, QThreadPool, Signal, Slot
 from PySide6.QtWidgets import QApplication, QWidget
 
 from app.core.logging import logger
+
+# One dedicated worker thread for every background DB task in the app -
+# see "THE SINGLE-WORKER-THREAD RULE" above for why this must not be
+# QThreadPool.globalInstance(). Module-level so every window's calls to
+# run_in_background land on the same pool and therefore genuinely
+# serialize, rather than each getting its own pool of one (which would
+# still let two different windows' tasks run concurrently with each
+# other).
+_db_thread_pool = QThreadPool()
+_db_thread_pool.setMaxThreadCount(1)
 
 
 def is_widget_alive(widget: QWidget) -> bool:
@@ -164,12 +206,12 @@ def run_in_background(
         owner._background_tasks = []
     owner._background_tasks.append(worker)
 
-    QThreadPool.globalInstance().start(worker)
+    _db_thread_pool.start(worker)
 
 
 def wait_for_background_tasks(timeout_ms: int = 10_000) -> bool:
     """Block until the pool is idle. For tests and for shutdown, never for
     ordinary UI code - calling this from a slot reintroduces the exact
     freeze this module exists to prevent."""
-    return QThreadPool.globalInstance().waitForDone(timeout_ms)
+    return _db_thread_pool.waitForDone(timeout_ms)
 

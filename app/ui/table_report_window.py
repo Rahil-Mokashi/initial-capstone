@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.services.report_export import build_table_report_html, export_table_csv, export_table_excel, export_table_pdf
+from app.ui.background import run_in_background
 from app.ui.print_utils import show_print_preview
 from app.ui.qt_utils import describe_unexpected_error, money_table_item, volume_table_item
 from app.ui.widgets import GridBackgroundWidget
@@ -176,21 +177,35 @@ class TableReportWindow(QWidget):
                 args[keyword] = value
         return args
 
-    def _get_report(self) -> Optional[object]:
-        try:
-            return self._fetch_report(self._actor_user_id, **self._date_filter_args(), **self._choice_filter_args())
-        except Exception as exc:  # noqa: BLE001 - a report window must never crash the app
-            self.error_label.setText(describe_unexpected_error(exc))
-            self.error_label.show()
-            return None
+    def _current_filters(self) -> dict:
+        """Reads QDateEdit/QComboBox widget state, which only the GUI
+        thread may touch - always called before a background task is
+        started, never from inside one."""
+        return dict(self._date_filter_args(), **self._choice_filter_args())
+
+    def _action_buttons(self) -> list:
+        return [self.refresh_button, self.export_pdf_button, self.export_excel_button, self.export_csv_button, self.print_button]
 
     def refresh(self) -> None:
+        """Runs off the GUI thread (problemstatement.md #44: "Never freeze
+        the application while generating a large report"). This window is
+        shared by every report in the app - Sales, Cash Book, Daily
+        Summary and the rest all query across a date range that grows
+        with the pump's trading history, so the fetch is exactly the kind
+        of work that must not run inside a Qt slot. See app/ui/background.py
+        for why a slot blocks the whole window and how run_in_background
+        avoids it."""
         self.error_label.hide()
-        report = self._get_report()
-        if report is None:
-            self.table.setRowCount(0)
-            return
+        filters = self._current_filters()
+        run_in_background(
+            self,
+            lambda: self._fetch_report(self._actor_user_id, **filters),
+            on_done=self._on_report_ready,
+            on_error=self._on_report_failed,
+            busy_widgets=self._action_buttons(),
+        )
 
+    def _on_report_ready(self, report) -> None:
         self.title_label.setText(report.title)
         self.setWindowTitle(report.title)
         self.table.setColumnCount(len(report.headers))
@@ -210,6 +225,11 @@ class TableReportWindow(QWidget):
         self.table.resizeColumnsToContents()
         self.table.horizontalHeader().setStretchLastSection(True)
 
+    def _on_report_failed(self, exc: Exception) -> None:
+        self.error_label.setText(describe_unexpected_error(exc))
+        self.error_label.show()
+        self.table.setRowCount(0)
+
     def _export_pdf(self) -> None:
         self._export(export_table_pdf, "PDF Files (*.pdf)", ".pdf")
 
@@ -220,10 +240,14 @@ class TableReportWindow(QWidget):
         self._export(export_table_csv, "CSV Files (*.csv)", ".csv")
 
     def _export(self, export_fn, file_filter: str, default_suffix: str) -> None:
-        report = self._get_report()
-        if report is None:
-            return
-
+        """The save-file dialog runs first, on the GUI thread, since it is
+        itself modal. The fetch-then-write that follows - a query across
+        the report's date range, then ReportLab/openpyxl building the
+        actual file on disk - is real I/O and real CPU work, so it runs on
+        a worker thread like every other heavy operation (problemstatement.md
+        #44). Re-fetching here rather than reusing what's on screen also
+        means an export always reflects the current filters, even if the
+        user changed a date and never clicked Refresh."""
         from app.core.paths import default_export_path
 
         default_name = f"{self._filename_stem}{default_suffix}"
@@ -231,16 +255,36 @@ class TableReportWindow(QWidget):
         if not file_path:
             return
 
-        try:
-            export_fn(report, file_path)
-        except Exception as exc:  # noqa: BLE001 - last resort so a write failure (disk full, permissions) can't crash the window
-            QMessageBox.warning(self, "Could not export", describe_unexpected_error(exc))
-            return
+        filters = self._current_filters()
 
-        QMessageBox.information(self, "Export complete", f"Report saved to {file_path}")
+        def _fetch_and_export():
+            report = self._fetch_report(self._actor_user_id, **filters)
+            export_fn(report, file_path)
+            return file_path
+
+        run_in_background(
+            self,
+            _fetch_and_export,
+            on_done=lambda path: QMessageBox.information(self, "Export complete", f"Report saved to {path}"),
+            on_error=lambda exc: QMessageBox.warning(self, "Could not export", describe_unexpected_error(exc)),
+            busy_widgets=self._action_buttons(),
+        )
 
     def _print(self) -> None:
-        report = self._get_report()
-        if report is None:
-            return
-        show_print_preview(build_table_report_html(report), self)
+        """Same reasoning as _export: fetch and HTML-build off the GUI
+        thread, then hand the finished HTML to show_print_preview, which
+        opens a QPrintPreviewDialog and therefore must run on the GUI
+        thread - that's what on_done guarantees."""
+        filters = self._current_filters()
+
+        def _fetch_and_build_html():
+            report = self._fetch_report(self._actor_user_id, **filters)
+            return build_table_report_html(report)
+
+        run_in_background(
+            self,
+            _fetch_and_build_html,
+            on_done=lambda html: show_print_preview(html, self),
+            on_error=lambda exc: QMessageBox.warning(self, "Could not print", describe_unexpected_error(exc)),
+            busy_widgets=self._action_buttons(),
+        )
