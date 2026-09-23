@@ -184,3 +184,43 @@ code path, rather than replacing the whole window with a generic `TableReportWin
 reusing the export pattern, not about visual uniformity, and CLAUDE.md's "never
 rewrite working code unnecessarily" argues against discarding a UI that already
 works well just to make every report look identical.
+
+## Task 5 - General UI simplification pass (one file per commit, 90-minute budget)
+
+Scanning strategy: grepped every `app/ui/*_window.py` for files that have both a
+per-row `make_edit_icon_button` (the app's established one-click row action) and a
+`_selected_*`-style "read the currently selected table row" helper - that
+combination is the fingerprint of a top-level button requiring select-then-click
+sitting next to a row-level action that already does the same thing in one click,
+the exact "redundant clicks to reach common info/action" pattern this task asks
+about. Working through the matches in order.
+
+### fuel_price_window.py
+
+**Commit:** `c95dc2c` - `style: drop the redundant top-level Change Price button`
+**Tests:** 891 passed (full suite, before committing) - includes a brand-new
+`tests/test_fuel_price_ui.py` (4 tests), since this window had no UI test coverage
+at all before this pass.
+
+**What changed:** the top "Change Price" button required selecting a fuel's row
+first, then clicking the button (2 actions) - but every row already has a per-row
+pencil-icon button (`make_edit_icon_button`) that opens the exact same
+`FuelRateDialog` for that row's fuel in 1 click, gated on the same
+`FUEL_PRICE_MANAGE` permission. Removed the top button and the now-unused
+`_change_price` method; kept `_selected_fuel` (still used by "Price History", which
+has no per-row equivalent) and `_change_price_for` (now the single, shared entry
+point both the removed button and the row icon used to call).
+
+**Why this is simpler:** changing one fuel's price is now always 1 click instead of
+up to 2, with no loss of discoverability - the per-row icon was already there and
+already the documented, established convention this app uses for row-level actions
+(see `qt_utils.make_edit_icon_button`'s own docstring on why double-click-to-edit
+was replaced with a visible icon everywhere else). Same permission check
+(`FUEL_PRICE_MANAGE`), same dialog, same audit logging - nothing about *what* the
+action does or who can do it changed, only how many clicks it took to get there.
+
+Judgment call: added a new test file rather than skipping tests for this change,
+since CLAUDE.md requires tests for changes to a module and this window had zero
+existing coverage - the four tests cover the button's removal, the row icon still
+opening the dialog, the icon being hidden for a view-only role, and the dialog
+itself still saving correctly.
