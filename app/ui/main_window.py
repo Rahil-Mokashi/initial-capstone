@@ -3,9 +3,10 @@ import platform
 from datetime import date, datetime
 
 from PySide6.QtCore import QEvent, QSize, Qt, QTimer, Signal
-from PySide6.QtGui import QColor, QFont, QIcon, QPainter, QPixmap
+from PySide6.QtGui import QColor, QFont, QIcon, QKeySequence, QPainter, QPixmap, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
+    QComboBox,
     QCompleter,
     QGridLayout,
     QHBoxLayout,
@@ -265,6 +266,7 @@ class MainWindow(QMainWindow):
         self.search_input = QLineEdit()
         self.search_input.setObjectName("topBarSearch")
         self.search_input.setPlaceholderText("Search employees, nozzles, tanks…")
+        self.search_input.setToolTip("Search (Ctrl+F)")
         self.search_input.setFixedWidth(280)
         self.search_input.setClearButtonEnabled(True)
         self._search_completer = QCompleter([])
@@ -679,6 +681,7 @@ class MainWindow(QMainWindow):
         self._back_button = QPushButton("← Back")
         self._back_button.setObjectName("secondaryButton")
         self._back_button.setCursor(Qt.PointingHandCursor)
+        self._back_button.setToolTip("Back (Esc)")
         self._back_button.clicked.connect(self._go_back)
 
         # Every segment but the last is a clickable link straight to that
@@ -758,6 +761,8 @@ class MainWindow(QMainWindow):
         container = QWidget()
         container.setLayout(outer_layout)
         self.setCentralWidget(container)
+
+        self._install_keyboard_shortcuts()
 
         self._populate_dashboard(self._compute_card_columns())
         # The alert count is deliberately NOT computed here, and the two
@@ -1306,6 +1311,52 @@ class MainWindow(QMainWindow):
         content_stack.removeWidget(widget)
         widget.setParent(None)
         widget.deleteLater()
+
+    def _install_keyboard_shortcuts(self) -> None:
+        """problemstatement.md #37: "Keyboard shortcuts... Minimal clicks...
+        Fast data entry" - this app is used standing at a busy forecourt
+        counter, not at a desk, so reaching for the mouse for routine
+        moves (find a record, refresh a list, step back a screen) costs
+        real time across a whole shift. Three shortcuts, each a standard,
+        widely-known convention rather than something invented for this
+        app specifically - matching an existing convention costs a user
+        nothing to learn, unlike a bespoke binding they'd have to be
+        taught.
+
+        Every QShortcut here defaults to Qt.WindowShortcut context, so it
+        only fires while this window (or a non-modal child of it) has
+        focus - a separate modal QDialog (e.g. the forced change-password
+        dialog, or a confirmation box) is its own top-level window and is
+        unaffected, exactly as it should be.
+        """
+        QShortcut(QKeySequence("Ctrl+F"), self, activated=self._focus_search_shortcut)
+        QShortcut(QKeySequence("F5"), self, activated=self._refresh_active_page_shortcut)
+        QShortcut(QKeySequence(Qt.Key_Escape), self, activated=self._go_back_shortcut)
+
+    def _focus_search_shortcut(self) -> None:
+        self.search_input.setFocus()
+        self.search_input.selectAll()
+
+    def _refresh_active_page_shortcut(self) -> None:
+        """Calls the open page's own refresh() - the same method its
+        on-screen Refresh button already calls - if it has one. Plain
+        pages with nothing to reload (e.g. Settings) simply have no such
+        method, so this is a safe no-op there rather than something that
+        needs a lookup table of which pages support it."""
+        page = self._content_stack.currentWidget()
+        refresh = getattr(page, "refresh", None)
+        if callable(refresh):
+            refresh()
+
+    def _go_back_shortcut(self) -> None:
+        # A text field's own Escape handling (e.g. closing the search
+        # box's completer popup) should win over navigating away - only
+        # step back when focus isn't in a text-entry widget, so Escape
+        # never yanks a supervisor mid-typing off the screen they're on.
+        focused = QApplication.focusWidget()
+        if isinstance(focused, (QLineEdit, QComboBox)):
+            return
+        self._go_back()
 
     def _go_back(self) -> None:
         if not self._page_stack:

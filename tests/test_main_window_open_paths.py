@@ -454,3 +454,78 @@ def test_shift_indicator_reflects_a_real_open_shift(main_window, db_session):
     main_window.refresh_shift_indicator()
     assert main_window.shift_indicator_label.text() == "Shift: Night • Open"
     assert main_window.shift_indicator_label.property("tone") == "open"
+
+
+# --------------------------------------------------------------------
+# Keyboard shortcuts (problemstatement.md #37) - client-review pass,
+# 2026-09-23. Tests call the handler methods directly rather than
+# simulating real key presses: the QShortcut wiring itself is standard
+# Qt machinery (see _install_keyboard_shortcuts), what actually needs
+# proving is what each handler does once triggered.
+# --------------------------------------------------------------------
+
+
+def test_ctrl_f_selects_the_search_box_text_ready_to_retype(main_window):
+    # hasFocus() is not asserted here: this fixture's window is never
+    # shown/activated (deliberately, to keep this file's tests fast and
+    # headless-safe), and real OS keyboard focus only lands on a shown,
+    # active window - not something a test on an unshown window can
+    # observe. selectAll()'s effect is what actually matters (the field
+    # is ready to type straight over) and does not depend on that.
+    main_window.search_input.setText("something typed earlier")
+
+    main_window._focus_search_shortcut()
+
+    assert main_window.search_input.selectedText() == "something typed earlier"
+
+
+def test_f5_calls_refresh_on_whatever_page_is_open(main_window):
+    _open_grouped_module(main_window, "MASTERS", "Employees")
+    page = main_window._content_stack.currentWidget()
+    calls = []
+    page.refresh = lambda: calls.append(True)
+
+    main_window._refresh_active_page_shortcut()
+
+    assert calls == [True]
+    main_window._go_home()
+
+
+def test_f5_is_a_no_op_on_a_page_with_no_refresh_method(main_window):
+    main_window._go_home()
+    page = main_window._content_stack.currentWidget()
+    assert not hasattr(page, "refresh")
+
+    main_window._refresh_active_page_shortcut()  # must not raise
+
+
+def test_escape_navigates_back_one_level(main_window):
+    _open_grouped_module(main_window, "MASTERS", "Employees")
+    assert len(main_window._page_stack) == 2
+
+    main_window._go_back_shortcut()
+
+    assert len(main_window._page_stack) == 1
+    main_window._go_home()
+
+
+def test_escape_does_nothing_while_typing_in_the_search_box(main_window, monkeypatch):
+    # Same headless-focus limitation as the Ctrl+F test above: this
+    # fixture's window is never shown, so QApplication.focusWidget()
+    # would report nothing here rather than the search box no matter
+    # which widget last called setFocus(). Monkeypatching it to report
+    # the search box - as it would on a real, shown, active window with
+    # the cursor in that field - is what actually exercises
+    # _go_back_shortcut's guard clause.
+    from PySide6.QtWidgets import QApplication
+
+    _open_grouped_module(main_window, "MASTERS", "Tanks")
+    depth_before = len(main_window._page_stack)
+    monkeypatch.setattr(QApplication, "focusWidget", staticmethod(lambda: main_window.search_input))
+
+    main_window._go_back_shortcut()
+
+    assert len(main_window._page_stack) == depth_before
+    # Restore navigation to the dashboard so this test doesn't leave the
+    # shared module-scoped main_window mid-drill-down for anything after it.
+    main_window._go_home()
