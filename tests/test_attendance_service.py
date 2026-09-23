@@ -19,6 +19,7 @@ from app.repositories.audit_log_repository import AuditLogRepository
 from app.repositories.employee_document_repository import EmployeeDocumentRepository
 from app.repositories.employee_repository import EmployeeRepository
 from app.repositories.role_repository import RoleRepository
+from app.repositories.shift_repository import ShiftRepository
 from app.repositories.user_repository import UserRepository
 from app.repositories.user_session_repository import UserSessionRepository
 from app.schemas.attendance import AttendanceCorrection, AttendanceMark
@@ -96,7 +97,21 @@ def attendance_service(db_session, employee_service):
     user_repo = UserRepository(db_session)
     audit_repo = AuditLogRepository(db_session)
     auth_service = AuthService(user_repo, audit_repo, UserSessionRepository(db_session))
-    return AttendanceService(AttendanceRepository(db_session), EmployeeRepository(db_session), audit_repo, auth_service)
+    return AttendanceService(
+        AttendanceRepository(db_session), EmployeeRepository(db_session), ShiftRepository(db_session), audit_repo, auth_service
+    )
+
+
+@pytest.fixture()
+def shift_id(db_session, admin_id):
+    from app.core.constants import ShiftStatus
+    from app.models.shift import Shift
+
+    shift = Shift(shift_date=date(2026, 2, 1), shift_label="Morning", opened_by_id=admin_id, status=ShiftStatus.OPEN.value)
+    db_session.add(shift)
+    db_session.commit()
+    db_session.refresh(shift)
+    return shift.id
 
 
 @pytest.fixture()
@@ -148,6 +163,40 @@ def test_mark_attendance_unknown_employee_raises_not_found(attendance_service, a
         attendance_service.mark_attendance(
             admin_id,
             AttendanceMark(employee_id="does-not-exist", attendance_date=date(2026, 2, 1), status=AttendanceStatus.PRESENT),
+        )
+
+
+def test_mark_attendance_stores_shift_id(attendance_service, admin_id, employee_id, shift_id):
+    record = attendance_service.mark_attendance(
+        admin_id,
+        AttendanceMark(
+            employee_id=employee_id, attendance_date=date(2026, 2, 1), status=AttendanceStatus.PRESENT, shift_id=shift_id
+        ),
+    )
+    assert record.shift_id == shift_id
+
+
+def test_mark_attendance_unknown_shift_raises_not_found(attendance_service, admin_id, employee_id):
+    with pytest.raises(NotFoundError):
+        attendance_service.mark_attendance(
+            admin_id,
+            AttendanceMark(
+                employee_id=employee_id,
+                attendance_date=date(2026, 2, 1),
+                status=AttendanceStatus.PRESENT,
+                shift_id="does-not-exist",
+            ),
+        )
+
+
+def test_correct_attendance_unknown_shift_raises_not_found(attendance_service, admin_id, employee_id):
+    record = attendance_service.mark_attendance(
+        admin_id,
+        AttendanceMark(employee_id=employee_id, attendance_date=date(2026, 2, 1), status=AttendanceStatus.PRESENT),
+    )
+    with pytest.raises(NotFoundError):
+        attendance_service.correct_attendance(
+            admin_id, record.id, AttendanceCorrection(shift_id="does-not-exist"), "fixing shift"
         )
 
 

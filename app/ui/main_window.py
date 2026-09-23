@@ -494,7 +494,11 @@ class MainWindow(QMainWindow):
                             (
                                 "Attendance", "Mark today's attendance and review past records.",
                                 lambda: AttendanceWindow(
-                                    self._attendance_service, self._employee_service, self._auth_service, self._user_data["id"]
+                                    self._attendance_service,
+                                    self._employee_service,
+                                    self._shift_service,
+                                    self._auth_service,
+                                    self._user_data["id"],
                                 ),
                                 Permission.ATTENDANCE_VIEW,
                             ),
@@ -1663,6 +1667,7 @@ class AppController:
         self._attendance_service = AttendanceService(
             AttendanceRepository(self._db_session),
             employee_repo,
+            ShiftRepository(self._db_session),
             audit_repo,
             self._auth_service,
         )

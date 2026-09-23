@@ -18,9 +18,10 @@ from app.schemas.attendance import AttendanceCorrection, AttendanceMark
 
 
 class AttendanceService:
-    def __init__(self, attendance_repo, employee_repo, audit_repo, auth_service):
+    def __init__(self, attendance_repo, employee_repo, shift_repo, audit_repo, auth_service):
         self._attendance_repo = attendance_repo
         self._employee_repo = employee_repo
+        self._shift_repo = shift_repo
         self._audit_repo = audit_repo
         self._auth_service = auth_service
 
@@ -28,6 +29,9 @@ class AttendanceService:
     def mark_attendance(self, actor_user_id: str, data: AttendanceMark) -> Attendance:
         if not self._employee_repo.get_by_id(data.employee_id):
             raise NotFoundError(f"Employee not found: {data.employee_id}")
+
+        if data.shift_id and not self._shift_repo.get_by_id(data.shift_id):
+            raise NotFoundError(f"Shift not found: {data.shift_id}")
 
         if self._attendance_repo.get_by_employee_and_date(data.employee_id, data.attendance_date):
             raise ConflictError(
@@ -42,6 +46,7 @@ class AttendanceService:
             check_in_time=data.check_in_time,
             check_out_time=data.check_out_time,
             shift_label=data.shift_label,
+            shift_id=data.shift_id,
             supervisor_id=data.supervisor_id,
             overtime_minutes=data.overtime_minutes,
         )
@@ -61,6 +66,9 @@ class AttendanceService:
     ) -> Attendance:
         if not reason or not reason.strip():
             raise ValueError("A reason is required to correct attendance")
+
+        if data.shift_id and not self._shift_repo.get_by_id(data.shift_id):
+            raise NotFoundError(f"Shift not found: {data.shift_id}")
 
         attendance = self._get_or_raise(attendance_id)
         old_snapshot = (

@@ -13,6 +13,7 @@ class AttendanceMark(BaseModel):
     check_in_time: Optional[datetime] = None
     check_out_time: Optional[datetime] = None
     shift_label: Optional[str] = None
+    shift_id: Optional[str] = None
     supervisor_id: Optional[str] = None
     overtime_minutes: int = 0
 
@@ -34,6 +35,7 @@ class AttendanceCorrection(BaseModel):
     status: Optional[AttendanceStatus] = None
     check_in_time: Optional[datetime] = None
     check_out_time: Optional[datetime] = None
+    shift_id: Optional[str] = None
     overtime_minutes: Optional[int] = None
 
     @field_validator("overtime_minutes")
