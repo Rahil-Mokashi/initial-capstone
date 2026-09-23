@@ -286,6 +286,31 @@ class MainWindow(QMainWindow):
         self._clock_timer.timeout.connect(self._update_clock)
         self._clock_timer.start(1000)
 
+        # problemstatement.md #37 explicitly asks for an "offline status
+        # indicator" and #1 makes offline the whole premise of this
+        # product (no web framework, no cloud database, no online sync,
+        # ever). This app never has a network dependency to lose in the
+        # first place, so there is nothing to poll or ping - a static
+        # badge stating the fact is the honest indicator, not a live
+        # connectivity check for a connection this app never opens.
+        self.offline_indicator_label = QLabel("● Offline — Local Only")
+        self.offline_indicator_label.setObjectName("topBarOfflineBadge")
+        self.offline_indicator_label.setToolTip(
+            "This app runs entirely on this computer. It never needs, and never uses, an internet connection."
+        )
+
+        # problemstatement.md #37's "current shift indicator" - whether a
+        # shift is open on this pump right now, without having to open
+        # the Shift screen to find out. Starts with a neutral placeholder
+        # (matching the AlertStrip's own "Checking…" pattern) rather than
+        # querying the database here in __init__ - see the long-standing
+        # comment on refresh_alert_badge for why an early DB read from a
+        # still-settling widget tree previously caused a real crash.
+        # Populated by refresh_shift_indicator, on the same session-timer
+        # tick that already refreshes the Alerts badge.
+        self.shift_indicator_label = QLabel("Shift: —")
+        self.shift_indicator_label.setObjectName("topBarShiftIndicator")
+
         # The alert count belongs in the top bar rather than on a dashboard
         # card, because it must be visible from every state of this screen
         # - including when the operator has scrolled the cards out of view.
@@ -328,6 +353,10 @@ class MainWindow(QMainWindow):
 
         top_bar_layout.addWidget(self.search_input)
         top_bar_layout.addStretch()
+        top_bar_layout.addWidget(self.offline_indicator_label)
+        top_bar_layout.addSpacing(12)
+        top_bar_layout.addWidget(self.shift_indicator_label)
+        top_bar_layout.addSpacing(16)
         top_bar_layout.addWidget(self.clock_label)
         top_bar_layout.addSpacing(16)
         top_bar_layout.addWidget(self.alerts_button)
@@ -1055,6 +1084,49 @@ class MainWindow(QMainWindow):
         else:
             self._set_alert_tone("")
 
+    def refresh_shift_indicator(self) -> None:
+        """Update the top-bar current-shift indicator (problemstatement.md
+        #37/#36). Same "an aid, not a gate" reasoning as refresh_alert_badge
+        and _build_stat_tiles: a failed or unauthorized query degrades to
+        a neutral label rather than blocking anything."""
+        if not is_widget_alive(self):
+            return
+
+        try:
+            summary = self._dashboard_service.get_summary(self._user_data["id"])
+        except Exception:  # noqa: BLE001
+            self.shift_indicator_label.setText("Shift: —")
+            self._set_shift_tone("")
+            return
+
+        labels = summary.open_shift_labels
+        if labels is None:
+            # SHIFT_VIEW not held by this role (e.g. an attendant only
+            # sees their own assignment via My Shift) - nothing useful to
+            # show, so the indicator hides rather than displaying a
+            # confusing dash.
+            self.shift_indicator_label.hide()
+            return
+
+        self.shift_indicator_label.show()
+        if not labels:
+            self.shift_indicator_label.setText("No shift open")
+            self._set_shift_tone("")
+        elif len(labels) == 1:
+            self.shift_indicator_label.setText(f"Shift: {labels[0]} • Open")
+            self._set_shift_tone("open")
+        else:
+            self.shift_indicator_label.setText(f"{len(labels)} shifts open")
+            self._set_shift_tone("open")
+
+    def _set_shift_tone(self, tone: str) -> None:
+        """Same unpolish/polish dance as _set_alert_tone - Qt does not
+        restyle a widget on its own when a stylesheet-selector property
+        changes after the widget is already shown."""
+        self.shift_indicator_label.setProperty("tone", tone)
+        self.shift_indicator_label.style().unpolish(self.shift_indicator_label)
+        self.shift_indicator_label.style().polish(self.shift_indicator_label)
+
     def _set_alert_tone(self, tone: str) -> None:
         """Qt does not restyle a widget when a property used in a
         stylesheet selector changes, so the style has to be explicitly
@@ -1169,6 +1241,7 @@ class MainWindow(QMainWindow):
         # One timer also means one place where periodic work happens,
         # instead of two competing schedules.
         self.refresh_alert_badge()
+        self.refresh_shift_indicator()
 
     def _logout(self) -> None:
         self._session_timer.stop()

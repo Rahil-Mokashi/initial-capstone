@@ -419,3 +419,38 @@ def test_clicking_an_alert_navigates_to_the_exact_screen_involved(main_window, c
     # The real click path: a group landing page first, then a drill-down
     # with a breadcrumb back to it - not a shortcut with no way back.
     assert len(main_window._page_stack) == 2
+
+
+# --------------------------------------------------------------------
+# Top-bar current-shift indicator (problemstatement.md #36/#37) - the
+# client-review pass, 2026-09-23. Placed last in this file deliberately:
+# db_session and main_window are module-scoped and shared with every test
+# above, and test_shift_indicator_reflects_a_real_open_shift below adds a
+# real open Shift row to that shared database - safe for the tests above
+# (none of them assert on shift counts), but ordered last anyway so nothing
+# later in this file could be affected by it.
+# --------------------------------------------------------------------
+
+
+def test_shift_indicator_shows_no_shift_open_by_default(main_window):
+    main_window.refresh_shift_indicator()
+    assert main_window.shift_indicator_label.text() == "No shift open"
+    assert main_window.shift_indicator_label.property("tone") in (None, "")
+
+
+def test_shift_indicator_reflects_a_real_open_shift(main_window, db_session):
+    from datetime import date
+
+    from app.core.constants import ShiftStatus
+    from app.models.shift import Shift
+
+    shift = Shift(
+        shift_date=date.today(), shift_label="Night",
+        opened_by_id=main_window._user_data["id"], status=ShiftStatus.OPEN.value,
+    )
+    db_session.add(shift)
+    db_session.commit()
+
+    main_window.refresh_shift_indicator()
+    assert main_window.shift_indicator_label.text() == "Shift: Night • Open"
+    assert main_window.shift_indicator_label.property("tone") == "open"
