@@ -16,9 +16,14 @@ class Attendance(EntityMixin, Base):
     overwrite, and every correction is also audit-logged with old/new
     values by AttendanceService.
 
-    shift_label is a free-text field (e.g. "Morning") rather than a
-    foreign key because the Shift entity doesn't exist yet (Phase 7);
-    replace with a proper relationship once Shift Management is built.
+    shift_id links to the real Shift entity (Phase 7), migrated
+    2026-09-23 from what used to be a free-text shift_label - Shift
+    didn't exist yet when Attendance was first built (Phase 6). shift_id
+    is nullable: attendance is routinely marked for a date that has no
+    Shift row at all (Shift is opened separately, per shift, and isn't a
+    prerequisite for marking who was present). shift_label is kept
+    alongside it, never dropped, as the historical free-text record for
+    rows the migration could not confidently match to a real Shift.
     """
 
     __tablename__ = "attendance"
@@ -31,6 +36,7 @@ class Attendance(EntityMixin, Base):
     check_in_time = Column(UtcDateTime, nullable=True)
     check_out_time = Column(UtcDateTime, nullable=True)
     shift_label = Column(String(64), nullable=True)
+    shift_id = Column(String(36), ForeignKey("shifts.id"), nullable=True, index=True)
     supervisor_id = Column(String(36), ForeignKey("users.id"), nullable=True)
     overtime_minutes = Column(Integer, nullable=False, default=0)
 
@@ -39,6 +45,7 @@ class Attendance(EntityMixin, Base):
     corrected_at = Column(UtcDateTime, nullable=True)
 
     employee = relationship("Employee")
+    shift = relationship("Shift")
     supervisor = relationship("User", foreign_keys=[supervisor_id])
     corrected_by = relationship("User", foreign_keys=[corrected_by_id])
 
