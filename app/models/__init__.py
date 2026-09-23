@@ -15,6 +15,7 @@ from .fuel import Fuel
 from .fuel_delivery import FuelDelivery
 from .fuel_price_history import FuelPriceHistory
 from .fuel_reconciliation import FuelReconciliation
+from .leave_request import LeaveRequest
 from .nozzle import Nozzle
 from .nozzle_assignment import NozzleAssignment
 from .payment import Payment
@@ -55,6 +56,7 @@ __all__ = [
     "FuelDelivery",
     "FuelPriceHistory",
     "FuelReconciliation",
+    "LeaveRequest",
     "Nozzle",
     "NozzleAssignment",
     "Payment",

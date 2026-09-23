@@ -72,6 +72,7 @@
 - [x] Track overtime-ready fields (overtime_minutes, non-negative validated)
 - [ ] Implement holiday tracking (HOLIDAY is a valid status per day, but there's no holiday calendar entity yet)
 - [x] Attendance UI (app/ui/attendance_window.py: date-filterable roster, mark dialog, correction dialog)
+- [x] **Leave as its own entity, not just an attendance-day status** (client-perspective review, 2026-09-23): `LeaveRequest` (`app/models/leave_request.py`) - request/approve/reject/cancel, the same shape as Expense's approve/reject workflow; approving marks the corresponding days LEAVE via `AttendanceService.apply_leave_as_related_action`. Deliberately no leave-balance/entitlement/accrual policy - the user chose that narrower scope explicitly (see `app/services/leave_service.py`'s module docstring) rather than have one invented
 
 ## Phase 7: Shift Management (Complete except full reconciliation, deferred to Phase 15)
 - [x] Implement shift opening workflow (ShiftService.open_shift — one row per shift_date+shift_label, duplicate rejected)

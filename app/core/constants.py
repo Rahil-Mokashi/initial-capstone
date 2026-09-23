@@ -81,6 +81,24 @@ class Permission(str, Enum):
     # Pinned by test_shift_supervisor_cannot_record_shortage.
     SHORTAGE_VIEW = "shortage.view"
     SHORTAGE_MANAGE = "shortage.manage"
+    # Leave (problemstatement.md #2/#9/#10/#29, client-review pass
+    # 2026-09-23) - request/approve tracking, scoped deliberately narrow
+    # per the user's own choice: no leave-balance/entitlement policy is
+    # implemented (see LeaveRequest's docstring), so there was nothing to
+    # invent here either. LEAVE_MANAGE mirrors ATTENDANCE_MANAGE's role
+    # set exactly, since submitting a leave request on an employee's
+    # behalf is the same kind of action as marking their attendance -
+    # done by a supervisor/manager, never the employee themselves (no
+    # role in this app performs ATTENDANCE_MANAGE on their own behalf).
+    # LEAVE_APPROVE is deliberately narrower than LEAVE_MANAGE, Manager
+    # only - the same "a stricter permission for a sensitive, one-way
+    # decision" pattern as EXPENSE_APPROVE/SHIFT_REOPEN/
+    # RECONCILIATION_APPROVE, and specifically so a Shift Supervisor can
+    # never both submit AND approve a leave request for someone they
+    # supervise.
+    LEAVE_VIEW = "leave.view"
+    LEAVE_MANAGE = "leave.manage"
+    LEAVE_APPROVE = "leave.approve"
 
 
 class EmployeeStatus(str, Enum):
@@ -101,6 +119,20 @@ class AttendanceStatus(str, Enum):
     HALF_DAY = "half_day"
     LEAVE = "leave"
     HOLIDAY = "holiday"
+
+
+class LeaveRequestStatus(str, Enum):
+    """Values stored in LeaveRequest.status. Only PENDING is a live state
+    a decision can still be made on - APPROVED/REJECTED/CANCELLED are all
+    final, matching the project's VOID/REVERSE/ADJUST-not-DELETE rule:
+    a mistaken decision is corrected by a new request, or by directly
+    correcting the Attendance rows an approval already wrote, never by
+    editing this record after the fact."""
+
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    CANCELLED = "cancelled"
 
 
 class ShiftStatus(str, Enum):
@@ -402,6 +434,9 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
         Permission.ANALYTICS_VIEW,
         Permission.SHORTAGE_VIEW,
         Permission.SHORTAGE_MANAGE,
+        Permission.LEAVE_VIEW,
+        Permission.LEAVE_MANAGE,
+        Permission.LEAVE_APPROVE,
     ),
     UserRole.ACCOUNTANT: (
         Permission.INVENTORY_VIEW,
@@ -419,6 +454,7 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
         Permission.EXPENSE_MANAGE,
         Permission.RECONCILIATION_VIEW,
         Permission.ANALYTICS_VIEW,
+        Permission.LEAVE_VIEW,
     ),
     UserRole.SHIFT_SUPERVISOR: (
         Permission.INVENTORY_VIEW,
@@ -434,6 +470,8 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
         Permission.SALE_MANAGE,
         Permission.RECONCILIATION_VIEW,
         Permission.RECONCILIATION_MANAGE,
+        Permission.LEAVE_VIEW,
+        Permission.LEAVE_MANAGE,
     ),
     UserRole.ATTENDANT: (
         Permission.MY_ASSIGNMENT_VIEW,
