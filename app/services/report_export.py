@@ -234,60 +234,17 @@ def _fuel_summary_rows(summaries: Sequence[FuelTypeSummary]) -> List[List[str]]:
     return rows
 
 
-def export_fuel_summary_pdf(summaries: Sequence[FuelTypeSummary], file_path: str) -> None:
-    doc = SimpleDocTemplate(file_path, pagesize=A4)
-    styles = getSampleStyleSheet()
-    elements = [
-        Paragraph("Fuel Type Summary", styles["Title"]),
-        Paragraph(datetime.now().strftime("Generated %Y-%m-%d %H:%M"), styles["Normal"]),
-        Spacer(1, 12),
-    ]
-
-    table_data = [FUEL_SUMMARY_HEADER] + _fuel_summary_rows(summaries)
-    table = Table(table_data, hAlign="LEFT")
-    table.setStyle(
-        TableStyle(
-            [
-                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#4F46E5")),
-                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#DDD5C0")),
-                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F5F1E7")]),
-                ("FONTSIZE", (0, 0), (-1, -1), 9),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-                ("TOPPADDING", (0, 0), (-1, -1), 6),
-            ]
-        )
+def fuel_summary_to_table_report(summaries: Sequence[FuelTypeSummary]) -> TableReport:
+    """Reshape the Fuel Type Summary's own dataclass into the generic
+    TableReport shape (2026-09-23) so it can go through the same
+    export_table_pdf/export_table_excel/export_table_csv/
+    build_table_report_html every other report already shares, instead
+    of the duplicate PDF/Excel-building code this report used to carry
+    on its own - this was the one report Phase 16's generic report
+    infrastructure predated (see PROJECT_CONTEXT.md/ROADMAP.md)."""
+    return TableReport(
+        title="Fuel Type Summary",
+        headers=FUEL_SUMMARY_HEADER,
+        rows=_fuel_summary_rows(summaries),
+        volume_columns=frozenset({2, 3}),
     )
-    elements.append(table)
-    doc.build(elements)
-
-
-def export_fuel_summary_excel(summaries: Sequence[FuelTypeSummary], file_path: str) -> None:
-    workbook = Workbook()
-    sheet = workbook.active
-    sheet.title = "Fuel Type Summary"
-
-    sheet.append(FUEL_SUMMARY_HEADER)
-    for cell in sheet[1]:
-        cell.font = Font(bold=True)
-
-    for summary in summaries:
-        sheet.append(
-            [
-                summary.fuel_type,
-                summary.tank_count,
-                float(summary.total_capacity),
-                float(summary.total_current_stock),
-                summary.active_nozzle_count,
-                summary.nozzle_count,
-                float(summary.latest_variance_percent) if summary.latest_variance_percent is not None else None,
-                (summary.latest_variance_classification or "").replace("_", " ").title(),
-            ]
-        )
-
-    for column_cells in sheet.columns:
-        longest = max((len(str(cell.value)) if cell.value is not None else 0 for cell in column_cells), default=0)
-        sheet.column_dimensions[column_cells[0].column_letter].width = longest + 4
-
-    workbook.save(file_path)

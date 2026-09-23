@@ -10,12 +10,11 @@ from pypdf import PdfReader
 from app.services.report_export import (
     build_sale_receipt_html,
     build_table_report_html,
-    export_fuel_summary_excel,
-    export_fuel_summary_pdf,
     export_sale_receipt_pdf,
     export_table_csv,
     export_table_excel,
     export_table_pdf,
+    fuel_summary_to_table_report,
 )
 from app.services.report_service import FuelTypeSummary, TableReport
 
@@ -50,7 +49,7 @@ def summaries():
 
 def test_export_pdf_creates_a_readable_file(tmp_path, summaries):
     pdf_path = str(tmp_path / "fuel_summary.pdf")
-    export_fuel_summary_pdf(summaries, pdf_path)
+    export_table_pdf(fuel_summary_to_table_report(summaries), pdf_path)
 
     reader = PdfReader(pdf_path)
     assert len(reader.pages) >= 1
@@ -61,7 +60,7 @@ def test_export_pdf_creates_a_readable_file(tmp_path, summaries):
 
 def test_export_excel_creates_expected_rows(tmp_path, summaries):
     xlsx_path = str(tmp_path / "fuel_summary.xlsx")
-    export_fuel_summary_excel(summaries, xlsx_path)
+    export_table_excel(fuel_summary_to_table_report(summaries), xlsx_path)
 
     workbook = openpyxl.load_workbook(xlsx_path)
     sheet = workbook.active
@@ -74,19 +73,19 @@ def test_export_excel_creates_expected_rows(tmp_path, summaries):
 
 def test_export_excel_handles_missing_variance(tmp_path, summaries):
     xlsx_path = str(tmp_path / "fuel_summary.xlsx")
-    export_fuel_summary_excel(summaries, xlsx_path)
+    export_table_excel(fuel_summary_to_table_report(summaries), xlsx_path)
 
     workbook = openpyxl.load_workbook(xlsx_path)
     sheet = workbook.active
 
     diesel_row = sheet[3]
     variance_cell = diesel_row[6]
-    assert variance_cell.value is None
+    assert variance_cell.value == "—"
 
 
 def test_export_pdf_handles_empty_summary_list(tmp_path):
     pdf_path = str(tmp_path / "empty.pdf")
-    export_fuel_summary_pdf([], pdf_path)
+    export_table_pdf(fuel_summary_to_table_report([]), pdf_path)
 
     reader = PdfReader(pdf_path)
     assert len(reader.pages) >= 1
@@ -94,11 +93,24 @@ def test_export_pdf_handles_empty_summary_list(tmp_path):
 
 def test_export_excel_handles_empty_summary_list(tmp_path):
     xlsx_path = str(tmp_path / "empty.xlsx")
-    export_fuel_summary_excel([], xlsx_path)
+    export_table_excel(fuel_summary_to_table_report([]), xlsx_path)
 
     workbook = openpyxl.load_workbook(xlsx_path)
     sheet = workbook.active
     assert sheet.max_row == 1
+
+
+def test_fuel_summary_to_table_report_shapes_csv_export(tmp_path, summaries):
+    """The fuel summary window gained CSV export (2026-09-23) once it
+    moved onto the shared TableReport shape - every other report already
+    had this, it just predated the generic infrastructure before."""
+    csv_path = str(tmp_path / "fuel_summary.csv")
+    export_table_csv(fuel_summary_to_table_report(summaries), csv_path)
+
+    with open(csv_path, encoding="utf-8-sig") as f:
+        content = f.read()
+    assert "Petrol" in content
+    assert "Diesel" in content
 
 
 @pytest.fixture()

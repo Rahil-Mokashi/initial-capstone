@@ -121,6 +121,22 @@ def test_export_excel_writes_a_file(qapp, report_service, admin_id, tmp_path, mo
     assert target.stat().st_size > 0
 
 
+def test_export_csv_writes_a_file(qapp, report_service, admin_id, tmp_path, monkeypatch):
+    from app.ui.report_window import FuelTypeSummaryReportWindow
+
+    target = tmp_path / "out.csv"
+    monkeypatch.setattr(
+        "app.ui.report_window.QFileDialog.getSaveFileName", lambda *a, **k: (str(target), "CSV Files (*.csv)")
+    )
+    monkeypatch.setattr("app.ui.report_window.QMessageBox.information", lambda *a, **k: None)
+
+    window = FuelTypeSummaryReportWindow(report_service, None, admin_id)
+    window._export_csv()
+
+    assert target.exists()
+    assert target.stat().st_size > 0
+
+
 def test_export_cancelled_dialog_does_not_write_a_file(qapp, report_service, admin_id, monkeypatch):
     from app.ui.report_window import FuelTypeSummaryReportWindow
 
