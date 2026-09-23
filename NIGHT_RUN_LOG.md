@@ -101,3 +101,43 @@ saves the selected shift, correction dialog preselects the record's existing shi
   requires - checked the role/permission matrix first: every role holding
   `ATTENDANCE_MANAGE` (Manager, Shift Supervisor, Admin, Owner) already holds
   `SHIFT_VIEW` too, so no one who could reach this dialog before is newly blocked.
+
+## Task 3 - Decide ADMIN vs OWNER permission divergence
+
+**Commit:** `c5f6440` - `docs: decide ADMIN and OWNER stay permission-identical, guard it with a test`
+**Tests:** 885 passed (full suite, before committing) - includes 2 new RBAC tests.
+
+**The decision: keep them identical.** No code change to `ROLE_PERMISSIONS` was
+needed - `ADMIN` and `OWNER` already both resolve to `tuple(Permission)` and this
+task's job was to turn "flagged as worth a deliberate decision" into an actual,
+documented decision rather than a silent default.
+
+**Why:** this app is scoped to a single petrol pump throughout (problemstatement.md,
+ARCHITECTURE.md, every phase built so far) - nothing in the requirements, the
+confirmed business rules, or six roles' actual real usage across the codebase ever
+distinguishes what an Owner may do that an Admin may not. The one place the original
+requirements gesture at Owner-specific authority (problemstatement.md #21's
+discrepancy workflow, step 6, "Owner approval where required") was already
+deliberately folded into a single Manager/Admin/Owner-shared `RECONCILIATION_APPROVE`
+permission back in Phase 15, not an Owner-only gate - reopening that split now,
+without a real requirement driving it, would be inventing a business rule instead of
+following one (explicitly against CLAUDE.md's Development Rules).
+
+**What changed:**
+- `PROJECT_CONTEXT.md`'s Known Limitations bullet on this topic rewritten from an
+  open flag into the actual decision and its full reasoning, plus a pointer to where
+  to revisit it (a second location or outside investor introducing a real
+  financial-visibility split) and which test to update if that day comes.
+- Two new tests in `tests/test_auth_rbac.py`: `test_admin_and_owner_are_deliberately_identical`
+  (compares the `ROLE_PERMISSIONS` constant directly) and
+  `test_admin_and_owner_seeded_roles_hold_the_same_permissions` (compares what's
+  actually seeded into the DB for both roles, and that it's the full permission set).
+  Together these mean a future accidental divergence fails a test instead of drifting
+  in silently - and a *deliberate* future split has to touch this test in the same
+  change, which is the point.
+
+Judgment call: this is the "keep them the same, document why" branch of the task's
+two allowed outcomes, not the "split them" branch - picked because nothing in the
+existing codebase/docs supports inventing a specific split, and the task said to
+pick whichever reading is best supported rather than defaulting to a split just
+because one was offered as an option.
