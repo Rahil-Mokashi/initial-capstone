@@ -141,3 +141,46 @@ two allowed outcomes, not the "split them" branch - picked because nothing in th
 existing codebase/docs supports inventing a specific split, and the task said to
 pick whichever reading is best supported rather than defaulting to a split just
 because one was offered as an option.
+
+## Task 4 - Extend PDF/Excel export to remaining reports
+
+**Commit:** `2f06085` - `refactor: move Fuel Type Summary report onto the shared export pattern`
+**Tests:** 887 passed (full suite, before committing) - includes 1 new CSV-export test
+in `test_report_export.py` and 1 new CSV-writes-a-file UI test in `test_report_ui.py`.
+
+**Survey first:** checked every report method in `report_service.py` (11 total) against
+`report_window.py`'s Reports Hub and found all 10 `TableReport`-returning methods
+already wired through the shared `TableReportWindow`/`report_export.py` pattern (the
+six Phase 16 reports plus the five later cross-module ones). Only `get_fuel_type_summary`
+was still on its own bespoke exporters (`export_fuel_summary_pdf`/`export_fuel_summary_excel`
+in `report_export.py`) - exactly the gap ROADMAP.md's Next Immediate Task #6 and its
+own CSV-export note already named by file and reason. Also checked for report-shaped
+screens with *no* export at all (e.g. the Audit Log viewer) - found one, but left it
+out of scope: it was never listed anywhere as a report with a missing-export gap, and
+adding export to a screen that never had any is a materially different, larger task
+than "wire the ones with bespoke exporters onto the shared one," which is what this
+task and ROADMAP's own wording actually describe.
+
+**What changed:**
+- `report_export.py`: replaced `export_fuel_summary_pdf`/`export_fuel_summary_excel`
+  (~90 lines of PDF/Excel-building code duplicating `export_table_pdf`/`export_table_excel`)
+  with one small `fuel_summary_to_table_report()` that reshapes the report's own
+  `FuelTypeSummary` list into the generic `TableReport` shape, reusing the existing
+  `_fuel_summary_rows` row-building helper.
+- `report_window.py`'s `FuelTypeSummaryReportWindow`: PDF/Excel/Print buttons now call
+  the shared `export_table_pdf`/`export_table_excel`/`build_table_report_html` through
+  that conversion, and it gained a fourth button, **Export CSV** (`export_table_csv`) -
+  the one thing every other report already had that this one didn't.
+- The on-screen card layout (`FuelTypeSummaryCard`, one card per fuel type) was
+  deliberately left untouched - this task is about the export mechanism, not a
+  restyle, and the cards are a better on-screen presentation than a raw table for
+  this particular report.
+- Updated `PROJECT_CONTEXT.md` (Phase 17 section) and `ROADMAP.md` (the CSV-export
+  bullet and Next Immediate Task #6, both closed out) to match.
+
+Judgment call: kept the bespoke on-screen card UI and only converged the *export*
+code path, rather than replacing the whole window with a generic `TableReportWindow`
+(which would trade the cards for a plain table). The task's own wording is about
+reusing the export pattern, not about visual uniformity, and CLAUDE.md's "never
+rewrite working code unnecessarily" argues against discarding a UI that already
+works well just to make every report look identical.
