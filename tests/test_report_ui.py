@@ -81,58 +81,74 @@ def report_service(db_session):
     )
 
 
-def test_window_shows_seeded_fuel_types(qapp, report_service, admin_id):
+def test_window_shows_seeded_fuel_types(qapp, qtbot, report_service, admin_id):
     from app.ui.report_window import FuelTypeSummaryReportWindow
 
     window = FuelTypeSummaryReportWindow(report_service, None, admin_id)
+    # The fetch now runs on a worker thread (problemstatement.md #44), so
+    # the cards appear when the task reports back rather than by the time
+    # the constructor returns - see table_report_window.py's refresh for
+    # the same pattern applied to the shared report window.
     # Petrol/Diesel/Power are seeded by default (DEFAULT_FUEL_TYPES).
-    assert window.cards_layout.count() >= 3
+    qtbot.waitUntil(lambda: window.cards_layout.count() >= 3, timeout=10000)
 
 
-def test_export_pdf_writes_a_file(qapp, report_service, admin_id, tmp_path, monkeypatch):
+def test_export_pdf_writes_a_file(qapp, qtbot, report_service, admin_id, tmp_path, monkeypatch):
     from app.ui.report_window import FuelTypeSummaryReportWindow
 
     target = tmp_path / "out.pdf"
     monkeypatch.setattr(
         "app.ui.report_window.QFileDialog.getSaveFileName", lambda *a, **k: (str(target), "PDF Files (*.pdf)")
     )
-    monkeypatch.setattr("app.ui.report_window.QMessageBox.information", lambda *a, **k: None)
+    # Waiting on target.exists() is a race: ReportLab/openpyxl open (and
+    # so create) the file before they finish writing to it, so "the file
+    # exists" and "the file is complete" are different moments once the
+    # write runs on a worker thread. Waiting for the "export complete"
+    # dialog - which on_done only shows after export_fn has returned - is
+    # what actually marks the write as finished.
+    shown = {"called": False}
+    monkeypatch.setattr("app.ui.report_window.QMessageBox.information", lambda *a, **k: shown.__setitem__("called", True))
 
     window = FuelTypeSummaryReportWindow(report_service, None, admin_id)
     window._export_pdf()
 
+    qtbot.waitUntil(lambda: shown["called"], timeout=10000)
     assert target.exists()
     assert target.stat().st_size > 0
 
 
-def test_export_excel_writes_a_file(qapp, report_service, admin_id, tmp_path, monkeypatch):
+def test_export_excel_writes_a_file(qapp, qtbot, report_service, admin_id, tmp_path, monkeypatch):
     from app.ui.report_window import FuelTypeSummaryReportWindow
 
     target = tmp_path / "out.xlsx"
     monkeypatch.setattr(
         "app.ui.report_window.QFileDialog.getSaveFileName", lambda *a, **k: (str(target), "Excel Files (*.xlsx)")
     )
-    monkeypatch.setattr("app.ui.report_window.QMessageBox.information", lambda *a, **k: None)
+    shown = {"called": False}
+    monkeypatch.setattr("app.ui.report_window.QMessageBox.information", lambda *a, **k: shown.__setitem__("called", True))
 
     window = FuelTypeSummaryReportWindow(report_service, None, admin_id)
     window._export_excel()
 
+    qtbot.waitUntil(lambda: shown["called"], timeout=10000)
     assert target.exists()
     assert target.stat().st_size > 0
 
 
-def test_export_csv_writes_a_file(qapp, report_service, admin_id, tmp_path, monkeypatch):
+def test_export_csv_writes_a_file(qapp, qtbot, report_service, admin_id, tmp_path, monkeypatch):
     from app.ui.report_window import FuelTypeSummaryReportWindow
 
     target = tmp_path / "out.csv"
     monkeypatch.setattr(
         "app.ui.report_window.QFileDialog.getSaveFileName", lambda *a, **k: (str(target), "CSV Files (*.csv)")
     )
-    monkeypatch.setattr("app.ui.report_window.QMessageBox.information", lambda *a, **k: None)
+    shown = {"called": False}
+    monkeypatch.setattr("app.ui.report_window.QMessageBox.information", lambda *a, **k: shown.__setitem__("called", True))
 
     window = FuelTypeSummaryReportWindow(report_service, None, admin_id)
     window._export_csv()
 
+    qtbot.waitUntil(lambda: shown["called"], timeout=10000)
     assert target.exists()
     assert target.stat().st_size > 0
 
@@ -144,3 +160,7 @@ def test_export_cancelled_dialog_does_not_write_a_file(qapp, report_service, adm
 
     window = FuelTypeSummaryReportWindow(report_service, None, admin_id)
     window._export_pdf()  # must not raise, must not prompt for anything further
+    # No background task is dispatched when the dialog is cancelled (the
+    # function returns before reaching run_in_background), so there is
+    # nothing to wait for here - the assertion is simply that nothing
+    # above raised.

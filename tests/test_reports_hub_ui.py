@@ -216,7 +216,7 @@ def test_reports_hub_hides_reports_attendant_cannot_view(qapp, report_service, a
     assert "Credit Report by Fuel Type" not in labels
 
 
-def test_table_report_window_shows_sales_data(qapp, report_service, sale_service, admin_id, open_shift_id, nozzle_id, employee_id):
+def test_table_report_window_shows_sales_data(qapp, qtbot, report_service, sale_service, admin_id, open_shift_id, nozzle_id, employee_id):
     from app.ui.table_report_window import TableReportWindow
 
     sale_service.create_sale(
@@ -224,7 +224,11 @@ def test_table_report_window_shows_sales_data(qapp, report_service, sale_service
         SaleCreate(shift_id=open_shift_id, nozzle_id=nozzle_id, employee_id=employee_id, quantity=Decimal("10"), payment_method=PaymentMethod.CASH),
     )
     window = TableReportWindow(admin_id, report_service.get_sales_report, "sales_report", supports_date_filter=True)
-    assert window.table.rowCount() == 2  # one fuel-type row + a total row
+    # The fetch now runs on a worker thread (problemstatement.md #44: never
+    # freeze the window while a report query runs), so the table fills in
+    # when the task reports back rather than by the time the constructor
+    # returns.
+    qtbot.waitUntil(lambda: window.table.rowCount() == 2, timeout=10000)  # one fuel-type row + a total row
     assert window.windowTitle() == "Sales Report"
 
 
@@ -264,14 +268,22 @@ def test_cash_book_is_hidden_from_a_role_that_cannot_see_expenses(
     assert "Attendance Report" not in labels     # ATTENDANCE_VIEW - not granted
 
 
-def test_a_choice_filter_is_passed_through_to_the_report(qapp, report_service, admin_id, employee_id):
+def test_a_choice_filter_is_passed_through_to_the_report(qapp, qtbot, report_service, admin_id, employee_id):
     """The drop-down has to actually reach the service, not just render."""
     from app.ui.table_report_window import TableReportWindow
 
     received = {}
+    # A plain dict can't distinguish "never called yet" from "called with
+    # no filter", so a call counter is what the wait actually needs to
+    # watch - the fetch itself now runs on a worker thread started by the
+    # constructor's own refresh(), so it has not necessarily run yet by
+    # the time TableReportWindow(...) returns.
+    call_count = {"n": 0}
 
     def fake_report(actor_user_id, **kwargs):
+        received.clear()
         received.update(kwargs)
+        call_count["n"] += 1
         return report_service.get_attendant_nozzle_report(actor_user_id, **kwargs)
 
     window = TableReportWindow(
@@ -279,12 +291,14 @@ def test_a_choice_filter_is_passed_through_to_the_report(qapp, report_service, a
         supports_date_filter=True,
         choice_filters=[("Employee", "employee_id", [("EMP-0001 - Ravi Kumar", employee_id)])],
     )
+    qtbot.waitUntil(lambda: call_count["n"] >= 1, timeout=10000)
     # Defaults to "All employees", so nothing is filtered yet.
     assert "employee_id" not in received
 
     keyword, combo = window._choice_inputs[0]
     combo.setCurrentIndex(1)
     window.refresh()
+    qtbot.waitUntil(lambda: call_count["n"] >= 2, timeout=10000)
     assert received["employee_id"] == employee_id
 
 

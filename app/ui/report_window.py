@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
 
 from app.core.constants import Permission
 from app.services.report_export import build_table_report_html, export_table_csv, export_table_excel, export_table_pdf, fuel_summary_to_table_report
+from app.ui.background import run_in_background
 from app.ui.print_utils import show_print_preview
 from app.ui.qt_utils import apply_hard_shadow, describe_unexpected_error
 from app.ui.widgets import GridBackgroundWidget
@@ -139,21 +140,33 @@ class FuelTypeSummaryReportWindow(QWidget):
 
         self.refresh()
 
-    def refresh(self) -> None:
+    def _action_buttons(self) -> list:
+        return [self.refresh_button, self.export_pdf_button, self.export_excel_button, self.export_csv_button, self.print_button]
+
+    def _clear_cards(self) -> None:
         while self.cards_layout.count():
             item = self.cards_layout.takeAt(0)
             widget = item.widget()
             if widget:
                 widget.deleteLater()
 
-        try:
-            summaries = self._report_service.get_fuel_type_summary(self._actor_user_id)
-        except Exception as exc:  # noqa: BLE001 - last resort so a DB/unexpected error can't crash the window
-            error_label = QLabel(describe_unexpected_error(exc))
-            error_label.setObjectName("errorLabel")
-            self.cards_layout.addWidget(error_label)
-            return
+    def refresh(self) -> None:
+        """Runs off the GUI thread (problemstatement.md #44), same reasoning
+        and same run_in_background helper as TableReportWindow.refresh -
+        get_fuel_type_summary aggregates across every tank, nozzle and
+        this pump's latest reconciliation. The old cards stay on screen
+        until the new ones are ready, instead of clearing immediately and
+        flashing an empty scroll area for the moment the fetch takes."""
+        run_in_background(
+            self,
+            lambda: self._report_service.get_fuel_type_summary(self._actor_user_id),
+            on_done=self._render_summaries,
+            on_error=self._render_error,
+            busy_widgets=self._action_buttons(),
+        )
 
+    def _render_summaries(self, summaries) -> None:
+        self._clear_cards()
         if not summaries:
             empty = QLabel("No fuel types configured yet.")
             empty.setObjectName("subtitle")
@@ -163,6 +176,13 @@ class FuelTypeSummaryReportWindow(QWidget):
         for summary in summaries:
             self.cards_layout.addWidget(FuelTypeSummaryCard(summary))
         self.cards_layout.addStretch()
+
+    def _render_error(self, exc: Exception) -> None:
+        # Last resort so a DB/unexpected error can't crash the window.
+        self._clear_cards()
+        error_label = QLabel(describe_unexpected_error(exc))
+        error_label.setObjectName("errorLabel")
+        self.cards_layout.addWidget(error_label)
 
     def _export_pdf(self) -> None:
         self._export(export_table_pdf, "PDF Files (*.pdf)", ".pdf")
@@ -174,12 +194,6 @@ class FuelTypeSummaryReportWindow(QWidget):
         self._export(export_table_csv, "CSV Files (*.csv)", ".csv")
 
     def _export(self, export_fn, file_filter: str, default_suffix: str) -> None:
-        try:
-            report = fuel_summary_to_table_report(self._report_service.get_fuel_type_summary(self._actor_user_id))
-        except Exception as exc:  # noqa: BLE001
-            QMessageBox.warning(self, "Could not export", describe_unexpected_error(exc))
-            return
-
         from app.core.paths import default_export_path
 
         default_name = f"fuel_type_summary{default_suffix}"
@@ -187,22 +201,31 @@ class FuelTypeSummaryReportWindow(QWidget):
         if not file_path:
             return
 
-        try:
+        def _fetch_and_export():
+            report = fuel_summary_to_table_report(self._report_service.get_fuel_type_summary(self._actor_user_id))
             export_fn(report, file_path)
-        except Exception as exc:  # noqa: BLE001 - last resort so a write failure (disk full, permissions) can't crash the window
-            QMessageBox.warning(self, "Could not export", describe_unexpected_error(exc))
-            return
+            return file_path
 
-        QMessageBox.information(self, "Export complete", f"Report saved to {file_path}")
+        run_in_background(
+            self,
+            _fetch_and_export,
+            on_done=lambda path: QMessageBox.information(self, "Export complete", f"Report saved to {path}"),
+            on_error=lambda exc: QMessageBox.warning(self, "Could not export", describe_unexpected_error(exc)),
+            busy_widgets=self._action_buttons(),
+        )
 
     def _print(self) -> None:
-        try:
+        def _fetch_and_build_html():
             report = fuel_summary_to_table_report(self._report_service.get_fuel_type_summary(self._actor_user_id))
-        except Exception as exc:  # noqa: BLE001
-            QMessageBox.warning(self, "Could not print", describe_unexpected_error(exc))
-            return
+            return build_table_report_html(report)
 
-        show_print_preview(build_table_report_html(report), self)
+        run_in_background(
+            self,
+            _fetch_and_build_html,
+            on_done=lambda html: show_print_preview(html, self),
+            on_error=lambda exc: QMessageBox.warning(self, "Could not print", describe_unexpected_error(exc)),
+            busy_widgets=self._action_buttons(),
+        )
 
 
 class ReportsHubWindow(QWidget):
