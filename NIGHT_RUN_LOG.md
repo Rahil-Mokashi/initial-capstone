@@ -263,3 +263,60 @@ not "touch every file regardless." Files not yet reviewed at all: `analytics_win
 `settings_window.py`, `shift_window.py`, `support_window.py`, `terminal_window.py`,
 `user_management_window.py` - a real next-session candidate list if this pass is
 picked up again, rather than an implied "nothing there."
+
+## Task 6 - Shared UI base-class refactor (incremental)
+
+**Commits:** `a2365e3` (base class + fuel_price_window.py), `c736ded` (tank_window.py),
+`5f8668d` (nozzle_window.py) - three separate commits, full suite run and green
+before each one, per the task's own "one window at a time" instruction.
+**Tests:** 891 passed both before Task 6 started and after all three migrations -
+this is a pure refactor, no behavior changed, so the count staying flat is the
+expected, correct outcome (not a sign nothing happened).
+
+**What was actually extracted:** confirmed byte-for-byte identical across
+`tank_window.py`, `nozzle_window.py`, `employee_window.py`, `fuel_price_window.py`,
+`credit_window.py` (and almost certainly the rest) before touching anything:
+
+```python
+container = GridBackgroundWidget()
+container.setObjectName("background")
+container.setLayout(layout)
+_page_layout = QVBoxLayout(self)
+_page_layout.setContentsMargins(0, 0, 0, 0)
+_page_layout.addWidget(container)
+```
+
+New `app/ui/base_window.py`'s `PageWindow(QWidget)` wraps exactly this into one
+`self._build_page(layout)` call. Migrated three windows onto it so far:
+`FuelPriceWindow`, `TankListWindow`, `NozzleManagementWindow` - each a one-line
+class-declaration change (`QWidget` -> `PageWindow`) plus replacing the six-line
+block with the one call, then dropping the now-unused `GridBackgroundWidget` import
+where nothing else in that file still needed it (`tank_window.py`/`nozzle_window.py`
+kept `QWidget` itself - it's still used there for other sub-widgets/tabs in the same
+file, just not for the top-level window's own page shell anymore).
+
+**Deliberately not extracted (yet):** table setup, button rows, and refresh()
+logic. These differ enough between a list-only window, a list-with-detail-dialog
+window, and a tabbed window (this app has all three shapes) that forcing them into
+one shared method now would have meant guessing at a common shape rather than
+extracting a proven one - exactly the risk CLAUDE.md's "don't invent abstractions
+beyond what the task requires" warns about. `base_window.py`'s own docstring records
+this reasoning so it isn't silently reversed or re-litigated next time this file is
+touched.
+
+**Verified nothing broke by construction, not just by the tests**: for both
+`tank_window.py` and `nozzle_window.py`, checked there was exactly one
+`GridBackgroundWidget()` instantiation in the whole file (the window's own) before
+touching imports - every `QDialog` subclass in these files (`TankFormDialog`,
+`NozzleFormDialog`, etc.) never used the page-shell pattern to begin with, since
+dialogs are modal popups, not full pages. Also specifically checked that
+`tank_window.py`'s existing "defer `add_button.setVisible()` until it's actually
+parented" flicker fix (a 2026-09-16 find, re-used from `attendance_window.py`'s
+Task 1 pattern this same night) still runs in the right order after
+`_build_page()` - it does, since `_build_page` performs the exact same
+`container.setLayout()`/`addWidget()` calls that already did the parenting before.
+
+Stopping at 3 windows migrated (of the ~15+ `*_window.py` files that likely share
+this exact block) - a fine stopping point per the task's own instructions, and
+enough to prove the extraction is correct and safe before doing more of it in a
+future session.
