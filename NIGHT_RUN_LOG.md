@@ -320,3 +320,47 @@ Stopping at 3 windows migrated (of the ~15+ `*_window.py` files that likely shar
 this exact block) - a fine stopping point per the task's own instructions, and
 enough to prove the extraction is correct and safe before doing more of it in a
 future session.
+
+## Task 7 - Regenerate docs/screenshots/login.png and main-window.png
+
+**Resumed 2026-09-23** in an interactive session (the overnight run stopped with this
+task's script changes uncommitted). **Tests:** 891 passed before and after - only
+`scripts/capture_screenshots.py` and the two PNGs changed, nothing under `app/`.
+
+**Four problems fixed in the script, not the app:**
+1. **It used whatever database was configured**, and assumed a `manager1` account already
+   existed in it. It now builds an isolated temp SQLite database, runs migrations and the
+   seed data, and creates its own Manager login (the same pattern as
+   `scripts/verify_navigation_and_alerts.py`). It can't touch real data.
+2. **login.png came out blank** (solid grey). The login screen is QML, which Qt Quick
+   renders on its own render loop, so five `processEvents()` calls weren't enough time.
+   The script now keeps processing events for about 2 seconds before calling `grab()`.
+3. **main-window.png came out unstyled** (Qt's bare default dark widgets). `launch_app()`
+   calls `apply_theme(app)` before creating any window, and this script never did. This
+   is the second time a verification script has hit this; see PROJECT_CONTEXT.md's
+   sidebar-highlight entry. The script now calls `apply_theme()`. It also pins light mode
+   by replacing `theme.is_dark_mode` in memory for this process only. Calling
+   `set_dark_mode(False)` instead would overwrite the runner's own saved preference in
+   the registry.
+4. **The sidebar showed the real hostname** of the PC that ran the script. It is replaced
+   with a neutral `COUNTER-PC` label for the screenshot only.
+
+The script also calls `refresh_alert_badge()` once. Otherwise the alert strip shows its
+"Checking for alerts..." loading text, because it only refreshes on the session timer's
+tick. Both images were inspected after the final run: the login card renders fully, and
+the dashboard shows the themed sidebar, KPI cards and an "All clear" alert strip.
+
+## Final summary
+
+| Task | Result |
+|---|---|
+| 1 - Inline Present/Absent attendance marking | Done |
+| 2 - Attendance.shift_label -> Shift FK migration | Done |
+| 3 - ADMIN vs OWNER | Decided: stay identical, guarded by a test |
+| 4 - Remaining reports onto shared export | Done (Fuel Type Summary) |
+| 5 - UI simplification pass | Done within budget (see its entry for the files still unchecked) |
+| 6 - Shared PageWindow base class | Extracted; 3 windows migrated, the rest left for later |
+| 7 - Regenerate README screenshots | Done |
+
+Nothing skipped or blocked. Final test count: **891 passed**. No `git push` done;
+everything is local commits for review.
