@@ -192,7 +192,7 @@ Cash/UPI/card/expense reconciliation are folded into one per-shift `ShiftReconci
 - [x] Implement print preview functionality (`app/ui/print_utils.py`'s `show_print_preview` - every "Print" button across the app now opens a `QPrintPreviewDialog`, not a direct-to-printer `QPrintDialog`, so Print and Print Preview are both satisfied from one entry point; replaces the print-only flow every report window had before)
 - [x] Enable PDF export for all reports (already true for the fuel-type summary since the 2026-08-16 audit pass; now also true for all six Phase 16 table reports via the shared `export_table_pdf`)
 - [x] Enable Excel export for all reports (same shared `export_table_excel`)
-- [x] Enable CSV export where appropriate (`export_table_csv`, new - wired into every `TableReportWindow`-based report; not added to the fuel-type summary window, which predates the generic report infrastructure and stays on its own bespoke export functions)
+- [x] Enable CSV export where appropriate (`export_table_csv`, new - wired into every `TableReportWindow`-based report; the fuel-type summary window predated the generic report infrastructure and stayed on its own bespoke export functions until it was moved onto the shared pattern 2026-09-23 - see Next Immediate Task #6, now done)
 - [x] Implement professional report formatting (the existing ReportLab/openpyxl styling - indigo header row, alternating row shading, bold headers - is shared by every report through the generic export functions, so "professional formatting" is a property of the shared layer, not something to redo per report)
 - [x] Support direct printer output via PySide6 (`QPrintPreviewDialog`'s own Print action, `QPrinter(QPrinter.HighResolution)`)
 - [x] Create printable documents - two concrete document types added, closing explicit promises from earlier phases: **Sales receipts** (`export_sale_receipt_pdf`/`build_sale_receipt_html`, "Print Receipt"/"Export Receipt PDF" on the Sales screen - Phase 11 had explicitly deferred this) and **Customer statements** (`CustomerStatementDialog` gained Print/Export PDF/Export Excel, reusing the `TableReport` shape by treating each statement line as a row with a trailing running-balance row) - the rest of the list (shift/daily/attendance/employee/purchase/supplier-invoice/inventory/management documents) depends on report types Phase 16 hasn't built yet and is deferred alongside them
@@ -311,7 +311,7 @@ On 2026-08-16 the user asked for a full build audit and then to resolve everythi
 3. The shared UI base-class refactor (list-window/form-dialog boilerplate), as its own focused pass
 4. Migrate `Attendance.shift_label` (free text) to a real foreign key against the now-existing `Shift` model
 5. Decide whether `ADMIN` and `OWNER` should keep identical permissions or diverge (flagged in the 2026-08-16 audit)
-6. Extend PDF/Excel export to the remaining reports not yet covered, reusing `app/services/report_export.py`'s pattern
+6. ~~Extend PDF/Excel export to the remaining reports not yet covered, reusing `app/services/report_export.py`'s pattern~~ — **done 2026-09-23**. The Fuel Type Summary was the only report left on its own bespoke exporters; it now shares `export_table_pdf`/`export_table_excel`/`export_table_csv`/`build_table_report_html` with every other report (via new `fuel_summary_to_table_report()`), and gained CSV export in the process.
 
 ## Long-term Considerations (Not for Initial Release)
 While building for offline-only operation, the architecture should not prevent future expansion:

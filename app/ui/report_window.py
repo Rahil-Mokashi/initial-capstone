@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.core.constants import Permission
-from app.services.report_export import export_fuel_summary_excel, export_fuel_summary_pdf
+from app.services.report_export import build_table_report_html, export_table_csv, export_table_excel, export_table_pdf, fuel_summary_to_table_report
 from app.ui.print_utils import show_print_preview
 from app.ui.qt_utils import apply_hard_shadow, describe_unexpected_error
 from app.ui.widgets import GridBackgroundWidget
@@ -95,6 +95,11 @@ class FuelTypeSummaryReportWindow(QWidget):
         self.export_excel_button.setCursor(Qt.PointingHandCursor)
         self.export_excel_button.clicked.connect(self._export_excel)
 
+        self.export_csv_button = QPushButton("Export CSV")
+        self.export_csv_button.setObjectName("secondaryButton")
+        self.export_csv_button.setCursor(Qt.PointingHandCursor)
+        self.export_csv_button.clicked.connect(self._export_csv)
+
         self.print_button = QPushButton("Print")
         self.print_button.setObjectName("secondaryButton")
         self.print_button.setCursor(Qt.PointingHandCursor)
@@ -104,6 +109,7 @@ class FuelTypeSummaryReportWindow(QWidget):
         actions_row.addWidget(self.refresh_button)
         actions_row.addStretch()
         actions_row.addWidget(self.print_button)
+        actions_row.addWidget(self.export_csv_button)
         actions_row.addWidget(self.export_excel_button)
         actions_row.addWidget(self.export_pdf_button)
 
@@ -159,14 +165,17 @@ class FuelTypeSummaryReportWindow(QWidget):
         self.cards_layout.addStretch()
 
     def _export_pdf(self) -> None:
-        self._export(export_fuel_summary_pdf, "PDF Files (*.pdf)", ".pdf")
+        self._export(export_table_pdf, "PDF Files (*.pdf)", ".pdf")
 
     def _export_excel(self) -> None:
-        self._export(export_fuel_summary_excel, "Excel Files (*.xlsx)", ".xlsx")
+        self._export(export_table_excel, "Excel Files (*.xlsx)", ".xlsx")
+
+    def _export_csv(self) -> None:
+        self._export(export_table_csv, "CSV Files (*.csv)", ".csv")
 
     def _export(self, export_fn, file_filter: str, default_suffix: str) -> None:
         try:
-            summaries = self._report_service.get_fuel_type_summary(self._actor_user_id)
+            report = fuel_summary_to_table_report(self._report_service.get_fuel_type_summary(self._actor_user_id))
         except Exception as exc:  # noqa: BLE001
             QMessageBox.warning(self, "Could not export", describe_unexpected_error(exc))
             return
@@ -179,7 +188,7 @@ class FuelTypeSummaryReportWindow(QWidget):
             return
 
         try:
-            export_fn(summaries, file_path)
+            export_fn(report, file_path)
         except Exception as exc:  # noqa: BLE001 - last resort so a write failure (disk full, permissions) can't crash the window
             QMessageBox.warning(self, "Could not export", describe_unexpected_error(exc))
             return
@@ -188,43 +197,12 @@ class FuelTypeSummaryReportWindow(QWidget):
 
     def _print(self) -> None:
         try:
-            summaries = self._report_service.get_fuel_type_summary(self._actor_user_id)
+            report = fuel_summary_to_table_report(self._report_service.get_fuel_type_summary(self._actor_user_id))
         except Exception as exc:  # noqa: BLE001
             QMessageBox.warning(self, "Could not print", describe_unexpected_error(exc))
             return
 
-        show_print_preview(_build_report_html(summaries), self)
-
-
-def _build_report_html(summaries) -> str:
-    from datetime import datetime
-
-    rows = []
-    for summary in summaries:
-        variance = (
-            f"{summary.latest_variance_percent:+.2f}%" if summary.latest_variance_percent is not None else "—"
-        )
-        classification = (summary.latest_variance_classification or "—").replace("_", " ").title()
-        rows.append(
-            "<tr>"
-            f"<td>{summary.fuel_type}</td><td>{summary.tank_count}</td>"
-            f"<td>{summary.total_capacity:.2f}</td><td>{summary.total_current_stock:.2f}</td>"
-            f"<td>{summary.active_nozzle_count}/{summary.nozzle_count}</td>"
-            f"<td>{variance}</td><td>{classification}</td>"
-            "</tr>"
-        )
-
-    return f"""
-    <h2>Fuel Type Summary</h2>
-    <p>Generated {datetime.now().strftime('%Y-%m-%d %H:%M')}</p>
-    <table border="1" cellspacing="0" cellpadding="6" width="100%">
-    <tr>
-        <th>Fuel Type</th><th>Tanks</th><th>Capacity (L)</th><th>Stock (L)</th>
-        <th>Nozzles</th><th>Variance %</th><th>Classification</th>
-    </tr>
-    {''.join(rows)}
-    </table>
-    """
+        show_print_preview(build_table_report_html(report), self)
 
 
 class ReportsHubWindow(QWidget):
