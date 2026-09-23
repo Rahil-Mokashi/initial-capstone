@@ -77,13 +77,6 @@ class FuelPriceWindow(QWidget):
         self.refresh_button.setCursor(Qt.PointingHandCursor)
         self.refresh_button.clicked.connect(self.refresh)
 
-        self.change_price_button = QPushButton("Change Price")
-        self.change_price_button.setCursor(Qt.PointingHandCursor)
-        self.change_price_button.clicked.connect(self._change_price)
-        self.change_price_button.setEnabled(self._can_manage)
-        if not self._can_manage:
-            self.change_price_button.setToolTip("Only a manager can change a fuel price.")
-
         self.history_button = QPushButton("Price History")
         self.history_button.setObjectName("secondaryButton")
         self.history_button.setCursor(Qt.PointingHandCursor)
@@ -101,7 +94,6 @@ class FuelPriceWindow(QWidget):
         actions.addWidget(self.refresh_button)
         actions.addStretch(1)
         actions.addWidget(self.history_button)
-        actions.addWidget(self.change_price_button)
 
         layout = QVBoxLayout()
         layout.setContentsMargins(24, 24, 24, 24)
@@ -164,6 +156,12 @@ class FuelPriceWindow(QWidget):
             self.table.setItem(row, 2, status_item)
 
             if self._can_manage:
+                # The one path to change a price (2026-09-23 simplification
+                # pass): a top-level "Change Price" button used to require
+                # selecting a row first, then clicking it - a select-then-click
+                # detour around a row-level action this per-row icon already
+                # does in one click, so the button was removed rather than
+                # kept as a slower duplicate of this.
                 self.table.setCellWidget(
                     row, 3, make_edit_icon_button(lambda _=False, f=fuel: self._change_price_for(f), tooltip="Change price")
                 )
@@ -183,14 +181,6 @@ class FuelPriceWindow(QWidget):
             self._show_error("Select a fuel first.")
             return None
         return self._fuels[row]
-
-    def _change_price(self) -> None:
-        if not self._can_manage:
-            return
-        fuel = self._selected_fuel()
-        if fuel is None:
-            return
-        self._change_price_for(fuel)
 
     def _change_price_for(self, fuel) -> None:
         if not self._can_manage:
