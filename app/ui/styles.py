@@ -366,6 +366,40 @@ QLabel#topBarClock {{
     font-weight: 600;
 }}
 
+/* problemstatement.md #37: an always-visible offline-status indicator.
+   Calm/positive rather than neutral grey - it is reassurance ("this is
+   working as designed"), not a warning, so it gets the same success
+   colour as a passing reconciliation rather than the muted clock's. */
+QLabel#topBarOfflineBadge {{
+    color: {color_success};
+    background-color: {color_success_bg};
+    border-radius: {RADIUS_FULL}px;
+    padding: 4px 12px;
+    font-size: 11px;
+    font-weight: 700;
+}}
+
+/* problemstatement.md #37/#36: current-shift indicator. Neutral grey pill
+   when no shift is open (an idle terminal between shifts is normal, not
+   a problem), the same success green as the offline badge once one is -
+   tone="" vs tone="open", the same property-driven pattern as
+   alertsButton's tone. */
+QLabel#topBarShiftIndicator {{
+    color: {color_text_muted};
+    background-color: {color_surface};
+    border: 1px solid {color_border};
+    border-radius: {RADIUS_FULL}px;
+    padding: 4px 12px;
+    font-size: 11px;
+    font-weight: 700;
+}}
+
+QLabel#topBarShiftIndicator[tone="open"] {{
+    color: {color_success};
+    background-color: {color_success_bg};
+    border: 1px solid transparent;
+}}
+
 /* The account control: an initials-avatar icon + name, replacing the
    old plain "admin" text label - see MainWindow._make_avatar. */
 QPushButton#accountButton {{

@@ -35,6 +35,14 @@ class DashboardSummary:
     sales_today_count: Optional[int] = None
     sales_today_amount: Optional[Decimal] = None
     open_shifts_count: Optional[int] = None
+    # The shift_label of every shift currently OPEN today (usually zero
+    # or one - a pump normally runs one shift at a time - but never
+    # assumed to be exactly one, since nothing stops two differently
+    # labelled shifts from being open together). Same permission gate and
+    # same underlying query as open_shifts_count, just also keeping the
+    # labels instead of only their count - added for the top bar's
+    # current-shift indicator (problemstatement.md #37/#36).
+    open_shift_labels: Optional[List[str]] = None
     low_stock_tanks_count: Optional[int] = None
     pending_purchase_orders_count: Optional[int] = None
 
@@ -70,7 +78,9 @@ class DashboardService:
 
         if can(Permission.SHIFT_VIEW):
             todays_shifts = self._shift_repo.list_for_date_range(date.today(), date.today())
-            summary.open_shifts_count = sum(1 for shift in todays_shifts if shift.status == ShiftStatus.OPEN.value)
+            open_today = [shift for shift in todays_shifts if shift.status == ShiftStatus.OPEN.value]
+            summary.open_shifts_count = len(open_today)
+            summary.open_shift_labels = [shift.shift_label for shift in open_today]
 
         if can(Permission.INVENTORY_VIEW):
             low_stock_count = 0

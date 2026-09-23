@@ -171,6 +171,7 @@ def test_admin_sees_every_section(dashboard_service, admin_id):
     assert summary.sales_today_count == 0
     assert summary.sales_today_amount == Decimal("0")
     assert summary.open_shifts_count == 0
+    assert summary.open_shift_labels == []
     assert summary.low_stock_tanks_count == 0
     assert summary.pending_purchase_orders_count == 0
 
@@ -179,6 +180,7 @@ def test_attendant_only_sees_sales_section(dashboard_service, attendant_id):
     summary = dashboard_service.get_summary(attendant_id)
     assert summary.sales_today_count == 0
     assert summary.open_shifts_count is None
+    assert summary.open_shift_labels is None
     assert summary.low_stock_tanks_count is None
     assert summary.pending_purchase_orders_count is None
 
@@ -207,6 +209,20 @@ def test_cancelled_sale_excluded_from_todays_total(dashboard_service, sale_servi
 def test_open_shift_is_counted(dashboard_service, admin_id, open_shift_id):
     summary = dashboard_service.get_summary(admin_id)
     assert summary.open_shifts_count == 1
+    # For the top bar's current-shift indicator (main_window.py's
+    # refresh_shift_indicator): the label, not just the count, so "Shift:
+    # Morning - Open" can be shown without a second query.
+    assert summary.open_shift_labels == ["Morning"]
+
+
+def test_closed_shift_is_not_counted_as_open(dashboard_service, admin_id, db_session):
+    shift = Shift(shift_date=date.today(), shift_label="Evening", opened_by_id=admin_id, status=ShiftStatus.CLOSED.value)
+    db_session.add(shift)
+    db_session.commit()
+
+    summary = dashboard_service.get_summary(admin_id)
+    assert summary.open_shifts_count == 0
+    assert summary.open_shift_labels == []
 
 
 def test_low_stock_tank_is_flagged(dashboard_service, tank_service, admin_id, fuel_id):
