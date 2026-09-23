@@ -141,6 +141,31 @@ def test_check_permission_attendant_has_no_permissions(auth_service, db_session)
     assert auth_service.check_permission(attendant.id, PermissionName.USER_MANAGE.value) is False
 
 
+def test_admin_and_owner_are_deliberately_identical():
+    """ADMIN vs OWNER divergence was flagged in the 2026-08-16 audit as an
+    open question and decided 2026-09-23: no functional difference is
+    intended for this single-pump deployment (see PROJECT_CONTEXT.md's
+    Known Limitations for the full reasoning). This guards that decision
+    so the two roles can't drift apart by accident - a real, deliberate
+    split should update this test in the same change, not slip past it.
+    """
+    from app.core.constants import ROLE_PERMISSIONS
+
+    assert set(ROLE_PERMISSIONS[UserRole.ADMIN]) == set(ROLE_PERMISSIONS[UserRole.OWNER])
+
+
+def test_admin_and_owner_seeded_roles_hold_the_same_permissions(db_session):
+    seed_initial_data()
+    admin_role = db_session.query(Role).filter_by(name=UserRole.ADMIN.value).first()
+    owner_role = db_session.query(Role).filter_by(name=UserRole.OWNER.value).first()
+
+    admin_permissions = {p.name for p in admin_role.permissions}
+    owner_permissions = {p.name for p in owner_role.permissions}
+
+    assert admin_permissions == owner_permissions
+    assert len(admin_permissions) == len(PermissionName)
+
+
 def test_session_validate_and_logout(auth_service):
     success, data, _ = auth_service.authenticate("admin", DEFAULT_ADMIN_PASSWORD)
     assert success is True
