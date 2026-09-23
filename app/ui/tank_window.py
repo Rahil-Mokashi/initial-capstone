@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
 from app.core.constants import Permission, TankStatus, TankTransactionType
 from app.core.exceptions import AppError
 from app.schemas.tank import ReconciliationPerform, TankCreate, TankReadingCreate, TankTransactionCreate
+from app.ui.base_window import PageWindow
 from app.ui.qt_utils import (
     apply_hard_shadow,
     chain_enter_to_next_field,
@@ -35,7 +36,7 @@ from app.ui.qt_utils import (
     qdate_to_date,
     volume_table_item,
 )
-from app.ui.widgets import GridBackgroundWidget, TankGaugeCard, VarianceBarCard
+from app.ui.widgets import TankGaugeCard, VarianceBarCard
 
 GAUGE_COLUMNS = 3
 RECENT_TRANSACTIONS_PANEL_WIDTH = 300
@@ -47,7 +48,7 @@ READING_HEADERS = ["Date", "Physical Stock", "Dip", "Employee"]
 RECONCILIATION_HEADERS = ["Date", "Expected", "Physical", "Variance", "Classification"]
 
 
-class TankListWindow(QWidget):
+class TankListWindow(PageWindow):
     def __init__(self, tank_service, employee_service, fuel_repo, auth_service, actor_user_id: str):
         super().__init__()
         self._tank_service = tank_service
@@ -100,12 +101,7 @@ class TankListWindow(QWidget):
         layout.setContentsMargins(24, 24, 24, 24)
         layout.addLayout(columns_row)
 
-        container = GridBackgroundWidget()
-        container.setObjectName("background")
-        container.setLayout(layout)
-        _page_layout = QVBoxLayout(self)
-        _page_layout.setContentsMargins(0, 0, 0, 0)
-        _page_layout.addWidget(container)
+        self._build_page(layout)
 
         # Deferred until add_button is actually parented (2026-09-16,
         # user-reported flicker) - see app/ui/sales_window.py's
