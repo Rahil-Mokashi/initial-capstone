@@ -29,17 +29,16 @@ from PySide6.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
-    QWidget,
 )
 
 from app.core.constants import Permission
 from app.core.exceptions import AppError
 from app.schemas.fuel import MAX_REASONABLE_RATE_PER_LITER, FuelRateChange
+from app.ui.base_window import PageWindow
 from app.ui.qt_utils import chain_enter_to_next_field, describe_unexpected_error, make_edit_icon_button
-from app.ui.widgets import GridBackgroundWidget
 
 
-class FuelPriceWindow(QWidget):
+class FuelPriceWindow(PageWindow):
     def __init__(self, actor_user_id: str, fuel_service, auth_service):
         super().__init__()
         self._actor_user_id = actor_user_id
@@ -105,12 +104,7 @@ class FuelPriceWindow(QWidget):
         layout.addLayout(actions)
         layout.addWidget(self.table, stretch=1)
 
-        container = GridBackgroundWidget()
-        container.setObjectName("background")
-        container.setLayout(layout)
-        _page_layout = QVBoxLayout(self)
-        _page_layout.setContentsMargins(0, 0, 0, 0)
-        _page_layout.addWidget(container)
+        self._build_page(layout)
 
         self.refresh()
 
