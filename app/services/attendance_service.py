@@ -10,7 +10,7 @@ old and new values — attendance history is never silently overwritten.
 from datetime import date, datetime, timezone
 from typing import List, Optional
 
-from app.core.constants import Permission
+from app.core.constants import AttendanceStatus, Permission
 from app.core.exceptions import ConflictError, NotFoundError
 from app.core.permissions import require_permission
 from app.models.attendance import Attendance
@@ -100,6 +100,62 @@ class AttendanceService:
             new_value=new_snapshot,
         )
         return attendance
+
+    def apply_leave_as_related_action(
+        self, actor_user_id: str, employee_id: str, attendance_date, note: str
+    ) -> Attendance:
+        """Deliberately unchecked - callable only as a side effect of an
+        action the caller has already authorized under its own permission
+        (LeaveService.approve_leave_request, gated on the stricter
+        LEAVE_APPROVE), the same *_as_related_action pattern TankService/
+        SaleService established (see PROJECT_CONTEXT.md, Phase 11).
+
+        Marks the day LEAVE if nothing was recorded yet, or corrects it to
+        LEAVE - audit-logged, old value preserved, never a silent
+        overwrite - if something else already was. Approving a leave
+        request is a deliberate, authorized override of whatever was
+        there before (e.g. an attendant marked ABSENT before the leave was
+        formally approved); it is idempotent when the day already reads
+        LEAVE, so approving a multi-day request that overlaps a day
+        already corrected this way does nothing surprising the second time.
+        """
+        existing = self._attendance_repo.get_by_employee_and_date(employee_id, attendance_date)
+        if existing is None:
+            attendance = Attendance(
+                employee_id=employee_id,
+                attendance_date=attendance_date,
+                status=AttendanceStatus.LEAVE.value,
+                supervisor_id=actor_user_id,
+            )
+            attendance = self._attendance_repo.add(attendance)
+            self._audit_repo.record(
+                event_type="attendance_marked",
+                actor_id=actor_user_id,
+                entity_type="Attendance",
+                entity_id=attendance.id,
+                description=note,
+            )
+            return attendance
+
+        if existing.status == AttendanceStatus.LEAVE.value:
+            return existing
+
+        old_snapshot = f"status={existing.status}"
+        existing.status = AttendanceStatus.LEAVE.value
+        existing.correction_reason = note
+        existing.corrected_by_id = actor_user_id
+        existing.corrected_at = datetime.now(timezone.utc)
+        existing = self._attendance_repo.update(existing)
+        self._audit_repo.record(
+            event_type="attendance_corrected",
+            actor_id=actor_user_id,
+            entity_type="Attendance",
+            entity_id=existing.id,
+            description=note,
+            old_value=old_snapshot,
+            new_value=f"status={existing.status}",
+        )
+        return existing
 
     @require_permission(Permission.ATTENDANCE_VIEW.value)
     def get_attendance(self, actor_user_id: str, attendance_id: str) -> Attendance:

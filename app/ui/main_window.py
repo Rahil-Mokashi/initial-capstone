@@ -43,6 +43,7 @@ from app.repositories.expense_repository import ExpenseCategoryRepository, Expen
 from app.repositories.fuel_delivery_repository import FuelDeliveryRepository
 from app.repositories.fuel_price_history_repository import FuelPriceHistoryRepository
 from app.repositories.fuel_repository import FuelRepository
+from app.repositories.leave_request_repository import LeaveRequestRepository
 from app.repositories.nozzle_assignment_repository import NozzleAssignmentRepository
 from app.repositories.nozzle_repository import NozzleRepository
 from app.repositories.payment_repository import PaymentRepository
@@ -71,6 +72,7 @@ from app.services.dashboard_service import DashboardService
 from app.services.employee_service import EmployeeService
 from app.services.expense_service import ExpenseService
 from app.services.fuel_service import FuelService
+from app.services.leave_service import LeaveService
 from app.services.settings_service import SettingsService
 from app.services.notification_service import NotificationService
 from app.services.nozzle_service import NozzleService
@@ -178,6 +180,7 @@ class MainWindow(QMainWindow):
         auth_service: AuthService,
         employee_service: EmployeeService,
         attendance_service: AttendanceService,
+        leave_service: LeaveService,
         shift_service: ShiftService,
         nozzle_service: NozzleService,
         tank_service: TankService,
@@ -207,6 +210,7 @@ class MainWindow(QMainWindow):
         self._auth_service = auth_service
         self._employee_service = employee_service
         self._attendance_service = attendance_service
+        self._leave_service = leave_service
         self._shift_service = shift_service
         self._nozzle_service = nozzle_service
         self._tank_service = tank_service
@@ -390,6 +394,7 @@ class MainWindow(QMainWindow):
         from app.ui.employee_window import EmployeeListWindow
         from app.ui.expense_window import ExpenseWindow
         from app.ui.fuel_price_window import FuelPriceWindow
+        from app.ui.leave_window import LeaveWindow
         from app.ui.my_shift_window import MyShiftWindow
         from app.ui.nozzle_window import NozzleManagementWindow
         from app.ui.procurement_window import ProcurementWindow
@@ -532,6 +537,13 @@ class MainWindow(QMainWindow):
                                     self._user_data["id"],
                                 ),
                                 Permission.ATTENDANCE_VIEW,
+                            ),
+                            (
+                                "Leave", "Request leave on an employee's behalf and approve or reject requests.",
+                                lambda: LeaveWindow(
+                                    self._leave_service, self._employee_service, self._auth_service, self._user_data["id"]
+                                ),
+                                Permission.LEAVE_VIEW,
                             ),
                         ],
                     ),
@@ -1795,6 +1807,13 @@ class AppController:
             audit_repo,
             self._auth_service,
         )
+        self._leave_service = LeaveService(
+            LeaveRequestRepository(self._db_session),
+            employee_repo,
+            audit_repo,
+            self._auth_service,
+            attendance_service=self._attendance_service,
+        )
         nozzle_repo = NozzleRepository(self._db_session)
         nozzle_assignment_repo = NozzleAssignmentRepository(self._db_session)
         self._shift_service = ShiftService(
@@ -2017,6 +2036,7 @@ class AppController:
             self._auth_service,
             self._employee_service,
             self._attendance_service,
+            self._leave_service,
             self._shift_service,
             self._nozzle_service,
             self._tank_service,
