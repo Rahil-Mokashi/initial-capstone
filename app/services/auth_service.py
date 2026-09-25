@@ -69,10 +69,7 @@ class AuthService:
                 description="Login attempted on locked account",
                 device_info=device_info,
             )
-            return False, None, (
-                f"This account is temporarily locked because of too many wrong attempts. "
-                f"Please wait {LOCKOUT_DURATION_MINUTES} minutes and try again, or ask an administrator to unlock it now."
-            )
+            return False, self._lockout_details(user), self._lockout_message()
 
         if not user.is_active:
             self._audit_repo.record(
@@ -84,8 +81,15 @@ class AuthService:
             return False, None, "This account has been switched off. Please ask an administrator to turn it back on."
 
         if not verify_password(password, user.password_hash):
-            self._record_failed_login(user, device_info)
-            return False, None, "That username or password isn't correct. Please check and try again."
+            locked = self._record_failed_login(user, device_info)
+            if locked:
+                return False, self._lockout_details(user), self._lockout_message()
+            attempts_remaining = max(0, MAX_FAILED_LOGIN_ATTEMPTS - user.failed_attempts)
+            return (
+                False,
+                {"attempts_remaining": attempts_remaining},
+                "That username or password isn't correct. Please check and try again.",
+            )
 
         # Captured before _record_successful_login overwrites it with
         # *this* login's timestamp - the account menu wants to show when
@@ -128,8 +132,13 @@ class AuthService:
             description=f"Automatic lockout expired after {LOCKOUT_DURATION_MINUTES} minutes",
         )
 
-    def _record_failed_login(self, user, device_info: Optional[str] = None) -> None:
-        """Record a failed login attempt and lock the account after too many."""
+    def _record_failed_login(self, user, device_info: Optional[str] = None) -> bool:
+        """Record a failed login attempt and lock the account after too many.
+
+        Returns whether this specific attempt is the one that just
+        crossed the threshold, so the caller can show the lockout
+        message immediately rather than the generic wrong-password one.
+        """
         user.failed_attempts += 1
         locked = user.failed_attempts >= MAX_FAILED_LOGIN_ATTEMPTS
         if locked:
@@ -143,6 +152,25 @@ class AuthService:
             description=f"Failed login attempt {user.failed_attempts}",
             device_info=device_info,
         )
+        return locked
+
+    @staticmethod
+    def _lockout_message() -> str:
+        return (
+            f"This account is temporarily locked because of too many wrong attempts. "
+            f"Please wait {LOCKOUT_DURATION_MINUTES} minutes and try again, or ask an administrator to unlock it now."
+        )
+
+    @staticmethod
+    def _lockout_details(user) -> dict:
+        """When a locked account's lock will lift on its own, for a live
+        countdown in the UI - None when it won't (an administrator-
+        applied lock has no locked_at and must be cleared deliberately,
+        matching _lockout_has_expired's own reasoning)."""
+        if user.locked_at is None:
+            return {"locked_until": None}
+        locked_until = _as_aware_utc(user.locked_at) + timedelta(minutes=LOCKOUT_DURATION_MINUTES)
+        return {"locked_until": locked_until.isoformat()}
 
     def _record_successful_login(self, user) -> None:
         """Reset failed-attempt counters and stamp last login time."""

@@ -103,7 +103,10 @@ def test_authenticate_success(auth_service):
 def test_authenticate_wrong_password_is_generic_and_counts_attempt(auth_service, db_session):
     success, data, error = auth_service.authenticate("admin", "wrong-password")
     assert success is False
-    assert data is None
+    # Carries how many attempts are left before a lockout, for the login
+    # screen's own countdown warning - never a session_token or anything
+    # else success-shaped, since this is still a failed attempt.
+    assert data == {"attempts_remaining": MAX_FAILED_LOGIN_ATTEMPTS - 1}
     assert error == "That username or password isn't correct. Please check and try again."
 
     admin = db_session.query(User).filter_by(username="admin").first()
@@ -129,6 +132,27 @@ def test_account_locks_after_max_failed_attempts(auth_service, db_session):
     # leaving them to guess whether the lock is permanent.
     assert "locked" in error
     assert "15 minutes" in error
+    # A live countdown for the login screen (see LoginBridge) - the
+    # account auto-clears its own lock at this moment (_lockout_has_expired),
+    # so this timestamp is always a real, meaningful deadline.
+    assert data["locked_until"] is not None
+    locked_until = datetime.fromisoformat(data["locked_until"])
+    assert locked_until > datetime.now(timezone.utc)
+
+
+def test_lockout_applied_by_an_administrator_has_no_countdown(auth_service, db_session):
+    """A lock with no locked_at (set directly, not via a failed-attempt
+    threshold) never expires on its own - see _lockout_has_expired's own
+    docstring - so the login screen has nothing to count down to."""
+    admin = db_session.query(User).filter_by(username="admin").first()
+    admin.is_locked = True
+    admin.locked_at = None
+    db_session.commit()
+
+    success, data, error = auth_service.authenticate("admin", DEFAULT_ADMIN_PASSWORD)
+
+    assert success is False
+    assert data == {"locked_until": None}
 
 
 def test_check_permission_admin_has_full_access(auth_service, db_session):

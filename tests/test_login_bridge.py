@@ -44,7 +44,32 @@ def db_session(tmp_path, monkeypatch):
 
 
 @pytest.fixture()
-def bridge(qapp, db_session):
+def isolated_settings(monkeypatch):
+    """Points app.ui.theme's and app.ui.terminal_settings' QSettings at a
+    throwaway in-memory store instead of the real per-machine one (the
+    Windows registry) - the same isolation tests/test_theme.py already
+    applies to theme.py, extended here to cover terminal_settings.py too
+    since LoginBridge now reads/writes both."""
+    import app.ui.terminal_settings as terminal_settings_module
+    import app.ui.theme as theme_module
+
+    store: dict[str, object] = {}
+
+    class FakeSettings:
+        def value(self, key, default=None, type=None):  # noqa: A002 - matches QSettings' own signature
+            value = store.get(key, default)
+            return type(value) if type is not None else value
+
+        def setValue(self, key, value):  # noqa: N802 - matches QSettings' own method name
+            store[key] = value
+
+    monkeypatch.setattr(theme_module, "QSettings", lambda *a, **k: FakeSettings())
+    monkeypatch.setattr(terminal_settings_module, "QSettings", lambda *a, **k: FakeSettings())
+    return store
+
+
+@pytest.fixture()
+def bridge(qapp, db_session, isolated_settings):
     from app.ui.login_bridge import LoginBridge
 
     seed_initial_data()
@@ -158,3 +183,128 @@ def test_username_and_password_properties_stay_in_sync_with_qml_typing():
 
     assert username_changes == ["a", "ad"]
     assert password_changes == ["p"]
+
+
+def test_wrong_password_sets_attempts_remaining(bridge):
+    _fill(bridge, "admin", "wrong-password")
+    bridge.submit()
+
+    assert bridge.attemptsRemaining == 4  # MAX_FAILED_LOGIN_ATTEMPTS (5) - 1
+
+
+def test_attempts_remaining_resets_at_the_start_of_a_new_submit(bridge):
+    _fill(bridge, "admin", "wrong-password")
+    bridge.submit()
+    assert bridge.attemptsRemaining == 4
+
+    _fill(bridge, "", "")
+    bridge.submit()  # the empty-fields path never even reaches AuthService
+
+    assert bridge.attemptsRemaining == -1
+
+
+def test_lockout_sets_a_positive_countdown(bridge):
+    from app.core.constants import MAX_FAILED_LOGIN_ATTEMPTS
+
+    for _ in range(MAX_FAILED_LOGIN_ATTEMPTS):
+        _fill(bridge, "admin", "wrong-password")
+        bridge.submit()
+
+    assert "locked" in bridge.error
+    assert bridge.lockoutSecondsRemaining > 0
+
+
+def test_successful_login_records_the_username_on_this_terminal(bridge):
+    from app.ui.terminal_settings import get_recent_usernames
+
+    _fill(bridge, "admin", DEFAULT_ADMIN_PASSWORD)
+    bridge.submit()
+
+    assert get_recent_usernames() == ["admin"]
+
+
+def test_failed_login_does_not_record_the_username(bridge):
+    from app.ui.terminal_settings import get_recent_usernames
+
+    _fill(bridge, "admin", "wrong-password")
+    bridge.submit()
+
+    assert get_recent_usernames() == []
+
+
+def test_recent_usernames_property_reflects_this_terminals_history(bridge):
+    from app.ui.terminal_settings import record_recent_username
+
+    record_recent_username("night-shift-attendant")
+
+    assert bridge.recentUsernames == ["night-shift-attendant"]
+
+
+def test_toggle_dark_mode_flips_and_persists(bridge):
+    from app.ui.theme import is_dark_mode
+
+    starting = bridge.darkMode
+    assert starting is is_dark_mode()
+
+    changes = []
+    bridge.darkModeChanged.connect(lambda: changes.append(bridge.darkMode))
+    bridge.toggleDarkMode()
+
+    assert bridge.darkMode is (not starting)
+    assert changes == [not starting]
+    # Persisted through the same store the main window's theme toggle
+    # uses, so the choice carries over after logging in - not undone the
+    # moment this screen closes.
+    assert is_dark_mode() is (not starting)
+
+
+def test_caps_lock_property_reflects_os_state_at_construction(qapp, db_session, isolated_settings, monkeypatch):
+    import app.ui.login_bridge as login_bridge_module
+
+    monkeypatch.setattr(login_bridge_module, "is_caps_lock_on", lambda: True)
+
+    seed_initial_data()
+    auth_service = AuthService(
+        UserRepository(db_session),
+        AuditLogRepository(db_session),
+        UserSessionRepository(db_session),
+        session_timeout_hours=8,
+    )
+    bridge = login_bridge_module.LoginBridge(auth_service)
+
+    assert bridge.capsLockOn is True
+
+
+def test_caps_lock_poll_emits_only_on_a_real_change(qapp, db_session, isolated_settings, monkeypatch):
+    import app.ui.login_bridge as login_bridge_module
+
+    # Fixed to False at construction, rather than trusting whatever the
+    # real machine running this test happens to have Caps Lock set to -
+    # that would make the test's outcome depend on the test runner's own
+    # physical keyboard state, which is exactly the kind of flakiness a
+    # test must not have.
+    monkeypatch.setattr(login_bridge_module, "is_caps_lock_on", lambda: False)
+    seed_initial_data()
+    auth_service = AuthService(
+        UserRepository(db_session),
+        AuditLogRepository(db_session),
+        UserSessionRepository(db_session),
+        session_timeout_hours=8,
+    )
+    bridge = login_bridge_module.LoginBridge(auth_service)
+    assert bridge.capsLockOn is False
+
+    changes = []
+    bridge.capsLockOnChanged.connect(lambda: changes.append(bridge.capsLockOn))
+
+    monkeypatch.setattr(login_bridge_module, "is_caps_lock_on", lambda: False)
+    bridge._poll_caps_lock()
+    assert changes == []  # no change, no signal
+
+    monkeypatch.setattr(login_bridge_module, "is_caps_lock_on", lambda: True)
+    bridge._poll_caps_lock()
+    assert changes == [True]
+
+
+def test_device_name_property_is_non_empty(bridge):
+    assert bridge.deviceName

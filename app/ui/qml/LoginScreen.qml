@@ -64,6 +64,14 @@ Rectangle {
     // window.
     property real formWidth: Math.max(320, Math.min(460, width - 64))
 
+    // Seeded from bridge.lockoutSecondsRemaining (see the Connections
+    // block below) and ticked down locally by lockoutCountdownTimer -
+    // kept as its own root property rather than binding straight to
+    // bridge.lockoutSecondsRemaining, since that value is only ever
+    // computed once per failed attempt and would otherwise stay frozen
+    // at whatever it was first set to instead of counting down.
+    property int lockoutSecondsLeft: 0
+
     Column {
         id: centerColumn
         anchors.centerIn: parent
@@ -97,6 +105,59 @@ Rectangle {
                 to: 1
                 duration: 420
                 easing.type: Easing.OutCubic
+            }
+        }
+
+        // Utility row: an offline badge (this app never needs or uses an
+        // internet connection, matching the same static badge the main
+        // window's own top bar shows post-login - see MainWindow's
+        // offline_indicator_label) and a theme toggle, so light/dark mode
+        // can be set before signing in rather than only afterwards. Plain
+        // anchors, not a Layout - this file only imports QtQuick/
+        // QtQuick.Controls.Basic, not QtQuick.Layouts.
+        Item {
+            width: root.formWidth
+            height: Math.max(offlineBadge.implicitHeight, themeToggle.height)
+
+            Text {
+                id: offlineBadge
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                text: "● Offline — Local Only"
+                color: theme.colorTextFaint
+                font.pixelSize: 12
+                font.family: theme.fontSans
+            }
+
+            Button {
+                id: themeToggle
+                objectName: "themeToggleButton"
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                focusPolicy: Qt.NoFocus
+                hoverEnabled: true
+                text: bridge.darkMode ? "☀ Light" : "☾ Dark"
+                font.pixelSize: 12
+                font.family: theme.fontSans
+                height: 28
+                onClicked: bridge.toggleDarkMode()
+                HoverHandler { cursorShape: Qt.PointingHandCursor }
+
+                background: Rectangle {
+                    radius: theme.radiusFull
+                    color: themeToggle.hovered ? theme.colorBg : "transparent"
+                    border.color: theme.colorBorder
+                    border.width: 1
+                }
+                contentItem: Text {
+                    text: themeToggle.text
+                    color: theme.colorTextMuted
+                    font: themeToggle.font
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    leftPadding: 10
+                    rightPadding: 10
+                }
             }
         }
 
@@ -135,6 +196,14 @@ Rectangle {
                     font.family: theme.fontSans
                     anchors.verticalCenter: parent.verticalCenter
                 }
+            }
+
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: "This device: " + bridge.deviceName
+                color: theme.colorTextFaint
+                font.pixelSize: 12
+                font.family: theme.fontSans
             }
         }
 
@@ -198,6 +267,54 @@ Rectangle {
                     color: theme.colorTextMuted
                 }
 
+                // Recently-used usernames on this specific terminal (see
+                // app/ui/terminal_settings.py) - a shared forecourt PC is
+                // used by a handful of people across shifts, so a tap
+                // fills the field instead of retyping a name that was
+                // just used here an hour ago. Only the username is
+                // remembered, never a password/PIN, so this carries no
+                // credential of its own.
+                Flow {
+                    width: parent.width
+                    spacing: 8
+                    visible: bridge.recentUsernames.length > 0
+
+                    Repeater {
+                        model: bridge.recentUsernames
+                        delegate: Button {
+                            required property string modelData
+                            objectName: "recentUsernameChip"
+                            focusPolicy: Qt.NoFocus
+                            hoverEnabled: true
+                            text: modelData
+                            font.pixelSize: 13
+                            font.family: theme.fontSans
+                            height: 30
+                            onClicked: {
+                                usernameField.text = modelData
+                                passwordField.forceActiveFocus()
+                            }
+                            HoverHandler { cursorShape: Qt.PointingHandCursor }
+
+                            background: Rectangle {
+                                radius: theme.radiusFull
+                                color: parent.hovered ? theme.colorBg : theme.colorSurface
+                                border.color: theme.colorBorder
+                                border.width: 1
+                            }
+                            contentItem: Text {
+                                text: parent.text
+                                color: theme.colorTextMuted
+                                font: parent.font
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                                leftPadding: 10
+                                rightPadding: 10
+                            }
+                        }
+                    }
+                }
+
                 TextField {
                     id: usernameField
                     objectName: "usernameField"
@@ -215,6 +332,15 @@ Rectangle {
                     onAccepted: passwordField.forceActiveFocus()
                     onTextChanged: bridge.username = text
 
+                    // Inline validation (2026-09-25 follow-up): a hint the
+                    // moment the user leaves this field empty, rather than
+                    // only after a whole submit attempt fails - property
+                    // set only on blur, never while still typing, so it
+                    // doesn't nag before the user has even had a chance to
+                    // type anything.
+                    property bool touched: false
+                    onActiveFocusChanged: if (!activeFocus) touched = true
+
                     background: Rectangle {
                         radius: theme.radiusMd
                         color: theme.colorSurface
@@ -228,6 +354,14 @@ Rectangle {
                         Behavior on border.color { ColorAnimation { duration: 120 } }
                         Behavior on border.width { NumberAnimation { duration: 120 } }
                     }
+                }
+
+                Text {
+                    text: "Username is required."
+                    visible: usernameField.touched && usernameField.text.length === 0
+                    color: theme.colorDanger
+                    font.pixelSize: 13
+                    font.family: theme.fontSans
                 }
 
                 Text {
@@ -270,9 +404,11 @@ Rectangle {
                         // itself* doesn't count as "leaving" the field
                         // and immediately undo the reveal it just asked
                         // for.
+                        property bool touched: false
                         onActiveFocusChanged: {
                             if (!activeFocus) {
                                 toggleButton.checked = false
+                                touched = true
                             }
                         }
 
@@ -347,6 +483,40 @@ Rectangle {
                             horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter
                         }
+                    }
+                }
+
+                Text {
+                    text: "Password is required."
+                    visible: passwordField.touched && passwordField.text.length === 0
+                    color: theme.colorDanger
+                    font.pixelSize: 13
+                    font.family: theme.fontSans
+                }
+
+                // Caps Lock warning (2026-09-25 follow-up): the single
+                // highest-value, lowest-effort login fix per the client
+                // review's own punch list - most "wrong password" support
+                // requests trace back to this, and it costs nothing to
+                // check once the state is available (see
+                // app/core/keyboard_state.py / LoginBridge.capsLockOn).
+                // Shown whenever Caps Lock is on, not just while a field
+                // has focus, since it affects both fields identically.
+                Row {
+                    width: parent.width
+                    spacing: 6
+                    visible: bridge.capsLockOn
+
+                    Text {
+                        text: "⚠"
+                        color: theme.colorDanger
+                        font.pixelSize: 13
+                    }
+                    Text {
+                        text: "Caps Lock is on."
+                        color: theme.colorDanger
+                        font.pixelSize: 13
+                        font.family: theme.fontSans
                     }
                 }
 
@@ -428,6 +598,48 @@ Rectangle {
                     }
                 }
 
+                // Attempts-remaining / lockout countdown (2026-09-25
+                // follow-up): AuthService.authenticate already computed
+                // and enforced this - see the lockout warning that used
+                // to say only "wait 15 minutes" with no visible sense of
+                // how much of that was left, and the wrong-password error
+                // that gave no hint how close the account was to locking.
+                // secondsLeft ticks down locally once a second rather
+                // than re-querying Python every second - it's only ever
+                // seeded from bridge.lockoutSecondsRemaining, right after
+                // a failed attempt.
+                Text {
+                    width: parent.width
+                    visible: root.lockoutSecondsLeft > 0
+                    text: "Try again in " + Math.floor(root.lockoutSecondsLeft / 60) + ":" +
+                          String(root.lockoutSecondsLeft % 60).padStart(2, "0")
+                    color: theme.colorDanger
+                    font.pixelSize: 13
+                    font.bold: true
+                    font.family: theme.fontSans
+                    horizontalAlignment: Text.AlignHCenter
+                }
+
+                Text {
+                    width: parent.width
+                    visible: root.lockoutSecondsLeft === 0 && bridge.attemptsRemaining >= 0 && bridge.attemptsRemaining <= 3
+                    text: bridge.attemptsRemaining === 1
+                        ? "1 attempt remaining before this account is locked."
+                        : bridge.attemptsRemaining + " attempts remaining before this account is locked."
+                    color: theme.colorTextMuted
+                    font.pixelSize: 13
+                    font.family: theme.fontSans
+                    horizontalAlignment: Text.AlignHCenter
+                }
+
+                Timer {
+                    id: lockoutCountdownTimer
+                    interval: 1000
+                    repeat: true
+                    running: root.lockoutSecondsLeft > 0
+                    onTriggered: root.lockoutSecondsLeft = Math.max(0, root.lockoutSecondsLeft - 1)
+                }
+
                 Item { width: 1; height: 6 }
 
                 // Reworded (2026-09-25): "Locked out" and "system
@@ -463,6 +675,9 @@ Rectangle {
                 passwordField.forceActiveFocus()
                 shakeAnimation.start()
             }
+        }
+        function onLockoutSecondsRemainingChanged() {
+            root.lockoutSecondsLeft = bridge.lockoutSecondsRemaining
         }
     }
 
