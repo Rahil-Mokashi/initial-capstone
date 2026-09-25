@@ -64,7 +64,14 @@ class LoginWindow(QMainWindow):
         self.bridge.loginSucceeded.connect(self.login_succeeded.emit)
 
         self.setWindowTitle(f"{PRODUCT_NAME} — Sign In")
-        self.setMinimumSize(640, 780)
+        # Lowered from the previous (640, 780) (2026-09-25, login UI pass):
+        # LoginScreen.qml's card now computes its own width from the
+        # window's actual size (root.formWidth) instead of using a fixed
+        # 380px, so the window can actually be shrunk and the form will
+        # reflow instead of clipping - a minimum this tall/wide would have
+        # made that responsiveness unreachable, since the window could
+        # never get small enough to exercise it.
+        self.setMinimumSize(420, 620)
 
         self._quick_widget = QQuickWidget()
         self._quick_widget.setResizeMode(QQuickWidget.ResizeMode.SizeRootObjectToView)

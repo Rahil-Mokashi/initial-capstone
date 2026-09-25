@@ -52,7 +52,7 @@ class AuthService:
                 device_info=device_info,
             )
             # Deliberately generic: do not reveal whether the username exists.
-            return False, None, "Invalid username or password"
+            return False, None, "That username or password isn't correct. Please check and try again."
 
         if user.is_locked and self._lockout_has_expired(user):
             # The lockout served its purpose and timed out. Clearing it here
@@ -70,8 +70,8 @@ class AuthService:
                 device_info=device_info,
             )
             return False, None, (
-                f"Account is locked due to failed attempts. "
-                f"Try again in {LOCKOUT_DURATION_MINUTES} minutes, or ask an administrator to unlock it."
+                f"This account is temporarily locked because of too many wrong attempts. "
+                f"Please wait {LOCKOUT_DURATION_MINUTES} minutes and try again, or ask an administrator to unlock it now."
             )
 
         if not user.is_active:
@@ -81,11 +81,11 @@ class AuthService:
                 description="Login attempted on deactivated account",
                 device_info=device_info,
             )
-            return False, None, "Account is deactivated"
+            return False, None, "This account has been switched off. Please ask an administrator to turn it back on."
 
         if not verify_password(password, user.password_hash):
             self._record_failed_login(user, device_info)
-            return False, None, "Invalid username or password"
+            return False, None, "That username or password isn't correct. Please check and try again."
 
         # Captured before _record_successful_login overwrites it with
         # *this* login's timestamp - the account menu wants to show when

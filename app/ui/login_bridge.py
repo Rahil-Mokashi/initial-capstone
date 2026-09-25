@@ -127,7 +127,7 @@ class LoginBridge(QObject):
         self._set_error("")
 
         if not username or not password:
-            self._set_error("Enter both username and password.")
+            self._set_error("Please enter both your username and password.")
             return
 
         # Password verification (bcrypt) isn't instant; `busy` disables the
