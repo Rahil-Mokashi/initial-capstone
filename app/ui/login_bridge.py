@@ -38,6 +38,7 @@ from app.ui.qt_utils import describe_unexpected_error
 from app.ui.terminal_settings import get_login_locale, get_recent_usernames, record_recent_username, set_login_locale
 from app.ui.theme import is_dark_mode, set_dark_mode
 
+
 def get_device_info() -> str:
     return platform.node() or "unknown-device"
 
@@ -293,7 +294,9 @@ class LoginBridge(QObject):
         # concurrent authenticate() calls.
         self._set_busy(True)
         try:
-            authenticate = self._auth_service.authenticate_with_pin if self._pin_mode else self._auth_service.authenticate
+            authenticate = (
+                self._auth_service.authenticate_with_pin if self._pin_mode else self._auth_service.authenticate
+            )
             success, user_data, error = authenticate(username, credential, device_info=get_device_info())
         except Exception as exc:  # noqa: BLE001 - last resort so a DB/unexpected error can't crash the login screen
             self._set_error(describe_unexpected_error(exc))
