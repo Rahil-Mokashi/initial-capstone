@@ -28,16 +28,39 @@ call boundary itself.
 """
 
 import platform
+from datetime import datetime, timezone
 
-from PySide6.QtCore import Property, QObject, Signal, Slot
+from PySide6.QtCore import Property, QObject, QTimer, Signal, Slot
 
+from app.core.keyboard_state import is_caps_lock_on
 from app.services.auth_service import AuthService
 from app.ui.qt_utils import describe_unexpected_error
-from app.ui.theme import is_dark_mode
+from app.ui.terminal_settings import get_recent_usernames, record_recent_username
+from app.ui.theme import is_dark_mode, set_dark_mode
+
+# How often the Caps Lock indicator is re-checked. Caps Lock is a toggle
+# key with no Qt change-notification of its own (see
+# app/core/keyboard_state.py's docstring) - polling is the only option,
+# and this only needs to be fast enough to feel immediate to someone who
+# just pressed it, not fast enough for anything performance-sensitive.
+CAPS_LOCK_POLL_INTERVAL_MS = 400
 
 
 def get_device_info() -> str:
     return platform.node() or "unknown-device"
+
+
+def _seconds_until(iso_timestamp) -> int:
+    """Whole seconds between now and an ISO timestamp AuthService
+    returned, floored at 0 - used to seed the lockout countdown QML
+    ticks down locally rather than polling Python every second. None
+    (no timestamp - an administrator-applied lock with no auto-expiry,
+    or no lockout at all) maps to 0, meaning "no countdown to show"."""
+    if not iso_timestamp:
+        return 0
+    locked_until = datetime.fromisoformat(iso_timestamp)
+    remaining = (locked_until - datetime.now(timezone.utc)).total_seconds()
+    return max(0, int(remaining))
 
 
 class LoginBridge(QObject):
@@ -46,6 +69,10 @@ class LoginBridge(QObject):
     usernameChanged = Signal()
     passwordChanged = Signal()
     loginSucceeded = Signal(dict)
+    capsLockOnChanged = Signal()
+    darkModeChanged = Signal()
+    attemptsRemainingChanged = Signal()
+    lockoutSecondsRemainingChanged = Signal()
 
     def __init__(self, auth_service: AuthService, parent=None):
         super().__init__(parent)
@@ -54,6 +81,18 @@ class LoginBridge(QObject):
         self._busy = False
         self._username = ""
         self._password = ""
+        self._caps_lock_on = is_caps_lock_on()
+        self._attempts_remaining = -1  # -1: unknown/not applicable yet
+        self._lockout_seconds_remaining = 0
+
+        # Polling, not a Qt key-event hook: Caps Lock's toggle state has
+        # to be read from the OS (see keyboard_state.is_caps_lock_on),
+        # and this way it also updates if the key is pressed while the
+        # window doesn't have focus, not just while typing here.
+        self._caps_lock_timer = QTimer(self)
+        self._caps_lock_timer.setInterval(CAPS_LOCK_POLL_INTERVAL_MS)
+        self._caps_lock_timer.timeout.connect(self._poll_caps_lock)
+        self._caps_lock_timer.start()
 
     @Property(str, notify=errorChanged)
     def error(self) -> str:
@@ -62,6 +101,36 @@ class LoginBridge(QObject):
     @Property(bool, notify=busyChanged)
     def busy(self) -> bool:
         return self._busy
+
+    @Property(bool, notify=capsLockOnChanged)
+    def capsLockOn(self) -> bool:
+        return self._caps_lock_on
+
+    def _poll_caps_lock(self) -> None:
+        current = is_caps_lock_on()
+        if current != self._caps_lock_on:
+            self._caps_lock_on = current
+            self.capsLockOnChanged.emit()
+
+    @Property(int, notify=attemptsRemainingChanged)
+    def attemptsRemaining(self) -> int:
+        return self._attempts_remaining
+
+    @Property(int, notify=lockoutSecondsRemainingChanged)
+    def lockoutSecondsRemaining(self) -> int:
+        return self._lockout_seconds_remaining
+
+    @Property(str, constant=True)
+    def deviceName(self) -> str:
+        return get_device_info()
+
+    @Property("QStringList", constant=True)
+    def recentUsernames(self) -> list:
+        """This terminal's last few successfully-used usernames (see
+        app/ui/terminal_settings.py) - fixed for the life of this screen,
+        since a new one is only ever added after a successful login,
+        which closes this screen anyway."""
+        return get_recent_usernames()
 
     def _get_username(self) -> str:
         return self._username
@@ -85,9 +154,19 @@ class LoginBridge(QObject):
 
     password = Property(str, _get_password, _set_password, notify=passwordChanged)
 
-    @Property(bool, constant=True)
+    @Property(bool, notify=darkModeChanged)
     def darkMode(self) -> bool:
         return is_dark_mode()
+
+    @Slot(name="toggleDarkMode")
+    def toggleDarkMode(self) -> None:
+        """Lets the login screen flip light/dark mode itself, not just the
+        main window after signing in - saved through the same QSettings
+        store app/ui/theme.py already uses, so the choice carries into the
+        main window's own theme once the user does log in, rather than
+        being undone the moment this screen closes."""
+        set_dark_mode(not is_dark_mode())
+        self.darkModeChanged.emit()
 
     def _set_error(self, text: str) -> None:
         text = text or ""
@@ -99,6 +178,16 @@ class LoginBridge(QObject):
         if value != self._busy:
             self._busy = value
             self.busyChanged.emit()
+
+    def _set_attempts_remaining(self, value: int) -> None:
+        if value != self._attempts_remaining:
+            self._attempts_remaining = value
+            self.attemptsRemainingChanged.emit()
+
+    def _set_lockout_seconds_remaining(self, value: int) -> None:
+        if value != self._lockout_seconds_remaining:
+            self._lockout_seconds_remaining = value
+            self.lockoutSecondsRemainingChanged.emit()
 
     @Slot(name="submit")
     def submit(self) -> None:
@@ -125,6 +214,8 @@ class LoginBridge(QObject):
         username = self._username.strip()
         password = self._password
         self._set_error("")
+        self._set_attempts_remaining(-1)
+        self._set_lockout_seconds_remaining(0)
 
         if not username or not password:
             self._set_error("Please enter both your username and password.")
@@ -147,6 +238,10 @@ class LoginBridge(QObject):
 
         if not success:
             self._set_error(error or "Login failed.")
+            details = user_data or {}
+            self._set_attempts_remaining(details.get("attempts_remaining", -1))
+            self._set_lockout_seconds_remaining(_seconds_until(details.get("locked_until")))
             return
 
+        record_recent_username(username)
         self.loginSucceeded.emit(user_data)
