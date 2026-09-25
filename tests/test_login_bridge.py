@@ -298,13 +298,51 @@ def test_caps_lock_poll_emits_only_on_a_real_change(qapp, db_session, isolated_s
     bridge.capsLockOnChanged.connect(lambda: changes.append(bridge.capsLockOn))
 
     monkeypatch.setattr(login_bridge_module, "is_caps_lock_on", lambda: False)
-    bridge._poll_caps_lock()
+    bridge.pollCapsLock()
     assert changes == []  # no change, no signal
 
     monkeypatch.setattr(login_bridge_module, "is_caps_lock_on", lambda: True)
-    bridge._poll_caps_lock()
+    bridge.pollCapsLock()
     assert changes == [True]
 
 
 def test_device_name_property_is_non_empty(bridge):
     assert bridge.deviceName
+
+
+def test_initial_login_locale_defaults_to_english(bridge):
+    assert bridge.initialLoginLocale == "en"
+
+
+def test_set_login_locale_persists_through_terminal_settings(bridge):
+    from app.ui.terminal_settings import get_login_locale
+
+    bridge.setLoginLocale("hi")
+    assert get_login_locale() == "hi"
+
+
+def test_pin_mode_routes_submit_to_authenticate_with_pin(bridge):
+    calls = []
+    bridge._auth_service.authenticate_with_pin = lambda *a, **k: (calls.append((a, k)) or (False, None, "no pin"))
+
+    bridge.setPinMode(True)
+    bridge.username = "admin"
+    bridge.pin = "482913"
+    bridge.submit()
+
+    assert len(calls) == 1
+    assert calls[0][0][0] == "admin"
+    assert calls[0][0][1] == "482913"
+
+
+def test_password_mode_ignores_pin_field(bridge):
+    calls = []
+    bridge._auth_service.authenticate = lambda *a, **k: (calls.append(a) or (False, None, "wrong"))
+
+    bridge.setPinMode(False)
+    bridge.username = "admin"
+    bridge.password = "Admin@123"
+    bridge.pin = "482913"  # left over from a mode switch - must be ignored
+    bridge.submit()
+
+    assert calls[0][1] == "Admin@123"

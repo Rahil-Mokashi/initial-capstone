@@ -112,11 +112,11 @@ def main_window(qapp, db_session):
 
 
 # _open_module_page/_push_subpage are the shared machinery every real
-# opener calls into, not openers themselves. _open_change_password is
-# the one opener that is a genuinely blocking modal (dialog.exec()) -
+# opener calls into, not openers themselves. _open_change_password and
+# _open_set_pin are each a genuinely blocking modal (dialog.exec()) -
 # tested separately below with exec() patched out, rather than folded
 # into the generic loop where it would hang the test.
-_NON_MODULE_OPENERS = {"_open_module_page", "_open_change_password"}
+_NON_MODULE_OPENERS = {"_open_module_page", "_open_change_password", "_open_set_pin"}
 
 
 def _discover_module_openers(window) -> list:
@@ -239,6 +239,54 @@ def test_change_password_opens_through_its_real_menu_action(main_window, monkeyp
 
     monkeypatch.setattr(QDialog, "exec", lambda self: QDialog.Accepted)
     main_window._open_change_password()
+
+
+def test_set_pin_opens_through_its_real_menu_action(main_window, monkeypatch):
+    """Same reasoning as test_change_password_opens_through_its_real_menu_action
+    above: _open_set_pin's dialog.exec() is a genuinely blocking modal call,
+    excluded from the generic sweep and exercised here instead with exec()
+    patched out."""
+    from PySide6.QtWidgets import QDialog
+
+    monkeypatch.setattr(QDialog, "exec", lambda self: QDialog.Accepted)
+    main_window._open_set_pin()
+    assert main_window._user_data["has_pin"] is True
+
+
+def test_lock_screen_resumes_without_logging_out(main_window, monkeypatch):
+    """_lock_screen isn't an _open_* method (it doesn't navigate the page
+    stack at all), so it's outside the generic sweep entirely - covered
+    directly here instead, the same "patch exec(), exercise the real
+    wiring" shape as the two tests above."""
+    from PySide6.QtWidgets import QDialog
+
+    from app.ui.lock_screen_dialog import LockScreenDialog
+
+    monkeypatch.setattr(LockScreenDialog, "exec", lambda self: QDialog.Accepted)  # signed_out stays False
+    logout_calls = []
+    monkeypatch.setattr(main_window, "_logout", lambda: logout_calls.append(True))
+
+    main_window._lock_screen()
+
+    assert logout_calls == []
+
+
+def test_lock_screen_sign_out_instead_logs_out(main_window, monkeypatch):
+    from PySide6.QtWidgets import QDialog
+
+    from app.ui.lock_screen_dialog import LockScreenDialog
+
+    def fake_exec(self):
+        self.signed_out = True
+        return QDialog.Accepted
+
+    monkeypatch.setattr(LockScreenDialog, "exec", fake_exec)
+    logout_calls = []
+    monkeypatch.setattr(main_window, "_logout", lambda: logout_calls.append(True))
+
+    main_window._lock_screen()
+
+    assert logout_calls == [True]
 
 
 def test_opening_the_same_module_twice_leaves_only_one_instance_embedded(main_window):

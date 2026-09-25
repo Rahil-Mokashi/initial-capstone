@@ -16,6 +16,12 @@ reportlab>=4.0
 openpyxl>=3.1
 pypdf>=4.0  # test-only: verifies PDF export content in tests/test_report_export.py
 
+# Optional: Windows Hello support for the Lock Screen (app/core/windows_hello.py).
+# Guarded by ImportError - the app runs identically without it, just without
+# that one convenience button on Windows. Not installed by requirements.lock's
+# pinned CI/build environment; add it locally only if you want to try that path.
+winsdk>=1.0.0b10; sys_platform == "win32"
+
 # Dev/test tooling (see pyproject.toml [project.optional-dependencies].dev)
 pytest-qt>=4.4   # owns Qt widget lifetime in tests; without it the UI suites
                  # leak native handles and abort the interpreter at teardown

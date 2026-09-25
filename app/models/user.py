@@ -23,6 +23,21 @@ class User(EntityMixin, Base):
     failed_attempts = Column(Integer, default=0, nullable=False)
     must_change_password = Column(Boolean, default=False, nullable=False)
     last_login = Column(UtcDateTime, nullable=True)
+    # Optional quick-sign-in PIN, self-service (UserService.set_own_pin) -
+    # nullable because most accounts never set one; NULL means "PIN
+    # sign-in isn't available for this account", not "PIN is blank".
+    # Hashed with the same PBKDF2 helper as password_hash (app/core/
+    # security.py's hash_password/verify_password work on any string),
+    # never stored or compared in plaintext.
+    pin_hash = Column(String(512), nullable=True)
+    pin_set_at = Column(UtcDateTime, nullable=True)
+    # A one-time code an administrator generates for a user who forgot
+    # their password and cannot reach one in person (UserService.
+    # generate_password_reset_code / AuthService.reset_password_with_code).
+    # Hashed the same way as a password - this is a credential, even
+    # though it is short-lived and single-use.
+    password_reset_code_hash = Column(String(512), nullable=True)
+    password_reset_code_expires_at = Column(UtcDateTime, nullable=True)
     role_id = Column(String(36), ForeignKey("roles.id"), nullable=True)
 
     role = relationship("Role", back_populates="users")

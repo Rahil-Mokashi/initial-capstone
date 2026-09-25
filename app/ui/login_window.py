@@ -57,9 +57,10 @@ class LoginWindow(QMainWindow):
 
     login_succeeded = Signal(dict)
 
-    def __init__(self, auth_service: AuthService):
+    def __init__(self, auth_service: AuthService, user_service=None):
         super().__init__()
         self._auth_service = auth_service
+        self._user_service = user_service
         self.bridge = LoginBridge(auth_service)
         self.bridge.loginSucceeded.connect(self.login_succeeded.emit)
 
@@ -104,8 +105,36 @@ class LoginWindow(QMainWindow):
         root = self._quick_widget.rootObject()
         if root is not None:
             root.submitTriggerChanged.connect(self.bridge.submit, Qt.QueuedConnection)
+            # Same boundary rule as submitTrigger above: root.pinMode is a
+            # plain QML property the mode-toggle button flips directly
+            # (pure QML/JS, no Python call from inside that click) - only
+            # its own auto-generated changed signal reaches Python, and
+            # only via a queued connection, so bridge.setPinMode always
+            # runs after the click has fully finished being delivered.
+            root.pinModeChanged.connect(self.bridge.setPinMode, Qt.QueuedConnection)
+            # Same pattern again for the language toggle (root.loginLocale
+            # is a plain QML property, flipped directly by that button's
+            # own onClicked) - only its changed signal reaches Python,
+            # only via a queued connection, to persist the choice.
+            root.loginLocaleChanged.connect(self.bridge.setLoginLocale, Qt.QueuedConnection)
+            # Same pattern again for the theme toggle - see
+            # LoginScreen.qml's own comment on themeToggleTrigger for why
+            # this one specifically was caught and fixed on review.
+            root.themeToggleTriggerChanged.connect(self.bridge.toggleDarkMode, Qt.QueuedConnection)
+            # Same pattern again for "Forgot password?": LoginScreen.qml's
+            # link only touches root.forgotPasswordTrigger, a plain QML
+            # property, never Python directly.
+            root.forgotPasswordTriggerChanged.connect(self._open_forgot_password_dialog, Qt.QueuedConnection)
 
         self.setCentralWidget(self._quick_widget)
+
+    def _open_forgot_password_dialog(self) -> None:
+        if self._user_service is None:
+            return
+        from app.ui.forgot_password_dialog import ForgotPasswordDialog
+
+        dialog = ForgotPasswordDialog(self._user_service, parent=self)
+        dialog.exec()
 
     def find_qml_object(self, object_name: str):
         """Look up a named item inside the loaded QML scene by objectName.

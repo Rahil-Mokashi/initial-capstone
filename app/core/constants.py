@@ -488,6 +488,26 @@ PASSWORD_REQUIRE_UPPER = True
 PASSWORD_REQUIRE_LOWER = True
 PASSWORD_REQUIRE_DIGIT = True
 
+# Quick-sign-in PIN policy (client review, 2026-09-25): a shared
+# forecourt PC is signed into repeatedly across a shift, and a full
+# password every time is real friction a short numeric PIN removes -
+# see UserService.set_own_pin / AuthService.authenticate_with_pin. Six
+# digits, not four: it shares the exact same account lockout as a
+# password (MAX_FAILED_LOGIN_ATTEMPTS wrong PINs locks the account the
+# same way MAX_FAILED_LOGIN_ATTEMPTS wrong passwords does), so guessing
+# is already hopeless either way - the extra two digits cost almost
+# nothing to type but remove any temptation to treat a 4-digit PIN as
+# "good enough" security on its own.
+PIN_LENGTH = 6
+
+# A one-time password-reset code an administrator generates
+# (UserService.generate_password_reset_code) for a user who forgot
+# their password and has no one else to ask in person. Deliberately
+# short-lived - long enough to walk the code over or read it out on a
+# call, not long enough to be a standing second password.
+PASSWORD_RESET_CODE_LENGTH = 8
+PASSWORD_RESET_CODE_VALID_MINUTES = 30
+
 # Login attempt protection (problemstatement.md #39)
 MAX_FAILED_LOGIN_ATTEMPTS = 5
 

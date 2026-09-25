@@ -214,3 +214,48 @@ def test_detail_dialog_unlock_button_enabled_only_when_locked(qapp, user_service
 
     dialog._refresh()
     assert dialog.unlock_button.isEnabled() is True
+
+
+def test_generate_reset_code_requires_a_reason(qapp, user_service_and_auth, role_repo, admin_id, attendant_role_id, db_session, monkeypatch):
+    from PySide6.QtWidgets import QInputDialog
+    from app.ui.user_management_window import UserDetailDialog
+
+    service, _ = user_service_and_auth
+    user = service.create_user(
+        admin_id,
+        UserCreate(username="attendant.c", email="c@example.com", password="Strong@123", role_id=attendant_role_id),
+    )
+    dialog = UserDetailDialog(service, role_repo, admin_id, user.id)
+
+    # Cancelled/blank reason - QInputDialog.getText's own (text, ok) shape.
+    monkeypatch.setattr(QInputDialog, "getText", staticmethod(lambda *a, **k: ("", False)))
+    dialog._generate_reset_code()
+
+    db_session.expire_all()
+    refreshed = db_session.query(User).filter_by(id=user.id).first()
+    assert refreshed.password_reset_code_hash is None
+
+
+def test_generate_reset_code_button_produces_a_working_code(qapp, user_service_and_auth, role_repo, admin_id, attendant_role_id, monkeypatch):
+    from PySide6.QtWidgets import QInputDialog, QMessageBox
+    from app.ui.user_management_window import UserDetailDialog
+
+    service, _ = user_service_and_auth
+    user = service.create_user(
+        admin_id,
+        UserCreate(username="attendant.d", email="d@example.com", password="Strong@123", role_id=attendant_role_id),
+    )
+    dialog = UserDetailDialog(service, role_repo, admin_id, user.id)
+
+    monkeypatch.setattr(QInputDialog, "getText", staticmethod(lambda *a, **k: ("Forgot password, no admin on site", True)))
+    shown = []
+    monkeypatch.setattr(QMessageBox, "information", staticmethod(lambda *a, **k: shown.append(a)))
+
+    dialog._generate_reset_code()
+
+    assert len(shown) == 1
+    # The code itself is the one piece of information that only ever
+    # exists here, in this message - it must actually be usable.
+    displayed_text = shown[0][-1]
+    code = displayed_text.split(f"{user.username}: ")[1].split("\n")[0]
+    service.reset_password_with_code(user.username, code, "BrandNew@123")

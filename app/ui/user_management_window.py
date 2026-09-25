@@ -245,6 +245,15 @@ class UserDetailDialog(QDialog):
         self.reset_password_button.setObjectName("secondaryButton")
         self.reset_password_button.clicked.connect(self._reset_password)
 
+        self.reset_code_button = QPushButton("Generate Password Reset Code")
+        self.reset_code_button.setObjectName("secondaryButton")
+        self.reset_code_button.setToolTip(
+            "For a user who forgot their password and has no one to reset it in person right now "
+            "(e.g. a night shift with no admin on site) - they enter this code themselves on the "
+            "login screen's \"Forgot password?\" link."
+        )
+        self.reset_code_button.clicked.connect(self._generate_reset_code)
+
         close_button = QPushButton("Close")
         close_button.setObjectName("secondaryButton")
         close_button.clicked.connect(self.accept)
@@ -260,6 +269,7 @@ class UserDetailDialog(QDialog):
         layout.addWidget(self.toggle_active_button)
         layout.addWidget(self.unlock_button)
         layout.addWidget(self.reset_password_button)
+        layout.addWidget(self.reset_code_button)
         layout.addLayout(bottom_row)
         self.setLayout(layout)
 
@@ -331,3 +341,22 @@ class UserDetailDialog(QDialog):
         except Exception as exc:  # noqa: BLE001
             QMessageBox.warning(self, "Could not reset password", describe_unexpected_error(exc))
         self._refresh()
+
+    def _generate_reset_code(self) -> None:
+        reason, ok = QInputDialog.getText(self, "Generate password reset code", "Reason:")
+        if not ok or not reason.strip():
+            return
+        try:
+            code = self._user_service.generate_password_reset_code(self._actor_user_id, self._user_id, reason.strip())
+            QMessageBox.information(
+                self,
+                "Password reset code",
+                f"One-time code for {self._user.username}: {code}\n\n"
+                f"Give this to them directly (read it aloud, write it down) - it is shown only "
+                f"once, works only once, and expires soon. They enter it on the login screen's "
+                f"\"Forgot password?\" link along with a new password of their own choosing.",
+            )
+        except (AppError, ValueError) as exc:
+            QMessageBox.warning(self, "Could not generate a reset code", str(exc))
+        except Exception as exc:  # noqa: BLE001
+            QMessageBox.warning(self, "Could not generate a reset code", describe_unexpected_error(exc))

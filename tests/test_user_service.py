@@ -265,3 +265,184 @@ def test_change_own_password_does_not_require_user_manage_permission(user_servic
     attendant = user_service.create_user(admin_id, make_user_data(role_id=attendant_role_id))
     updated = user_service.change_own_password(attendant.id, "Strong@123", "NewStrong@123")
     assert updated.must_change_password is False
+
+
+# --- Quick-sign-in PIN -----------------------------------------------------
+
+
+def test_set_own_pin_requires_correct_current_password(user_service, admin_id, attendant_role_id):
+    user = user_service.create_user(admin_id, make_user_data(role_id=attendant_role_id))
+    with pytest.raises(AuthenticationError):
+        user_service.set_own_pin(user.id, "wrong-current-password", "482913")
+
+
+def test_set_own_pin_rejects_wrong_length(user_service, admin_id, attendant_role_id):
+    user = user_service.create_user(admin_id, make_user_data(role_id=attendant_role_id))
+    with pytest.raises(WeakPasswordError):
+        user_service.set_own_pin(user.id, "Strong@123", "1234")
+
+
+def test_set_own_pin_rejects_repeated_digits(user_service, admin_id, attendant_role_id):
+    user = user_service.create_user(admin_id, make_user_data(role_id=attendant_role_id))
+    with pytest.raises(WeakPasswordError):
+        user_service.set_own_pin(user.id, "Strong@123", "111111")
+
+
+def test_set_own_pin_rejects_sequential_digits(user_service, admin_id, attendant_role_id):
+    user = user_service.create_user(admin_id, make_user_data(role_id=attendant_role_id))
+    with pytest.raises(WeakPasswordError):
+        user_service.set_own_pin(user.id, "Strong@123", "123456")
+
+
+def test_set_own_pin_succeeds_and_is_hashed_not_plaintext(user_service, admin_id, attendant_role_id):
+    user = user_service.create_user(admin_id, make_user_data(role_id=attendant_role_id))
+    updated = user_service.set_own_pin(user.id, "Strong@123", "482913")
+
+    assert updated.pin_hash is not None
+    assert updated.pin_hash != "482913"
+    assert updated.pin_set_at is not None
+
+
+def test_set_own_pin_records_audit_log(user_service, admin_id, attendant_role_id, db_session):
+    user = user_service.create_user(admin_id, make_user_data(role_id=attendant_role_id))
+    user_service.set_own_pin(user.id, "Strong@123", "482913")
+    events = {log.event_type for log in db_session.query(AuditLog).all()}
+    assert "user_pin_set" in events
+
+
+def test_authenticate_with_pin_succeeds_after_it_is_set(user_service, admin_id, attendant_role_id, db_session):
+    from app.repositories.audit_log_repository import AuditLogRepository
+    from app.repositories.user_repository import UserRepository
+    from app.repositories.user_session_repository import UserSessionRepository
+    from app.services.auth_service import AuthService
+
+    user = user_service.create_user(admin_id, make_user_data(role_id=attendant_role_id))
+    user_service.set_own_pin(user.id, "Strong@123", "482913")
+
+    auth_service = AuthService(
+        UserRepository(db_session), AuditLogRepository(db_session), UserSessionRepository(db_session)
+    )
+    success, data, error = auth_service.authenticate_with_pin(user.username, "482913")
+    assert success is True
+    assert data["username"] == user.username
+    assert "session_token" in data
+
+
+def test_authenticate_with_pin_fails_generically_when_no_pin_is_set(user_service, admin_id, attendant_role_id, db_session):
+    """An account with no PIN configured must fail with the exact same
+    message a wrong PIN would - see AuthService.authenticate_with_pin's
+    own docstring on why distinguishing the two would leak which
+    accounts exist."""
+    from app.repositories.audit_log_repository import AuditLogRepository
+    from app.repositories.user_repository import UserRepository
+    from app.repositories.user_session_repository import UserSessionRepository
+    from app.services.auth_service import AuthService
+
+    user = user_service.create_user(admin_id, make_user_data(role_id=attendant_role_id))
+
+    auth_service = AuthService(
+        UserRepository(db_session), AuditLogRepository(db_session), UserSessionRepository(db_session)
+    )
+    success, data, error = auth_service.authenticate_with_pin(user.username, "482913")
+    assert success is False
+    assert error == "That username or PIN isn't correct. Please check and try again."
+
+
+def test_wrong_pin_counts_toward_the_same_lockout_as_password(user_service, admin_id, attendant_role_id, db_session):
+    from app.core.constants import MAX_FAILED_LOGIN_ATTEMPTS
+    from app.repositories.audit_log_repository import AuditLogRepository
+    from app.repositories.user_repository import UserRepository
+    from app.repositories.user_session_repository import UserSessionRepository
+    from app.services.auth_service import AuthService
+
+    user = user_service.create_user(admin_id, make_user_data(role_id=attendant_role_id))
+    user_service.set_own_pin(user.id, "Strong@123", "482913")
+
+    auth_service = AuthService(
+        UserRepository(db_session), AuditLogRepository(db_session), UserSessionRepository(db_session)
+    )
+    for _ in range(MAX_FAILED_LOGIN_ATTEMPTS):
+        auth_service.authenticate_with_pin(user.username, "000000")
+
+    # Locked out of PASSWORD sign-in too, by the same counter - one
+    # account, one lockout, not a separate guessing surface per credential.
+    success, _data, error = auth_service.authenticate(user.username, "Strong@123")
+    assert success is False
+    assert "locked" in error
+
+
+# --- Admin-generated password reset code -----------------------------------
+
+
+def test_generate_password_reset_code_requires_reason(user_service, admin_id, attendant_role_id):
+    user = user_service.create_user(admin_id, make_user_data(role_id=attendant_role_id))
+    with pytest.raises(ValueError):
+        user_service.generate_password_reset_code(admin_id, user.id, "")
+
+
+def test_generate_password_reset_code_requires_user_manage_permission(user_service, shift_supervisor_id, admin_id, attendant_role_id):
+    user = user_service.create_user(admin_id, make_user_data(role_id=attendant_role_id))
+    with pytest.raises(PermissionDeniedError):
+        user_service.generate_password_reset_code(shift_supervisor_id, user.id, "Forgot password, no admin on site")
+
+
+def test_reset_password_with_code_succeeds_and_is_single_use(user_service, admin_id, attendant_role_id):
+    user = user_service.create_user(admin_id, make_user_data(role_id=attendant_role_id))
+    code = user_service.generate_password_reset_code(admin_id, user.id, "Forgot password, night shift")
+
+    user_service.reset_password_with_code(user.username, code, "BrandNew@123")
+
+    # The account can now sign in with the new password...
+    updated = user_service._get_user_or_raise(user.id)
+    assert verify_password_helper(updated.password_hash, "BrandNew@123")
+
+    # ...and the same code cannot be reused a second time.
+    with pytest.raises(AuthenticationError):
+        user_service.reset_password_with_code(user.username, code, "AnotherNew@123")
+
+
+def test_reset_password_with_code_rejects_expired_code(user_service, admin_id, attendant_role_id, db_session):
+    from datetime import datetime, timedelta, timezone
+
+    user = user_service.create_user(admin_id, make_user_data(role_id=attendant_role_id))
+    code = user_service.generate_password_reset_code(admin_id, user.id, "Forgot password")
+
+    stored = user_service._get_user_or_raise(user.id)
+    stored.password_reset_code_expires_at = datetime.now(timezone.utc) - timedelta(minutes=1)
+    db_session.commit()
+
+    with pytest.raises(AuthenticationError):
+        user_service.reset_password_with_code(user.username, code, "BrandNew@123")
+
+
+def test_reset_password_with_code_rejects_wrong_code(user_service, admin_id, attendant_role_id):
+    user = user_service.create_user(admin_id, make_user_data(role_id=attendant_role_id))
+    user_service.generate_password_reset_code(admin_id, user.id, "Forgot password")
+
+    with pytest.raises(AuthenticationError):
+        user_service.reset_password_with_code(user.username, "00000000", "BrandNew@123")
+
+
+def test_reset_password_with_code_rejects_unknown_username_with_the_same_message(user_service):
+    try:
+        user_service.reset_password_with_code("nobody-at-all", "12345678", "BrandNew@123")
+        assert False, "expected AuthenticationError"
+    except AuthenticationError as exc:
+        assert str(exc) == "That reset code isn't valid or has expired. Please ask an administrator for a new one."
+
+
+def test_reset_password_with_code_clears_must_change_password(user_service, admin_id, attendant_role_id):
+    user = user_service.create_user(admin_id, make_user_data(role_id=attendant_role_id))
+    assert user.must_change_password is True
+    code = user_service.generate_password_reset_code(admin_id, user.id, "Forgot password")
+
+    user_service.reset_password_with_code(user.username, code, "BrandNew@123")
+
+    updated = user_service._get_user_or_raise(user.id)
+    assert updated.must_change_password is False
+
+
+def verify_password_helper(password_hash: str, plaintext: str) -> bool:
+    from app.core.security import verify_password
+
+    return verify_password(plaintext, password_hash)

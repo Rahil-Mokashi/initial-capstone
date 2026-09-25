@@ -30,21 +30,13 @@ call boundary itself.
 import platform
 from datetime import datetime, timezone
 
-from PySide6.QtCore import Property, QObject, QTimer, Signal, Slot
+from PySide6.QtCore import Property, QObject, Signal, Slot
 
 from app.core.keyboard_state import is_caps_lock_on
 from app.services.auth_service import AuthService
 from app.ui.qt_utils import describe_unexpected_error
-from app.ui.terminal_settings import get_recent_usernames, record_recent_username
+from app.ui.terminal_settings import get_login_locale, get_recent_usernames, record_recent_username, set_login_locale
 from app.ui.theme import is_dark_mode, set_dark_mode
-
-# How often the Caps Lock indicator is re-checked. Caps Lock is a toggle
-# key with no Qt change-notification of its own (see
-# app/core/keyboard_state.py's docstring) - polling is the only option,
-# and this only needs to be fast enough to feel immediate to someone who
-# just pressed it, not fast enough for anything performance-sensitive.
-CAPS_LOCK_POLL_INTERVAL_MS = 400
-
 
 def get_device_info() -> str:
     return platform.node() or "unknown-device"
@@ -68,6 +60,7 @@ class LoginBridge(QObject):
     busyChanged = Signal()
     usernameChanged = Signal()
     passwordChanged = Signal()
+    pinChanged = Signal()
     loginSucceeded = Signal(dict)
     capsLockOnChanged = Signal()
     darkModeChanged = Signal()
@@ -84,15 +77,12 @@ class LoginBridge(QObject):
         self._caps_lock_on = is_caps_lock_on()
         self._attempts_remaining = -1  # -1: unknown/not applicable yet
         self._lockout_seconds_remaining = 0
-
-        # Polling, not a Qt key-event hook: Caps Lock's toggle state has
-        # to be read from the OS (see keyboard_state.is_caps_lock_on),
-        # and this way it also updates if the key is pressed while the
-        # window doesn't have focus, not just while typing here.
-        self._caps_lock_timer = QTimer(self)
-        self._caps_lock_timer.setInterval(CAPS_LOCK_POLL_INTERVAL_MS)
-        self._caps_lock_timer.timeout.connect(self._poll_caps_lock)
-        self._caps_lock_timer.start()
+        self._pin = ""
+        # Not a QML-visible Property with its own notify signal - see
+        # setPinMode's docstring for why this is set only via a Slot
+        # reached through the same queued-connection pattern as submit()
+        # itself, never a direct property write from a live QML click.
+        self._pin_mode = False
 
     @Property(str, notify=errorChanged)
     def error(self) -> str:
@@ -106,7 +96,35 @@ class LoginBridge(QObject):
     def capsLockOn(self) -> bool:
         return self._caps_lock_on
 
-    def _poll_caps_lock(self) -> None:
+    @Slot(name="pollCapsLock")
+    def pollCapsLock(self) -> None:
+        """Re-checks Caps Lock's OS-level toggle state.
+
+        Called from a QML `Timer` in LoginScreen.qml, not a Python-owned
+        QTimer - a QObject like this bridge has no natural point in its
+        own lifecycle where such a timer would ever be stopped (nothing
+        here closes it the way a QWidget's own close() would), so a
+        perpetual Python-side QTimer leaks for as long as the process
+        runs. A QML Timer's lifetime is tied to the scene that owns it
+        instead: it stops existing the moment LoginScreen.qml's root
+        item is destroyed, exactly when LoginWindow itself closes -
+        found the hard way when it wasn't done this way: every
+        LoginBridge constructed in the test suite (dozens, across
+        test_login_bridge.py and every UI test that opens a login
+        screen) left one live 400ms-interval timer running for the rest
+        of the process, which both slowed the full suite roughly 5x and
+        produced cascading native "already deleted" widget-teardown
+        crashes later in the run from the sheer number of live Qt
+        objects competing for garbage collection (see conftest.py's own
+        docstring on that exact failure mode).
+
+        A Timer.onTriggered call into Python is a safe boundary to cross
+        (unlike onAccepted/onClicked - see submit()'s own docstring):
+        it runs from the event loop's own idle dispatch, the same
+        "already back at the outermost frame" guarantee a
+        Qt.QueuedConnection relies on, never nested inside a live
+        Return/click native call stack.
+        """
         current = is_caps_lock_on()
         if current != self._caps_lock_on:
             self._caps_lock_on = current
@@ -123,6 +141,25 @@ class LoginBridge(QObject):
     @Property(str, constant=True)
     def deviceName(self) -> str:
         return get_device_info()
+
+    @Property(str, constant=True)
+    def initialLoginLocale(self) -> str:
+        """This terminal's saved login-screen language (see
+        app/ui/terminal_settings.py) - read once at construction; QML
+        keeps its own copy from here and reports changes back via
+        setLoginLocale, the same split responsibility recentUsernames/
+        record_recent_username already has."""
+        return get_login_locale()
+
+    @Slot(str, name="setLoginLocale")
+    def setLoginLocale(self, value: str) -> None:
+        """Persists the login screen's own language choice for this
+        terminal. Reached only via a Qt.QueuedConnection from
+        LoginWindow (see its own wiring) - the language toggle button in
+        LoginScreen.qml only ever touches a plain QML property in its
+        own onClicked handler, the same safe pattern as pinMode/
+        setPinMode."""
+        set_login_locale(value)
 
     @Property("QStringList", constant=True)
     def recentUsernames(self) -> list:
@@ -153,6 +190,34 @@ class LoginBridge(QObject):
             self.passwordChanged.emit()
 
     password = Property(str, _get_password, _set_password, notify=passwordChanged)
+
+    def _get_pin(self) -> str:
+        return self._pin
+
+    def _set_pin(self, value: str) -> None:
+        value = value or ""
+        if value != self._pin:
+            self._pin = value
+            self.pinChanged.emit()
+
+    pin = Property(str, _get_pin, _set_pin, notify=pinChanged)
+
+    @Slot(bool, name="setPinMode")
+    def setPinMode(self, value: bool) -> None:
+        """Records which credential submit() should check next time it
+        runs - PIN or password.
+
+        Deliberately a Slot reached only via a Qt.QueuedConnection from
+        LoginWindow (see its own wiring), the exact same boundary rule
+        `submit()`'s own docstring documents for the Sign In button:
+        LoginScreen.qml's PIN/password toggle button only ever touches a
+        plain QML property (`root.pinMode`) in its own onClicked handler,
+        pure QML/JS with no Python call - this method is reached only
+        once that property's own auto-generated changed signal reaches
+        LoginWindow's queued connection, safely after the click event
+        has fully finished being delivered.
+        """
+        self._pin_mode = value
 
     @Property(bool, notify=darkModeChanged)
     def darkMode(self) -> bool:
@@ -212,24 +277,24 @@ class LoginBridge(QObject):
         native call stack that carried it has unwound.
         """
         username = self._username.strip()
-        password = self._password
+        credential = self._pin if self._pin_mode else self._password
+        credential_label = "PIN" if self._pin_mode else "password"
         self._set_error("")
         self._set_attempts_remaining(-1)
         self._set_lockout_seconds_remaining(0)
 
-        if not username or not password:
-            self._set_error("Please enter both your username and password.")
+        if not username or not credential:
+            self._set_error(f"Please enter both your username and {credential_label}.")
             return
 
-        # Password verification (bcrypt) isn't instant; `busy` disables the
+        # Password/PIN verification isn't instant; `busy` disables the
         # Sign In button in QML for the same reason the old widget version
         # disabled it directly - so a double-click can't fire two
         # concurrent authenticate() calls.
         self._set_busy(True)
         try:
-            success, user_data, error = self._auth_service.authenticate(
-                username, password, device_info=get_device_info()
-            )
+            authenticate = self._auth_service.authenticate_with_pin if self._pin_mode else self._auth_service.authenticate
+            success, user_data, error = authenticate(username, credential, device_info=get_device_info())
         except Exception as exc:  # noqa: BLE001 - last resort so a DB/unexpected error can't crash the login screen
             self._set_error(describe_unexpected_error(exc))
             return
