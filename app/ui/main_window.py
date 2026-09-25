@@ -347,12 +347,17 @@ class MainWindow(QMainWindow):
         account_menu.addAction(header_action)
         account_menu.addSeparator()
         account_menu.addAction("Change Password", self._open_change_password)
+        self._pin_menu_action = account_menu.addAction(
+            "Change Quick-Sign-In PIN" if user_data.get("has_pin") else "Set a Quick Sign-In PIN",
+            self._open_set_pin,
+        )
         account_menu.addSeparator()
         self._dark_mode_action = account_menu.addAction("Dark Mode")
         self._dark_mode_action.setCheckable(True)
         self._dark_mode_action.setChecked(is_dark_mode())
         self._dark_mode_action.toggled.connect(self._toggle_dark_mode)
         account_menu.addSeparator()
+        account_menu.addAction("Lock", self._lock_screen)
         account_menu.addAction("Logout", self._logout)
         account_button.setMenu(account_menu)
         self._refresh_account_avatar()
@@ -759,6 +764,7 @@ class MainWindow(QMainWindow):
             footer_actions=[
                 ("Support", self._open_support),
                 ("Change Password", self._open_change_password),
+                ("Lock", self._lock_screen),
                 ("Logout", self._logout),
             ],
         )
@@ -1260,6 +1266,20 @@ class MainWindow(QMainWindow):
         self.refresh_alert_badge()
         self.refresh_shift_indicator()
 
+    def _lock_screen(self) -> None:
+        """Blocks the window behind a modal Lock Screen (app/ui/
+        lock_screen_dialog.py) until the current user re-confirms their
+        own identity - the SAME session resumes (session_token unchanged,
+        its own expiry clock keeps running), unlike Logout which ends it.
+        Session-expiry can still fire while locked; _check_session's own
+        timer is untouched by this method."""
+        from app.ui.lock_screen_dialog import LockScreenDialog
+
+        dialog = LockScreenDialog(self._auth_service, self._user_data, parent=self)
+        dialog.exec()
+        if dialog.signed_out:
+            self._logout()
+
     def _logout(self) -> None:
         self._session_timer.stop()
         try:
@@ -1536,6 +1556,13 @@ class MainWindow(QMainWindow):
 
         dialog = ChangePasswordDialog(self._user_service, self._user_data["id"], forced=False, parent=self)
         dialog.exec()
+
+    def _open_set_pin(self) -> None:
+        from app.ui.set_pin_dialog import SetPinDialog
+
+        dialog = SetPinDialog(self._user_service, self._user_data["id"], parent=self)
+        if dialog.exec():
+            self._user_data["has_pin"] = True
 
     def _toggle_dark_mode(self, enabled: bool) -> None:
         set_dark_mode(enabled)
@@ -2016,7 +2043,7 @@ class AppController:
         from app.ui.login_window import LoginWindow
 
         self.main_window = None
-        self.login_window = LoginWindow(self._auth_service)
+        self.login_window = LoginWindow(self._auth_service, self._user_service)
         self.login_window.login_succeeded.connect(self._show_main_window)
         self.login_window.show()
 

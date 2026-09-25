@@ -44,6 +44,50 @@ class AuthService:
 
         Returns: (success, user_data (including a session_token on success), error_message)
         """
+        return self._authenticate_with_credential(
+            username,
+            password,
+            get_stored_hash=lambda user: user.password_hash,
+            generic_error="That username or password isn't correct. Please check and try again.",
+            device_info=device_info,
+        )
+
+    def authenticate_with_pin(
+        self, username: str, pin: str, device_info: Optional[str] = None
+    ) -> Tuple[bool, Optional[dict], Optional[str]]:
+        """Authenticate via a user's self-service quick-sign-in PIN
+        (UserService.set_own_pin) instead of their password.
+
+        Shares AuthService.authenticate's exact lockout/audit machinery -
+        it is the same account being signed into, so a wrong PIN counts
+        toward the same MAX_FAILED_LOGIN_ATTEMPTS lockout a wrong
+        password would, rather than opening a second, separately-limited
+        guessing surface against the same account.
+
+        An account with no PIN configured (`user.pin_hash is None`) fails
+        exactly like a wrong PIN would, with the same generic message -
+        distinguishing "no PIN set" from "wrong PIN" in the response
+        would let PIN sign-in be used to probe which accounts exist,
+        defeating the same anti-enumeration protection `authenticate`
+        already applies to unknown usernames.
+        """
+        return self._authenticate_with_credential(
+            username,
+            pin,
+            get_stored_hash=lambda user: user.pin_hash,
+            generic_error="That username or PIN isn't correct. Please check and try again.",
+            device_info=device_info,
+        )
+
+    def _authenticate_with_credential(
+        self,
+        username: str,
+        credential: str,
+        *,
+        get_stored_hash,
+        generic_error: str,
+        device_info: Optional[str],
+    ) -> Tuple[bool, Optional[dict], Optional[str]]:
         user = self._user_repo.get_by_username(username)
         if not user:
             self._audit_repo.record(
@@ -52,7 +96,7 @@ class AuthService:
                 device_info=device_info,
             )
             # Deliberately generic: do not reveal whether the username exists.
-            return False, None, "That username or password isn't correct. Please check and try again."
+            return False, None, generic_error
 
         if user.is_locked and self._lockout_has_expired(user):
             # The lockout served its purpose and timed out. Clearing it here
@@ -80,16 +124,13 @@ class AuthService:
             )
             return False, None, "This account has been switched off. Please ask an administrator to turn it back on."
 
-        if not verify_password(password, user.password_hash):
+        stored_hash = get_stored_hash(user)
+        if stored_hash is None or not verify_password(credential, stored_hash):
             locked = self._record_failed_login(user, device_info)
             if locked:
                 return False, self._lockout_details(user), self._lockout_message()
             attempts_remaining = max(0, MAX_FAILED_LOGIN_ATTEMPTS - user.failed_attempts)
-            return (
-                False,
-                {"attempts_remaining": attempts_remaining},
-                "That username or password isn't correct. Please check and try again.",
-            )
+            return False, {"attempts_remaining": attempts_remaining}, generic_error
 
         # Captured before _record_successful_login overwrites it with
         # *this* login's timestamp - the account menu wants to show when
@@ -190,6 +231,7 @@ class AuthService:
             "role": user.role.name if user.role else None,
             "permissions": sorted(p.name for p in user.role.permissions) if user.role else [],
             "must_change_password": user.must_change_password,
+            "has_pin": user.pin_hash is not None,
         }
 
     def validate_session(self, token: str):
@@ -209,6 +251,56 @@ class AuthService:
 
         self._session_repo.touch(session_entry)
         return self._user_repo.get_by_id(session_entry.user_id)
+
+    def reauthenticate(
+        self, user_id: str, credential: str, use_pin: bool = False, device_info: Optional[str] = None
+    ) -> Tuple[bool, Optional[str]]:
+        """Re-confirms an already-logged-in user's own identity (password
+        or PIN) WITHOUT creating a new session - what the main window's
+        Lock Screen calls to resume the CURRENT session, distinct from a
+        fresh authenticate() call that would issue a new session token
+        for what is, from the account's point of view, a second login.
+
+        Still shares the same account lockout as a full sign-in: a wrong
+        credential here counts toward MAX_FAILED_LOGIN_ATTEMPTS exactly
+        as a wrong one during sign-in would, since someone guessing at an
+        unattended-but-unlocked device is the same threat that lockout
+        exists to defend against.
+
+        Returns (success, error_message) - no user_data/session_token,
+        since none is created.
+        """
+        user = self._user_repo.get_by_id(user_id)
+        if not user:
+            return False, "Account not found."
+
+        if user.is_locked and self._lockout_has_expired(user):
+            self._clear_lockout(user)
+
+        if user.is_locked:
+            self._audit_repo.record(
+                event_type="login_blocked",
+                actor_id=user.id,
+                description="Unlock attempted on locked account",
+                device_info=device_info,
+            )
+            return False, self._lockout_message()
+
+        stored_hash = user.pin_hash if use_pin else user.password_hash
+        if stored_hash is None or not verify_password(credential, stored_hash):
+            locked = self._record_failed_login(user, device_info)
+            if locked:
+                return False, self._lockout_message()
+            return False, "That's not correct. Please try again."
+
+        # Deliberately not _record_successful_login: that stamps
+        # last_login, which is a LOGIN event's timestamp, not an unlock's
+        # - this isn't a new sign-in, just clearing the failed-attempt
+        # counter the same successful credential check always does.
+        user.failed_attempts = 0
+        self._user_repo.update(user)
+        self._audit_repo.record(event_type="device_unlocked", actor_id=user.id, device_info=device_info)
+        return True, None
 
     def logout(self, token: str) -> bool:
         """Invalidate a session token. Returns False if it was already inactive."""

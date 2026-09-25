@@ -8,14 +8,37 @@ deleted: deactivate/lock/unlock instead, all audit-logged, matching the
 project's rule against destroying historical/security data.
 """
 
+from datetime import datetime, timedelta, timezone
 from typing import List
 
-from app.core.constants import Permission
+from app.core.constants import PASSWORD_RESET_CODE_LENGTH, PASSWORD_RESET_CODE_VALID_MINUTES, Permission
 from app.core.exceptions import AuthenticationError, ConflictError, NotFoundError, WeakPasswordError
 from app.core.permissions import require_permission
-from app.core.security import hash_password, validate_password_strength, verify_password
+from app.core.security import (
+    generate_numeric_code,
+    hash_password,
+    validate_password_strength,
+    validate_pin_strength,
+    verify_password,
+)
 from app.models.user import User
 from app.schemas.user import UserCreate
+
+
+def _as_aware_utc(value: datetime) -> datetime:
+    """SQLite drops tzinfo on round-trip; treat naive values as UTC -
+    the same helper AuthService keeps for the same reason."""
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value
+
+
+# Generic, deliberately identical whether the username doesn't exist, the
+# code is wrong, or the code has expired - the same anti-enumeration
+# reasoning AuthService.authenticate already applies to login itself:
+# distinguishing these cases would let this recovery path be used to
+# probe which usernames exist.
+_INVALID_RESET_CODE_MESSAGE = "That reset code isn't valid or has expired. Please ask an administrator for a new one."
 
 
 class UserService:
@@ -184,6 +207,112 @@ class UserService:
             description="Self-service password change",
         )
         return user
+
+    def set_own_pin(self, actor_user_id: str, current_password: str, pin: str) -> User:
+        """Self-service: set or change the calling user's own quick-
+        sign-in PIN (AuthService.authenticate_with_pin uses it).
+
+        Requires re-entering the current password first, the same
+        re-authentication change_own_password already requires - proving
+        who is at the keyboard right now, not just trusting that this
+        session is still the same person who logged in, matters more
+        here than usual: this action is what turns a short PIN into a
+        second way to sign in as this account at all.
+        """
+        user = self._get_user_or_raise(actor_user_id)
+        if not verify_password(current_password, user.password_hash):
+            raise AuthenticationError("Current password is incorrect")
+
+        pin_errors = validate_pin_strength(pin)
+        if pin_errors:
+            raise WeakPasswordError("; ".join(pin_errors))
+
+        user.pin_hash = hash_password(pin)
+        user.pin_set_at = datetime.now(timezone.utc)
+        user = self._user_repo.update(user)
+        self._audit_repo.record(
+            event_type="user_pin_set",
+            actor_id=actor_user_id,
+            entity_type="User",
+            entity_id=user.id,
+            description="Self-service quick-sign-in PIN set",
+        )
+        return user
+
+    @require_permission(Permission.USER_MANAGE.value)
+    def generate_password_reset_code(self, actor_user_id: str, user_id: str, reason: str) -> str:
+        """Admin-initiated recovery for a user who forgot their password
+        and has no one to reset it in person right now (e.g. a night
+        shift with no admin on site). Returns the plaintext code - the
+        only time it ever exists outside a hash - for the admin to relay
+        to the user out of band (read aloud, written down); only its
+        hash is stored, and it expires and is single-use (see
+        reset_password_with_code).
+        """
+        if not reason or not reason.strip():
+            raise ValueError("A reason is required to generate a password reset code")
+
+        user = self._get_user_or_raise(user_id)
+        code = generate_numeric_code(PASSWORD_RESET_CODE_LENGTH)
+        user.password_reset_code_hash = hash_password(code)
+        user.password_reset_code_expires_at = datetime.now(timezone.utc) + timedelta(
+            minutes=PASSWORD_RESET_CODE_VALID_MINUTES
+        )
+        self._user_repo.update(user)
+        self._audit_repo.record(
+            event_type="user_password_reset_code_generated",
+            actor_id=actor_user_id,
+            entity_type="User",
+            entity_id=user.id,
+            description=reason.strip(),
+        )
+        return code
+
+    def reset_password_with_code(self, username: str, code: str, new_password: str) -> None:
+        """Self-service completion of the admin-generated reset code
+        above - reached from the login screen by someone who is, by
+        definition, not authenticated yet, so this takes no actor_user_id
+        and needs no permission check. Every failure path returns the
+        exact same generic message (see _INVALID_RESET_CODE_MESSAGE);
+        only success is distinguishable from the outside.
+        """
+        user = self._user_repo.get_by_username(username)
+        if user is None or user.password_reset_code_hash is None:
+            self._audit_repo.record(
+                event_type="password_reset_code_rejected",
+                description=f"Reset code attempted for unknown or code-less account: {username}",
+            )
+            raise AuthenticationError(_INVALID_RESET_CODE_MESSAGE)
+
+        expired = (
+            user.password_reset_code_expires_at is None
+            or _as_aware_utc(user.password_reset_code_expires_at) < datetime.now(timezone.utc)
+        )
+        if expired or not verify_password(code, user.password_reset_code_hash):
+            self._audit_repo.record(
+                event_type="password_reset_code_rejected",
+                actor_id=user.id,
+                description="Wrong or expired reset code",
+            )
+            raise AuthenticationError(_INVALID_RESET_CODE_MESSAGE)
+
+        password_errors = validate_password_strength(new_password)
+        if password_errors:
+            raise WeakPasswordError("; ".join(password_errors))
+
+        user.password_hash = hash_password(new_password)
+        user.must_change_password = False
+        # Single-use: a code that already worked once must not work again.
+        user.password_reset_code_hash = None
+        user.password_reset_code_expires_at = None
+        self._user_repo.update(user)
+        self._audit_repo.record(
+            event_type="password_reset_via_code",
+            actor_id=user.id,
+            entity_type="User",
+            entity_id=user.id,
+            description="Password reset via one-time administrator-issued code",
+        )
 
     def _get_user_or_raise(self, user_id: str) -> User:
         user = self._user_repo.get_by_id(user_id)

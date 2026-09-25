@@ -53,6 +53,84 @@ Rectangle {
     property int submitTrigger: 0
     function requestSubmit() { submitTrigger++ }
 
+    // PIN vs password sign-in mode: a plain QML property, toggled only
+    // by direct assignment in a click handler (pure QML/JS, the same
+    // safe pattern as submitTrigger) - LoginWindow.py connects this
+    // property's own auto-generated changed signal to
+    // bridge.setPinMode via a Qt.QueuedConnection, so Python only ever
+    // learns the new mode after the click has fully finished.
+    property bool pinMode: false
+
+    // "Forgot password?" - same queued-trigger pattern as submitTrigger,
+    // since opening a dialog is itself a call into Python that must not
+    // happen synchronously from inside a live click.
+    property int forgotPasswordTrigger: 0
+    function requestForgotPassword() { forgotPasswordTrigger++ }
+
+    // Same queued-trigger pattern again for the theme toggle - it was
+    // initially wired as a direct `onClicked: bridge.toggleDarkMode()`
+    // call, which is exactly the unsafe pattern submitTrigger's own long
+    // comment exists to warn against (a Slot call from a live click),
+    // caught on review before it shipped.
+    property int themeToggleTrigger: 0
+    function requestThemeToggle() { themeToggleTrigger++ }
+
+    // Login-screen-only language switch (2026-09-25, scoped deliberately
+    // narrow per user decision): covers this one screen's own strings,
+    // not the rest of the app - full app-wide i18n (Qt Linguist .ts/.qm
+    // files for every screen) is a separate, much larger infrastructure
+    // project, out of scope here. bridge.initialLoginLocale is read once
+    // at construction (a `constant` Property); every change after that
+    // lives entirely in this QML property, reported back to Python only
+    // to persist it (see LoginBridge.setLoginLocale).
+    property string loginLocale: bridge.initialLoginLocale
+
+    readonly property var _en: ({
+        welcomeBack: "Welcome back",
+        usernameLabel: "Username",
+        usernamePlaceholder: "Enter your username",
+        passwordLabel: "Password",
+        pinLabel: "PIN",
+        passwordPlaceholder: "Your password",
+        pinPlaceholder: "6-digit PIN",
+        signIn: "Sign In →",
+        signingIn: "Signing in…",
+        usePinInstead: "Use PIN instead",
+        usePasswordInstead: "Use password instead",
+        cantSignIn: "Can't sign in? Ask the person who manages this computer for help.",
+        forgotPassword: "Forgot password?",
+        show: "Show",
+        hide: "Hide",
+        usernameRequired: "Username is required.",
+        passwordRequired: "Password is required.",
+        pinRequired: "PIN is required.",
+        capsLockOn: "Caps Lock is on."
+    })
+
+    readonly property var _hi: ({
+        welcomeBack: "वापसी पर स्वागत है",
+        usernameLabel: "उपयोगकर्ता नाम",
+        usernamePlaceholder: "अपना उपयोगकर्ता नाम डालें",
+        passwordLabel: "पासवर्ड",
+        pinLabel: "पिन",
+        passwordPlaceholder: "अपना पासवर्ड डालें",
+        pinPlaceholder: "6 अंकों का पिन",
+        signIn: "साइन इन करें →",
+        signingIn: "साइन इन हो रहा है…",
+        usePinInstead: "इसके बजाय पिन का उपयोग करें",
+        usePasswordInstead: "इसके बजाय पासवर्ड का उपयोग करें",
+        cantSignIn: "साइन इन नहीं कर पा रहे? इस कंप्यूटर का प्रबंधन करने वाले व्यक्ति से मदद लें।",
+        forgotPassword: "पासवर्ड भूल गए?",
+        show: "दिखाएं",
+        hide: "छुपाएं",
+        usernameRequired: "उपयोगकर्ता नाम आवश्यक है।",
+        passwordRequired: "पासवर्ड आवश्यक है।",
+        pinRequired: "पिन आवश्यक है।",
+        capsLockOn: "कैप्स लॉक ऑन है।"
+    })
+
+    readonly property var strings: loginLocale === "hi" ? _hi : _en
+
     // Responsive form width (2026-09-25, login UI pass): a fixed 380px
     // card looked fine at the window's default size but either clipped
     // against the edges on a narrow/resized window or looked stranded
@@ -130,6 +208,38 @@ Rectangle {
             }
 
             Button {
+                id: localeToggle
+                objectName: "localeToggleButton"
+                anchors.right: themeToggle.left
+                anchors.rightMargin: 8
+                anchors.verticalCenter: parent.verticalCenter
+                focusPolicy: Qt.NoFocus
+                hoverEnabled: true
+                text: root.loginLocale === "hi" ? "EN" : "हिं"
+                font.pixelSize: 12
+                font.family: theme.fontSans
+                height: 28
+                onClicked: root.loginLocale = (root.loginLocale === "hi" ? "en" : "hi")
+                HoverHandler { cursorShape: Qt.PointingHandCursor }
+
+                background: Rectangle {
+                    radius: theme.radiusFull
+                    color: localeToggle.hovered ? theme.colorBg : "transparent"
+                    border.color: theme.colorBorder
+                    border.width: 1
+                }
+                contentItem: Text {
+                    text: localeToggle.text
+                    color: theme.colorTextMuted
+                    font: localeToggle.font
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    leftPadding: 10
+                    rightPadding: 10
+                }
+            }
+
+            Button {
                 id: themeToggle
                 objectName: "themeToggleButton"
                 anchors.right: parent.right
@@ -140,7 +250,7 @@ Rectangle {
                 font.pixelSize: 12
                 font.family: theme.fontSans
                 height: 28
-                onClicked: bridge.toggleDarkMode()
+                onClicked: root.requestThemeToggle()
                 HoverHandler { cursorShape: Qt.PointingHandCursor }
 
                 background: Rectangle {
@@ -250,7 +360,7 @@ Rectangle {
 
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    text: "Welcome back"
+                    text: root.strings.welcomeBack
                     font.pixelSize: 26
                     font.bold: true
                     font.family: theme.fontSans
@@ -260,7 +370,7 @@ Rectangle {
                 Item { width: 1; height: 8 }
 
                 Text {
-                    text: "Username"
+                    text: root.strings.usernameLabel
                     font.pixelSize: 16
                     font.bold: true
                     font.family: theme.fontSans
@@ -320,7 +430,7 @@ Rectangle {
                     objectName: "usernameField"
                     width: parent.width
                     height: 52
-                    placeholderText: "Enter your username"
+                    placeholderText: root.strings.usernamePlaceholder
                     font.pixelSize: 20
                     font.family: theme.fontSans
                     color: theme.colorText
@@ -357,31 +467,61 @@ Rectangle {
                 }
 
                 Text {
-                    text: "Username is required."
+                    text: root.strings.usernameRequired
                     visible: usernameField.touched && usernameField.text.length === 0
                     color: theme.colorDanger
                     font.pixelSize: 13
                     font.family: theme.fontSans
                 }
 
-                Text {
-                    text: "Password"
-                    font.pixelSize: 16
-                    font.bold: true
-                    font.family: theme.fontSans
-                    color: theme.colorTextMuted
+                Item {
+                    width: parent.width
+                    height: pinModeLabel.implicitHeight
+
+                    Text {
+                        id: pinModeLabel
+                        anchors.left: parent.left
+                        text: root.pinMode ? root.strings.pinLabel : root.strings.passwordLabel
+                        font.pixelSize: 16
+                        font.bold: true
+                        font.family: theme.fontSans
+                        color: theme.colorTextMuted
+                    }
+
+                    // PIN vs password toggle (2026-09-25): quick-sign-in
+                    // PIN is opt-in and self-service (see
+                    // app/ui/set_pin_dialog.py) - a returning user who set
+                    // one up can switch here instead of always typing a
+                    // full password. Pure QML property flip, no Python
+                    // call from this click (see root.pinMode's own
+                    // comment).
+                    Text {
+                        id: modeToggleLink
+                        objectName: "pinModeToggleLink"
+                        anchors.right: parent.right
+                        text: root.pinMode ? root.strings.usePasswordInstead : root.strings.usePinInstead
+                        color: theme.colorPrimary
+                        font.pixelSize: 13
+                        font.family: theme.fontSans
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.pinMode = !root.pinMode
+                        }
+                    }
                 }
 
                 Row {
                     width: parent.width
                     spacing: 8
+                    visible: !root.pinMode
 
                     TextField {
                         id: passwordField
                         objectName: "passwordField"
                         width: parent.width - toggleButton.width - 8
                         height: 52
-                        placeholderText: "Your password"
+                        placeholderText: root.strings.passwordPlaceholder
                         font.pixelSize: 20
                         font.family: theme.fontSans
                         color: theme.colorText
@@ -430,7 +570,7 @@ Rectangle {
                         checkable: true
                         focusPolicy: Qt.NoFocus
                         hoverEnabled: true
-                        text: checked ? "Hide" : "Show"
+                        text: checked ? root.strings.hide : root.strings.show
                         font.pixelSize: 14
                         font.bold: true
                         font.family: theme.fontSans
@@ -486,9 +626,52 @@ Rectangle {
                     }
                 }
 
+                TextField {
+                    id: pinField
+                    objectName: "pinField"
+                    visible: root.pinMode
+                    width: parent.width
+                    height: 52
+                    placeholderText: root.strings.pinPlaceholder
+                    font.pixelSize: 20
+                    font.family: theme.fontSans
+                    color: theme.colorText
+                    leftPadding: 16
+                    rightPadding: 16
+                    selectByMouse: true
+                    hoverEnabled: true
+                    echoMode: TextInput.Password
+                    inputMethodHints: Qt.ImhDigitsOnly
+                    validator: RegularExpressionValidator { regularExpression: /^[0-9]{0,6}$/ }
+                    onAccepted: root.requestSubmit()
+                    onTextChanged: if (root.pinMode) bridge.pin = text
+
+                    property bool touched: false
+                    onActiveFocusChanged: if (!activeFocus) touched = true
+
+                    background: Rectangle {
+                        radius: theme.radiusMd
+                        color: theme.colorSurface
+                        border.color: pinField.activeFocus
+                            ? theme.colorText
+                            : (pinField.hovered ? theme.colorTextMuted : theme.colorBorder)
+                        border.width: pinField.activeFocus ? 2 : 1.5
+                        Behavior on border.color { ColorAnimation { duration: 120 } }
+                        Behavior on border.width { NumberAnimation { duration: 120 } }
+                    }
+                }
+
                 Text {
-                    text: "Password is required."
-                    visible: passwordField.touched && passwordField.text.length === 0
+                    text: root.strings.passwordRequired
+                    visible: !root.pinMode && passwordField.touched && passwordField.text.length === 0
+                    color: theme.colorDanger
+                    font.pixelSize: 13
+                    font.family: theme.fontSans
+                }
+
+                Text {
+                    text: root.strings.pinRequired
+                    visible: root.pinMode && pinField.touched && pinField.text.length === 0
                     color: theme.colorDanger
                     font.pixelSize: 13
                     font.family: theme.fontSans
@@ -513,7 +696,7 @@ Rectangle {
                         font.pixelSize: 13
                     }
                     Text {
-                        text: "Caps Lock is on."
+                        text: root.strings.capsLockOn
                         color: theme.colorDanger
                         font.pixelSize: 13
                         font.family: theme.fontSans
@@ -529,7 +712,7 @@ Rectangle {
                     height: 52
                     enabled: !bridge.busy
                     hoverEnabled: true
-                    text: bridge.busy ? "Signing in…" : "Sign In →"
+                    text: bridge.busy ? root.strings.signingIn : root.strings.signIn
                     onClicked: root.requestSubmit()
                     scale: pressed ? 0.97 : 1.0
                     Behavior on scale { NumberAnimation { duration: 90; easing.type: Easing.OutCubic } }
@@ -650,12 +833,29 @@ Rectangle {
                 // user is more likely to already understand.
                 Text {
                     width: parent.width
-                    text: "Can't sign in? Ask the person who manages this computer for help."
+                    text: root.strings.cantSignIn
                     color: theme.colorTextFaint
                     font.pixelSize: 14
                     font.family: theme.fontSans
                     wrapMode: Text.WordWrap
                     horizontalAlignment: Text.AlignHCenter
+                }
+
+                Text {
+                    id: forgotPasswordLink
+                    objectName: "forgotPasswordLink"
+                    width: parent.width
+                    visible: !root.pinMode
+                    text: root.strings.forgotPassword
+                    color: theme.colorPrimary
+                    font.pixelSize: 14
+                    font.family: theme.fontSans
+                    horizontalAlignment: Text.AlignHCenter
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.requestForgotPassword()
+                    }
                 }
             }
         }
@@ -671,14 +871,33 @@ Rectangle {
             // - by the time this handler runs, the original Return/click
             // event has already finished being delivered.
             if (bridge.error.length > 0) {
-                passwordField.text = ""
-                passwordField.forceActiveFocus()
+                if (root.pinMode) {
+                    pinField.text = ""
+                    pinField.forceActiveFocus()
+                } else {
+                    passwordField.text = ""
+                    passwordField.forceActiveFocus()
+                }
                 shakeAnimation.start()
             }
         }
         function onLockoutSecondsRemainingChanged() {
             root.lockoutSecondsLeft = bridge.lockoutSecondsRemaining
         }
+    }
+
+    // Caps Lock polling (see LoginBridge.pollCapsLock's own docstring for
+    // why this timer lives here, in QML, rather than as a Python-owned
+    // QTimer inside LoginBridge itself): this Timer's lifetime is tied
+    // to this scene, so it stops existing the moment LoginScreen.qml's
+    // root item is destroyed - exactly when LoginWindow closes, with no
+    // separate cleanup call needed. 400ms is fast enough to feel
+    // immediate without being fast enough to matter performance-wise.
+    Timer {
+        interval: 400
+        running: true
+        repeat: true
+        onTriggered: bridge.pollCapsLock()
     }
 
     Component.onCompleted: usernameField.forceActiveFocus()

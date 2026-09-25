@@ -155,6 +155,60 @@ def test_lockout_applied_by_an_administrator_has_no_countdown(auth_service, db_s
     assert data == {"locked_until": None}
 
 
+def test_reauthenticate_succeeds_with_correct_password_and_does_not_create_a_session(auth_service, db_session):
+    from app.models.user_session import UserSession
+
+    sessions_before = db_session.query(UserSession).count()
+
+    admin = db_session.query(User).filter_by(username="admin").first()
+    success, error = auth_service.reauthenticate(admin.id, DEFAULT_ADMIN_PASSWORD)
+    assert success is True
+    assert error is None
+
+    # Unlike authenticate(), which always issues a fresh session_token on
+    # success, reauthenticate() resumes the existing session and must not
+    # create a new row here.
+    assert db_session.query(UserSession).count() == sessions_before
+
+
+def test_reauthenticate_fails_with_wrong_password_and_counts_toward_lockout(auth_service, db_session):
+    admin = db_session.query(User).filter_by(username="admin").first()
+    success, error = auth_service.reauthenticate(admin.id, "wrong-password")
+    assert success is False
+    assert "not correct" in error
+
+    db_session.refresh(admin)
+    assert admin.failed_attempts == 1
+
+
+def test_reauthenticate_does_not_change_last_login(auth_service, db_session):
+    """Unlike a fresh sign-in, resuming a locked session must not stamp
+    a new last_login - see AuthService.reauthenticate's own docstring."""
+    admin = db_session.query(User).filter_by(username="admin").first()
+    admin.last_login = None
+    db_session.commit()
+
+    auth_service.reauthenticate(admin.id, DEFAULT_ADMIN_PASSWORD)
+
+    db_session.refresh(admin)
+    assert admin.last_login is None
+
+
+def test_reauthenticate_with_pin(auth_service, db_session):
+    from app.core.security import hash_password
+
+    admin = db_session.query(User).filter_by(username="admin").first()
+    admin.pin_hash = hash_password("482913")
+    db_session.commit()
+
+    success, error = auth_service.reauthenticate(admin.id, "482913", use_pin=True)
+    assert success is True
+    assert error is None
+
+    success, error = auth_service.reauthenticate(admin.id, "000000", use_pin=True)
+    assert success is False
+
+
 def test_check_permission_admin_has_full_access(auth_service, db_session):
     admin = db_session.query(User).filter_by(username="admin").first()
     assert auth_service.check_permission(admin.id, PermissionName.USER_MANAGE.value) is True
