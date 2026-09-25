@@ -189,7 +189,7 @@ def test_wrong_password_shows_generic_error_and_stays_on_login(controller):
     _login(controller, "admin", "wrong-password")
 
     assert controller.main_window is None
-    assert controller.login_window.bridge.error == "Invalid username or password"
+    assert controller.login_window.bridge.error == "That username or password isn't correct. Please check and try again."
 
 
 def test_unexpected_error_during_login_shows_generic_message_not_a_crash(controller, monkeypatch):
@@ -208,7 +208,7 @@ def test_empty_fields_show_validation_message_without_calling_auth(controller):
     _login(controller, "", "")
 
     assert controller.main_window is None
-    assert "Enter both" in controller.login_window.bridge.error
+    assert "enter both" in controller.login_window.bridge.error.lower()
 
 
 def test_successful_login_shows_main_window_with_user_info(controller):

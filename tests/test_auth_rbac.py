@@ -104,7 +104,7 @@ def test_authenticate_wrong_password_is_generic_and_counts_attempt(auth_service,
     success, data, error = auth_service.authenticate("admin", "wrong-password")
     assert success is False
     assert data is None
-    assert error == "Invalid username or password"
+    assert error == "That username or password isn't correct. Please check and try again."
 
     admin = db_session.query(User).filter_by(username="admin").first()
     assert admin.failed_attempts == 1
@@ -113,7 +113,7 @@ def test_authenticate_wrong_password_is_generic_and_counts_attempt(auth_service,
 def test_authenticate_unknown_username_gives_same_generic_error(auth_service):
     success, data, error = auth_service.authenticate("nobody", "whatever")
     assert success is False
-    assert error == "Invalid username or password"
+    assert error == "That username or password isn't correct. Please check and try again."
 
 
 def test_account_locks_after_max_failed_attempts(auth_service, db_session):

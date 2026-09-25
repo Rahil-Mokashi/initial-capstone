@@ -145,7 +145,7 @@ def make_edit_icon_button(on_click, tooltip: str = "Edit details") -> QPushButto
     return button
 
 
-GENERIC_ERROR_MESSAGE = "Something went wrong. Please try again, and contact support if this keeps happening."
+GENERIC_ERROR_MESSAGE = "Something went wrong. Please try again, and contact your administrator if this keeps happening."
 
 
 def describe_unexpected_error(exc: Exception) -> str:

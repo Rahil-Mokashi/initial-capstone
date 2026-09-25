@@ -79,7 +79,7 @@ def test_empty_fields_set_validation_error_without_calling_auth(bridge, monkeypa
     _fill(bridge, "", "")
     bridge.submit()
 
-    assert "Enter both" in bridge.error
+    assert "enter both" in bridge.error.lower()
 
 
 def test_wrong_password_sets_generic_error(bridge):
@@ -89,7 +89,7 @@ def test_wrong_password_sets_generic_error(bridge):
     _fill(bridge, "admin", "wrong-password")
     bridge.submit()
 
-    assert bridge.error == "Invalid username or password"
+    assert bridge.error == "That username or password isn't correct. Please check and try again."
     assert succeeded == []
 
 
