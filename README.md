@@ -273,13 +273,31 @@ Everything below is implemented, tested, and running — not planned. Each modul
 - Every alert renders as one self-contained, plain-language sentence: **what** went wrong, **where** (the real tank/customer/employee/shift name, never a bare id or enum name), and **what to do about it** — e.g. "MS-16 is low on fuel. 450.00 of 10000.00 litres remaining (4% of capacity). Reorder now — sales may have to stop once this tank runs out." A single alert shows its full sentence directly; several collapse to a count plus the single most urgent one named by name, expandable to a scrollable list
 - Clicking an alert opens the exact screen it concerns (e.g. a low-fuel alert opens Tanks, an overdue-credit alert opens Credit), not just the general dashboard
 
+### Leave Management (client-review pass, 2026-09-25)
+- Request/approve/reject/cancel workflow on behalf of an employee (`LeaveRequest`), deliberately scoped narrow — no leave-balance or entitlement policy is implemented, since none was specified
+- `LEAVE_MANAGE` (submit a request) mirrors `ATTENDANCE_MANAGE`'s role set — a supervisor/manager action, never the employee acting on their own behalf; `LEAVE_APPROVE` is a stricter, Manager-only permission, so a Shift Supervisor can never both submit and approve the same request
+- Approving a leave request automatically marks the employee's attendance as `leave` for the requested date(s) — one workflow, not two records that can drift apart
+- Only a `pending` request is a live state — approved/rejected/cancelled are all final; a mistaken decision is corrected with a new request or by correcting the attendance record it wrote, never by editing the original after the fact (the project's VOID/REVERSE/ADJUST-not-DELETE rule)
+
+### Employee cash shortages & shift cash book (client-review pass, 2026-09-16 – 2026-09-25)
+- A shift's reconciliation can book a named employee's cash shortage as a receivable (`EmployeeCashShortage`) rather than silently writing it off — booking one is a stricter permission than routine reconciliation (Manager and above only, never Shift Supervisor), since it is effectively an accusation against a named staff member
+- Recovery against a shortage (`EmployeeShortageRecovery`) is its own append-only record, the same "a correction is a new record, not an edit" pattern used everywhere else in this app
+- `ShiftCashBook` / `ShiftBankDeposit` track the physical cash a shift actually banks — denomination-level cash counting and bank deposit recording, reconciled against the shift's own expected cash total
+
+### Top-bar UX pass: keyboard shortcuts, live indicators, search (client-review pass, 2026-09-23 – 2026-09-25)
+- **Keyboard shortcuts** for counter workflows: `Ctrl+F` focuses the top-bar search, `F5` refreshes whatever page is open (calling that page's own `refresh()` if it has one), `Esc` steps back one level — three shortcuts, each a widely-known OS convention rather than a bespoke binding a counter attendant would have to be taught
+- **Offline indicator**: a static top-bar badge stating the app never needs or uses an internet connection — honest by construction, since there is no connection to poll or lose in the first place
+- **Current-shift indicator**: the top bar shows whether a shift is open on this pump right now (and which one), without opening the Shifts screen to check
+- **Global search** (`Ctrl+F`): searches employees, nozzles, tanks, and (for `USER_MANAGE` holders) user accounts across every module the logged-in role can actually see — reuses the exact same permission gate the sidebar/dashboard use, so it can never surface a record the navigation itself would have hidden
+- **Login screen redesign**: bigger, decluttered fields; the card resizes responsively with the window instead of clipping; hover/focus/press animations and an entrance fade+scale so the screen reads as live rather than static; a shake + auto-clearing password field on a failed attempt; error wording rewritten in plain, non-technical language everywhere it's produced (`AuthService`, `LoginBridge`, the app-wide generic-error fallback) — see `docs/screenshots/login.png` and `login-error.png`
+
 ### Database integrity & exception handling (cross-cutting, hardened 2026-08-15)
 - SQLite foreign-key enforcement (`PRAGMA foreign_keys=ON`) and WAL mode (`PRAGMA journal_mode=WAL`) are enabled on every connection — every `ForeignKey()` declared in the models is actually enforced by the database, not just by application code
 - Every repository write commits through a shared `safe_commit()` helper that rolls back cleanly on failure, so a failed write can't leave a session unusable for the rest of that login
 - Application startup (`app/main.py`) wraps database init/seed failures into a single `DatabaseInitializationError` with a clear message and a logged traceback, instead of crashing with a raw stack trace
 - Every UI dialog's save/action handler catches its specific errors (validation, business-rule conflicts) for a precise message, then falls back to a generic "something went wrong" message for anything unexpected — logged in full, never left to crash the app or a Qt event-loop callback
 
-Not yet built: Payments (dedicated reconciliation reporting beyond what Sale already tracks), Credit, Expenses, full cash/UPI/card Reconciliation module, full Reporting System (dedicated reports beyond the fuel-type summary), Printing. See [ROADMAP.md](ROADMAP.md) for the full phase-by-phase plan.
+Not yet built: the full problemstatement.md #25-32 reporting enumeration (daily/HR/inventory/management reports beyond the six already shipped), print configuration management, a configurable backup location, and the bigger login-screen decisions still awaiting sign-off (PIN-based quick sign-in, Windows Hello, a regional-language toggle — see PROJECT_CONTEXT.md's client-perspective review log). See [ROADMAP.md](ROADMAP.md) for the full phase-by-phase plan.
 
 ---
 
@@ -293,7 +311,7 @@ Not yet built: Payments (dedicated reconciliation reporting beyond what Sale alr
 | ORM | SQLAlchemy 2.x | in use |
 | Validation | Pydantic v2 | in use |
 | Configuration | pydantic-settings | in use |
-| Testing | pytest | in use — 875 tests |
+| Testing | pytest | in use — 924 tests |
 | Logging | Python standard `logging` | in use — console + a rotating file colocated with the database |
 | Migrations | Alembic | in use — `init_db()` runs `alembic upgrade head`, not `Base.metadata.create_all()` |
 | PDF reports | ReportLab | in use — fuel-type summary report, more reports to follow in Phase 16 |
@@ -327,7 +345,7 @@ PetrolPumpERP/
 │   ├── schemas/                 # Pydantic input-validation schemas
 │   ├── services/                # Business logic, RBAC checks, audit logging
 │   └── ui/                      # PySide6 windows/dialogs + shared stylesheet
-├── tests/                       # pytest suite (459 tests)
+├── tests/                       # pytest suite (924 tests)
 ├── docs/
 │   └── screenshots/             # Screenshots used in this README
 ├── requirements.txt
@@ -385,7 +403,7 @@ On first run this will:
 pytest
 ```
 
-All 875 tests should pass, in about 5-6 minutes (most of that is PySide6 widget construction across the UI test modules, not business logic). To run a single module's tests:
+All 924 tests should pass, in about 6-7 minutes (most of that is PySide6 widget construction across the UI test modules, not business logic). To run a single module's tests:
 
 ```bash
 pytest tests/test_auth_rbac.py -v
@@ -489,6 +507,7 @@ This offline desktop application is phase one of a two-phase plan. Once it prove
 | 20: Packaging & Deployment | 🟡 Started early (standalone .exe works end-to-end) — installer, config system, and packaged docs still open |
 | 21: Pilot Deployment & Feedback | ⬜ Requires real-world deployment and feedback from actual pump operations |
 | 22: Final Release | ⬜ Depends on Phase 21 |
+| Client-perspective review pass (Leave, cash shortages, shift cash book, navigation restructure, alert strip, keyboard shortcuts, login redesign) | ✅ Complete (2026-09-16 – 2026-09-25) — see PROJECT_CONTEXT.md's own review-log entries for full detail on each item |
 
 See [ROADMAP.md](ROADMAP.md) for the full, granular breakdown of every phase.
 
