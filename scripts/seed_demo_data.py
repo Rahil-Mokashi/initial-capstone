@@ -41,12 +41,13 @@ from app.core.constants import (  # noqa: E402
     ReconciliationStatus,
     SaleStatus,
     ShiftStatus,
+    TenderSettlementType,
     UserRole,
     VarianceClassification,
 )
 from app.core.security import hash_password  # noqa: E402
 from app.database.connection import SessionLocal, init_db  # noqa: E402
-from app.database.seed import seed_initial_data  # noqa: E402
+from app.database.seed import _backfill_tender_ids, _seed_tenders, seed_initial_data  # noqa: E402
 from app.models.credit_account import CreditAccount  # noqa: E402
 from app.models.customer import Customer  # noqa: E402
 from app.models.customer_payment import CustomerPayment  # noqa: E402
@@ -62,9 +63,11 @@ from app.models.role import Role  # noqa: E402
 from app.models.sale import Sale  # noqa: E402
 from app.models.shift import Shift  # noqa: E402
 from app.models.shift_reconciliation import ShiftReconciliation  # noqa: E402
+from app.models.shift_reconciliation_line import ShiftReconciliationLine  # noqa: E402
 from app.models.supplier import Supplier  # noqa: E402
 from app.models.tank import Tank  # noqa: E402
 from app.models.user import User  # noqa: E402
+from app.services.reconciliation_service import classify_reconciliation_variance  # noqa: E402
 
 DAYS_OF_HISTORY = 70
 
@@ -392,47 +395,82 @@ def _seed_expenses(session, admin, employees):
     session.commit()
 
 
+_CLASSIFICATION_SEVERITY = {
+    VarianceClassification.NORMAL: 0,
+    VarianceClassification.WARNING: 1,
+    VarianceClassification.INVESTIGATION_REQUIRED: 2,
+    VarianceClassification.APPROVAL_REQUIRED: 3,
+}
+
+
 def _seed_reconciliations(session, admin, shifts):
+    """Per-tender reconciliation (ShiftReconciliation + ShiftReconciliationLine),
+    matching ReconciliationService.perform_shift_reconciliation's own shape -
+    that model no longer has fixed cash/upi/card columns (see
+    PROJECT_CONTEXT.md's Step 2 entry). Demo sales/expenses are bulk-inserted
+    without a tender_id (the same way historical pre-Tender rows were), so
+    they're backfilled here via the project's own existing
+    app.database.seed._backfill_tender_ids helper - the exact mechanism that
+    already exists for this exact situation - before computing expected
+    amounts per tender.
+    """
+    tenders_by_name = _seed_tenders(session)
+    _backfill_tender_ids(session, tenders_by_name)
+    credit_tender_ids = {
+        t.id for t in tenders_by_name.values() if t.settlement_type == TenderSettlementType.INVOICED_CREDIT.value
+    }
+
     closed_shifts = [s for s in shifts if s.status == ShiftStatus.CLOSED.value][-10:]
     for shift in closed_shifts:
         if session.query(ShiftReconciliation).filter_by(shift_id=shift.id).first():
             continue
 
         sales = session.query(Sale).filter_by(shift_id=shift.id, status=SaleStatus.COMPLETED.value).all()
-        expected_cash = sum((s.amount for s in sales if s.payment_method == PaymentMethod.CASH.value), Decimal("0"))
-        expected_upi = sum((s.amount for s in sales if s.payment_method == PaymentMethod.UPI.value), Decimal("0"))
-        expected_card = sum((s.amount for s in sales if s.payment_method == PaymentMethod.CARD.value), Decimal("0"))
+        expenses = session.query(Expense).filter_by(shift_id=shift.id, status=ExpenseStatus.APPROVED.value).all()
+
+        expected_by_tender: dict = {}
+        for sale in sales:
+            if sale.tender_id and sale.tender_id not in credit_tender_ids:
+                expected_by_tender[sale.tender_id] = expected_by_tender.get(sale.tender_id, Decimal("0")) + sale.amount
+        for expense in expenses:
+            if expense.tender_id and expense.tender_id not in credit_tender_ids:
+                expected_by_tender[expense.tender_id] = expected_by_tender.get(expense.tender_id, Decimal("0")) - expense.amount
+        expected_by_tender = {tid: amt for tid, amt in expected_by_tender.items() if amt != 0}
+        if not expected_by_tender:
+            continue
+
+        reconciliation = ShiftReconciliation(
+            shift_id=shift.id, classification=VarianceClassification.NORMAL.value,
+            status=ReconciliationStatus.ACCEPTED.value, performed_by_id=admin.id,
+        )
+        session.add(reconciliation)
+        session.flush()  # need reconciliation.id for the lines' FK
 
         # Small realistic variance most of the time, occasionally a
         # bigger one so the reconciliation report shows a mix of
         # classifications, not uniformly "normal".
-        variance_factor = Decimal(str(round(random.uniform(-0.03, 0.03), 4)))
-        declared_cash = (expected_cash * (1 + variance_factor)).quantize(Decimal("0.01"))
+        classifications = []
+        for tender_id, expected in expected_by_tender.items():
+            variance_factor = Decimal(str(round(random.uniform(-0.03, 0.03), 4)))
+            declared = (expected * (1 + variance_factor)).quantize(Decimal("0.01"))
+            variance = declared - expected
+            variance_percent = (variance / expected * 100) if expected != 0 else Decimal("0")
+            classification = classify_reconciliation_variance(variance_percent)
+            classifications.append(classification)
+            session.add(
+                ShiftReconciliationLine(
+                    shift_reconciliation_id=reconciliation.id, tender_id=tender_id,
+                    expected=expected, declared=declared, variance=variance,
+                )
+            )
 
-        cash_variance = declared_cash - expected_cash
-        classification = VarianceClassification.NORMAL
-        if expected_cash > 0:
-            variance_percent = abs(cash_variance / expected_cash * 100)
-            if variance_percent > 2:
-                classification = VarianceClassification.APPROVAL_REQUIRED
-            elif variance_percent > 1:
-                classification = VarianceClassification.INVESTIGATION_REQUIRED
-            elif variance_percent > 0.5:
-                classification = VarianceClassification.WARNING
-
-        status = (
-            ReconciliationStatus.ACCEPTED
-            if classification in (VarianceClassification.NORMAL, VarianceClassification.WARNING)
-            else ReconciliationStatus.PENDING_APPROVAL
+        worst = max(classifications, key=lambda c: _CLASSIFICATION_SEVERITY[c])
+        reconciliation.classification = worst.value
+        reconciliation.status = (
+            ReconciliationStatus.ACCEPTED.value
+            if worst in (VarianceClassification.NORMAL, VarianceClassification.WARNING)
+            else ReconciliationStatus.PENDING_APPROVAL.value
         )
-
-        reconciliation = ShiftReconciliation(
-            shift_id=shift.id, expected_cash=expected_cash, declared_cash=declared_cash, cash_variance=cash_variance,
-            expected_upi=expected_upi, declared_upi=expected_upi, upi_variance=Decimal("0"),
-            expected_card=expected_card, declared_card=expected_card, card_variance=Decimal("0"),
-            classification=classification.value, status=status.value, performed_by_id=admin.id,
-        )
-        session.add(reconciliation)
     session.commit()
 
 
