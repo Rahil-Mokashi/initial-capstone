@@ -26,13 +26,13 @@ from PySide6.QtWidgets import (
 from app.core.constants import AttendanceStatus, EmployeeStatus, Permission
 from app.core.exceptions import AppError
 from app.schemas.attendance import AttendanceCorrection, AttendanceMark
+from app.ui.base_window import PageWindow
 from app.ui.qt_utils import describe_unexpected_error, make_edit_icon_button, qdate_to_date
-from app.ui.widgets import GridBackgroundWidget
 
 TABLE_HEADERS = ["Employee", "Status", "Check In", "Check Out", "Overtime (min)", "Corrected", ""]
 
 
-class AttendanceWindow(QWidget):
+class AttendanceWindow(PageWindow):
     """Daily attendance roster: pick a date, view who's marked, mark/correct entries."""
 
     def __init__(self, attendance_service, employee_service, shift_service, auth_service, actor_user_id: str):
@@ -80,12 +80,7 @@ class AttendanceWindow(QWidget):
         layout.addLayout(top_row)
         layout.addWidget(self.table)
 
-        container = GridBackgroundWidget()
-        container.setObjectName("background")
-        container.setLayout(layout)
-        _page_layout = QVBoxLayout(self)
-        _page_layout.setContentsMargins(0, 0, 0, 0)
-        _page_layout.addWidget(container)
+        self._build_page(layout)
 
         # Deferred until mark_button is actually parented (2026-09-16,
         # user-reported flicker): a QPushButton constructed with no
