@@ -16,11 +16,10 @@ from PySide6.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
-    QWidget,
 )
 
+from app.ui.base_window import PageWindow
 from app.ui.qt_utils import qdate_to_date
-from app.ui.widgets import GridBackgroundWidget
 from app.core.exceptions import AppError
 from app.ui.background import run_in_background
 from app.ui.qt_utils import describe_unexpected_error
@@ -28,7 +27,7 @@ from app.ui.qt_utils import describe_unexpected_error
 TABLE_HEADERS = ["When", "Event", "Actor", "Entity", "Description"]
 
 
-class AuditLogWindow(QWidget):
+class AuditLogWindow(PageWindow):
     def __init__(self, audit_service, user_repo, actor_user_id: str):
         super().__init__()
         self._audit_service = audit_service
@@ -91,12 +90,7 @@ class AuditLogWindow(QWidget):
         layout.addLayout(filter_row)
         layout.addWidget(self.table)
 
-        container = GridBackgroundWidget()
-        container.setObjectName("background")
-        container.setLayout(layout)
-        _page_layout = QVBoxLayout(self)
-        _page_layout.setContentsMargins(0, 0, 0, 0)
-        _page_layout.addWidget(container)
+        self._build_page(layout)
 
         self.refresh()
 
