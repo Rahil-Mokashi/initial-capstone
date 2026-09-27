@@ -29,9 +29,9 @@ from PySide6.QtWidgets import (
 from app.core.dates import PeriodType
 from app.services.report_export import export_table_csv, export_table_excel, export_table_pdf
 from app.services.report_service import TableReport
+from app.ui.base_window import PageWindow
 from app.ui.print_utils import show_print_preview
 from app.ui.qt_utils import describe_unexpected_error
-from app.ui.widgets import GridBackgroundWidget
 
 PERIOD_LABELS = [
     ("Daily", PeriodType.DAY),
@@ -90,7 +90,7 @@ def _forecasts_to_table_report(forecasts) -> TableReport:
     return TableReport(title="Sales Forecast", headers=headers, rows=rows)
 
 
-class AnalyticsWindow(QWidget):
+class AnalyticsWindow(PageWindow):
     def __init__(self, analytics_service, actor_user_id: str):
         super().__init__()
         self.setWindowTitle("Business Insights")
@@ -112,12 +112,7 @@ class AnalyticsWindow(QWidget):
         layout.addWidget(title)
         layout.addWidget(tabs)
 
-        container = GridBackgroundWidget()
-        container.setObjectName("background")
-        container.setLayout(layout)
-        _page_layout = QVBoxLayout(self)
-        _page_layout.setContentsMargins(0, 0, 0, 0)
-        _page_layout.addWidget(container)
+        self._build_page(layout)
 
 
 class PerformanceTab(QWidget):
