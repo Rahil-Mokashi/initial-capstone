@@ -16,15 +16,14 @@ from PySide6.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
-    QWidget,
 )
 
 from app.core.constants import OFFSITE_BACKUP_STALE_AFTER_DAYS
 from app.core.exceptions import AppError
 from app.database import backup as backup_module
 from app.ui.background import run_in_background
+from app.ui.base_window import PageWindow
 from app.ui.qt_utils import describe_unexpected_error
-from app.ui.widgets import GridBackgroundWidget
 
 BACKUP_HEADERS = ["Created", "File", "Size"]
 
@@ -38,7 +37,7 @@ def _format_size(size_bytes: int) -> str:
     return f"{size:.1f} GB"
 
 
-class BackupWindow(QWidget):
+class BackupWindow(PageWindow):
     def __init__(self, backup_service, actor_user_id: str, settings_service=None):
         super().__init__()
         self._backup_service = backup_service
@@ -117,12 +116,7 @@ class BackupWindow(QWidget):
         layout.addWidget(self.offsite_warning)
         layout.addWidget(self.table)
 
-        container = GridBackgroundWidget()
-        container.setObjectName("background")
-        container.setLayout(layout)
-        _page_layout = QVBoxLayout(self)
-        _page_layout.setContentsMargins(0, 0, 0, 0)
-        _page_layout.addWidget(container)
+        self._build_page(layout)
 
         self.refresh()
 
