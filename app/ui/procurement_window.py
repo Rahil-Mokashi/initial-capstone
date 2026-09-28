@@ -35,8 +35,8 @@ from app.schemas.fuel_delivery import FuelDeliveryArrive, FuelDeliveryDipReading
 from app.schemas.purchase_order import PurchaseOrderCreate, PurchaseOrderItemCreate
 from app.schemas.supplier import SupplierCreate
 from app.schemas.supplier_invoice import SupplierInvoiceCreate, SupplierPaymentCreate
+from app.ui.base_window import PageWindow
 from app.ui.qt_utils import apply_hard_shadow, chain_enter_to_next_field, describe_unexpected_error, make_edit_icon_button, qdate_to_date
-from app.ui.widgets import GridBackgroundWidget
 
 SUPPLIER_HEADERS = ["Name", "Contact", "Phone", "Status", ""]
 PO_HEADERS = ["PO Number", "Supplier", "Order Date", "Status", ""]
@@ -56,7 +56,7 @@ DELIVERY_HEADERS = ["Tanker", "Arrived", "Status", "Received", ""]
 PAYMENT_HEADERS = ["Date", "Amount", "Method", "Reference"]
 
 
-class ProcurementWindow(QWidget):
+class ProcurementWindow(PageWindow):
     def __init__(
         self,
         procurement_service,
@@ -101,12 +101,7 @@ class ProcurementWindow(QWidget):
         layout.addWidget(title)
         layout.addWidget(tabs)
 
-        container = GridBackgroundWidget()
-        container.setObjectName("background")
-        container.setLayout(layout)
-        _page_layout = QVBoxLayout(self)
-        _page_layout.setContentsMargins(0, 0, 0, 0)
-        _page_layout.addWidget(container)
+        self._build_page(layout)
 
 
 # ----------------------------------------------------------------------
