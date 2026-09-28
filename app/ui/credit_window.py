@@ -28,8 +28,8 @@ from app.core.constants import PaymentMethod, Permission
 from app.core.exceptions import AppError
 from app.services.report_export import export_table_excel, export_table_pdf
 from app.schemas.credit import CreditAccountCreate, CustomerPaymentCreate
+from app.ui.base_window import PageWindow
 from app.ui.qt_utils import describe_unexpected_error, money_table_item
-from app.ui.widgets import GridBackgroundWidget
 
 # Sentinel QComboBox data value for the "+ Add New Customer..." row -
 # distinct from every real customer_id (a UUID string) so it can never
@@ -40,7 +40,7 @@ _ADD_NEW_CUSTOMER = object()
 ACCOUNT_HEADERS = ["Customer", "Credit Limit", "Outstanding", "Overdue", "Due (days)"]
 
 
-class CreditWindow(QWidget):
+class CreditWindow(PageWindow):
     def __init__(self, credit_service, sale_service, auth_service, actor_user_id: str):
         super().__init__()
         self.setWindowTitle("Credit Management")
@@ -58,12 +58,7 @@ class CreditWindow(QWidget):
         layout.addWidget(title)
         layout.addWidget(self.accounts_tab)
 
-        container = GridBackgroundWidget()
-        container.setObjectName("background")
-        container.setLayout(layout)
-        _page_layout = QVBoxLayout(self)
-        _page_layout.setContentsMargins(0, 0, 0, 0)
-        _page_layout.addWidget(container)
+        self._build_page(layout)
 
 
 class CreditAccountsTab(QWidget):
