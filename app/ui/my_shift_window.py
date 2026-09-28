@@ -10,11 +10,11 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.ui.base_window import PageWindow
 from app.ui.qt_utils import apply_hard_shadow, describe_unexpected_error
-from app.ui.widgets import GridBackgroundWidget
 
 
-class MyShiftWindow(QWidget):
+class MyShiftWindow(PageWindow):
     """Shows the logged-in attendant's current nozzle/fuel assignment, if any."""
 
     def __init__(self, shift_service, auth_service, actor_user_id: str):
@@ -38,12 +38,7 @@ class MyShiftWindow(QWidget):
         layout.addLayout(self.body_layout)
         layout.addStretch()
 
-        container = GridBackgroundWidget()
-        container.setObjectName("background")
-        container.setLayout(layout)
-        _page_layout = QVBoxLayout(self)
-        _page_layout.setContentsMargins(0, 0, 0, 0)
-        _page_layout.addWidget(container)
+        self._build_page(layout)
 
         self.refresh()
 
