@@ -19,17 +19,16 @@ from PySide6.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
-    QWidget,
 )
 
 from app.services.report_export import build_table_report_html, export_table_csv, export_table_excel, export_table_pdf
 from app.ui.background import run_in_background
+from app.ui.base_window import PageWindow
 from app.ui.print_utils import show_print_preview
 from app.ui.qt_utils import describe_unexpected_error, money_table_item, volume_table_item
-from app.ui.widgets import GridBackgroundWidget
 
 
-class TableReportWindow(QWidget):
+class TableReportWindow(PageWindow):
     def __init__(
         self,
         actor_user_id: str,
@@ -147,12 +146,7 @@ class TableReportWindow(QWidget):
         layout.addWidget(self.error_label)
         layout.addWidget(self.table)
 
-        container = GridBackgroundWidget()
-        container.setObjectName("background")
-        container.setLayout(layout)
-        _page_layout = QVBoxLayout(self)
-        _page_layout.setContentsMargins(0, 0, 0, 0)
-        _page_layout.addWidget(container)
+        self._build_page(layout)
 
         self.refresh()
 
