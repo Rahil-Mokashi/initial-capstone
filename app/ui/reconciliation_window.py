@@ -35,8 +35,8 @@ from app.core.exceptions import AppError
 from app.schemas.employee_cash_shortage import EmployeeCashShortageRecord, EmployeeShortageRecoveryRecord
 from app.schemas.shift_cash_book import ShiftBankDepositRecord, ShiftCashBookRecord
 from app.schemas.shift_reconciliation import ShiftReconciliationPerform
+from app.ui.base_window import PageWindow
 from app.ui.qt_utils import describe_unexpected_error, money_table_item
-from app.ui.widgets import GridBackgroundWidget
 
 RECONCILIATION_HEADERS = ["Shift", "Variance by Tender", "Classification", "Status"]
 CASH_BOOK_HEADERS = [
@@ -51,7 +51,7 @@ CASH_BOOK_HEADERS = [
 SHORTAGE_HEADERS = ["Employee", "Shift", "Tender", "Amount", "Recovered", "Outstanding", "Status"]
 
 
-class ReconciliationWindow(QWidget):
+class ReconciliationWindow(PageWindow):
     def __init__(
         self,
         reconciliation_service,
@@ -101,12 +101,7 @@ class ReconciliationWindow(QWidget):
             layout.addWidget(shortages_title)
             layout.addWidget(self.shortages_tab)
 
-        container = GridBackgroundWidget()
-        container.setObjectName("background")
-        container.setLayout(layout)
-        _page_layout = QVBoxLayout(self)
-        _page_layout.setContentsMargins(0, 0, 0, 0)
-        _page_layout.addWidget(container)
+        self._build_page(layout)
 
 
 class ReconciliationsTab(QWidget):
