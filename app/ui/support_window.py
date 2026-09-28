@@ -15,8 +15,8 @@ reachable" treatment My Shift and Change Password get.
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
+from app.ui.base_window import PageWindow
 from app.ui.qt_utils import apply_hard_shadow
-from app.ui.widgets import GridBackgroundWidget
 
 
 class _SupportCard(QWidget):
@@ -42,7 +42,7 @@ class _SupportCard(QWidget):
         apply_hard_shadow(self)
 
 
-class SupportWindow(QWidget):
+class SupportWindow(PageWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -89,9 +89,4 @@ class SupportWindow(QWidget):
         body.addLayout(cards_row)
         body.addStretch()
 
-        container = GridBackgroundWidget()
-        container.setObjectName("background")
-        container.setLayout(body)
-        _page_layout = QVBoxLayout(self)
-        _page_layout.setContentsMargins(0, 0, 0, 0)
-        _page_layout.addWidget(container)
+        self._build_page(body)
