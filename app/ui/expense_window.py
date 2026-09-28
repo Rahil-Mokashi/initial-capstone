@@ -25,14 +25,14 @@ from PySide6.QtWidgets import (
 from app.core.constants import PaymentMethod, Permission
 from app.core.exceptions import AppError
 from app.schemas.expense import ExpenseCategoryCreate, ExpenseCreate
+from app.ui.base_window import PageWindow
 from app.ui.qt_utils import chain_enter_to_next_field, describe_unexpected_error
-from app.ui.widgets import GridBackgroundWidget
 
 EXPENSE_HEADERS = ["Date", "Category", "Amount", "Method", "Employee", "Status"]
 CATEGORY_HEADERS = ["Name", "Status"]
 
 
-class ExpenseWindow(QWidget):
+class ExpenseWindow(PageWindow):
     def __init__(self, expense_service, employee_service, shift_service, auth_service, actor_user_id: str):
         super().__init__()
         self.setWindowTitle("Expenses")
@@ -59,12 +59,7 @@ class ExpenseWindow(QWidget):
         layout.addWidget(title)
         layout.addWidget(tabs)
 
-        container = GridBackgroundWidget()
-        container.setObjectName("background")
-        container.setLayout(layout)
-        _page_layout = QVBoxLayout(self)
-        _page_layout.setContentsMargins(0, 0, 0, 0)
-        _page_layout.addWidget(container)
+        self._build_page(layout)
 
 
 class ExpensesTab(QWidget):
