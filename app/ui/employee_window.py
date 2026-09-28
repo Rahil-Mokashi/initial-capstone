@@ -32,13 +32,14 @@ from PySide6.QtWidgets import (
 from app.core.constants import EmployeeStatus, Permission
 from app.core.exceptions import AppError
 from app.schemas.employee import EmployeeCreate, EmployeeUpdate
+from app.ui.base_window import PageWindow
 from app.ui.qt_utils import chain_enter_to_next_field, describe_unexpected_error, make_edit_icon_button, qdate_to_date
-from app.ui.widgets import GridBackgroundWidget, confirm_dialog
+from app.ui.widgets import confirm_dialog
 
 TABLE_HEADERS = ["Code", "Name", "Designation", "Department", "Status", "Joining Date", ""]
 
 
-class EmployeeListWindow(QWidget):
+class EmployeeListWindow(PageWindow):
     """Searchable employee list with add/view actions."""
 
     def __init__(self, employee_service, auth_service, actor_user_id: str):
@@ -83,12 +84,7 @@ class EmployeeListWindow(QWidget):
         layout.addLayout(top_row)
         layout.addWidget(self.table)
 
-        container = GridBackgroundWidget()
-        container.setObjectName("background")
-        container.setLayout(layout)
-        _page_layout = QVBoxLayout(self)
-        _page_layout.setContentsMargins(0, 0, 0, 0)
-        _page_layout.addWidget(container)
+        self._build_page(layout)
 
         # Deferred until add_button is actually parented (2026-09-16,
         # user-reported flicker) - see app/ui/sales_window.py's
