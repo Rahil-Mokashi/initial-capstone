@@ -25,8 +25,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.ui.base_window import PageWindow
 from app.ui.qt_utils import apply_hard_shadow
-from app.ui.widgets import GridBackgroundWidget
 
 LANDING_GRID_COLUMNS = 3
 
@@ -69,7 +69,7 @@ class ModuleTileCard(QWidget):
         super().mousePressEvent(event)
 
 
-class GroupLandingWindow(QWidget):
+class GroupLandingWindow(PageWindow):
     """One sidebar group's landing page: title, one-line description,
     then every visible module in the group as a ModuleTileCard, grouped
     under subheadings. A subheading with no visible item (every module
@@ -149,12 +149,7 @@ class GroupLandingWindow(QWidget):
         page_layout.addWidget(subtitle)
         page_layout.addWidget(scroll, stretch=1)
 
-        container = GridBackgroundWidget()
-        container.setObjectName("background")
-        container.setLayout(page_layout)
-        outer = QVBoxLayout(self)
-        outer.setContentsMargins(0, 0, 0, 0)
-        outer.addWidget(container)
+        self._build_page(page_layout)
 
     def _open(self, title: str, factory) -> None:
         if self._open_subpage is not None:
