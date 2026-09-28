@@ -21,20 +21,20 @@ from PySide6.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
-    QWidget,
 )
 
 from app.core.constants import Permission
 from app.core.exceptions import AppError
 from app.schemas.shift import NozzleAssignmentComplete, NozzleAssignmentCreate, ShiftOpen
+from app.ui.base_window import PageWindow
 from app.ui.qt_utils import describe_unexpected_error, make_edit_icon_button, qdate_to_date
-from app.ui.widgets import GridBackgroundWidget, confirm_dialog
+from app.ui.widgets import confirm_dialog
 
 SHIFT_TABLE_HEADERS = ["Date", "Shift", "Status", "Opened By", ""]
 ASSIGNMENT_TABLE_HEADERS = ["Employee", "Nozzle", "Opening", "Closing", "Status", ""]
 
 
-class ShiftListWindow(QWidget):
+class ShiftListWindow(PageWindow):
     def __init__(self, shift_service, employee_service, auth_service, actor_user_id: str):
         super().__init__()
         self._shift_service = shift_service
@@ -73,12 +73,7 @@ class ShiftListWindow(QWidget):
         layout.addLayout(top_row)
         layout.addWidget(self.table)
 
-        container = GridBackgroundWidget()
-        container.setObjectName("background")
-        container.setLayout(layout)
-        _page_layout = QVBoxLayout(self)
-        _page_layout.setContentsMargins(0, 0, 0, 0)
-        _page_layout.addWidget(container)
+        self._build_page(layout)
 
         # Deferred until open_button is actually parented (2026-09-16,
         # user-reported flicker) - see app/ui/sales_window.py's
