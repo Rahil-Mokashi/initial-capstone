@@ -23,9 +23,9 @@ from PySide6.QtWidgets import (
 from app.core.constants import Permission
 from app.services.report_export import build_table_report_html, export_table_csv, export_table_excel, export_table_pdf, fuel_summary_to_table_report
 from app.ui.background import run_in_background
+from app.ui.base_window import PageWindow
 from app.ui.print_utils import show_print_preview
 from app.ui.qt_utils import apply_hard_shadow, describe_unexpected_error
-from app.ui.widgets import GridBackgroundWidget
 
 
 class FuelTypeSummaryCard(QWidget):
@@ -62,7 +62,7 @@ class FuelTypeSummaryCard(QWidget):
         apply_hard_shadow(self)
 
 
-class FuelTypeSummaryReportWindow(QWidget):
+class FuelTypeSummaryReportWindow(PageWindow):
     """problemstatement.md #30/#31: fuel-type-sectioned inventory summary.
 
     Full Phase 16 scope (print/PDF/Excel export, print preview, the rest
@@ -131,12 +131,7 @@ class FuelTypeSummaryReportWindow(QWidget):
         layout.addLayout(actions_row)
         layout.addWidget(scroll)
 
-        container = GridBackgroundWidget()
-        container.setObjectName("background")
-        container.setLayout(layout)
-        _page_layout = QVBoxLayout(self)
-        _page_layout.setContentsMargins(0, 0, 0, 0)
-        _page_layout.addWidget(container)
+        self._build_page(layout)
 
         self.refresh()
 
@@ -228,7 +223,7 @@ class FuelTypeSummaryReportWindow(QWidget):
         )
 
 
-class ReportsHubWindow(QWidget):
+class ReportsHubWindow(PageWindow):
     """Landing screen for the Reports module: a list of every report the
     acting user can open, gated per-report on that report's own
     permission."""
@@ -326,12 +321,7 @@ class ReportsHubWindow(QWidget):
         layout.addLayout(buttons_layout)
         layout.addStretch()
 
-        container = GridBackgroundWidget()
-        container.setObjectName("background")
-        container.setLayout(layout)
-        _page_layout = QVBoxLayout(self)
-        _page_layout.setContentsMargins(0, 0, 0, 0)
-        _page_layout.addWidget(container)
+        self._build_page(layout)
 
     def _navigate(self, title: str, factory) -> None:
         if self._open_subpage is not None:
