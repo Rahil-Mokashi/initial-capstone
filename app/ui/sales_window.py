@@ -37,6 +37,7 @@ from app.core.exceptions import AppError
 from app.database.base import StatusEnum
 from app.schemas.customer import CustomerCreate
 from app.schemas.sale import SaleCreate
+from app.ui.base_window import PageWindow
 from app.ui.qt_utils import (
     chain_enter_to_next_field,
     describe_unexpected_error,
@@ -44,7 +45,6 @@ from app.ui.qt_utils import (
     money_table_item,
     volume_table_item,
 )
-from app.ui.widgets import GridBackgroundWidget
 
 # One screenful at a time. The sales table is the highest-volume list in
 # the app - at 300 sales a day a pump reaches ~110,000 rows in a year, and
@@ -57,7 +57,7 @@ SALE_HEADERS = ["Receipt #", "When", "Fuel", "Quantity", "Amount", "Method", "Sa
 CUSTOMER_HEADERS = ["Name", "Phone", "Status", ""]
 
 
-class SalesWindow(QWidget):
+class SalesWindow(PageWindow):
     def __init__(self, sale_service, shift_service, employee_service, auth_service, actor_user_id: str, report_service=None):
         super().__init__()
         self.setWindowTitle("Sales")
@@ -99,12 +99,7 @@ class SalesWindow(QWidget):
 
         layout.addWidget(tabs)
 
-        container = GridBackgroundWidget()
-        container.setObjectName("background")
-        container.setLayout(layout)
-        _page_layout = QVBoxLayout(self)
-        _page_layout.setContentsMargins(0, 0, 0, 0)
-        _page_layout.addWidget(container)
+        self._build_page(layout)
 
     def _refresh_fuel_cards(self) -> None:
         from datetime import date
