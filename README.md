@@ -8,20 +8,72 @@ This README is the detailed, up-to-date entry point for the project. It reflects
 
 ## Table of Contents
 
+- [Download & install (start here)](#download--install-start-here)
 - [Screenshots](#screenshots)
 - [What's built so far](#whats-built-so-far)
 - [Technology stack](#technology-stack)
 - [Project structure](#project-structure)
-- [Getting started](#getting-started)
-- [Running the app](#running-the-app)
+- [Running the app from source](#running-the-app-from-source)
 - [Running the tests](#running-the-tests)
 - [Building a standalone Windows executable](#building-a-standalone-windows-executable)
+- [Troubleshooting](#troubleshooting)
 - [Architecture](#architecture)
 - [Security & data-integrity model](#security--data-integrity-model)
 - [Database](#database)
 - [Two-phase plan](#two-phase-plan)
 - [Documentation index](#documentation-index)
 - [Roadmap status](#roadmap-status)
+
+---
+
+## Download & install (start here)
+
+Pick the path that matches who you are. Everything runs **offline** — no account, internet connection, or server is needed once it's installed.
+
+### Option A — I just want to use it (Windows, no Python needed)
+
+1. Open the repository's **[Releases page](https://github.com/Rahil-Mokashi/initial-capstone/releases)** and download the latest `PetrolPumpERP-Setup-<version>.exe` (installer) or `PetrolPumpERP.exe` (single portable file).
+2. Run it. The installer needs no administrator rights; the portable `.exe` just needs a double-click.
+3. Sign in with `admin` / `Admin@123`. You'll be forced to choose a new password straight away — do that, then create a named account for each staff member under **Masters → Users**.
+
+> **No release published yet?** Releases are built automatically by CI when a version tag is pushed (`git tag v1.0.0 && git push origin v1.0.0`, see [installer/README.md](installer/README.md)). Until the first tag exists, use Option B, or build the `.exe` yourself ([instructions below](#building-a-standalone-windows-executable)).
+
+Your data lives in `%LOCALAPPDATA%\PetrolPumpERP\` (database, backups, logs, exported reports). Uninstalling never deletes it.
+
+### Option B — I want to run it from source (Windows / macOS / Linux)
+
+You need **Python 3.13+** ([python.org/downloads](https://www.python.org/downloads/); on Windows tick *"Add python.exe to PATH"*) and **Git** ([git-scm.com](https://git-scm.com/downloads)) — or skip Git and use *Code → Download ZIP* on the GitHub page, then unzip it.
+
+```bash
+# 1. Get the code
+git clone https://github.com/Rahil-Mokashi/initial-capstone.git
+cd initial-capstone
+
+# 2. Create an isolated Python environment
+python -m venv venv
+venv\Scripts\activate            # Windows (PowerShell/cmd)
+source venv/bin/activate         # macOS / Linux
+
+# 3. Install dependencies
+pip install -r requirements.txt
+
+# 4. Run it
+python -m app.main
+```
+
+The first launch creates the database, applies every migration, seeds the roles/permissions and default fuel types, and opens the login screen. Sign in with `admin` / `Admin@123` and set a new password when prompted.
+
+**Want to see it with realistic data?** Load ~10 weeks of throwaway demo history (shifts, sales, purchases, expenses, credit customers) so every report and the sales forecast have something to show:
+
+```bash
+python scripts/seed_demo_data.py
+```
+
+To start clean again, close the app and delete `app/petrol_pump.db` (plus its `-wal`/`-shm` files).
+
+### Option C — I want to develop on it
+
+Do Option B, then run the test suite (`pytest`, ~996 tests) and read [DEVELOPMENT_GUIDELINES.md](DEVELOPMENT_GUIDELINES.md), [ARCHITECTURE.md](ARCHITECTURE.md) and [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md) before changing anything — the layering rules and the "never delete financial history" rule are enforced by convention, not by tooling.
 
 ---
 
@@ -135,17 +187,19 @@ Everything below is implemented, tested, and running — not planned. Each modul
 ### Authentication & RBAC (Phase 4 — complete)
 - Login/logout with a styled login screen, session tokens (SHA-256 hashed at rest, never stored raw), and configurable session expiry with **auto-logout**
 - Six business roles seeded automatically: `ADMIN`, `OWNER`, `MANAGER`, `ACCOUNTANT`, `SHIFT_SUPERVISOR`, `ATTENDANT`, each with a starter permission set that grows as new modules are added
-- Account lockout after 5 failed login attempts; generic "invalid username or password" errors (no username enumeration)
+- Account lockout after 5 failed login attempts (auto-expires after 15 minutes, or an admin can unlock it sooner); generic "invalid username or password" errors (no username enumeration)
 - Password hashing via PBKDF2-HMAC-SHA256 (200,000 iterations, random per-password salt) — never plaintext
 - A password policy (`validate_password_strength`) and a `require_permission` decorator used by every service method that needs an authorization check
 - Every authentication event (login success/failure/lockout, logout, session expiry) is written to an **immutable, append-only audit log**
+- **Quick sign-in & recovery** (2026-09-25): optional PIN sign-in for counter staff, a self-service forgot-password flow, a screen lock that re-prompts without ending the session, optional Windows Hello on the lock screen (needs the optional `winsdk` package; the app runs identically without it), remembered usernames, a Caps Lock warning, a lockout countdown, and an English/regional-language toggle on the login screen
+- **Forced first-login password change**: the seeded `admin` account (and any account an admin creates or resets) must set a new password before doing anything else
 
 ### Employee & HR Management (Phase 5 — complete)
 - Employee master data distinct from login accounts (`Employee.user_id` optionally links to a `User`, but HR records can exist without login access)
 - Auto-generated sequential employee codes (`EMP-0001`, ...)
 - Document tracking (ID proof, etc.) with soft-delete, never a hard delete
 - Status lifecycle (`active` / `on_leave` / `suspended` / `terminated`) and exit tracking via `exit_date` — **an employee record is never deleted**, only its status changes, with every change audit-logged
-- Full search/list/add/edit UI
+- Full search/list/add/edit UI, with the employee's **status changeable straight from the list row** (same mandatory reason prompt, same permission gate, same audit entry as the detail dialog — just fewer clicks)
 
 ### Attendance Management (Phase 6 — complete)
 - Daily attendance roster, filterable by date
@@ -297,7 +351,10 @@ Everything below is implemented, tested, and running — not planned. Each modul
 - Application startup (`app/main.py`) wraps database init/seed failures into a single `DatabaseInitializationError` with a clear message and a logged traceback, instead of crashing with a raw stack trace
 - Every UI dialog's save/action handler catches its specific errors (validation, business-rule conflicts) for a precise message, then falls back to a generic "something went wrong" message for anything unexpected — logged in full, never left to crash the app or a Qt event-loop callback
 
-Not yet built: the full problemstatement.md #25-32 reporting enumeration (daily/HR/inventory/management reports beyond the six already shipped), print configuration management, a configurable backup location, and the bigger login-screen decisions still awaiting sign-off (PIN-based quick sign-in, Windows Hello, a regional-language toggle — see PROJECT_CONTEXT.md's client-perspective review log). See [ROADMAP.md](ROADMAP.md) for the full phase-by-phase plan.
+### Code health (2026-10, refactor pass)
+- Every full-page module window now shares one `PageWindow` base class (`app/ui/base_window.py`) for the page shell (dot-grid background + zero-margin layout) instead of each window copy-pasting the same block. Deliberately only the byte-for-byte identical part was extracted — table/button/refresh logic differs too much per window to force into one abstraction.
+
+Not yet built: the full problemstatement.md #25-32 reporting enumeration (daily/HR/inventory/management reports beyond the six already shipped), print configuration management, a configurable backup location, and a first real pilot at a pump (Phase 21). See [ROADMAP.md](ROADMAP.md) for the full phase-by-phase plan.
 
 ---
 
@@ -311,13 +368,14 @@ Not yet built: the full problemstatement.md #25-32 reporting enumeration (daily/
 | ORM | SQLAlchemy 2.x | in use |
 | Validation | Pydantic v2 | in use |
 | Configuration | pydantic-settings | in use |
-| Testing | pytest | in use — 924 tests |
+| Testing | pytest + pytest-qt | in use — 996 tests |
 | Logging | Python standard `logging` | in use — console + a rotating file colocated with the database |
 | Migrations | Alembic | in use — `init_db()` runs `alembic upgrade head`, not `Base.metadata.create_all()` |
 | PDF reports | ReportLab | in use — fuel-type summary report, more reports to follow in Phase 16 |
 | Excel reports | openpyxl | in use — fuel-type summary report, more reports to follow in Phase 16 |
 | Packaging | PyInstaller | in use — see [Building a standalone Windows executable](#building-a-standalone-windows-executable) |
-| CI | GitHub Actions | in use — `.github/workflows/tests.yml` runs the full suite on every push/PR |
+| CI / releases | GitHub Actions | in use — `tests.yml` runs the full suite on every push/PR; `release.yml` builds the `.exe` + Inno Setup installer and attaches them to a GitHub Release when a `v*.*.*` tag is pushed |
+| Installer | Inno Setup | in use — `installer/petrol_pump_erp.iss` |
 
 This table is deliberately honest about what's a real dependency today (see `requirements.txt`) versus what's still on the roadmap.
 
@@ -344,11 +402,20 @@ PetrolPumpERP/
 │   ├── repositories/            # Data access layer — one repository per model
 │   ├── schemas/                 # Pydantic input-validation schemas
 │   ├── services/                # Business logic, RBAC checks, audit logging
-│   └── ui/                      # PySide6 windows/dialogs + shared stylesheet
-├── tests/                       # pytest suite (924 tests)
+│   └── ui/                      # PySide6 windows/dialogs, QML login screen, shared PageWindow base
+├── alembic/                     # Database migrations (run automatically on launch)
+├── tests/                       # pytest suite (996 tests)
 ├── docs/
+│   ├── user-guide.md            # Day-to-day staff guide
+│   ├── administrator-guide.md   # Install, users, config, backups, DB protection
+│   ├── recovery-guide.md        # What to do when something goes wrong
+│   ├── first-shift-runbook.md   # Walkthrough for the very first live shift
 │   └── screenshots/             # Screenshots used in this README
-├── requirements.txt
+├── scripts/                     # seed_demo_data.py, capture_screenshots.py, verification helpers
+├── installer/                   # Inno Setup script + build notes
+├── .github/workflows/           # tests.yml (CI) and release.yml (build + publish on tag)
+├── petrol_pump_erp.spec         # PyInstaller build config
+├── requirements.txt             # Loose ranges for local setup (requirements.lock = pinned CI/build set)
 ├── README.md                    # You are here
 ├── PROJECT_CONTEXT.md            # Living project memory: what's done, pending, known issues
 ├── ARCHITECTURE.md               # Layered architecture, module responsibilities, diagrams
@@ -358,44 +425,23 @@ PetrolPumpERP/
 
 ---
 
-## Getting started
+## Running the app from source
 
-**Requirements:** Python 3.13+, Windows/macOS/Linux (developed and tested on Windows).
-
-```bash
-# Clone the repository
-git clone https://github.com/Rahil-Mokashi/initial-capstone.git
-cd initial-capstone
-
-# Create and activate a virtual environment
-python -m venv venv
-venv\Scripts\activate          # Windows
-source venv/bin/activate       # macOS/Linux
-
-# Install dependencies
-pip install -r requirements.txt
-```
-
-## Running the app
+See [Download & install](#download--install-start-here) for the full setup. Once your virtual environment is active:
 
 ```bash
 python -m app.main
 ```
 
-On first run this will:
-1. Create `app/petrol_pump.db` (SQLite, WAL mode, foreign keys enforced)
-2. Seed the six business roles and their baseline permissions
-3. Seed a default admin account
-4. Launch the login window (or print a CLI fallback message if PySide6 isn't installed)
+Where the data goes:
 
-**Default admin login:**
-
-| Field | Value |
+| How you run it | Database location |
 |---|---|
-| Username | `admin` |
-| Password | `Admin@123` |
+| From source (`python -m app.main`) | `app/petrol_pump.db` next to the code |
+| Packaged `.exe` / installer | `%LOCALAPPDATA%\PetrolPumpERP\petrol_pump.db` |
+| Either, to override | set the `PETROL_PUMP_DB_PATH` environment variable to any file path |
 
-⚠️ This is a seeded development credential (see `app/database/seed.py`, `DEFAULT_ADMIN_PASSWORD`). It must be changed before any real deployment — there is no forced password-change-on-first-login flow yet.
+**Default admin login:** username `admin`, password `Admin@123`. This is a known, publicly-committed development credential (`app/database/seed.py`), so the app **forces you to replace it at first login**. Never leave it in place on a real deployment.
 
 ## Running the tests
 
@@ -403,7 +449,7 @@ On first run this will:
 pytest
 ```
 
-All 924 tests should pass, in about 6-7 minutes (most of that is PySide6 widget construction across the UI test modules, not business logic). To run a single module's tests:
+All 996 tests should pass, in about 6-7 minutes (most of that is PySide6 widget construction across the UI test modules, not business logic). To run a single module's tests:
 
 ```bash
 pytest tests/test_auth_rbac.py -v
@@ -428,13 +474,26 @@ pip install -r requirements-build.txt
 pyinstaller petrol_pump_erp.spec
 ```
 
-This produces a single file, `dist/PetrolPumpERP.exe` (~90MB — PySide6/Qt is the bulk of that). Copy that one file to any Windows PC and double-click it to run; nothing else needs to be installed.
+This produces a single file, `dist/PetrolPumpERP.exe` (~90MB — PySide6/Qt is the bulk of that). Copy that one file to any Windows PC and double-click it to run; nothing else needs to be installed. To wrap it in a proper Windows installer (Start Menu shortcuts, uninstaller), see [installer/README.md](installer/README.md) — or just push a version tag and let `release.yml` build and publish both.
 
 **Each install gets its own fresh, persistent database automatically.** This matters more than it sounds: a PyInstaller onefile build re-extracts itself to a new temporary directory on *every single launch*, so resolving the database path relative to the running executable (as a normal dev checkout does) would silently wipe the database on every restart once packaged. `app/database/connection.py` detects the frozen/packaged state and instead stores the database at `%LOCALAPPDATA%\PetrolPumpERP\petrol_pump.db` — a stable location that survives restarts and is private to whichever Windows user account runs it. This is covered by `tests/test_core_setup.py::test_frozen_build_uses_per_user_app_data_dir_not_temp_extraction_path`.
 
-On first launch on a new PC, the app creates that database, seeds the six roles/permissions and default fuel types, and creates the same dev admin login described above (`admin` / `Admin@123`) — change it before real use.
+On first launch on a new PC, the app creates that database, seeds the six roles/permissions and default fuel types, and creates the same dev admin login described above (`admin` / `Admin@123`), which must be changed at first login.
 
 ⚠️ `petrol_pump_erp.spec` intentionally bundles matplotlib/PIL/tkinter even though this app doesn't use them directly — excluding them was tried and broke PySide6's Qt platform-plugin bundling (the app exited silently right after startup, no window, no error). See the comment at the top of the spec file for the full story before trying to slim the build down.
+
+---
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| `python` not found / wrong version | Install Python 3.13+ and re-open the terminal; check with `python --version`. On Windows try `py -3.13` in place of `python`. |
+| `venv\Scripts\activate` is blocked in PowerShell | Run `Set-ExecutionPolicy -Scope Process RemoteSigned` once in that window, or use `cmd` instead. |
+| `pip install` fails building a package | Upgrade pip first: `python -m pip install --upgrade pip`. PySide6 needs 64-bit Python. |
+| Locked out after 5 wrong passwords | The lock lifts by itself after 15 minutes, or an admin/owner can unlock the account right away under Masters → Users. |
+| Want a fresh database | Close the app and delete `petrol_pump.db` (and its `-wal`/`-shm` files) from the location in the table above. This erases all data — take a backup first if any of it matters. |
+| App won't start / something looks wrong | Check `petrol_pump_erp.log` (next to the database), then see [docs/recovery-guide.md](docs/recovery-guide.md). |
 
 ---
 
@@ -480,6 +539,11 @@ This offline desktop application is phase one of a two-phase plan. Once it prove
 | [ROADMAP.md](ROADMAP.md) | Phase-by-phase plan (22 phases) with granular, checked-off task lists |
 | [DEVELOPMENT_GUIDELINES.md](DEVELOPMENT_GUIDELINES.md) | Development guidelines and architecture rules for this codebase |
 | [problemstatement.md](problemstatement.md) | The original, complete project requirements |
+| [docs/user-guide.md](docs/user-guide.md) | Day-to-day guide for attendants, supervisors, managers, accountants |
+| [docs/administrator-guide.md](docs/administrator-guide.md) | Installation, user management, configuration, backups, protecting the database file |
+| [docs/recovery-guide.md](docs/recovery-guide.md) | Restoring from backup and handling data problems |
+| [docs/first-shift-runbook.md](docs/first-shift-runbook.md) | Step-by-step for the first live shift |
+| [installer/README.md](installer/README.md) | Building the Windows installer and cutting a release |
 
 ## Roadmap status
 
@@ -504,7 +568,7 @@ This offline desktop application is phase one of a two-phase plan. Once it prove
 | 17: Printing System | 🟡 Complete for every report/document that exists today (print preview, CSV export, receipts, statements); print configuration management and document types tied to the still-missing Phase 16 reports are deferred |
 | 18: Backup & Recovery | 🟡 Complete except configurable backup location, recovery-workflow documentation, and optional encryption |
 | 19: Testing | 🟡 Largely already satisfied by each module's own tests; added the one real gap (a cross-service integration test) |
-| 20: Packaging & Deployment | 🟡 Started early (standalone .exe works end-to-end) — installer, config system, and packaged docs still open |
+| 20: Packaging & Deployment | ✅ Mostly complete — standalone `.exe`, Inno Setup installer, tag-triggered GitHub Release workflow, optional `config.env`, and user/admin/recovery guides all exist; a first published release awaits a version tag |
 | 21: Pilot Deployment & Feedback | ⬜ Requires real-world deployment and feedback from actual pump operations |
 | 22: Final Release | ⬜ Depends on Phase 21 |
 | Client-perspective review pass (Leave, cash shortages, shift cash book, navigation restructure, alert strip, keyboard shortcuts, login redesign) | ✅ Complete (2026-09-16 – 2026-09-25) — see PROJECT_CONTEXT.md's own review-log entries for full detail on each item |

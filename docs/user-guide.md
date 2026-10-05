@@ -7,7 +7,7 @@ This guide is for day-to-day staff: attendants, shift supervisors, managers, and
 1. Launch **Petrol Pump ERP** from the Start Menu or desktop shortcut.
 2. Enter the username and password given to you by your administrator.
 3. On your very first login, you'll be asked to set a new password. Choose one that's at least 8 characters, with an uppercase letter, a lowercase letter, and a digit.
-4. If you enter the wrong password five times in a row, the account locks for safety — ask your administrator to unlock it.
+4. If you enter the wrong password five times in a row, the account locks for safety. It unlocks itself after 15 minutes, or your administrator can unlock it straight away.
 
 Sessions expire automatically after a period of inactivity (8 hours by default). You'll be returned to the login screen and simply need to sign in again — nothing in progress is lost, since sales and shift actions are saved as you go, not only at the end.
 
