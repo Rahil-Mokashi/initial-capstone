@@ -112,7 +112,7 @@ class EmployeeListWindow(PageWindow):
             self.table.setItem(row_index, 1, QTableWidgetItem(f"{employee.first_name} {employee.last_name}"))
             self.table.setItem(row_index, 2, QTableWidgetItem(employee.designation or ""))
             self.table.setItem(row_index, 3, QTableWidgetItem(employee.department or ""))
-            self.table.setItem(row_index, 4, QTableWidgetItem(employee.status.replace("_", " ").title()))
+            self.table.setCellWidget(row_index, 4, self._make_status_widget(employee))
             self.table.setItem(row_index, 5, QTableWidgetItem(employee.joining_date.isoformat()))
             self.table.item(row_index, 0).setData(Qt.UserRole, employee.id)
             self.table.setCellWidget(
@@ -120,6 +120,42 @@ class EmployeeListWindow(PageWindow):
             )
         self.table.resizeColumnsToContents()
         self.table.horizontalHeader().setStretchLastSection(True)
+
+    def _make_status_widget(self, employee) -> QComboBox:
+        """Status directly in the list row - previously required opening
+        the detail dialog just to change it, the single most common edit
+        made to an employee record. Uses `activated` (fires only on a
+        real user pick, never on the setCurrentText below) so populating
+        the table doesn't itself trigger a change. Same EmployeeService.
+        change_status call, same mandatory reason prompt, same permission
+        gate (disabled outright for a view-only role) as the dialog's own
+        Apply button - only how many clicks it takes changed."""
+        combo = QComboBox()
+        combo.addItems([s.value for s in EmployeeStatus])
+        combo.setCurrentText(employee.status)
+        combo.setEnabled(self._can_manage)
+        combo.activated.connect(
+            lambda _index, eid=employee.id, c=combo, previous=employee.status: self._quick_status_change(eid, c, previous)
+        )
+        return combo
+
+    def _quick_status_change(self, employee_id: str, combo: QComboBox, previous_status: str) -> None:
+        new_status = EmployeeStatus(combo.currentText())
+        reason, ok = QInputDialog.getText(self, "Change status", "Reason for status change:")
+        if not ok or not reason.strip():
+            combo.setCurrentText(previous_status)
+            return
+        try:
+            self._employee_service.change_status(self._actor_user_id, employee_id, new_status, reason.strip())
+        except AppError as exc:
+            QMessageBox.warning(self, "Could not change status", str(exc))
+            combo.setCurrentText(previous_status)
+            return
+        except Exception as exc:  # noqa: BLE001 - last resort so a DB/unexpected error can't crash the window
+            QMessageBox.warning(self, "Could not change status", describe_unexpected_error(exc))
+            combo.setCurrentText(previous_status)
+            return
+        self.refresh()
 
     def _open_add_dialog(self) -> None:
         dialog = EmployeeFormDialog(self._employee_service, self._actor_user_id, self)

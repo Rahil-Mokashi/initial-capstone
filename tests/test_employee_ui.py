@@ -113,6 +113,50 @@ def test_employee_list_shows_created_employees(qapp, employee_service, admin_id)
     assert window.table.rowCount() == 1
 
 
+def test_list_window_inline_status_change_updates_employee(qapp, employee_service, admin_id, monkeypatch):
+    from app.ui.employee_window import EmployeeListWindow
+
+    monkeypatch.setattr("app.ui.employee_window.QInputDialog.getText", lambda *a, **k: ("Medical leave", True))
+
+    service, auth_service = employee_service
+    employee = service.create_employee(admin_id, make_employee_data())
+
+    window = EmployeeListWindow(service, auth_service, admin_id)
+    combo = window.table.cellWidget(0, 4)
+    combo.setCurrentText("on_leave")
+    window._quick_status_change(employee.id, combo, "active")
+
+    assert service.get_employee(admin_id, employee.id).status == "on_leave"
+
+
+def test_list_window_inline_status_change_cancelled_reverts_combo(qapp, employee_service, admin_id, monkeypatch):
+    from app.ui.employee_window import EmployeeListWindow
+
+    monkeypatch.setattr("app.ui.employee_window.QInputDialog.getText", lambda *a, **k: ("", False))
+
+    service, auth_service = employee_service
+    employee = service.create_employee(admin_id, make_employee_data())
+
+    window = EmployeeListWindow(service, auth_service, admin_id)
+    combo = window.table.cellWidget(0, 4)
+    combo.setCurrentText("on_leave")
+    window._quick_status_change(employee.id, combo, "active")
+
+    assert combo.currentText() == "active"
+    assert service.get_employee(admin_id, employee.id).status == "active"
+
+
+def test_list_window_status_combo_disabled_for_view_only_role(qapp, employee_service, admin_id, shift_supervisor_id):
+    from app.ui.employee_window import EmployeeListWindow
+
+    service, auth_service = employee_service
+    service.create_employee(admin_id, make_employee_data())
+
+    supervisor_window = EmployeeListWindow(service, auth_service, shift_supervisor_id)
+    combo = supervisor_window.table.cellWidget(0, 4)
+    assert combo.isEnabled() is False
+
+
 def test_add_button_visible_for_manager_hidden_for_view_only(qapp, employee_service, admin_id, shift_supervisor_id):
     from app.ui.employee_window import EmployeeListWindow
 
