@@ -61,6 +61,13 @@ QML_HIDDEN_IMPORTS = [
     "PySide6.QtQuickControls2",
 ]
 
+# alembic/env.py is loaded from disk at runtime (see DATA_FILES), so
+# PyInstaller never analyses it and never sees its stdlib imports.
+# Without this the frozen exe crashes on startup with
+# "No module named 'logging.config'" (found 2026-10-08 on the first
+# CI-built release).
+ALEMBIC_RUNTIME_IMPORTS = ["logging.config", "logging.handlers"]
+
 # Substrings matched against both the qml/ plugin folder path AND each
 # module's own top-level DLL/pyd filename (e.g. "WebEngine" matches both
 # qml/QtWebEngine/... and PySide6\Qt6WebEngineCore.dll). Kept as an
@@ -131,7 +138,7 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=DATA_FILES,
-    hiddenimports=QML_HIDDEN_IMPORTS,
+    hiddenimports=QML_HIDDEN_IMPORTS + ALEMBIC_RUNTIME_IMPORTS,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

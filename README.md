@@ -38,6 +38,8 @@ Pick the path that matches who you are. Everything runs **offline** — no accou
 
 > **No release published yet?** Releases are built automatically by CI when a version tag is pushed (`git tag v1.0.0 && git push origin v1.0.0`, see [installer/README.md](installer/README.md)). Until the first tag exists, use Option B, or build the `.exe` yourself ([instructions below](#building-a-standalone-windows-executable)).
 
+**Full manual:** [docs/manual/Petrol_Pump_ERP_User_Manual.pdf](docs/manual/Petrol_Pump_ERP_User_Manual.pdf) walks through every screen, with screenshots.
+
 Your data lives in `%LOCALAPPDATA%\PetrolPumpERP\` (database, backups, logs, exported reports). Uninstalling never deletes it.
 
 ### Option B — I want to run it from source (Windows / macOS / Linux)
