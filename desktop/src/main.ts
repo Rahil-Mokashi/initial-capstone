@@ -1,6 +1,9 @@
 import { BrowserWindow, Menu, app, ipcMain, session } from 'electron';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { dirname } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { checkInstallPath, tooLongMessage } from './preflight';
 import { listPrinters, printToPdf, printToPrinter, type PrintOptions } from './print';
 import { isAllowedNavigation, isAllowedRequest, type Policy } from './security';
 import { startSidecar, stopSidecar, waitUntilHealthy, type RunningSidecar } from './sidecar';
@@ -57,7 +60,7 @@ function sidecarConfig() {
   const extraEnv: NodeJS.ProcessEnv = {};
   if (app.isPackaged) {
     return {
-      executable: join(process.resourcesPath, 'sidecar', 'pperp-api', 'pperp-api.exe'),
+      executable: join(process.resourcesPath, 'api', 'pperp-api.exe'),
       webDir: join(process.resourcesPath, 'web'),
       extraEnv,
     };
@@ -128,7 +131,29 @@ function showError(message: string): void {
   previous?.destroy();
 }
 
+/** Packaged builds only: refuse, with a clear message, to start from a path that is too long. */
+function installPathProblem(): string | null {
+  if (!app.isPackaged) return null;
+  try {
+    const record = JSON.parse(
+      readFileSync(join(process.resourcesPath, 'path-budget.json'), 'utf8'),
+    ) as {
+      longestRelative: number;
+    };
+    const installDir = dirname(process.execPath);
+    const check = checkInstallPath(installDir, record.longestRelative);
+    return check.ok ? null : tooLongMessage(installDir, check);
+  } catch {
+    return null; // no record (older build): do not block startup
+  }
+}
+
 async function launch(): Promise<void> {
+  const pathProblem = installPathProblem();
+  if (pathProblem) {
+    showError(pathProblem);
+    return;
+  }
   try {
     const running = await startSidecar(sidecarConfig());
     sidecar = running;

@@ -33,6 +33,12 @@ a = Analysis(
     excludes=EXCLUDES,
     noarchive=False,
 )
+# Windows' 260-character path limit is the real constraint on where this can be installed (a deep
+# install path once made a migration file unloadable). Two cheap, measurable savings:
+#  1. stale __pycache__ folders copied along with alembic/ are never loaded - drop them;
+#  2. a one-character contents folder instead of the default "_internal".
+a.datas = [d for d in a.datas if "__pycache__" not in d[0]]
+
 pyz = PYZ(a.pure)
 exe = EXE(
     pyz,
@@ -43,6 +49,7 @@ exe = EXE(
     debug=False,
     strip=False,
     upx=False,
+    contents_directory="_",
     console=True,  # Electron starts it with windowsHide, and a console keeps crash output capturable
 )
 coll = COLLECT(exe, a.binaries, a.datas, strip=False, upx=False, name="pperp-api")

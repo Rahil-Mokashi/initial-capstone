@@ -119,3 +119,17 @@ lockout countdown, code signing, auto-update.
 - Printing spike, sidecar spec (api/pperp_api.spec, onedir, no Qt, 50 MB), NSIS installer (131.7 MB), installed-app smoke test and measurements: see JS_MIGRATION_REPORT.md.
 - Late parity fix: Enter moves to the next field (as in the Qt screens); remarks are single-line like Qt.
 - Final: Python 1103 passed; web 104; desktop 29; Playwright 28 (+3 opt-in).
+
+## FIX BATCH (2026-10-09, after the proof phase)
+
+### Step 0 - reset point re-verified (read-only)
+Tag reset/pre-js-frontend-2026-10-09 resolves to 652c589 (matches RESET_POINT.md); feature/login-screen-enhancements is still 652c589; git bundle verify: okay; tree clean. The local history rewrite (removing a stray tool-name mention from my own new commits) touched only commits after b945d1d; the tag and original branch are unaffected.
+
+### Fix 1 - install path length
+- Before: longest relative path 152 chars (a stale __pycache__ .pyc inside alembic/versions; the longest .py that is actually loaded was about 127). Layout was resources\sidecar\pperp-api\_internal\...
+- Changes (bundle layout only, migration file names untouched): PyInstaller contents folder "_internal" -> "_" (contents_directory in api/pperp_api.spec); stale __pycache__ dropped from the bundled data; extraResources folder resources\sidecar\pperp-api -> resources\api; NSIS default install folder %LOCALAPPDATA%\PPERP (33 chars here, set only when there is no previous install, via build/installer.nsh).
+- After: longest relative path 107 (a third-party lxml .xsl file; the longest migration .py is about 105).
+- Build gate (desktop/scripts/after-pack.cjs): measures the packed app, writes resources\path-budget.json, FAILS the build above 130. Justification: install folder + relative path must stay under 240 (260 minus 20 spare), so 130 allows an install folder of 110 characters; the default is 33.
+- Startup preflight (desktop/src/preflight.ts, wired in main.ts): install dir + recorded longest path > 240 shows the error screen (what, the numbers, how to fix) and does not start the service. 4 unit tests.
+- Verified: installed to a 166-char folder -> installer fine, app showed the too-long message, 0 sidecar processes (opt-in test e2e/deep-path.spec.ts passes); installed to the default folder -> packaged smoke test passes (login visible 3.7 s on this run).
+- Note: the bundle also contains packages that are not needed by the API (lxml, mypy, psutil, setuptools, yaml) because they are installed globally on this machine; excluding them would shrink it further. Not done (out of scope).

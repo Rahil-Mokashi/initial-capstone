@@ -33,7 +33,7 @@ test('the installed app starts, shows login, and the Tanks screen works end to e
   const procs = execSync('powershell -NoProfile -Command "(Get-Process pperp-api).Path"', {
     encoding: 'utf8',
   });
-  expect(procs.toLowerCase()).toContain('resources\\sidecar\\pperp-api\\pperp-api.exe');
+  expect(procs.toLowerCase()).toContain('resources\\api\\pperp-api.exe');
 
   await page.getByLabel('Username').fill('manager1');
   await page.getByLabel('Password').fill('Passw0rd!x');

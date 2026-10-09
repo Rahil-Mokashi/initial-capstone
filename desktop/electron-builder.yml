@@ -4,6 +4,7 @@ productName: Petrol Pump ERP
 copyright: Petrol Pump ERP
 directories:
   output: release
+afterPack: scripts/after-pack.cjs
 files:
   - dist/**
   - package.json
@@ -11,7 +12,7 @@ asar: true
 extraResources:
   # The Python API, frozen by PyInstaller (api/pperp_api.spec) - a SEPARATE executable Electron spawns.
   - from: sidecar-dist/pperp-api
-    to: sidecar/pperp-api
+    to: api
   # The built web UI, served by the sidecar.
   - from: ../web/dist
     to: web
@@ -27,3 +28,5 @@ nsis:
   allowToChangeInstallationDirectory: true
   # Like the Qt installer: uninstalling must never delete the database or any historical data.
   deleteAppDataOnUninstall: false
+  # Short default install folder (%LOCALAPPDATA%\PPERP) - see build/installer.nsh.
+  include: build/installer.nsh
