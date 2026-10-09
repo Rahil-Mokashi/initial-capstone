@@ -261,16 +261,37 @@ describe('recording a reading', () => {
     expect(window.localStorage.getItem('pperp.lastReadingEmployee')).toBe('e1');
   });
 
-  it('refuses bad numbers on the spot, without calling the server', async () => {
+  it('will not let a fourth decimal place be typed, says why, and never calls the server', async () => {
     const { calls } = setup(MANAGE);
     await signIn();
     const card = screen.getByRole('heading', { name: 'T1' }).closest('li')!;
     await userEvent.click(within(card).getByRole('button', { name: 'Record reading' }));
     await userEvent.selectOptions(await screen.findByLabelText('Taken by'), 'e1');
     await userEvent.type(screen.getByLabelText('Physical stock (L)'), '12.3456');
-    await userEvent.click(screen.getByRole('button', { name: 'Save reading' }));
-    expect(await screen.findByText(/at most 3 decimal places/)).toBeInTheDocument();
+    expect(screen.getByLabelText('Physical stock (L)')).toHaveValue('12.345'); // not rounded, not sent
+    expect(screen.getByText(/at most 3 decimal places/)).toBeInTheDocument();
     expect(calls.some((c) => c.key.startsWith('POST /api/tanks'))).toBe(false);
+  });
+
+  it('a pasted value with too many places is refused as a whole', async () => {
+    setup(MANAGE);
+    await signIn();
+    const card = screen.getByRole('heading', { name: 'T1' }).closest('li')!;
+    await userEvent.click(within(card).getByRole('button', { name: 'Receipt' }));
+    const box = screen.getByLabelText('Quantity (L)');
+    await userEvent.click(box);
+    await userEvent.paste('100.12345');
+    expect(box).toHaveValue('');
+    expect(screen.getByText(/Extra digits are not accepted/)).toBeInTheDocument();
+  });
+
+  it('an adjustment accepts a minus sign, a receipt does not', async () => {
+    setup(MANAGE);
+    await signIn();
+    const card = screen.getByRole('heading', { name: 'T1' }).closest('li')!;
+    await userEvent.click(within(card).getByRole('button', { name: 'Receipt' }));
+    await userEvent.type(screen.getByLabelText('Quantity (L)'), '-5');
+    expect(screen.getByLabelText('Quantity (L)')).toHaveValue('5');
   });
 
   it('puts a server validation message next to the right field', async () => {

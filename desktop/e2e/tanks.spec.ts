@@ -90,6 +90,26 @@ test.describe('recording', () => {
     await expect(t1.getByText('3,501.000')).toBeVisible();
   });
 
+  test('number boxes stop at three decimal places and explain, instead of showing a server error', async ({
+    launched,
+  }) => {
+    const { page } = launched;
+    await signIn(page, 'manager1');
+    const t1 = page
+      .getByRole('listitem')
+      .filter({ has: page.getByRole('heading', { name: 'T1' }) });
+    await t1.getByRole('button', { name: 'Receipt' }).click();
+    const dialog = page.getByRole('dialog');
+    const quantity = dialog.getByLabel('Quantity (L)');
+    await quantity.pressSequentially('12.3456');
+    await expect(quantity).toHaveValue('12.345'); // the fourth place was refused, nothing rounded
+    await expect(dialog.getByText(/at most 3 decimal places/)).toBeVisible();
+    await expect(dialog.getByRole('alert')).toHaveCount(0); // no error banner, no server round trip needed
+    await dialog.getByRole('button', { name: 'Record receipt' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(t1.getByText('2,512.845')).toBeVisible(); // 2500.500 + 12.345, exact
+  });
+
   test('reconciling resets the book stock and reports the variance', async ({ launched }) => {
     const { page } = launched;
     await signIn(page, 'manager1');

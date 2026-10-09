@@ -5,6 +5,7 @@ import { z } from 'zod';
 import type { Reconciliation, Tank, TankStatus, TransactionType } from '@/api/types';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
+import { DecimalField } from '@/components/ui/DecimalField';
 import { SelectField, TextField } from '@/components/ui/Field';
 import { useToast } from '@/components/ui/Toast';
 import { applyApiError } from '@/lib/formErrors';
@@ -148,14 +149,14 @@ export function AddTankDialog({ open, onClose }: DialogBase) {
           ))}
         </SelectField>
         <div className="grid grid-cols-2 gap-4">
-          <TextField
+          <DecimalField
             label="Capacity (L)"
             inputMode="decimal"
             className="num"
             error={errors.capacity?.message}
             {...register('capacity')}
           />
-          <TextField
+          <DecimalField
             label="Opening stock (L)"
             inputMode="decimal"
             className="num"
@@ -260,8 +261,9 @@ export function TransactionDialog({
           {formatLitres(tank.capacity)}
         </p>
         <FormError message={formError} />
-        <TextField
+        <DecimalField
           label="Quantity (L)"
+          negative={type === 'adjustment'}
           autoFocus
           inputMode="decimal"
           className="num"
@@ -376,7 +378,7 @@ export function ReadingDialog({ tank, onClose }: { tank: Tank; onClose: () => vo
             </option>
           ))}
         </SelectField>
-        <TextField
+        <DecimalField
           label="Physical stock (L)"
           autoFocus
           inputMode="decimal"
@@ -385,7 +387,7 @@ export function ReadingDialog({ tank, onClose }: { tank: Tank; onClose: () => vo
           error={errors.physical_stock?.message}
           {...register('physical_stock')}
         />
-        <TextField
+        <DecimalField
           label="Dip value"
           optional
           inputMode="decimal"
@@ -489,7 +491,7 @@ export function ReconcileDialog({ tank, onClose }: { tank: Tank; onClose: () => 
           error={errors.reconciliation_date?.message}
           {...register('reconciliation_date')}
         />
-        <TextField
+        <DecimalField
           label="Physical stock (L)"
           autoFocus
           inputMode="decimal"

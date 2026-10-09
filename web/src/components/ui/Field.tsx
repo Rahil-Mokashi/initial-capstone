@@ -36,7 +36,7 @@ export function FieldShell({ label, hint, error, optional, children }: FieldShel
       </label>
       {children({ id, describedBy, invalid: Boolean(error) })}
       {hint && !error && (
-        <p id={hintId} className="text-xs text-muted">
+        <p id={hintId} aria-live="polite" className="text-xs text-muted">
           {hint}
         </p>
       )}
