@@ -29,6 +29,8 @@ dependencies = [
     "PySide6>=6.7",
     "reportlab>=4.0",
     "openpyxl>=3.1",
+    "fastapi>=0.110",
+    "uvicorn>=0.27",
 ]
 
 [project.optional-dependencies]
@@ -42,7 +44,7 @@ dev = [
 ]
 
 [tool.setuptools]
-packages = ["app"]
+packages = ["app", "api"]
 
 # ---------------------------------------------------------------------
 # Ruff: linter + formatter, written in Rust, replacing flake8/isort/black.

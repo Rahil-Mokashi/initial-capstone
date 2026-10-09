@@ -14,6 +14,8 @@ pytest>=8.0
 PySide6>=6.7
 reportlab>=4.0
 openpyxl>=3.1
+fastapi>=0.110      # local HTTP API sidecar (api/) the Electron front end talks to
+uvicorn>=0.27     # serves api/ on 127.0.0.1 only
 pypdf>=4.0  # test-only: verifies PDF export content in tests/test_report_export.py
 
 # Optional: Windows Hello support for the Lock Screen (app/core/windows_hello.py).
