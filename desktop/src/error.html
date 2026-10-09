@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src 'unsafe-inline'; img-src data:"
+    />
+    <title>Petrol Pump ERP</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: 'Segoe UI', system-ui, sans-serif;
+        background: #f4f2ed;
+        color: #1b2420;
+        display: grid;
+        place-items: center;
+        min-height: 100vh;
+      }
+      main {
+        max-width: 520px;
+        padding: 32px;
+      }
+      h1 {
+        font-size: 24px;
+        margin: 0 0 8px;
+      }
+      p {
+        color: #55605a;
+        line-height: 1.5;
+      }
+      pre {
+        background: #fff;
+        border: 1px solid #e2dfd6;
+        border-radius: 10px;
+        padding: 12px;
+        max-height: 140px;
+        overflow: auto;
+        white-space: pre-wrap;
+        font-size: 12px;
+      }
+      .row {
+        display: flex;
+        gap: 12px;
+        margin-top: 20px;
+      }
+      button {
+        min-height: 44px;
+        padding: 0 20px;
+        border-radius: 10px;
+        border: 1px solid #8a8f87;
+        background: #fff;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button.primary {
+        background: #0b5d4b;
+        border-color: #0b5d4b;
+        color: #fff;
+      }
+      button:focus-visible {
+        outline: 3px solid #1d4ed8;
+        outline-offset: 2px;
+      }
+    </style>
+  </head>
+  <body>
+    <main role="alert">
+      <h1>The application could not start</h1>
+      <p>
+        Your data has not been changed. Try again; if this keeps happening, close the app, restart
+        the computer, and tell your administrator what is shown below.
+      </p>
+      <pre id="details"></pre>
+      <div class="row">
+        <button id="restart" class="primary" type="button">Try again</button>
+        <button id="quit" type="button">Close</button>
+      </div>
+    </main>
+  </body>
+</html>

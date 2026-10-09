@@ -73,6 +73,14 @@ async function signIn() {
   await screen.findByRole('heading', { name: 'T1' }); // the list itself has loaded
 }
 
+// Like signIn(), but the list never loads for this role.
+async function signIn403() {
+  await userEvent.type(screen.getByLabelText('Username'), 'manager1');
+  await userEvent.type(screen.getByLabelText('Password'), 'Passw0rd!x');
+  await userEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+  await screen.findByRole('heading', { level: 1, name: /Tanks & Inventory/ });
+}
+
 beforeEach(() => session.set(null));
 afterEach(() => vi.unstubAllGlobals());
 
@@ -187,6 +195,15 @@ describe('permissions', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Record receipt' }));
     expect(await screen.findByText(/don't have permission/i)).toBeInTheDocument();
     expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('a role with no inventory access sees ONE clear explanation, not one per panel', async () => {
+    setup(VIEW_ONLY, {
+      'GET /api/tanks': () =>
+        apiError(403, 'permission_denied', 'denied', { permission: 'inventory.view' }),
+    });
+    await signIn403();
+    expect(await screen.findAllByText('You do not have access to this')).toHaveLength(1);
   });
 
   it('the detail page disables write actions for a view-only role and says why', async () => {

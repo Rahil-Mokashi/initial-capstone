@@ -2,6 +2,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { ClipboardList, LayoutGrid, Plus, Table2 } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { ApiError } from '@/api/errors';
 import type { Tank, TankTransaction } from '@/api/types';
 import { useAuth } from '@/auth/AuthContext';
 import { DataTable } from '@/components/DataTable';
@@ -190,36 +191,43 @@ export function TanksPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_20rem]">
-        <section aria-label="Tanks">
-          {tanks.isLoading ? (
-            <LoadingBlock label="Loading tanks" rows={4} />
-          ) : tanks.isError ? (
-            <ErrorState error={tanks.error} onRetry={() => void tanks.refetch()} />
-          ) : tanks.data && tanks.data.length === 0 ? (
-            <EmptyState title="No tanks yet">
-              {canManage
-                ? 'Add your first tank to start tracking stock.'
-                : 'A manager needs to add the tanks first.'}
-            </EmptyState>
-          ) : view === 'cards' ? (
-            <ul className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">
-              {tanks.data?.map((t) => (
-                <TankCard key={t.id} tank={t} canManage={canManage} onAction={setDialog} />
-              ))}
-            </ul>
-          ) : (
-            <DataTable
-              caption="All tanks"
-              columns={tankColumns}
-              data={tanks.data ?? []}
-              getRowId={(t) => t.id}
-              empty={null}
-            />
-          )}
-        </section>
-        <RecentTransactions />
-      </div>
+      {tanks.isError &&
+      tanks.error instanceof ApiError &&
+      tanks.error.code === 'permission_denied' ? (
+        // One clear message, not one per panel.
+        <ErrorState error={tanks.error} />
+      ) : (
+        <div className="grid gap-6 xl:grid-cols-[1fr_20rem]">
+          <section aria-label="Tanks">
+            {tanks.isLoading ? (
+              <LoadingBlock label="Loading tanks" rows={4} />
+            ) : tanks.isError ? (
+              <ErrorState error={tanks.error} onRetry={() => void tanks.refetch()} />
+            ) : tanks.data && tanks.data.length === 0 ? (
+              <EmptyState title="No tanks yet">
+                {canManage
+                  ? 'Add your first tank to start tracking stock.'
+                  : 'A manager needs to add the tanks first.'}
+              </EmptyState>
+            ) : view === 'cards' ? (
+              <ul className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">
+                {tanks.data?.map((t) => (
+                  <TankCard key={t.id} tank={t} canManage={canManage} onAction={setDialog} />
+                ))}
+              </ul>
+            ) : (
+              <DataTable
+                caption="All tanks"
+                columns={tankColumns}
+                data={tanks.data ?? []}
+                getRowId={(t) => t.id}
+                empty={null}
+              />
+            )}
+          </section>
+          <RecentTransactions />
+        </div>
+      )}
 
       {dialog?.kind === 'add' && <AddTankDialog open onClose={close} />}
       {dialog?.kind === 'receipt' && (

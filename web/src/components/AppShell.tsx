@@ -27,7 +27,10 @@ function Sidebar() {
           <p className="text-xs text-ink-muted">Back office</p>
         </div>
       </div>
-      <nav aria-label="Main" className="flex-1 overflow-y-auto px-3 py-4">
+      <nav
+        aria-label="Main"
+        className="flex-1 overflow-y-auto px-3 py-4 [scrollbar-color:var(--ink-muted)_transparent] [scrollbar-width:thin]"
+      >
         {groups.map((group) => (
           <div key={group.label} className="mb-5">
             <p className="px-3 pb-1.5 text-xs font-bold tracking-widest text-ink-muted uppercase">
@@ -52,7 +55,7 @@ function Sidebar() {
                     <span
                       aria-disabled="true"
                       title="Not in the new app yet - open it in the classic app"
-                      className="flex min-h-[44px] items-center justify-between rounded-md px-3 text-sm text-ink-muted"
+                      className="flex min-h-[44px] items-center justify-between gap-2 rounded-md px-3 text-sm text-ink-muted"
                     >
                       {item.label}
                       <span className="rounded bg-ink-2 px-1.5 py-0.5 text-[10px] font-bold tracking-wide uppercase">

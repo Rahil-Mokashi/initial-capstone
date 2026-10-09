@@ -49,6 +49,65 @@ Branch `feature/js-frontend`. Never pushed.
   Host header; CSP; no CORS; no docs endpoints; 500 mapping.
 - Full suite after phase: **1103 passed** (996 baseline + 107 API), 8m08s, no hang.
 
+## Phase 3 - Electron shell + front-end foundation
+- `desktop/` (Electron 44.7, TypeScript strict, esbuild bundles main + two preloads) and `web/` (React 19, TS ~5.9 strict,
+  Vite 7, Tailwind 4, TanStack Query 5 + Table 8, React Router 7 (HashRouter), react-hook-form + zod 4, Radix Dialog/Tabs,
+  lucide, @fontsource-variable/inter). ESLint 9 + Prettier + `@/` path aliases in both.
+- Version choices: npm "latest" is newer than I could vouch for (TypeScript 7, TanStack Table 9, ESLint 10), so I pinned
+  the majors whose APIs I know (TS 5.9, Table 8, ESLint 9, Vite 7). Upgrading is a separate, deliberate task.
+  `npm audit`: web 0 issues (vitest 5 fixed a tinypool advisory); desktop 8 moderate, all `sprintf-js` inside
+  electron-builder (build-time tooling, never shipped) - left alone.
+- Process lifecycle as in the ADR: free port, 32-byte random launch secret, env hand-off, health poll, single-instance lock,
+  graceful shutdown first (`POST /api/system/shutdown`, sidecar checkpoints the WAL) then force-kill of the process TREE
+  after a timeout, crash -> error window with "Try again". Proven by e2e (WAL file is 0 bytes after quit).
+- Hardening as in the ADR: contextIsolation, no nodeIntegration, sandbox, no webview, deny new windows, block navigation,
+  deny every permission request, preload exposes exactly {apiBase, launchSecret, print.{toPdf,toPrinter,listPrinters}}.
+  Offline: CSP (layer 1) + `session.webRequest` blocker cancelling everything but the sidecar's own origin (layer 2,
+  also rejects URLs with embedded credentials) + build gate (layer 3).
+- UI is served BY THE SIDECAR (same origin, static files from web/dist), not loaded from file://. Reason: with
+  `default-src 'self'` this needs no CORS at all and no `file://` special cases. Dev: Vite proxy adds the secret.
+- Typed client: `npm run api:types` exports the OpenAPI schema from the FastAPI app and runs openapi-typescript;
+  request decimals are typed `string` (WithJsonSchema) so the compiler also forbids sending numbers.
+- Build gate `web/scripts/check-offline.mjs` runs inside `npm run build`. It first FAILED on inert strings inside bundled
+  libraries (react.dev error-doc links, react-router doc link, JSON-schema dialect ids, an IPv6 template). Those are
+  allowlisted EXACTLY, for .js files only; HTML/CSS get no allowance. Unit-tested incl. look-alike hosts.
+- Tests: web Vitest 102 (error mapping, client, formatting, shared components, offline gate, WCAG contrast of both
+  themes, Tanks flows); desktop Vitest 29 (request policy, sidecar lifecycle with a stub service).
+- Bugs found by tests and fixed in NEW code (none in Qt/backend): `aria-describedby` pointed at a hidden hint when an
+  error showed; closing the main window before opening the error window made Electron quit the whole app; a
+  double-click on "Add tank" opened then instantly dismissed the dialog (outside-click now never dismisses a form).
+- Environment trap: this machine's shell sets `ELECTRON_RUN_AS_NODE=1`, which makes `electron` run as plain Node.
+  The sidecar launcher, the e2e fixtures and docs all unset it. Anyone running `npx electron` by hand must too.
+
+## Phase 4 - Tanks proof screen
+- Feature parity with `app/ui/tank_window.py` (see the checklist in JS_MIGRATION_REPORT.md): gauges + table + recent
+  transactions, add tank, tank detail (transactions / readings / reconciliations + variance card), receipt / issue /
+  adjustment, dip reading, reconcile (with result), change status (reason), all gated by the same permissions.
+- UX improvements (each with its reason):
+  1. Receipt and Record reading are buttons on each tank card - one click from the list instead of list -> detail -> button.
+  2. Tank detail is a ROUTE, not a stacked dialog: Back works, the page can be reloaded, and it cannot be opened twice.
+  3. Fill level is printed ("25.0%", "Low - 18.0%") next to the bar with an icon: never colour alone, readable at a glance.
+  4. Inline validation next to each field (3-decimal limit, no negatives, reason required for adjustments) before anything
+     is sent; the server's per-field errors are placed on the right field, and the typed values are kept on any failure.
+  5. Dialogs show the tank's current stock so a wrong number is noticed before saving.
+  6. Reading dialog pre-selects whoever took the last reading on this PC (localStorage; failure ignored).
+  7. Reconcile starts with today's date and shows a clear result (expected / physical / variance / classification) before closing.
+  8. Cards/Table toggle: Qt showed both at once; here one at a time, so the screen is less crowded.
+  9. Outside clicks never dismiss a data-entry dialog (lost typing); Esc / Close / Cancel do.
+  10. A role with no inventory access sees ONE explanation instead of an error in every panel.
+  11. Disabled action buttons say why ("Needs the inventory.manage permission").
+- Qt screen behaviours deliberately not copied: the duplicate-window bug (impossible here: one route per screen and one
+  dialog state value); QInputDialog for status change (now a real form with a validated reason).
+- Open questions (matching the Qt screen in the meantime): (a) Qt's reading dialog lists employees via EMPLOYEE_VIEW, so a
+  role with INVENTORY_MANAGE but not EMPLOYEE_VIEW cannot choose a person - same here, with an explanatory message;
+  (b) the Qt dip-value box treats 0 as "not entered"; here an empty field is "not entered" and "0" is sent as 0.
+- Playwright (real Electron + real Python API + seeded temp DB): 27 tests - login, view, reading, receipt incl. rule
+  violation, reconcile, accountant view-only, server-side 403 via the real stack, attendant no-access, logout and
+  server-side token rejection, no duplicate module/window, offline (session makes zero non-loopback requests; page CSP;
+  CSP-free window still blocked by the main-process blocker; main-process fetch blocked; blocker log asserted),
+  hardening (no require/process, bridge keys, web preferences, new window/navigation denied, strict CSP, secret needed),
+  single-instance lock, graceful WAL checkpoint, crash -> error screen -> recovery, un-startable service -> error screen.
+
 ## Deferred (per brief)
 PIN sign-in, Windows Hello, screen lock, self-service reset, locale toggle, Caps Lock warning,
 lockout countdown, code signing, auto-update.
