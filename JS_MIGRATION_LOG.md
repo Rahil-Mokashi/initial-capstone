@@ -162,3 +162,9 @@ Tag reset/pre-js-frontend-2026-10-09 resolves to 652c589 (matches RESET_POINT.md
 - PRINTING_TEST.md: owner steps, an A4 checklist and a thermal-receipt checklist (driver vs raw, page size, margins, length, cut, density, drawer, rupee sign), and what to send back.
 - What I ran here (no physical printer exists on this PC): --list (2 printers: OneNote, Microsoft Print to PDF), --to-pdf dry run (report: 2 pages, 595 x 842 pt; receipt: 1 page, 227 x 454 pt, text present), a bad printer name (exit code 2, clear message). Printing to paper: NOT done, NOT verified, and the silent Print-to-PDF driver is deliberately not used as evidence.
 - Bugs found in the harness while testing it: Electron quits when the last hidden window closes (needed a window-all-closed handler); load errors are now logged instead of an unhandled rejection.
+
+### Fix 6 - dependency and build checks
+- requirements.lock vs the reset tag: 37 -> 46 pins. ADDED (exactly FastAPI/uvicorn's tree, all hash-pinned): fastapi 0.143.0, starlette 1.7.0, uvicorn 0.54.0, anyio 4.14.0, click 8.3.2, h11 0.16.0, idna 3.10, annotated-doc 0.0.5, opentelemetry-api 1.45.1. REMOVED: none. CHANGED: none.
+- This FIXES an earlier side effect: the first lock bumped typing_extensions 4.15.0 -> 4.16.0 (pip pulled it in because anyio 4.15.x requires it). anyio is now pinned to 4.14.0, which does not need the newer typing_extensions on Python 3.13, and typing_extensions is back at 4.15.0 (the Qt app's original pin). `pip check` is clean and `pip install --dry-run --require-hashes -r requirements.lock` reports no conflict.
+- Qt build from this branch: `pyinstaller petrol_pump_erp.spec` (output to a scratch folder so dist/ was not touched) built in 4m50s: 116,634,062 bytes (the earlier exe was 116,634,823). Launched on a fresh throwaway database: window "FuelDesk - Sign In" appeared after 12.8 s, database created. No Qt source or spec was changed.
+- Qt tests: run in the final full suite (see below).
