@@ -3,3 +3,5 @@ dist
 release
 test-results
 playwright-report
+sidecar-dist
+sidecar-build

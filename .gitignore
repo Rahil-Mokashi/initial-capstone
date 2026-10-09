@@ -157,3 +157,6 @@ reports/*.csv
 
 # Runtime-generated report exports directory
 app/reports/
+
+# New: the API sidecar spec (the two above are the Qt app's).
+!api/pperp_api.spec

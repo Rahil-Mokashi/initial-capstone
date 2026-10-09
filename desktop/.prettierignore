@@ -3,3 +3,6 @@ release
 node_modules
 test-results
 playwright-report
+sidecar-dist
+sidecar-build
+release

@@ -1,0 +1,29 @@
+# NSIS installer for the new Electron app. The Qt app's Inno Setup installer is untouched.
+appId: com.petrolpumperp.desktop
+productName: Petrol Pump ERP
+copyright: Petrol Pump ERP
+directories:
+  output: release
+files:
+  - dist/**
+  - package.json
+asar: true
+extraResources:
+  # The Python API, frozen by PyInstaller (api/pperp_api.spec) - a SEPARATE executable Electron spawns.
+  - from: sidecar-dist/pperp-api
+    to: sidecar/pperp-api
+  # The built web UI, served by the sidecar.
+  - from: ../web/dist
+    to: web
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  # Code signing is deferred (out of scope this session); this also avoids downloading signing tools.
+  signAndEditExecutable: false
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  # Like the Qt installer: uninstalling must never delete the database or any historical data.
+  deleteAppDataOnUninstall: false
