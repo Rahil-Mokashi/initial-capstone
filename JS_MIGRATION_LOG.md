@@ -156,3 +156,9 @@ Tag reset/pre-js-frontend-2026-10-09 resolves to 652c589 (matches RESET_POINT.md
 - Tests: web 153 (+19): tone map incl. unknown fallback, fractions (equal, zero, negative clamp, exact strings), component (label, printed numbers, meters, widths, colour token per classification, plus sign).
 - Screenshots: docs/js-variance-warning.png, js-variance-critical.png, js-variance-critical-dark.png (real app).
 - Small difference from Qt, deliberate: bar fills use the same palette tokens as the rest of the web UI rather than the Qt hex values.
+
+### Fix 5 - printing test harness (hardware needed; NOT verified)
+- desktop/scripts/print-test/ (launcher run.cjs, main.cjs, static sample report.html and receipt.html generated from the real Qt HTML builders so the owner needs no Python). `npm run print-test -- --list | --printer "<name>" [--doc report|receipt|both] [--dialog] [--receipt-width-mm N] [--receipt-height-mm N] [--margins none|default] | --to-pdf <folder>`. Writes print-test-log.txt with exactly what Electron answered per job; the log itself says success only means "handed to the spooler".
+- PRINTING_TEST.md: owner steps, an A4 checklist and a thermal-receipt checklist (driver vs raw, page size, margins, length, cut, density, drawer, rupee sign), and what to send back.
+- What I ran here (no physical printer exists on this PC): --list (2 printers: OneNote, Microsoft Print to PDF), --to-pdf dry run (report: 2 pages, 595 x 842 pt; receipt: 1 page, 227 x 454 pt, text present), a bad printer name (exit code 2, clear message). Printing to paper: NOT done, NOT verified, and the silent Print-to-PDF driver is deliberately not used as evidence.
+- Bugs found in the harness while testing it: Electron quits when the last hidden window closes (needed a window-all-closed handler); load errors are now logged instead of an unhandled rejection.

@@ -5,3 +5,4 @@ test-results
 playwright-report
 sidecar-dist
 sidecar-build
+print-test-log.txt
