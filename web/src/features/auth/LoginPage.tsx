@@ -8,6 +8,7 @@ import { ApiError } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/Field';
+import { enterToAdvance } from '@/lib/enterToAdvance';
 
 const schema = z.object({
   username: z.string().trim().min(1, 'Enter your username.'),
@@ -65,6 +66,7 @@ export function LoginPage() {
 
       <main className="flex items-center justify-center p-6">
         <form
+          onKeyDown={enterToAdvance}
           onSubmit={onSubmit}
           noValidate
           className="flex w-full max-w-sm flex-col gap-5"

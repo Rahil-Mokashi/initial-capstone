@@ -7,6 +7,7 @@ import { ApiError } from '@/api/errors';
 import { useAuth } from '@/auth/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/Field';
+import { enterToAdvance } from '@/lib/enterToAdvance';
 
 const schema = z
   .object({
@@ -42,7 +43,12 @@ export function ChangePasswordPage() {
 
   return (
     <main className="flex min-h-full items-center justify-center p-6">
-      <form onSubmit={onSubmit} noValidate className="flex w-full max-w-sm flex-col gap-5">
+      <form
+        onKeyDown={enterToAdvance}
+        onSubmit={onSubmit}
+        noValidate
+        className="flex w-full max-w-sm flex-col gap-5"
+      >
         <div>
           <h1 className="text-2xl font-bold">Choose a new password</h1>
           <p className="mt-1 text-sm text-muted">

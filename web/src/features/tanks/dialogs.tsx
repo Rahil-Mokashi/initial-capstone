@@ -5,7 +5,7 @@ import { z } from 'zod';
 import type { Reconciliation, Tank, TankStatus, TransactionType } from '@/api/types';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
-import { SelectField, TextAreaField, TextField } from '@/components/ui/Field';
+import { SelectField, TextField } from '@/components/ui/Field';
 import { useToast } from '@/components/ui/Toast';
 import { applyApiError } from '@/lib/formErrors';
 import { checkDecimal, formatLitres, formatQuantity, titleCase, todayIso } from '@/lib/format';
@@ -18,6 +18,7 @@ import {
   useRecordTransaction,
   useSetStatus,
 } from './queries';
+import { enterToAdvance } from '@/lib/enterToAdvance';
 
 // ---- shared pieces ------------------------------------------------------------------
 const decimal = (rules?: Parameters<typeof checkDecimal>[1]) =>
@@ -123,7 +124,7 @@ export function AddTankDialog({ open, onClose }: DialogBase) {
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()} title="Add tank">
-      <form onSubmit={submit} noValidate className="flex flex-col gap-4">
+      <form onKeyDown={enterToAdvance} onSubmit={submit} noValidate className="flex flex-col gap-4">
         <FormError message={formError} />
         <TextField
           label="Tank code"
@@ -253,7 +254,7 @@ export function TransactionDialog({
       title={`${copy.title} - ${tank.code}`}
       description={copy.hint}
     >
-      <form onSubmit={submit} noValidate className="flex flex-col gap-4">
+      <form onKeyDown={enterToAdvance} onSubmit={submit} noValidate className="flex flex-col gap-4">
         <p className="num rounded-md bg-surface-2 p-3 text-sm">
           Now in tank: <strong>{formatLitres(tank.current_stock)}</strong> of{' '}
           {formatLitres(tank.capacity)}
@@ -275,7 +276,7 @@ export function TransactionDialog({
           error={errors.reference?.message}
           {...register('reference')}
         />
-        <TextAreaField
+        <TextField
           label="Remarks"
           optional={type !== 'adjustment'}
           error={errors.remarks?.message}
@@ -361,7 +362,7 @@ export function ReadingDialog({ tank, onClose }: { tank: Tank; onClose: () => vo
       title={`Record reading - ${tank.code}`}
       description="A dip reading is an observation. It does not change the book stock; reconcile for that."
     >
-      <form onSubmit={submit} noValidate className="flex flex-col gap-4">
+      <form onKeyDown={enterToAdvance} onSubmit={submit} noValidate className="flex flex-col gap-4">
         <FormError message={formError} />
         <SelectField
           label="Taken by"
@@ -392,7 +393,7 @@ export function ReadingDialog({ tank, onClose }: { tank: Tank; onClose: () => vo
           error={errors.dip_value?.message}
           {...register('dip_value')}
         />
-        <TextAreaField label="Remarks" optional {...register('remarks')} />
+        <TextField label="Remarks" optional {...register('remarks')} />
         <Actions onCancel={onClose} submitLabel="Save reading" busy={record.isPending} />
       </form>
     </Dialog>
@@ -477,7 +478,7 @@ export function ReconcileDialog({ tank, onClose }: { tank: Tank; onClose: () => 
       title={`Reconcile - ${tank.code}`}
       description="Compares the expected stock with what you measured, then resets the book stock to the measured figure."
     >
-      <form onSubmit={submit} noValidate className="flex flex-col gap-4">
+      <form onKeyDown={enterToAdvance} onSubmit={submit} noValidate className="flex flex-col gap-4">
         <p className="num rounded-md bg-surface-2 p-3 text-sm">
           Book stock now: <strong>{formatLitres(tank.current_stock)}</strong>
         </p>
@@ -497,7 +498,7 @@ export function ReconcileDialog({ tank, onClose }: { tank: Tank; onClose: () => 
           error={errors.physical_stock?.message}
           {...register('physical_stock')}
         />
-        <TextAreaField label="Remarks" optional {...register('remarks')} />
+        <TextField label="Remarks" optional {...register('remarks')} />
         <Actions onCancel={onClose} submitLabel="Reconcile" busy={reconcile.isPending} />
       </form>
     </Dialog>
@@ -548,7 +549,7 @@ export function StatusDialog({ tank, onClose }: { tank: Tank; onClose: () => voi
       title={`Change status - ${tank.code}`}
       description={`Currently ${tank.status}.`}
     >
-      <form onSubmit={submit} noValidate className="flex flex-col gap-4">
+      <form onKeyDown={enterToAdvance} onSubmit={submit} noValidate className="flex flex-col gap-4">
         <FormError message={formError} />
         <SelectField label="New status" {...register('status')}>
           {STATUSES.map((s) => (
@@ -557,7 +558,7 @@ export function StatusDialog({ tank, onClose }: { tank: Tank; onClose: () => voi
             </option>
           ))}
         </SelectField>
-        <TextAreaField
+        <TextField
           label="Reason"
           autoFocus
           error={errors.reason?.message}

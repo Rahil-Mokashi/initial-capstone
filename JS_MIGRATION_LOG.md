@@ -101,7 +101,7 @@ Branch `feature/js-frontend`. Never pushed.
 - Open questions (matching the Qt screen in the meantime): (a) Qt's reading dialog lists employees via EMPLOYEE_VIEW, so a
   role with INVENTORY_MANAGE but not EMPLOYEE_VIEW cannot choose a person - same here, with an explanatory message;
   (b) the Qt dip-value box treats 0 as "not entered"; here an empty field is "not entered" and "0" is sent as 0.
-- Playwright (real Electron + real Python API + seeded temp DB): 27 tests - login, view, reading, receipt incl. rule
+- Playwright (real Electron + real Python API + seeded temp DB): 28 tests run by default + 3 opt-in - login, view, reading, receipt incl. rule
   violation, reconcile, accountant view-only, server-side 403 via the real stack, attendant no-access, logout and
   server-side token rejection, no duplicate module/window, offline (session makes zero non-loopback requests; page CSP;
   CSP-free window still blocked by the main-process blocker; main-process fetch blocked; blocker log asserted),
@@ -114,3 +114,8 @@ lockout countdown, code signing, auto-update.
 
 ## NEEDS HUMAN REVIEW
 (none yet)
+
+## Phase 5 - printing + packaging
+- Printing spike, sidecar spec (api/pperp_api.spec, onedir, no Qt, 50 MB), NSIS installer (131.7 MB), installed-app smoke test and measurements: see JS_MIGRATION_REPORT.md.
+- Late parity fix: Enter moves to the next field (as in the Qt screens); remarks are single-line like Qt.
+- Final: Python 1103 passed; web 104; desktop 29; Playwright 28 (+3 opt-in).

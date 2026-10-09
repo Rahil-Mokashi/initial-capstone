@@ -291,6 +291,46 @@ describe('recording a reading', () => {
   });
 });
 
+describe('Enter key (same as the Qt screens)', () => {
+  it('Enter in the username moves to the password instead of submitting; Enter in the last field submits', async () => {
+    const { calls } = setup(MANAGE);
+    await userEvent.type(screen.getByLabelText('Username'), 'manager1{Enter}');
+    expect(screen.getByLabelText('Password')).toHaveFocus();
+    expect(calls).toHaveLength(0); // nothing sent yet
+    await userEvent.type(screen.getByLabelText('Password'), 'Passw0rd!x{Enter}');
+    await screen.findByRole('heading', { level: 1, name: /Tanks & Inventory/ });
+    expect(calls.some((c) => c.key === 'POST /api/auth/login')).toBe(true);
+  });
+
+  it('in a dialog, Enter walks the fields and only the last one saves', async () => {
+    const { calls } = setup(MANAGE, {
+      'POST /api/tanks/t1/transactions': () =>
+        json(201, {
+          id: 'x',
+          tank_id: 't1',
+          tank_code: 'T1',
+          transaction_type: 'receipt',
+          quantity: '10.000',
+          transaction_at: '2026-10-09T05:30:00Z',
+          reference: null,
+          remarks: null,
+          recorded_by: 'm',
+        }),
+    });
+    await signIn();
+    const card = screen.getByRole('heading', { name: 'T1' }).closest('li')!;
+    await userEvent.click(within(card).getByRole('button', { name: 'Receipt' }));
+    await userEvent.type(screen.getByLabelText('Quantity (L)'), '10{Enter}');
+    expect(screen.getByLabelText(/Reference/)).toHaveFocus();
+    await userEvent.keyboard('{Enter}');
+    expect(screen.getByLabelText(/Remarks/)).toHaveFocus();
+    expect(calls.some((c) => c.key === 'POST /api/tanks/t1/transactions')).toBe(false);
+    await userEvent.keyboard('{Enter}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(calls.some((c) => c.key === 'POST /api/tanks/t1/transactions')).toBe(true);
+  });
+});
+
 describe('adding a tank', () => {
   it('creates the tank with string decimals and shows the new list', async () => {
     const { calls } = setup(MANAGE, {
