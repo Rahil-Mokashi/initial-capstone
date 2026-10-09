@@ -15,10 +15,11 @@ import { DataTable } from '@/components/DataTable';
 import { Button } from '@/components/ui/Button';
 import { EmptyState, ErrorState, LoadingBlock } from '@/components/ui/States';
 import { StatusBadge } from '@/components/ui/StatusBadge';
-import { formatDate, formatDateTime, formatPercent, formatQuantity, titleCase } from '@/lib/format';
+import { formatDate, formatDateTime, formatQuantity, titleCase } from '@/lib/format';
 import { P } from '@/lib/permissions';
 import { ReadingDialog, ReconcileDialog, StatusDialog, TransactionDialog } from './dialogs';
 import { useReadings, useReconciliations, useTank, useTransactions } from './queries';
+import { VarianceBars } from './VarianceBars';
 import { GaugeBar, LevelBadge, StatusPill, StockFigures } from './TankGauge';
 
 type DialogState =
@@ -240,24 +241,7 @@ function Body({ tank }: { tank: Tank }) {
           />
         </Tabs.Content>
         <Tabs.Content value="reconciliation" className="flex flex-col gap-4 pt-4">
-          {latest && (
-            <div className="rounded-lg border border-line bg-surface p-4 shadow-card">
-              <p className="text-sm font-semibold">
-                Latest reconciliation - {formatDate(latest.reconciliation_date)}
-              </p>
-              <p className="num mt-1 text-sm text-muted">
-                Expected {formatQuantity(latest.expected_closing_stock)} L, physical{' '}
-                {formatQuantity(latest.physical_stock)} L, variance{' '}
-                {formatQuantity(latest.variance, { signed: true })} L (
-                {formatPercent(latest.variance_percent)})
-              </p>
-              <div className="mt-2">
-                <StatusBadge tone={classificationTone(latest.classification)}>
-                  {titleCase(latest.classification)}
-                </StatusBadge>
-              </div>
-            </div>
-          )}
+          {latest && <VarianceBars reconciliation={latest} />}
           <TabPanel
             query={recons}
             caption="Reconciliations"
