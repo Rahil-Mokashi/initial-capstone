@@ -16,6 +16,14 @@ export interface PrintOptions {
   outputPath?: string;
 }
 
+const MICRONS_PER_INCH = 25_400;
+
+/** Callers give custom sizes in microns (what webContents.print wants); printToPDF wants inches. */
+function pdfPageSize(size: PrintOptions['pageSize']): 'A4' | { width: number; height: number } {
+  if (!size || size === 'A4') return 'A4';
+  return { width: size.width / MICRONS_PER_INCH, height: size.height / MICRONS_PER_INCH };
+}
+
 // Document is fully self-contained: no network, no scripts.
 const CSP =
   '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; img-src data:; font-src data:">';
@@ -59,11 +67,12 @@ export async function printToPdf(
   try {
     return await withPrintWindow(html, policy, async (win) => {
       const data = await win.webContents.printToPDF({
-        pageSize: options.pageSize ?? 'A4',
+        pageSize: pdfPageSize(options.pageSize),
         printBackground: true,
         preferCSSPageSize: true,
       });
-      let path = options.outputPath;
+      // Only the test harness may choose the file; in the real app the user always picks it.
+      let path = process.env.PPERP_E2E === '1' ? options.outputPath : undefined;
       if (!path) {
         const choice = await dialog.showSaveDialog({
           defaultPath: join(app.getPath('documents'), 'report.pdf'),
