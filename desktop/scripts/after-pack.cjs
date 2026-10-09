@@ -24,7 +24,32 @@ function longestRelative(root) {
   return best;
 }
 
+// Electron "fuses": switches burned into the executable that remove ways of turning the packaged app
+// into something else. Applied to the exe in the unpacked folder before it is packaged.
+//  - RunAsNode off: ELECTRON_RUN_AS_NODE=1 can no longer make the app behave as a plain Node.js.
+//  - EnableNodeOptionsEnvironmentVariable off: NODE_OPTIONS cannot inject code.
+//  - EnableNodeCliInspectArguments off: --inspect / --inspect-brk cannot open a debugger on the main process.
+//  - EnableEmbeddedAsarIntegrityValidation + OnlyLoadAppFromAsar on: the app code must come from the
+//    signed-off app.asar and is checked against a digest, so a loose folder or edited asar is refused.
+// The UI is NOT loaded from the file protocol (it is served by the local sidecar over 127.0.0.1) so no
+// file-protocol fuse is touched. The error screen is loaded from inside app.asar, which OnlyLoadAppFromAsar allows.
+async function applyFuses(context) {
+  const { flipFuses, FuseVersion, FuseV1Options } = require('@electron/fuses');
+  const exe = join(context.appOutDir, context.packager.appInfo.productFilename + '.exe');
+  await flipFuses(exe, {
+    version: FuseVersion.V1,
+    resetAdHocDarwinSignature: false,
+    [FuseV1Options.RunAsNode]: false,
+    [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
+    [FuseV1Options.EnableNodeCliInspectArguments]: false,
+    [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: true,
+    [FuseV1Options.OnlyLoadAppFromAsar]: true,
+  });
+  console.log('  - fuses applied to ' + exe);
+}
+
 exports.default = async function afterPack(context) {
+  await applyFuses(context);
   const root = context.appOutDir;
   // The record file lives at resources\path-budget.json; make sure it is counted in the measurement.
   const record = join(root, 'resources', 'path-budget.json');

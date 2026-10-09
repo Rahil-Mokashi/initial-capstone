@@ -20,8 +20,9 @@ win:
   target:
     - target: nsis
       arch: [x64]
-  # Code signing is deferred (out of scope this session); this also avoids downloading signing tools.
-  signAndEditExecutable: false
+  signAndEditExecutable: true
+  # No code signing yet (deferred): keep resource editing (icon, version, asar integrity digest) but never sign.
+  signExecutable: false
 nsis:
   oneClick: false
   perMachine: false
