@@ -157,7 +157,7 @@ test('the installed (fused) app still enforces the offline rules: CSP, no outsid
     expect(probe.outside).toBe('blocked');
     expect(probe.http).toBe('blocked');
     expect(probe.csp).toMatch(/^default-src 'self'/);
-    expect(probe.bridge).toEqual(['apiBase', 'launchSecret', 'print']);
+    expect(probe.bridge).toEqual(['apiBase', 'files', 'launchSecret', 'print']);
     expect(probe.node).toEqual(['undefined', 'undefined']);
   } finally {
     await browser.close().catch(() => undefined);

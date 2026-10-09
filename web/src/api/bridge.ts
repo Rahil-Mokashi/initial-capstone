@@ -8,6 +8,7 @@ export interface PrintOptions {
 export interface PperpBridge {
   apiBase: string;
   launchSecret: string;
+  files: { pickPath(): Promise<string | null> };
   print: {
     toPdf(
       html: string,

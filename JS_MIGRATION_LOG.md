@@ -178,3 +178,19 @@ Tag reset/pre-js-frontend-2026-10-09 resolves to 652c589 (matches RESET_POINT.md
   * test:screenshots: 2 passed (docs regenerated).
   * test:print-spike: the call returned ok:true against "Microsoft Print to PDF" but nothing printed, i.e. it was a meaningless pass. The test now skips itself as INCONCLUSIVE when only virtual printers exist (not counted as a pass).
 - Refactor note: shared installed-app helpers moved to e2e/installed.ts; packaged tests re-run after the move: 4 passed.
+
+## CHECKPOINT - full migration, started (stopped by request)
+The owner asked for ALL functionality to be migrated, in my preferred (dependency) order. Work began and was stopped after the first screen's backend and the shared toolkit. Everything below is committed and green; nothing else is half-done.
+
+### Done and committed at this checkpoint
+- tests/api/test_api_route_matrix.py: reads the OpenAPI schema and checks EVERY route (existing and future) needs the launch secret (403) and a session (401, also for a garbage token). New routers cannot forget authentication.
+- Employees API (api/routers/employees.py, 21 tests): list, get, create, patch (only sent fields), status change with reason, exit (date defaults to today like Qt), documents list/add/remove. Audit rows and chain verified. Registered in api/app.py.
+- Shared web toolkit: FormDialog (Enter-to-next-field, errors inside, one dialog), ReasonDialog (confirm + required reason), PageHeader, SearchBox, api.patch, Reason type on the API side.
+- Preload bridge extended by ONE method, files.pickPath() (Windows file dialog in the main process; the page only receives a path or null), needed because Qt stores the picked file path for employee documents. Bridge-key tests updated. E2E can set PPERP_E2E_PICK_PATH.
+- web/src/features/employees/queries.ts (hooks for all employee calls); API types regenerated.
+
+### NOT done yet (next steps, in this order)
+1. Employees UI: list (search, inline status with reason), add dialog (outlet default "Main Outlet", joining date today), detail page (profile edit, status apply, record exit, documents add via files.pickPath / remove), nav entry + routes, unit + Playwright tests, then the Employees commit.
+2. Fuel Prices; Users; Nozzles & Dispensers; Suppliers/Procurement (largest); Shifts + My Shift; Attendance; Leave; Sales + Customers; Terminal; Credit; Expenses; Reconciliation (+ cash book, shortages); Reports hub; Analytics; Dashboard + alert strip + notifications; Company Profile; Backups; Audit Log; login extras (PIN, forgot password, lock screen, support).
+3. After each screen: update the parity checklist in JS_MIGRATION_REPORT.md, run the full suites, rebuild the installer.
+Not re-run at this checkpoint: Playwright (the bridge-key expectations were updated but not executed) and the full Python suite (only tests/api employees and route matrix were run: 75 passed).

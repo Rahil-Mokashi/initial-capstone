@@ -40,6 +40,8 @@ export async function launchApp(
     PETROL_PUMP_DB_PATH: dbPath,
     PPERP_WEB_DIR: join(repoRoot, 'web', 'dist'),
     PYTHONUTF8: '1',
+    // What the file dialog returns in tests (a native dialog cannot be clicked in an automated run).
+    PPERP_E2E_PICK_PATH: 'C:\\docs\\id-proof.pdf',
   });
 
   const app = await electron.launch({ args: [desktopDir], cwd: desktopDir, env });

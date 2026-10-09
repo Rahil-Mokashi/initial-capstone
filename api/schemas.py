@@ -10,7 +10,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Annotated, Literal, Optional
 
-from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, PlainSerializer, WithJsonSchema
+from pydantic import BaseModel, StringConstraints, BeforeValidator, ConfigDict, Field, PlainSerializer, WithJsonSchema
 
 from app.core.constants import TankStatus, TankTransactionType
 from app.core.money import money, volume
@@ -36,6 +36,10 @@ VolumeIn = Annotated[
     # The generated TypeScript type must say "string" - numbers are rejected.
     WithJsonSchema({"type": "string", "pattern": r"^-?\d{1,9}(\.\d{1,3})?$", "examples": ["12.500"]}),
 ]
+
+
+# A person-written explanation that must not be blank (the Qt screens refuse an empty reason in the dialog).
+Reason = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=1000)]
 
 
 class Out(BaseModel):

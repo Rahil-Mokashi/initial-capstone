@@ -18,7 +18,7 @@ test.describe('electron hardening', () => {
     expect(probe.require).toBe('undefined');
     expect(probe.process).toBe('undefined');
     expect(probe.buffer).toBe('undefined');
-    expect(probe.bridge).toEqual(['apiBase', 'launchSecret', 'print']);
+    expect(probe.bridge).toEqual(['apiBase', 'files', 'launchSecret', 'print']);
     expect(probe.print).toEqual(['listPrinters', 'toPdf', 'toPrinter']);
   });
 

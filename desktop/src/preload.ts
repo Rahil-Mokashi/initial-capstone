@@ -17,6 +17,10 @@ interface PrintOptions {
 contextBridge.exposeInMainWorld('pperp', {
   apiBase: arg('pperp-api-base'),
   launchSecret: arg('pperp-secret'),
+  files: {
+    // Opens the Windows file dialog in the main process; the page only ever receives the chosen path (or null).
+    pickPath: (): Promise<string | null> => ipcRenderer.invoke('files:pick'),
+  },
   print: {
     toPdf: (html: string, options?: PrintOptions) =>
       ipcRenderer.invoke('print:toPdf', html, options),

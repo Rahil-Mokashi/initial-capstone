@@ -1,4 +1,4 @@
-import { BrowserWindow, Menu, app, ipcMain, session } from 'electron';
+import { BrowserWindow, Menu, app, dialog, ipcMain, session } from 'electron';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { dirname } from 'node:path';
@@ -186,6 +186,15 @@ async function restart(): Promise<void> {
 function registerIpc(): void {
   ipcMain.handle('shell:restart', () => restart());
   ipcMain.handle('shell:quit', () => app.quit());
+  ipcMain.handle('files:pick', async (event) => {
+    // Test harness only: a fixed answer instead of a native dialog nobody can click in an automated run.
+    if (E2E && process.env.PPERP_E2E_PICK_PATH) return process.env.PPERP_E2E_PICK_PATH;
+    const win = BrowserWindow.fromWebContents(event.sender) ?? undefined;
+    const result = await (win
+      ? dialog.showOpenDialog(win, { properties: ['openFile'] })
+      : dialog.showOpenDialog({ properties: ['openFile'] }));
+    return result.canceled || result.filePaths.length === 0 ? null : (result.filePaths[0] ?? null);
+  });
   ipcMain.handle('print:toPdf', (_e, html: string, options: PrintOptions = {}) =>
     printToPdf(String(html), options, policy),
   );
