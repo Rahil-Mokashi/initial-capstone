@@ -48,8 +48,6 @@ Branch `feature/js-frontend`. Never pushed.
   every state-changing call and `verify_chain()` after; decimals-as-strings contract; loopback-only bind;
   Host header; CSP; no CORS; no docs endpoints; 500 mapping.
 - Full suite after phase: **1103 passed** (996 baseline + 107 API), 8m08s, no hang.
-- Observation (not changed): the Qt `TankService` has no way to list ISSUE transactions made by sales with
-  their sale link; unrelated to this phase.
 
 ## Deferred (per brief)
 PIN sign-in, Windows Hello, screen lock, self-service reset, locale toggle, Caps Lock warning,
