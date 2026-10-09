@@ -168,3 +168,13 @@ Tag reset/pre-js-frontend-2026-10-09 resolves to 652c589 (matches RESET_POINT.md
 - This FIXES an earlier side effect: the first lock bumped typing_extensions 4.15.0 -> 4.16.0 (pip pulled it in because anyio 4.15.x requires it). anyio is now pinned to 4.14.0, which does not need the newer typing_extensions on Python 3.13, and typing_extensions is back at 4.15.0 (the Qt app's original pin). `pip check` is clean and `pip install --dry-run --require-hashes -r requirements.lock` reports no conflict.
 - Qt build from this branch: `pyinstaller petrol_pump_erp.spec` (output to a scratch folder so dist/ was not touched) built in 4m50s: 116,634,062 bytes (the earlier exe was 116,634,823). Launched on a fresh throwaway database: window "FuelDesk - Sign In" appeared after 12.8 s, database created. No Qt source or spec was changed.
 - Qt tests: run in the final full suite (see below).
+
+### Fix 7 - repeatable checks and docs
+- OFFLINE_ACCEPTANCE.md created (did not exist): install, disconnect every network, sign in, view tanks, record a reading (or a receipt on an empty database), log out, restart. It states plainly that I could NOT do this step: it needs a real PC with the network physically off.
+- desktop/README.md documents every script. npm scripts added (via scripts/opt-in.cjs, which also unsets ELECTRON_RUN_AS_NODE): test:packaged [--install], test:deep-path (self-installs into a deep folder), test:screenshots, test:print-spike, plus print-test.
+- Each run once through npm:
+  * test:packaged --install: 4 passed (smoke, run-as-node fuse with unfused control, inspector/NODE_OPTIONS, offline rules).
+  * test:deep-path: first run FAILED (timeout). Cause: that spec still used Playwright's Electron mode, which the fuses (Fix 2) disable; the test, not the product, was wrong (the error window with the "too long" message did appear). Rewrote it to attach over Chromium's debugging port via shared e2e/installed.ts; then 1 passed. The test's expectations about the message were not loosened.
+  * test:screenshots: 2 passed (docs regenerated).
+  * test:print-spike: the call returned ok:true against "Microsoft Print to PDF" but nothing printed, i.e. it was a meaningless pass. The test now skips itself as INCONCLUSIVE when only virtual printers exist (not counted as a pass).
+- Refactor note: shared installed-app helpers moved to e2e/installed.ts; packaged tests re-run after the move: 4 passed.

@@ -14,7 +14,11 @@
     "start": "npm run build && electron .",
     "e2e": "npm run build && playwright test",
     "dist": "npm run build && electron-builder --win nsis",
-    "print-test": "node scripts/print-test/run.cjs"
+    "print-test": "node scripts/print-test/run.cjs",
+    "test:packaged": "node scripts/opt-in.cjs packaged",
+    "test:deep-path": "node scripts/opt-in.cjs deep-path",
+    "test:screenshots": "node scripts/opt-in.cjs screenshots",
+    "test:print-spike": "node scripts/opt-in.cjs print-spike"
   },
   "devDependencies": {
     "@electron/fuses": "^2.1.3",

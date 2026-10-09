@@ -110,6 +110,13 @@ test.describe('printing from the Electron app', () => {
       process.env.PRINT_SPIKE !== '1',
       'silent printing touches a real printer: run with PRINT_SPIKE=1',
     );
+    // A virtual printer (PDF, OneNote, XPS, fax) cannot show that paper printing works: its driver asks
+    // for a file name, so "success" proves nothing. Say so instead of reporting a meaningless pass.
+    const physical = printers.filter((p) => !/pdf|onenote|xps|fax/i.test(p.name));
+    test.skip(
+      physical.length === 0,
+      'INCONCLUSIVE: only virtual printers are installed. Use PRINTING_TEST.md on a real printer.',
+    );
     // Electron may report no printer as default even when Windows has one; '' means "the system default".
     const def = printers.find((p) => p.isDefault) ?? { name: '', isDefault: true };
     const dir = testInfo.outputPath('print');
