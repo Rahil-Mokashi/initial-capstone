@@ -11,7 +11,7 @@ test('a manager prices a fuel with a reason and sees it in the history', async (
   await dialog.getByLabel('New rate per litre').fill('');
   await dialog.getByLabel('New rate per litre').pressSequentially('104.505');
   await expect(dialog.getByLabel('New rate per litre')).toHaveValue('104.50');
-  await dialog.getByLabel('Reason').fill('OMC revision');
+  await dialog.getByLabel(/^Reason/).fill('OMC revision');
   await dialog.getByRole('button', { name: 'Save' }).click();
   await expect(dialog).toBeHidden();
   await expect(page.getByRole('row', { name: /Petrol/ })).toContainText('₹104.50');

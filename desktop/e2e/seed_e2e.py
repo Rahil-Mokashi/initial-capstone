@@ -37,6 +37,7 @@ def main() -> None:
     session = connection.SessionLocal()
     try:
         for username, role in (
+            ("admin1", UserRole.ADMIN),
             ("manager1", UserRole.MANAGER),
             ("accountant1", UserRole.ACCOUNTANT),
             ("attendant1", UserRole.ATTENDANT),

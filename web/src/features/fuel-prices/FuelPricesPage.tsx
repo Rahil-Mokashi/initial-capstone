@@ -43,7 +43,7 @@ const schema = z.object({
         ctx.addIssue({ code: 'custom', message: 'The rate must be between 0.01 and 10,000.' });
       }
     }),
-  reason: z.string().trim().min(1, 'Give a reason for the change.').max(500),
+  reason: z.string().trim().max(500),
 });
 type Values = z.infer<typeof schema>;
 
@@ -94,6 +94,7 @@ function ChangePriceDialog({ fuel, onClose }: { fuel: Fuel; onClose: () => void 
       />
       <TextField
         label="Reason"
+        optional
         placeholder="e.g. Daily OMC revision, 17 Aug"
         maxLength={500}
         error={errors.reason?.message}

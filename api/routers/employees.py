@@ -6,7 +6,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends
 
 from api.deps import CurrentUser, current_user, get_services
-from api.schemas import In, Out, Reason
+from api.schemas import In, OptionalReason, Out, Reason
 from api.services import Services
 from app.core.constants import EmployeeStatus
 from app.schemas.employee import EmployeeCreate, EmployeeUpdate
@@ -66,13 +66,13 @@ class EmployeeUpdateIn(In):
 
 class StatusIn(In):
     status: EmployeeStatus
-    reason: Reason
+    reason: OptionalReason
 
 
 class ExitIn(In):
     # The Qt screen always uses today's date; an explicit date is accepted for back-dated exits.
     exit_date: Optional[date] = None
-    reason: Reason
+    reason: OptionalReason
 
 
 class DocumentIn(In):
@@ -82,7 +82,7 @@ class DocumentIn(In):
 
 
 class RemoveDocumentIn(In):
-    reason: Reason
+    reason: OptionalReason
 
 
 @router.get("/employees", response_model=list[EmployeeFull])

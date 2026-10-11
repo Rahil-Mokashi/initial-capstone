@@ -6,7 +6,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends
 
 from api.deps import CurrentUser, current_user, get_services
-from api.schemas import In, MoneyIn, MoneyOut, Out, Reason
+from api.schemas import In, MoneyIn, MoneyOut, OptionalReason, Out
 from api.services import Services
 from app.schemas.fuel import FuelRateChange
 
@@ -31,7 +31,7 @@ class PriceHistoryOut(Out):
 
 class RateIn(In):
     new_rate_per_liter: MoneyIn
-    reason: Reason
+    reason: OptionalReason
 
 
 def _out(fuel) -> FuelPriceOut:

@@ -204,3 +204,10 @@ Not re-run at this checkpoint: Playwright (the bridge-key expectations were upda
 ### Fuel Prices (2026-10-11)
 - api/routers/fuel_prices.py (list, history, set rate; MoneyIn = strings, 2 dp), Services now wires every service like AppController (lazy, per request). web: FuelPricesPage (priced/unpriced badge, warning banner, change price with reason, per-fuel history), shared hooks in web/src/api/hooks.ts.
 - Tests: tests/api 6 new, web unit 4 new, Playwright fuel-prices.spec.ts.
+
+### Reasons made optional (owner decision, 2026-10-11)
+- The owner does not want a compulsory reason. In the NEW app every reason box is optional (employee status/exit/document removal, fuel price, tank status, stock adjustment, user actions). api/schemas.py OptionalReason turns a blank reason into the text "No reason given" so the audit row is never empty.
+- NEEDS HUMAN REVIEW: the shared services (app/services/*) still refuse a blank reason, so the Qt app still asks for one. I did not change them (rule: no service changes during UI migration). Say if you want the services relaxed too; that would change Qt behaviour and audit semantics.
+
+### Users (2026-10-11)
+- api/routers/users.py (list, roles, create, role, active, unlock, reset password, reset code; admin only via user.manage), web features/users (list, add, detail page with every Qt action, reset code shown once). Tests: tests/api 7, web 6, Playwright users.spec.ts. e2e seed gained admin1; tests/api conftest gained admin.

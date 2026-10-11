@@ -66,6 +66,7 @@ def _make_user(db, role_name: str, username: str, must_change_password: bool = F
 @pytest.fixture()
 def users(db):
     """username -> role: manager (view+manage), accountant (view only), attendant (no inventory access)."""
+    _make_user(db, UserRole.ADMIN.value, "admin1")
     _make_user(db, UserRole.MANAGER.value, "manager1")
     _make_user(db, UserRole.ACCOUNTANT.value, "accountant1")
     _make_user(db, UserRole.ATTENDANT.value, "attendant1")
@@ -104,6 +105,11 @@ def client(session_factory, users):
 @pytest.fixture()
 def manager(client):
     return login(client, "manager1")
+
+
+@pytest.fixture()
+def admin(client):
+    return login(client, "admin1")
 
 
 @pytest.fixture()

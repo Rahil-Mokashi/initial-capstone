@@ -430,16 +430,162 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Users */
+        get: operations["list_users_api_users_get"];
+        put?: never;
+        /** Create User */
+        post: operations["create_user_api_users_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/users/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Roles
+         * @description Qt fills its role boxes from RoleRepository.list_all(); only user managers see those dialogs.
+         */
+        get: operations["list_roles_api_users_roles_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/users/{user_id}/active": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Set Active */
+        post: operations["set_active_api_users__user_id__active_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/users/{user_id}/reset-code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reset Code
+         * @description The one-time code is returned once and never stored in clear (the service keeps only a hash).
+         */
+        post: operations["reset_code_api_users__user_id__reset_code_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/users/{user_id}/reset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reset Password */
+        post: operations["reset_password_api_users__user_id__reset_password_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/users/{user_id}/role": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Change Role */
+        post: operations["change_role_api_users__user_id__role_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/users/{user_id}/unlock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Unlock */
+        post: operations["unlock_api_users__user_id__unlock_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** ActiveIn */
+        ActiveIn: {
+            /** Is Active */
+            is_active: boolean;
+            /**
+             * Reason
+             * @default No reason given
+             */
+            reason: string;
+        };
         /** ChangePasswordIn */
         ChangePasswordIn: {
             /** Current Password */
             current_password: string;
             /** New Password */
             new_password: string;
+        };
+        /** ChangeRoleIn */
+        ChangeRoleIn: {
+            /**
+             * Reason
+             * @default No reason given
+             */
+            reason: string;
+            /** Role Id */
+            role_id: string;
         };
         /** DocumentIn */
         DocumentIn: {
@@ -565,7 +711,10 @@ export interface components {
         ExitIn: {
             /** Exit Date */
             exit_date?: string | null;
-            /** Reason */
+            /**
+             * Reason
+             * @default No reason given
+             */
             reason: string;
         };
         /** FuelOut */
@@ -629,7 +778,10 @@ export interface components {
              * @example 102.50
              */
             new_rate_per_liter: string;
-            /** Reason */
+            /**
+             * Reason
+             * @default No reason given
+             */
             reason: string;
         };
         /** ReadingIn */
@@ -667,6 +819,14 @@ export interface components {
             remarks?: string | null;
             /** Tank Id */
             tank_id: string;
+        };
+        /** ReasonIn */
+        ReasonIn: {
+            /**
+             * Reason
+             * @default No reason given
+             */
+            reason: string;
         };
         /** ReconcileIn */
         ReconcileIn: {
@@ -719,12 +879,40 @@ export interface components {
         };
         /** RemoveDocumentIn */
         RemoveDocumentIn: {
-            /** Reason */
+            /**
+             * Reason
+             * @default No reason given
+             */
             reason: string;
+        };
+        /** ResetCodeOut */
+        ResetCodeOut: {
+            /** Code */
+            code: string;
+        };
+        /** ResetPasswordIn */
+        ResetPasswordIn: {
+            /** New Password */
+            new_password: string;
+            /**
+             * Reason
+             * @default No reason given
+             */
+            reason: string;
+        };
+        /** RoleOut */
+        RoleOut: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
         };
         /** StatusIn */
         StatusIn: {
-            /** Reason */
+            /**
+             * Reason
+             * @default No reason given
+             */
             reason: string;
             status: components["schemas"]["EmployeeStatus"];
         };
@@ -781,7 +969,10 @@ export interface components {
         TankStatus: "active" | "inactive" | "maintenance";
         /** TankStatusIn */
         TankStatusIn: {
-            /** Reason */
+            /**
+             * Reason
+             * @default No reason given
+             */
             reason: string;
             status: components["schemas"]["TankStatus"];
         };
@@ -826,6 +1017,21 @@ export interface components {
             /** Transaction Type */
             transaction_type: string;
         };
+        /** UserCreateIn */
+        UserCreateIn: {
+            /** Email */
+            email: string;
+            /** First Name */
+            first_name?: string | null;
+            /** Last Name */
+            last_name?: string | null;
+            /** Password */
+            password: string;
+            /** Role Id */
+            role_id: string;
+            /** Username */
+            username: string;
+        };
         /** UserOut */
         UserOut: {
             /** First Name */
@@ -840,6 +1046,31 @@ export interface components {
             permissions: string[];
             /** Role */
             role?: string | null;
+            /** Username */
+            username: string;
+        };
+        /** UserRow */
+        UserRow: {
+            /** Email */
+            email: string;
+            /** First Name */
+            first_name?: string | null;
+            /** Id */
+            id: string;
+            /** Is Active */
+            is_active: boolean;
+            /** Is Locked */
+            is_locked: boolean;
+            /** Last Login */
+            last_login?: string | null;
+            /** Last Name */
+            last_name?: string | null;
+            /** Role */
+            role?: string | null;
+            /** Role Id */
+            role_id?: string | null;
+            /** Status */
+            status: string;
             /** Username */
             username: string;
         };
@@ -1931,6 +2162,296 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TransactionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_users_api_users_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserRow"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_user_api_users_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserCreateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserRow"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_roles_api_users_roles_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoleOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_active_api_users__user_id__active_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActiveIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserRow"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_code_api_users__user_id__reset_code_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReasonIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResetCodeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_password_api_users__user_id__reset_password_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResetPasswordIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserRow"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_role_api_users__user_id__role_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangeRoleIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserRow"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unlock_api_users__user_id__unlock_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReasonIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserRow"];
                 };
             };
             /** @description Validation Error */

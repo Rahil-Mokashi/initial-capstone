@@ -68,3 +68,12 @@ def current_user(user: CurrentUser = Depends(current_user_allow_pending)) -> Cur
     if user.user.must_change_password:
         raise ApiError(403, "password_change_required", "You must change your password before continuing.")
     return user
+
+
+def require_permission(services: Services, user_id: str, permission) -> None:
+    """For lookups the Qt screen reads straight from a repository: same permission the Qt screen implies."""
+    from app.core.exceptions import PermissionDeniedError
+
+    if not services.auth.check_permission(user_id, permission.value):
+        services.auth.record_permission_denied(user_id, permission.value)
+        raise PermissionDeniedError(permission.value)

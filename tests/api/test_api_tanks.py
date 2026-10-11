@@ -124,7 +124,7 @@ def test_set_status_403_422(client, accountant, manager, tank):
     assert client.post(f"/api/tanks/{tank['id']}/status", headers=manager,
                        json={"status": "exploded", "reason": "x"}).status_code == 422
     blank = client.post(f"/api/tanks/{tank['id']}/status", headers=manager, json={"status": "inactive", "reason": "  "})
-    assert blank.status_code == 422 and blank.json()["error"]["code"] == "rule_violation"
+    assert blank.status_code == 200  # reason optional (owner decision)
 
 
 # ---- transactions -----------------------------------------------------------------------
@@ -177,13 +177,13 @@ def test_transaction_business_rules(client, manager, tank, session_factory):
     assert under.status_code == 409
     noreason = client.post(f"/api/tanks/{tid}/transactions", headers=manager,
                            json={"transaction_type": "adjustment", "quantity": "5"})
-    assert noreason.status_code == 422 and noreason.json()["error"]["code"] == "rule_violation"
+    assert noreason.status_code == 201  # adjustment reason optional; stored as "No reason given"
     unknown = client.post("/api/tanks/nope/transactions", headers=manager,
                           json={"transaction_type": "receipt", "quantity": "1"})
     assert unknown.status_code == 404
     # rejected writes leave no trace in stock or in the audit trail
-    assert client.get(f"/api/tanks/{tid}", headers=manager).json()["current_stock"] == "2500.500"
-    assert audit_events(session_factory, "tank_transaction_recorded") == []
+    assert client.get(f"/api/tanks/{tid}", headers=manager).json()["current_stock"] == "2505.500"  # only the reason-less adjustment (+5) landed
+    assert len(audit_events(session_factory, "tank_transaction_recorded")) == 1  # just the adjustment
 
 
 # ---- readings ---------------------------------------------------------------------------------

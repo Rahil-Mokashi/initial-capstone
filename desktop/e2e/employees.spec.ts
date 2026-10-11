@@ -23,7 +23,7 @@ test.describe('employees', () => {
 
     // Quick status change needs a reason
     await page.getByLabel('Status of Anil Shah').selectOption('on_leave');
-    await page.getByLabel('Reason for status change').fill('Family event');
+    await page.getByLabel(/^Reason for status change/).fill('Family event');
     await page.getByRole('button', { name: 'Change status' }).click();
     await expect(page.getByLabel('Status of Anil Shah')).toHaveValue('on_leave');
 
@@ -37,7 +37,7 @@ test.describe('employees', () => {
 
     // Exit
     await page.getByRole('button', { name: 'Record exit' }).click();
-    await page.getByLabel('Reason for exit').fill('Resigned');
+    await page.getByLabel(/^Reason for exit/).fill('Resigned');
     await page.getByRole('button', { name: 'Mark as exited' }).click();
     await expect(page.getByText(/^Left on /)).toBeVisible();
     await expect(page.getByRole('combobox', { name: 'Status' })).toHaveValue('terminated');

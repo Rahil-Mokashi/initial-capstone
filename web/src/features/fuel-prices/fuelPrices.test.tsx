@@ -75,9 +75,7 @@ describe('fuel prices', () => {
     await userEvent.clear(rate);
     await userEvent.type(rate, '104.505');
     expect(rate).toHaveValue('104.50'); // third decimal refused, never rounded
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
-    expect(await within(dialog).findByText('Give a reason for the change.')).toBeInTheDocument();
-    await userEvent.type(within(dialog).getByLabelText('Reason'), 'OMC revision');
+    await userEvent.type(within(dialog).getByLabelText(/^Reason/), 'OMC revision');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(api.calls.find((c) => c.key === 'POST /api/fuel-prices/f1/rate')?.body).toEqual({
@@ -93,10 +91,10 @@ describe('fuel prices', () => {
     });
     await userEvent.click(await screen.findByRole('button', { name: 'Change price of Diesel' }));
     const dialog = screen.getByRole('dialog');
-    await userEvent.type(within(dialog).getByLabelText('Reason'), 'same');
+    await userEvent.type(within(dialog).getByLabelText(/^Reason/), 'same');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
     expect(await within(dialog).findByRole('alert')).toHaveTextContent('already priced');
-    expect(within(dialog).getByLabelText('Reason')).toHaveValue('same');
+    expect(within(dialog).getByLabelText(/^Reason/)).toHaveValue('same');
   });
 
   it('shows the history and hides change buttons from a view-only user', async () => {
@@ -115,5 +113,21 @@ describe('fuel prices', () => {
     expect(screen.queryByRole('button', { name: /Change price/ })).not.toBeInTheDocument();
     await userEvent.click(await screen.findByRole('button', { name: 'Price history for Diesel' }));
     expect(await screen.findByText('First price')).toBeInTheDocument();
+  });
+});
+
+describe('reason is optional', () => {
+  it('saves a price with no reason typed', async () => {
+    const api = await setup(MANAGE, {
+      'POST /api/fuel-prices/f1/rate': () =>
+        json(200, fuel({ rate_per_liter: '100.00', priced: true })),
+    });
+    await userEvent.click(await screen.findByRole('button', { name: 'Change price of Petrol' }));
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(api.calls.find((c) => c.key === 'POST /api/fuel-prices/f1/rate')?.body).toEqual({
+      new_rate_per_liter: '100.00',
+      reason: '',
+    });
   });
 });

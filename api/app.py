@@ -11,7 +11,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from api.deps import require_launch_secret
 from api.errors import install_error_handlers
-from api.routers import auth, employees, fuel_prices, tanks
+from api.routers import auth, employees, fuel_prices, tanks, users
 
 ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 
@@ -85,6 +85,7 @@ def create_app(
     api.include_router(tanks.router)
     api.include_router(employees.router)
     api.include_router(fuel_prices.router)
+    api.include_router(users.router)
     app.include_router(api)
 
     if web_dir is not None and Path(web_dir).is_dir():

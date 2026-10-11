@@ -101,7 +101,8 @@ def test_status_change_needs_a_reason_and_is_audited(client, manager, employee_i
 
 def test_status_422_403(client, manager, accountant, employee_id):
     url = f"/api/employees/{employee_id}/status"
-    assert client.post(url, headers=manager, json={"status": "on_leave", "reason": "   "}).status_code == 422
+    # A blank reason is allowed (owner decision): it is stored as "No reason given".
+    assert client.post(url, headers=manager, json={"status": "on_leave", "reason": "   "}).status_code == 200
     assert client.post(url, headers=manager, json={"status": "flying", "reason": "x"}).status_code == 422
     assert client.post(url, headers=accountant, json={"status": "on_leave", "reason": "x"}).status_code == 403
 
@@ -134,7 +135,7 @@ def test_exit_before_joining_is_a_rule_error(client, manager, employee_id):
 def test_exit_403_422(client, accountant, manager, employee_id):
     url = f"/api/employees/{employee_id}/exit"
     assert client.post(url, headers=accountant, json={"reason": "x"}).status_code == 403
-    assert client.post(url, headers=manager, json={}).status_code == 422
+    assert client.post(url, headers=manager, json={"exit_date": "not-a-date"}).status_code == 422
 
 
 # ---- documents --------------------------------------------------------------
@@ -167,4 +168,4 @@ def test_document_403_404_422(client, manager, accountant, attendant, employee_i
     remove = "/api/employees/documents/nope/remove"
     assert client.post(remove, headers=manager, json={"reason": "x"}).status_code == 404
     assert client.post(remove, headers=accountant, json={"reason": "x"}).status_code == 403
-    assert client.post(remove, headers=manager, json={"reason": ""}).status_code == 422
+    assert client.post(remove, headers=manager, json={}).status_code == 404  # reason is optional; the id is unknown

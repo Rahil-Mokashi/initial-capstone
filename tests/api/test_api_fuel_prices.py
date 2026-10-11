@@ -33,9 +33,9 @@ def test_same_price_is_a_conflict_and_extra_places_are_refused(client, manager):
     assert client.post(f"/api/fuel-prices/{fid}/rate", headers=manager, json=num).status_code == 422
 
 
-def test_blank_reason_and_nonpositive_rate_rejected(client, manager):
+def test_nonpositive_rate_rejected(client, manager):
     fid = _fuels(client, manager)[0]["id"]
-    for body in ({"new_rate_per_liter": "100", "reason": "  "}, {"new_rate_per_liter": "0", "reason": "x"}, {"new_rate_per_liter": "10001", "reason": "x"}):
+    for body in ({"new_rate_per_liter": "0", "reason": "x"}, {"new_rate_per_liter": "10001", "reason": "x"}):
         assert client.post(f"/api/fuel-prices/{fid}/rate", headers=manager, json=body).status_code == 422
 
 
@@ -49,3 +49,10 @@ def test_permissions(client, accountant, manager, session_factory):
 
 def test_unknown_fuel_is_404(client, manager):
     assert client.get("/api/fuel-prices/nope/history", headers=manager).status_code == 404
+
+
+def test_reason_is_optional_and_recorded_as_such(client, manager):
+    fid = _fuels(client, manager)[0]["id"]
+    assert client.post(f"/api/fuel-prices/{fid}/rate", headers=manager, json={"new_rate_per_liter": "99"}).status_code == 200
+    hist = client.get(f"/api/fuel-prices/{fid}/history", headers=manager).json()
+    assert hist[0]["reason"] == "No reason given"

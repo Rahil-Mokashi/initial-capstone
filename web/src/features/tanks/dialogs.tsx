@@ -186,7 +186,7 @@ const TXN_COPY: Record<TransactionType, { title: string; hint: string; submit: s
   issue: { title: 'Record issue', hint: 'Fuel taken out of this tank.', submit: 'Record issue' },
   adjustment: {
     title: 'Record adjustment',
-    hint: 'A correction to the book stock. Use a negative number to reduce it. A reason is required.',
+    hint: 'A correction to the book stock. Use a negative number to reduce it. A reason is welcome but optional.',
     submit: 'Record adjustment',
   },
 };
@@ -205,21 +205,11 @@ export function TransactionDialog({
   const [formError, setFormError] = useState<string | null>(null);
   const copy = TXN_COPY[type];
 
-  const schema = z
-    .object({
-      quantity: decimal({ negative: type === 'adjustment', nonZero: true }),
-      reference: z.string(),
-      remarks: z.string(),
-    })
-    .superRefine((v, ctx) => {
-      if (type === 'adjustment' && v.remarks.trim() === '') {
-        ctx.addIssue({
-          code: 'custom',
-          path: ['remarks'],
-          message: 'Give a reason for this adjustment.',
-        });
-      }
-    });
+  const schema = z.object({
+    quantity: decimal({ negative: type === 'adjustment', nonZero: true }),
+    reference: z.string(),
+    remarks: z.string(),
+  });
   type Values = z.infer<typeof schema>;
 
   const {
@@ -280,7 +270,7 @@ export function TransactionDialog({
         />
         <TextField
           label="Remarks"
-          optional={type !== 'adjustment'}
+          optional
           error={errors.remarks?.message}
           {...register('remarks')}
         />
@@ -512,7 +502,7 @@ const STATUSES: TankStatus[] = ['active', 'inactive', 'maintenance'];
 
 const statusSchema = z.object({
   status: z.enum(['active', 'inactive', 'maintenance']),
-  reason: z.string().trim().min(1, 'Give a reason for the change.'),
+  reason: z.string().trim(),
 });
 type StatusValues = z.infer<typeof statusSchema>;
 
@@ -562,6 +552,7 @@ export function StatusDialog({ tank, onClose }: { tank: Tank; onClose: () => voi
         </SelectField>
         <TextField
           label="Reason"
+          optional
           autoFocus
           error={errors.reason?.message}
           {...register('reason')}

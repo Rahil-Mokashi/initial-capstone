@@ -6,7 +6,8 @@ import { friendlyMessage } from '@/api/errors';
 import { TextField } from './Field';
 import { FormDialog } from './FormDialog';
 
-const schema = z.object({ reason: z.string().trim().min(1, 'Give a reason.') });
+// A reason is optional (owner decision); a blank one is recorded by the server as "No reason given".
+const schema = z.object({ reason: z.string().trim() });
 
 interface Props {
   title: string;
@@ -64,7 +65,13 @@ export function ReasonDialog({
       onSubmit={submit}
       onClose={onClose}
     >
-      <TextField label={label} autoFocus error={errors.reason?.message} {...register('reason')} />
+      <TextField
+        label={label}
+        optional
+        autoFocus
+        error={errors.reason?.message}
+        {...register('reason')}
+      />
     </FormDialog>
   );
 }

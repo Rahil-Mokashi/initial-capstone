@@ -10,7 +10,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Annotated, Literal, Optional
 
-from pydantic import BaseModel, StringConstraints, BeforeValidator, ConfigDict, Field, PlainSerializer, WithJsonSchema
+from pydantic import BaseModel, model_validator, StringConstraints, BeforeValidator, ConfigDict, Field, PlainSerializer, WithJsonSchema
 
 from app.core.constants import TankStatus, TankTransactionType
 from app.core.money import money, volume
@@ -49,6 +49,22 @@ MoneyIn = Annotated[
 
 # A person-written explanation that must not be blank (the Qt screens refuse an empty reason in the dialog).
 Reason = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=1000)]
+
+# Owner decision (2026-10-11): a reason is OPTIONAL in the new app. The shared services still refuse a blank
+# reason (changing them needs human review), so a blank one is recorded as this text - never as an empty audit row.
+NO_REASON = "No reason given"
+
+
+def _blank_to_default(value):
+    return value if isinstance(value, str) and value.strip() else NO_REASON
+
+
+OptionalReason = Annotated[
+    str,
+    BeforeValidator(_blank_to_default),
+    StringConstraints(strip_whitespace=True, max_length=1000),
+    Field(default=NO_REASON, validate_default=True),
+]
 
 
 class Out(BaseModel):
@@ -164,7 +180,7 @@ class TankCreateIn(In):
 
 class TankStatusIn(In):
     status: TankStatus
-    reason: str
+    reason: OptionalReason
 
 
 class ReadingIn(In):
@@ -181,6 +197,13 @@ class TransactionIn(In):
     quantity: VolumeIn
     reference: Optional[str] = None
     remarks: Optional[str] = None
+
+    @model_validator(mode="after")
+    def _adjustment_reason(self):
+        # Stock adjustments carry their reason in remarks; the service insists on one.
+        if self.transaction_type == "adjustment" and not (self.remarks or "").strip():
+            self.remarks = NO_REASON
+        return self
 
     def type_enum(self) -> TankTransactionType:
         return TankTransactionType(self.transaction_type)

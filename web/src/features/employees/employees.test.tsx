@@ -104,10 +104,7 @@ describe('employee list', () => {
     expect(screen.getByLabelText('Status of Ravi Kumar')).toHaveValue('active');
 
     await userEvent.selectOptions(screen.getByLabelText('Status of Ravi Kumar'), 'on_leave');
-    // A blank reason is refused before any call.
-    await userEvent.click(screen.getByRole('button', { name: 'Change status' }));
-    expect(await screen.findByText('Give a reason.')).toBeInTheDocument();
-    await userEvent.type(screen.getByLabelText('Reason for status change'), 'Medical');
+    await userEvent.type(screen.getByLabelText(/^Reason for status change/), 'Medical');
     await userEvent.click(screen.getByRole('button', { name: 'Change status' }));
     await waitFor(() =>
       expect(api.calls.find((c) => c.key === 'POST /api/employees/e1/status')?.body).toEqual({
@@ -197,7 +194,7 @@ describe('employee detail', () => {
       '/employees/e1',
     );
     await userEvent.click(await screen.findByRole('button', { name: 'Record exit' }));
-    await userEvent.type(screen.getByLabelText('Reason for exit'), 'Resigned');
+    await userEvent.type(screen.getByLabelText(/^Reason for exit/), 'Resigned');
     await userEvent.click(screen.getByRole('button', { name: 'Mark as exited' }));
     await waitFor(() =>
       expect(api.calls.find((c) => c.key === 'POST /api/employees/e1/exit')?.body).toEqual({
@@ -250,7 +247,7 @@ describe('employee detail', () => {
     });
 
     await userEvent.click(screen.getByRole('button', { name: 'Remove Photo' }));
-    await userEvent.type(screen.getByLabelText('Reason'), 'Wrong file');
+    await userEvent.type(screen.getByLabelText(/^Reason/), 'Wrong file');
     await userEvent.click(screen.getByRole('button', { name: 'Remove' }));
     await waitFor(() => expect(screen.queryByText('Photo')).not.toBeInTheDocument());
     expect(

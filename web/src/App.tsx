@@ -7,6 +7,8 @@ import { LoginPage } from '@/features/auth/LoginPage';
 import { EmployeeDetailPage } from '@/features/employees/EmployeeDetailPage';
 import { EmployeesPage } from '@/features/employees/EmployeesPage';
 import { FuelPricesPage } from '@/features/fuel-prices/FuelPricesPage';
+import { UsersPage } from '@/features/users/UsersPage';
+import { UserDetailPage } from '@/features/users/UserDetailPage';
 import { TankDetailPage } from '@/features/tanks/TankDetailPage';
 import { TanksPage } from '@/features/tanks/TanksPage';
 
@@ -27,6 +29,8 @@ export function App() {
         <Route element={<RequireAuth />}>
           <Route element={<AppShell />}>
             {/* One route per screen: opening Tanks again re-uses this page, it can never stack a second copy. */}
+            <Route path="/users" element={<UsersPage />} />
+            <Route path="/users/:id" element={<UserDetailPage />} />
             <Route path="/tanks" element={<TanksPage />} />
             <Route path="/tanks/:id" element={<TankDetailPage />} />
             <Route path="/fuel-prices" element={<FuelPricesPage />} />
