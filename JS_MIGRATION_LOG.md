@@ -227,3 +227,8 @@ Not re-run at this checkpoint: Playwright (the bridge-key expectations were upda
 - api/routers/shifts.py (list, open, get, close, reopen, assignments: assign / complete with testing and internal-consumption litres / cancel, assign-options, /shifts/mine). web features/shifts: list + open dialog, detail page, My Shift card. Completing an assignment settles a sale in the service, so an unpriced fuel is refused (message shown in the dialog), same as Qt.
 - Judgment call: Qt asks "complete or cancel?" in a popup then a chain of three number prompts; here each active row has Complete and Cancel buttons and one Complete dialog with the three numbers. Shared ConfirmDialog added for the close-shift confirmation.
 - Tests: tests/api 4, web 9, Playwright shifts.spec.ts (price, nozzle, shift, assign, blocked close, complete, close, reopen).
+
+### Attendance and Leave (2026-10-11)
+- api/routers/attendance.py (day list, mark, get, correct; leave list, request, approve, reject, cancel) and an optional date window on GET /shifts (the Qt dialogs list one day's shifts). web features/attendance: roster of ACTIVE employees for a chosen day with one-click Present/Absent, mark dialog (with that day's shifts), correction dialog, Leave page with per-row Approve / Reject / Cancel (pending only; approve/reject need leave.approve, cancel needs leave.manage). Approving writes the days into attendance (service does it in one transaction).
+- Judgment call: Qt's Leave screen selects a row then clicks a top button; here the buttons are on the row. The leave "Reason" text is also optional now (owner decision), stored as "No reason given".
+- Tests: tests/api 4, web 8, Playwright attendance.spec.ts (mark, correct, request, approve, see Leave on that day).

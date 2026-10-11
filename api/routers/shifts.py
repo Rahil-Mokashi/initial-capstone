@@ -126,8 +126,14 @@ def assignment_out(a) -> AssignmentOut:
 
 
 @router.get("/shifts", response_model=list[ShiftOut])
-def list_shifts(user: CurrentUser = Depends(current_user), services: Services = Depends(get_services)):
-    return [shift_out(s) for s in services.shifts.list_shifts(user.id)]
+def list_shifts(
+    date_from: Optional[date] = None,
+    date_to: Optional[date] = None,
+    user: CurrentUser = Depends(current_user),
+    services: Services = Depends(get_services),
+):
+    """Optional date window; the attendance dialogs list only the shifts of one day."""
+    return [shift_out(s) for s in services.shifts.list_shifts(user.id, date_from=date_from, date_to=date_to)]
 
 
 @router.post("/shifts", response_model=ShiftOut, status_code=201)

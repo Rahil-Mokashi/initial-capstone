@@ -4,6 +4,58 @@
  */
 
 export interface paths {
+    "/api/attendance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Attendance */
+        get: operations["list_attendance_api_attendance_get"];
+        put?: never;
+        /** Mark Attendance */
+        post: operations["mark_attendance_api_attendance_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/attendance/{attendance_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Attendance */
+        get: operations["get_attendance_api_attendance__attendance_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/attendance/{attendance_id}/correct": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Correct Attendance */
+        post: operations["correct_attendance_api_attendance__attendance_id__correct_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/change-password": {
         parameters: {
             query?: never;
@@ -435,6 +487,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/leave": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Leave */
+        get: operations["list_leave_api_leave_get"];
+        put?: never;
+        /** Request Leave */
+        post: operations["request_leave_api_leave_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/leave/{leave_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve Leave */
+        post: operations["approve_leave_api_leave__leave_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/leave/{leave_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel Leave */
+        post: operations["cancel_leave_api_leave__leave_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/leave/{leave_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject Leave */
+        post: operations["reject_leave_api_leave__leave_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/lookups/employees": {
         parameters: {
             query?: never;
@@ -676,7 +797,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Shifts */
+        /**
+         * List Shifts
+         * @description Optional date window; the attendance dialogs list only the shifts of one day.
+         */
         get: operations["list_shifts_api_shifts_get"];
         put?: never;
         /** Open Shift */
@@ -1112,6 +1236,14 @@ export interface components {
              */
             reason: string;
         };
+        /** ApproveIn */
+        ApproveIn: {
+            /**
+             * Remarks
+             * @default
+             */
+            remarks: string;
+        };
         /** ArrivalIn */
         ArrivalIn: {
             /** Driver Name */
@@ -1180,6 +1312,42 @@ export interface components {
             /** Testing Volume */
             testing_volume: string;
         };
+        /** AttendanceOut */
+        AttendanceOut: {
+            /**
+             * Attendance Date
+             * Format: date
+             */
+            attendance_date: string;
+            /** Check In Time */
+            check_in_time?: string | null;
+            /** Check Out Time */
+            check_out_time?: string | null;
+            /** Corrected At */
+            corrected_at?: string | null;
+            /** Correction Reason */
+            correction_reason?: string | null;
+            /** Employee */
+            employee?: string | null;
+            /** Employee Id */
+            employee_id: string;
+            /** Id */
+            id: string;
+            /** Overtime Minutes */
+            overtime_minutes: number;
+            /** Shift Id */
+            shift_id?: string | null;
+            /** Shift Label */
+            shift_label?: string | null;
+            /** Status */
+            status: string;
+        };
+        /**
+         * AttendanceStatus
+         * @description Values stored in Attendance.status (problemstatement.md #9).
+         * @enum {string}
+         */
+        AttendanceStatus: "present" | "absent" | "late" | "half_day" | "leave" | "holiday";
         /** CancelAssignmentIn */
         CancelAssignmentIn: {
             /**
@@ -1237,6 +1405,19 @@ export interface components {
              * @example 12.500
              */
             testing_volume: string;
+        };
+        /** CorrectIn */
+        CorrectIn: {
+            /** Overtime Minutes */
+            overtime_minutes?: number | null;
+            /**
+             * Reason
+             * @default No reason given
+             */
+            reason: string;
+            /** Shift Id */
+            shift_id?: string | null;
+            status?: components["schemas"]["AttendanceStatus"] | null;
         };
         /** DeliveryOut */
         DeliveryOut: {
@@ -1517,6 +1698,61 @@ export interface components {
             /** Supplier Id */
             supplier_id: string;
         };
+        /** LeaveOut */
+        LeaveOut: {
+            /**
+             * Date From
+             * Format: date
+             */
+            date_from: string;
+            /**
+             * Date To
+             * Format: date
+             */
+            date_to: string;
+            /** Decided By */
+            decided_by?: string | null;
+            /** Decision Reason */
+            decision_reason?: string | null;
+            /** Employee */
+            employee?: string | null;
+            /** Employee Id */
+            employee_id: string;
+            /** Id */
+            id: string;
+            /** Reason */
+            reason: string;
+            /** Status */
+            status: string;
+        };
+        /** LeaveReasonIn */
+        LeaveReasonIn: {
+            /**
+             * Reason
+             * @default No reason given
+             */
+            reason: string;
+        };
+        /** LeaveRequestIn */
+        LeaveRequestIn: {
+            /**
+             * Date From
+             * Format: date
+             */
+            date_from: string;
+            /**
+             * Date To
+             * Format: date
+             */
+            date_to: string;
+            /** Employee Id */
+            employee_id: string;
+            /**
+             * Reason
+             * @default No reason given
+             */
+            reason: string;
+        };
         /** LoginIn */
         LoginIn: {
             /** Password */
@@ -1531,6 +1767,26 @@ export interface components {
             /** Token */
             token: string;
             user: components["schemas"]["UserOut"];
+        };
+        /** MarkIn */
+        MarkIn: {
+            /**
+             * Attendance Date
+             * Format: date
+             */
+            attendance_date: string;
+            /** Employee Id */
+            employee_id: string;
+            /**
+             * Overtime Minutes
+             * @default 0
+             */
+            overtime_minutes: number;
+            /** Shift Id */
+            shift_id?: string | null;
+            /** Shift Label */
+            shift_label?: string | null;
+            status: components["schemas"]["AttendanceStatus"];
         };
         /** MyShiftOut */
         MyShiftOut: {
@@ -2164,6 +2420,148 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    list_attendance_api_attendance_get: {
+        parameters: {
+            query: {
+                date: string;
+            };
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mark_attendance_api_attendance_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MarkIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_attendance_api_attendance__attendance_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                attendance_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    correct_attendance_api_attendance__attendance_id__correct_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                attendance_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CorrectIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     change_password_api_auth_change_password_post: {
         parameters: {
             query?: never;
@@ -3258,6 +3656,188 @@ export interface operations {
             };
         };
     };
+    list_leave_api_leave_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_leave_api_leave_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeaveRequestIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_leave_api_leave__leave_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                leave_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApproveIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_leave_api_leave__leave_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                leave_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeaveReasonIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_leave_api_leave__leave_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                leave_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeaveReasonIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_employees_api_lookups_employees_get: {
         parameters: {
             query?: never;
@@ -3814,7 +4394,10 @@ export interface operations {
     };
     list_shifts_api_shifts_get: {
         parameters: {
-            query?: never;
+            query?: {
+                date_from?: string | null;
+                date_to?: string | null;
+            };
             header?: {
                 "x-launch-secret"?: string | null;
                 authorization?: string | null;

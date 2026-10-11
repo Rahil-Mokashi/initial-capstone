@@ -19,6 +19,8 @@ import {
 import { ShiftsPage } from '@/features/shifts/ShiftsPages';
 import { ShiftDetailPage } from '@/features/shifts/ShiftsPages';
 import { MyShiftPage } from '@/features/shifts/ShiftsPages';
+import { AttendancePage } from '@/features/attendance/AttendancePage';
+import { LeavePage } from '@/features/attendance/LeavePage';
 import { TankDetailPage } from '@/features/tanks/TankDetailPage';
 import { TanksPage } from '@/features/tanks/TanksPage';
 
@@ -50,6 +52,8 @@ export function App() {
             <Route path="/shifts" element={<ShiftsPage />} />
             <Route path="/shifts/:id" element={<ShiftDetailPage />} />
             <Route path="/my-shift" element={<MyShiftPage />} />
+            <Route path="/attendance" element={<AttendancePage />} />
+            <Route path="/leave" element={<LeavePage />} />
             <Route path="/tanks" element={<TanksPage />} />
             <Route path="/tanks/:id" element={<TankDetailPage />} />
             <Route path="/fuel-prices" element={<FuelPricesPage />} />
