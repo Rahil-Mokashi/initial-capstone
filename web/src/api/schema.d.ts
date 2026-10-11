@@ -72,6 +72,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/dispensers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Dispensers */
+        get: operations["list_dispensers_api_dispensers_get"];
+        put?: never;
+        /** Create Dispenser */
+        post: operations["create_dispenser_api_dispensers_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dispensers/{dispenser_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Set Dispenser Status */
+        post: operations["set_dispenser_status_api_dispensers__dispenser_id__status_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/employees": {
         parameters: {
             query?: never;
@@ -280,6 +315,61 @@ export interface paths {
         get: operations["list_fuels_api_lookups_fuels_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/nozzles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Nozzles */
+        get: operations["list_nozzles_api_nozzles_get"];
+        put?: never;
+        /** Create Nozzle */
+        post: operations["create_nozzle_api_nozzles_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/nozzles/options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Nozzle Options
+         * @description The Qt Add Nozzle dialog reads dispensers, FuelRepository and TankRepository; it is only shown to NOZZLE_MANAGE.
+         */
+        get: operations["nozzle_options_api_nozzles_options_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/nozzles/{nozzle_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Set Nozzle Status */
+        post: operations["set_nozzle_status_api_nozzles__nozzle_id__status_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -587,6 +677,29 @@ export interface components {
             /** Role Id */
             role_id: string;
         };
+        /** DispenserIn */
+        DispenserIn: {
+            /** Code */
+            code: string;
+        };
+        /** DispenserOut */
+        DispenserOut: {
+            /** Code */
+            code: string;
+            /** Id */
+            id: string;
+            /** Status */
+            status: string;
+        };
+        /** DispenserStatusIn */
+        DispenserStatusIn: {
+            /**
+             * Reason
+             * @default No reason given
+             */
+            reason: string;
+            status: components["schemas"]["StatusEnum"];
+        };
         /** DocumentIn */
         DocumentIn: {
             /** Description */
@@ -717,6 +830,13 @@ export interface components {
              */
             reason: string;
         };
+        /** FuelOption */
+        FuelOption: {
+            /** Fuel Type */
+            fuel_type: string;
+            /** Id */
+            id: string;
+        };
         /** FuelOut */
         FuelOut: {
             /** Fuel Type */
@@ -754,6 +874,63 @@ export interface components {
             /** Token */
             token: string;
             user: components["schemas"]["UserOut"];
+        };
+        /** NozzleIn */
+        NozzleIn: {
+            /** Code */
+            code: string;
+            /** Dispenser Id */
+            dispenser_id: string;
+            /** Fuel Id */
+            fuel_id: string;
+            /** Tank Id */
+            tank_id?: string | null;
+        };
+        /**
+         * NozzleOptions
+         * @description What the Add Nozzle dialog offers: active dispensers, active fuels, active tanks.
+         */
+        NozzleOptions: {
+            /** Dispensers */
+            dispensers: components["schemas"]["DispenserOut"][];
+            /** Fuels */
+            fuels: components["schemas"]["FuelOption"][];
+            /** Tanks */
+            tanks: components["schemas"]["TankOption"][];
+        };
+        /** NozzleOut */
+        NozzleOut: {
+            /** Code */
+            code: string;
+            /** Dispenser */
+            dispenser?: string | null;
+            /** Dispenser Id */
+            dispenser_id: string;
+            /** Fuel Id */
+            fuel_id: string;
+            /** Fuel Type */
+            fuel_type?: string | null;
+            /** Id */
+            id: string;
+            /** Status */
+            status: string;
+            /** Tank Id */
+            tank_id?: string | null;
+        };
+        /**
+         * NozzleStatus
+         * @description Values stored in Nozzle.status (problemstatement.md #15).
+         * @enum {string}
+         */
+        NozzleStatus: "active" | "inactive" | "maintenance";
+        /** NozzleStatusIn */
+        NozzleStatusIn: {
+            /**
+             * Reason
+             * @default No reason given
+             */
+            reason: string;
+            status: components["schemas"]["NozzleStatus"];
         };
         /** PriceHistoryOut */
         PriceHistoryOut: {
@@ -907,6 +1084,12 @@ export interface components {
             /** Name */
             name: string;
         };
+        /**
+         * StatusEnum
+         * @description Status enumeration for various entities.
+         * @enum {string}
+         */
+        StatusEnum: "active" | "inactive" | "pending" | "cancelled";
         /** StatusIn */
         StatusIn: {
             /**
@@ -935,6 +1118,13 @@ export interface components {
              * @example 12.500
              */
             opening_stock: string;
+        };
+        /** TankOption */
+        TankOption: {
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
         };
         /** TankOut */
         TankOut: {
@@ -1216,6 +1406,112 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UserOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_dispensers_api_dispensers_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DispenserOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_dispenser_api_dispensers_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DispenserIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DispenserOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_dispenser_status_api_dispensers__dispenser_id__status_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                dispenser_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DispenserStatusIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DispenserOut"];
                 };
             };
             /** @description Validation Error */
@@ -1741,6 +2037,144 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FuelOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_nozzles_api_nozzles_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NozzleOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_nozzle_api_nozzles_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NozzleIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NozzleOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    nozzle_options_api_nozzles_options_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NozzleOptions"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_nozzle_status_api_nozzles__nozzle_id__status_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                nozzle_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NozzleStatusIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NozzleOut"];
                 };
             };
             /** @description Validation Error */

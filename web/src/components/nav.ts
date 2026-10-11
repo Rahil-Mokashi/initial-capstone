@@ -20,7 +20,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Users', permission: 'user.manage', to: '/users' },
       { label: 'Fuel Prices', permission: 'fuel_price.view', to: '/fuel-prices' },
       { label: 'Tanks', permission: 'inventory.view', to: '/tanks' },
-      { label: 'Nozzles & Dispensers', permission: 'nozzle.view' },
+      { label: 'Nozzles & Dispensers', permission: 'nozzle.view', to: '/nozzles' },
       { label: 'Suppliers', permission: 'procurement.view' },
       { label: 'Company Profile', permission: 'settings.view' },
     ],

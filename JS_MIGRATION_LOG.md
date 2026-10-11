@@ -211,3 +211,6 @@ Not re-run at this checkpoint: Playwright (the bridge-key expectations were upda
 
 ### Users (2026-10-11)
 - api/routers/users.py (list, roles, create, role, active, unlock, reset password, reset code; admin only via user.manage), web features/users (list, add, detail page with every Qt action, reset code shown once). Tests: tests/api 7, web 6, Playwright users.spec.ts. e2e seed gained admin1; tests/api conftest gained admin.
+
+### Nozzles & Dispensers (2026-10-11)
+- api/routers/nozzles.py (dispensers + nozzles lists, create, status; /nozzles/options for the Add Nozzle dropdowns, gated nozzle.manage like the Qt dialog). web features/nozzles (two tabs, add dialogs, status dialogs). New shared TabbedPanel and test harness (src/test/harness.tsx). Tests: tests/api 3, web 5, Playwright nozzles.spec.ts.

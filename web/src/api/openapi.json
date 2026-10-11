@@ -62,6 +62,62 @@
         "title": "ChangeRoleIn",
         "type": "object"
       },
+      "DispenserIn": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "DispenserIn",
+        "type": "object"
+      },
+      "DispenserOut": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "status"
+        ],
+        "title": "DispenserOut",
+        "type": "object"
+      },
+      "DispenserStatusIn": {
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "default": "No reason given",
+            "maxLength": 1000,
+            "title": "Reason",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/StatusEnum"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "DispenserStatusIn",
+        "type": "object"
+      },
       "DocumentIn": {
         "additionalProperties": false,
         "properties": {
@@ -523,6 +579,24 @@
         "title": "ExitIn",
         "type": "object"
       },
+      "FuelOption": {
+        "properties": {
+          "fuel_type": {
+            "title": "Fuel Type",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "fuel_type"
+        ],
+        "title": "FuelOption",
+        "type": "object"
+      },
       "FuelOut": {
         "properties": {
           "fuel_type": {
@@ -629,6 +703,169 @@
           "user"
         ],
         "title": "LoginOut",
+        "type": "object"
+      },
+      "NozzleIn": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "dispenser_id": {
+            "title": "Dispenser Id",
+            "type": "string"
+          },
+          "fuel_id": {
+            "title": "Fuel Id",
+            "type": "string"
+          },
+          "tank_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tank Id"
+          }
+        },
+        "required": [
+          "code",
+          "dispenser_id",
+          "fuel_id"
+        ],
+        "title": "NozzleIn",
+        "type": "object"
+      },
+      "NozzleOptions": {
+        "description": "What the Add Nozzle dialog offers: active dispensers, active fuels, active tanks.",
+        "properties": {
+          "dispensers": {
+            "items": {
+              "$ref": "#/components/schemas/DispenserOut"
+            },
+            "title": "Dispensers",
+            "type": "array"
+          },
+          "fuels": {
+            "items": {
+              "$ref": "#/components/schemas/FuelOption"
+            },
+            "title": "Fuels",
+            "type": "array"
+          },
+          "tanks": {
+            "items": {
+              "$ref": "#/components/schemas/TankOption"
+            },
+            "title": "Tanks",
+            "type": "array"
+          }
+        },
+        "required": [
+          "dispensers",
+          "fuels",
+          "tanks"
+        ],
+        "title": "NozzleOptions",
+        "type": "object"
+      },
+      "NozzleOut": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "dispenser": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dispenser"
+          },
+          "dispenser_id": {
+            "title": "Dispenser Id",
+            "type": "string"
+          },
+          "fuel_id": {
+            "title": "Fuel Id",
+            "type": "string"
+          },
+          "fuel_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fuel Type"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "tank_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tank Id"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "dispenser_id",
+          "fuel_id",
+          "status"
+        ],
+        "title": "NozzleOut",
+        "type": "object"
+      },
+      "NozzleStatus": {
+        "description": "Values stored in Nozzle.status (problemstatement.md #15).",
+        "enum": [
+          "active",
+          "inactive",
+          "maintenance"
+        ],
+        "title": "NozzleStatus",
+        "type": "string"
+      },
+      "NozzleStatusIn": {
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "default": "No reason given",
+            "maxLength": 1000,
+            "title": "Reason",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/NozzleStatus"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "NozzleStatusIn",
         "type": "object"
       },
       "PriceHistoryOut": {
@@ -1002,6 +1239,17 @@
         "title": "RoleOut",
         "type": "object"
       },
+      "StatusEnum": {
+        "description": "Status enumeration for various entities.",
+        "enum": [
+          "active",
+          "inactive",
+          "pending",
+          "cancelled"
+        ],
+        "title": "StatusEnum",
+        "type": "string"
+      },
       "StatusIn": {
         "additionalProperties": false,
         "properties": {
@@ -1067,6 +1315,24 @@
           "capacity"
         ],
         "title": "TankCreateIn",
+        "type": "object"
+      },
+      "TankOption": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label"
+        ],
+        "title": "TankOption",
         "type": "object"
       },
       "TankOut": {
@@ -1794,6 +2060,232 @@
         "summary": "Me",
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/api/dispensers": {
+      "get": {
+        "operationId": "list_dispensers_api_dispensers_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DispenserOut"
+                  },
+                  "title": "Response List Dispensers Api Dispensers Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Dispensers",
+        "tags": [
+          "nozzles"
+        ]
+      },
+      "post": {
+        "operationId": "create_dispenser_api_dispensers_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DispenserIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DispenserOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Dispenser",
+        "tags": [
+          "nozzles"
+        ]
+      }
+    },
+    "/api/dispensers/{dispenser_id}/status": {
+      "post": {
+        "operationId": "set_dispenser_status_api_dispensers__dispenser_id__status_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "dispenser_id",
+            "required": true,
+            "schema": {
+              "title": "Dispenser Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DispenserStatusIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DispenserOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Dispenser Status",
+        "tags": [
+          "nozzles"
         ]
       }
     },
@@ -2919,6 +3411,298 @@
         "summary": "List Fuels",
         "tags": [
           "tanks"
+        ]
+      }
+    },
+    "/api/nozzles": {
+      "get": {
+        "operationId": "list_nozzles_api_nozzles_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/NozzleOut"
+                  },
+                  "title": "Response List Nozzles Api Nozzles Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Nozzles",
+        "tags": [
+          "nozzles"
+        ]
+      },
+      "post": {
+        "operationId": "create_nozzle_api_nozzles_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NozzleIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NozzleOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Nozzle",
+        "tags": [
+          "nozzles"
+        ]
+      }
+    },
+    "/api/nozzles/options": {
+      "get": {
+        "description": "The Qt Add Nozzle dialog reads dispensers, FuelRepository and TankRepository; it is only shown to NOZZLE_MANAGE.",
+        "operationId": "nozzle_options_api_nozzles_options_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NozzleOptions"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Nozzle Options",
+        "tags": [
+          "nozzles"
+        ]
+      }
+    },
+    "/api/nozzles/{nozzle_id}/status": {
+      "post": {
+        "operationId": "set_nozzle_status_api_nozzles__nozzle_id__status_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "nozzle_id",
+            "required": true,
+            "schema": {
+              "title": "Nozzle Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NozzleStatusIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NozzleOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Nozzle Status",
+        "tags": [
+          "nozzles"
         ]
       }
     },
