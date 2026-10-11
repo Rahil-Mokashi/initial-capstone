@@ -5,11 +5,11 @@ import { api } from '@/api/client';
 import { useGet } from '@/api/hooks';
 import type { components } from '@/api/schema';
 import { DocumentActions, type ExportFile } from '@/components/DocumentActions';
+import { ReportTable } from '@/components/ReportTable';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { SelectField, TextField } from '@/components/ui/Field';
 import { EmptyState, ErrorState, LoadingBlock } from '@/components/ui/States';
-import { cn } from '@/lib/cn';
 import { formatQuantity, titleCase } from '@/lib/format';
 
 type S = components['schemas'];
@@ -134,8 +134,6 @@ export function ReportPage() {
     { label: 'Excel', path: `/reports/${key}/export.xlsx${query(draft)}`, filename: `${key}.xlsx` },
     { label: 'PDF', path: `/reports/${key}/export.pdf${query(draft)}`, filename: `${key}.pdf` },
   ];
-  const isMoney = new Set(report.data?.money_columns ?? []);
-  const isVolume = new Set(report.data?.volume_columns ?? []);
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6">
@@ -232,55 +230,7 @@ export function ReportPage() {
           ) : report.isError ? (
             <ErrorState error={report.error} onRetry={() => void report.refetch()} />
           ) : report.data ? (
-            <div className="overflow-x-auto rounded-lg border border-line bg-surface shadow-card">
-              <table className="w-full border-collapse text-sm">
-                <caption className="sr-only">{report.data.title}</caption>
-                <thead className="bg-surface-2">
-                  <tr>
-                    {report.data.headers.map((h, i) => (
-                      <th
-                        key={`${h}-${i}`}
-                        scope="col"
-                        className={cn(
-                          'border-b border-line px-4 py-2 text-xs font-bold tracking-wide text-muted uppercase',
-                          isMoney.has(i) || isVolume.has(i) ? 'text-right' : 'text-left',
-                        )}
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {report.data.rows.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={Math.max(report.data.headers.length, 1)}
-                        className="px-4 py-6 text-center text-muted"
-                      >
-                        Nothing to report for this selection.
-                      </td>
-                    </tr>
-                  ) : (
-                    report.data.rows.map((row, r) => (
-                      <tr key={r} className="border-b border-line last:border-0">
-                        {row.map((cell, i) => (
-                          <td
-                            key={i}
-                            className={cn(
-                              'px-4 py-1.5',
-                              isMoney.has(i) || isVolume.has(i) ? 'num text-right' : '',
-                            )}
-                          >
-                            {isMoney.has(i) || isVolume.has(i) ? formatQuantity(cell) : cell}
-                          </td>
-                        ))}
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+            <ReportTable report={report.data} />
           ) : null}
         </>
       )}

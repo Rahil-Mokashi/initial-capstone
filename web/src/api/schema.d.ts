@@ -4,6 +4,74 @@
  */
 
 export interface paths {
+    "/api/analytics/forecast": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Forecast */
+        get: operations["forecast_api_analytics_forecast_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/analytics/forecast/export.{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Forecast Export */
+        get: operations["forecast_export_api_analytics_forecast_export__kind__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/analytics/performance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Performance */
+        get: operations["performance_api_analytics_performance_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/analytics/performance/export.{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Performance Export */
+        get: operations["performance_export_api_analytics_performance_export__kind__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/attendance": {
         parameters: {
             query?: never;
@@ -2470,6 +2538,12 @@ export interface components {
             /** Nozzles */
             nozzles: components["schemas"]["Choice"][];
         };
+        /** ForecastOut */
+        ForecastOut: {
+            /** Explanations */
+            explanations: string[];
+            report: components["schemas"]["ReportView"];
+        };
         /** FuelCard */
         FuelCard: {
             /** Active Nozzle Count */
@@ -2924,6 +2998,12 @@ export interface components {
             /** Shift Id */
             shift_id: string;
         };
+        /**
+         * PeriodType
+         * @description Reporting period granularity (business performance reports).
+         * @enum {string}
+         */
+        PeriodType: "day" | "week" | "month" | "quarter" | "year";
         /** PriceHistoryOut */
         PriceHistoryOut: {
             /**
@@ -3700,6 +3780,144 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    forecast_api_analytics_forecast_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForecastOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    forecast_export_api_analytics_forecast_export__kind__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                kind: "pdf" | "xlsx" | "csv";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    performance_api_analytics_performance_get: {
+        parameters: {
+            query?: {
+                period?: components["schemas"]["PeriodType"];
+                as_of?: string | null;
+            };
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    performance_export_api_analytics_performance_export__kind__get: {
+        parameters: {
+            query?: {
+                period?: components["schemas"]["PeriodType"];
+                as_of?: string | null;
+            };
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                kind: "pdf" | "xlsx" | "csv";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_attendance_api_attendance_get: {
         parameters: {
             query: {

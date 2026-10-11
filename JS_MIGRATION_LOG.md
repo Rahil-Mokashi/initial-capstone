@@ -268,3 +268,9 @@ Not re-run at this checkpoint: Playwright (the bridge-key expectations were upda
 - Formatting parity fix: the Qt tables group digits the Indian way (12,34,567.00); the shared formatter now does too (it was 3-digit grouping). Tests updated.
 - Nav: Reports entry (any of inventory / sale / expense / credit / reconciliation / analytics view), as in the Qt sidebar. Business Insights link goes to /analytics (next screen).
 - Tests: tests/api 9, web 8 (+ nav/format), Playwright reports.spec.ts (sales report, date window, preview text, PDF + Excel + CSV saved).
+
+### Business Insights / Analytics (2026-10-11)
+- api/routers/analytics.py: performance (period day / week / month / quarter / year + as-of date) and the sales forecast, each as a report view plus PDF / Excel / CSV. The two TableReport builders are COPIES of the ones inside app/ui/analytics_window.py (that module imports PySide6, so it cannot be imported by the API); if Qt changes them, change both. Shared web ReportTable component now serves Reports and Analytics.
+- web features/analytics: Performance tab (period + as-of, Generate, profit note, Print / CSV / Excel / PDF) and Sales Forecast tab (table + one explanation per fuel, explanations printed after the table). Reached from the Reports hub, as in Qt.
+- Small superset of Qt: the forecast also offers CSV and Excel (Qt had PDF only).
+- Tests: tests/api 4, web 4, Playwright analytics.spec.ts.
