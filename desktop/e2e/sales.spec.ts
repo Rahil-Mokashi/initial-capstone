@@ -36,9 +36,9 @@ test('record a sale, see the stock fall, open the receipt preview and save the r
   const preview = await previewPromise;
   await expect(preview).toHaveTitle('Print preview');
   await expect(preview.locator('#doc')).toBeVisible();
-  const text = await preview.frameLocator('#doc').locator('body').innerText();
-  expect(text).toContain('Receipt');
-  expect(text).toContain('1250.00');
+  const body = preview.frameLocator('#doc').locator('body');
+  await expect(body).toContainText('Receipt');
+  await expect(body).toContainText('1250.00');
   await preview.getByRole('button', { name: 'Close' }).click();
 
   await page.getByRole('button', { name: 'Export PDF' }).click();
