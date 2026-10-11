@@ -623,6 +623,24 @@
         "title": "ChangeRoleIn",
         "type": "object"
       },
+      "Choice": {
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "value"
+        ],
+        "title": "Choice",
+        "type": "object"
+      },
       "CloseShiftIn": {
         "additionalProperties": false,
         "properties": {
@@ -1812,6 +1830,90 @@
         "title": "ExpenseOut",
         "type": "object"
       },
+      "FilterOptions": {
+        "properties": {
+          "employees": {
+            "items": {
+              "$ref": "#/components/schemas/Choice"
+            },
+            "title": "Employees",
+            "type": "array"
+          },
+          "nozzles": {
+            "items": {
+              "$ref": "#/components/schemas/Choice"
+            },
+            "title": "Nozzles",
+            "type": "array"
+          }
+        },
+        "required": [
+          "employees",
+          "nozzles"
+        ],
+        "title": "FilterOptions",
+        "type": "object"
+      },
+      "FuelCard": {
+        "properties": {
+          "active_nozzle_count": {
+            "title": "Active Nozzle Count",
+            "type": "integer"
+          },
+          "fuel_type": {
+            "title": "Fuel Type",
+            "type": "string"
+          },
+          "latest_variance_classification": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Variance Classification"
+          },
+          "latest_variance_percent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Variance Percent"
+          },
+          "nozzle_count": {
+            "title": "Nozzle Count",
+            "type": "integer"
+          },
+          "tank_count": {
+            "title": "Tank Count",
+            "type": "integer"
+          },
+          "total_capacity": {
+            "title": "Total Capacity",
+            "type": "string"
+          },
+          "total_current_stock": {
+            "title": "Total Current Stock",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fuel_type",
+          "tank_count",
+          "total_capacity",
+          "total_current_stock",
+          "nozzle_count",
+          "active_nozzle_count"
+        ],
+        "title": "FuelCard",
+        "type": "object"
+      },
       "FuelOption": {
         "properties": {
           "fuel_type": {
@@ -1916,6 +2018,27 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "Hub": {
+        "properties": {
+          "insights": {
+            "title": "Insights",
+            "type": "boolean"
+          },
+          "reports": {
+            "items": {
+              "$ref": "#/components/schemas/ReportEntry"
+            },
+            "title": "Reports",
+            "type": "array"
+          }
+        },
+        "required": [
+          "reports",
+          "insights"
+        ],
+        "title": "Hub",
         "type": "object"
       },
       "IdLabel": {
@@ -3480,6 +3603,37 @@
         "title": "ReopenIn",
         "type": "object"
       },
+      "ReportEntry": {
+        "properties": {
+          "dates": {
+            "title": "Dates",
+            "type": "boolean"
+          },
+          "filters": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Filters",
+            "type": "array"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "dates",
+          "filters"
+        ],
+        "title": "ReportEntry",
+        "type": "object"
+      },
       "ReportView": {
         "description": "What a table report looks like on screen, plus its printable HTML (the same one Qt previews).",
         "properties": {
@@ -3494,6 +3648,14 @@
             "title": "Html",
             "type": "string"
           },
+          "money_columns": {
+            "default": [],
+            "items": {
+              "type": "integer"
+            },
+            "title": "Money Columns",
+            "type": "array"
+          },
           "rows": {
             "items": {
               "items": {
@@ -3507,6 +3669,14 @@
           "title": {
             "title": "Title",
             "type": "string"
+          },
+          "volume_columns": {
+            "default": [],
+            "items": {
+              "type": "integer"
+            },
+            "title": "Volume Columns",
+            "type": "array"
           }
         },
         "required": [
@@ -11127,6 +11297,497 @@
         "summary": "Approve",
         "tags": [
           "reconciliation"
+        ]
+      }
+    },
+    "/api/reports": {
+      "get": {
+        "operationId": "hub_api_reports_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Hub"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Hub",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/api/reports/filter-options": {
+      "get": {
+        "operationId": "filter_options_api_reports_filter_options_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FilterOptions"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Filter Options",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/api/reports/fuel-type-summary/cards": {
+      "get": {
+        "operationId": "fuel_cards_api_reports_fuel_type_summary_cards_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FuelCard"
+                  },
+                  "title": "Response Fuel Cards Api Reports Fuel Type Summary Cards Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Fuel Cards",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/api/reports/{key}": {
+      "get": {
+        "operationId": "run_report_api_reports__key__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "Key",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "employee_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Employee Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "nozzle_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Nozzle Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Run Report",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/api/reports/{key}/export.{kind}": {
+      "get": {
+        "operationId": "export_report_api_reports__key__export__kind__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "Key",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "enum": [
+                "pdf",
+                "xlsx",
+                "csv"
+              ],
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "employee_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Employee Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "nozzle_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Nozzle Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Export Report",
+        "tags": [
+          "reports"
         ]
       }
     },

@@ -261,3 +261,10 @@ Not re-run at this checkpoint: Playwright (the bridge-key expectations were upda
 - Judgment call: the declared-amount boxes start EMPTY (Qt starts them at 0), so a cashier cannot reconcile by clicking through; typing 0 is still allowed and the message says so. Everything else, including the classification and the approval rule, is the service's.
 - Shared model-name guard caught a clash (ReconciliationOut already exists for tanks): mine is ShiftReconciliationOut.
 - Tests: tests/api 4, web 8, Playwright reconciliation.spec.ts (sale, declare short, approve, book shortage, cash movements, recovery -> Recovered).
+
+### Reports hub + table reports (2026-10-11)
+- api/routers/reports.py: one catalog (same 12 reports, order, permissions and filters as the Qt hub), GET /reports/{key} (date_from/date_to/employee_id/nozzle_id, only when set), export.{pdf,xlsx,csv} that re-fetch with the filters sent, filter-options (the staff roster stays hidden from people without employee.view, as in Qt), and fuel-type-summary cards. HTML, PDF, Excel and CSV all come from the Qt exporters.
+- web features/reports: hub (links), one shared report page (date range, employee / nozzle choices where supported, Refresh, Print preview, CSV / Excel / PDF), fuel-type summary cards. Typing a date does not re-query; Refresh does, as in Qt; Print / Export use the filters as they are right now.
+- Formatting parity fix: the Qt tables group digits the Indian way (12,34,567.00); the shared formatter now does too (it was 3-digit grouping). Tests updated.
+- Nav: Reports entry (any of inventory / sale / expense / credit / reconciliation / analytics view), as in the Qt sidebar. Business Insights link goes to /analytics (next screen).
+- Tests: tests/api 9, web 8 (+ nav/format), Playwright reports.spec.ts (sales report, date window, preview text, PDF + Excel + CSV saved).

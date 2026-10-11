@@ -23,6 +23,9 @@ class ReportView(Out):
     title: str
     headers: list[str]
     rows: list[list[str]]
+    # Column positions that hold money / litres, so the table can right-align them like Qt does.
+    money_columns: list[int] = []
+    volume_columns: list[int] = []
     html: str
 
 
@@ -31,6 +34,8 @@ def view(report: TableReport) -> ReportView:
         title=report.title,
         headers=list(report.headers),
         rows=[[("" if c is None else str(c)) for c in row] for row in report.rows],
+        money_columns=sorted(getattr(report, "money_columns", ())),
+        volume_columns=sorted(getattr(report, "volume_columns", ())),
         html=build_table_report_html(report),
     )
 

@@ -212,7 +212,7 @@ describe('permission-aware navigation', () => {
 
   it('hides items the role cannot use and drops empty groups', () => {
     const groups = visibleGroups(only('inventory.view'));
-    expect(groups.map((g) => g.label)).toEqual(['Masters']);
+    expect(groups.map((g) => g.label)).toEqual(['Masters', 'Reports']); // inventory.view also opens Reports
     expect(groups[0]?.items.map((i) => i.label)).toEqual(['Tanks']);
   });
 

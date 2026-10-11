@@ -1101,6 +1101,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Hub */
+        get: operations["hub_api_reports_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reports/filter-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Filter Options */
+        get: operations["filter_options_api_reports_filter_options_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reports/fuel-type-summary/cards": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fuel Cards */
+        get: operations["fuel_cards_api_reports_fuel_type_summary_cards_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reports/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Run Report */
+        get: operations["run_report_api_reports__key__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reports/{key}/export.{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export Report */
+        get: operations["export_report_api_reports__key__export__kind__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sales": {
         parameters: {
             query?: never;
@@ -1998,6 +2083,13 @@ export interface components {
             /** Role Id */
             role_id: string;
         };
+        /** Choice */
+        Choice: {
+            /** Label */
+            label: string;
+            /** Value */
+            value: string;
+        };
         /** CloseShiftIn */
         CloseShiftIn: {
             /** Notes */
@@ -2371,6 +2463,32 @@ export interface components {
             /** Status */
             status: string;
         };
+        /** FilterOptions */
+        FilterOptions: {
+            /** Employees */
+            employees: components["schemas"]["Choice"][];
+            /** Nozzles */
+            nozzles: components["schemas"]["Choice"][];
+        };
+        /** FuelCard */
+        FuelCard: {
+            /** Active Nozzle Count */
+            active_nozzle_count: number;
+            /** Fuel Type */
+            fuel_type: string;
+            /** Latest Variance Classification */
+            latest_variance_classification?: string | null;
+            /** Latest Variance Percent */
+            latest_variance_percent?: string | null;
+            /** Nozzle Count */
+            nozzle_count: number;
+            /** Tank Count */
+            tank_count: number;
+            /** Total Capacity */
+            total_capacity: string;
+            /** Total Current Stock */
+            total_current_stock: string;
+        };
         /** FuelOption */
         FuelOption: {
             /** Fuel Type */
@@ -2409,6 +2527,13 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** Hub */
+        Hub: {
+            /** Insights */
+            insights: boolean;
+            /** Reports */
+            reports: components["schemas"]["ReportEntry"][];
         };
         /** IdLabel */
         IdLabel: {
@@ -3008,6 +3133,17 @@ export interface components {
              */
             reason: string;
         };
+        /** ReportEntry */
+        ReportEntry: {
+            /** Dates */
+            dates: boolean;
+            /** Filters */
+            filters: string[];
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+        };
         /**
          * ReportView
          * @description What a table report looks like on screen, plus its printable HTML (the same one Qt previews).
@@ -3017,10 +3153,20 @@ export interface components {
             headers: string[];
             /** Html */
             html: string;
+            /**
+             * Money Columns
+             * @default []
+             */
+            money_columns: number[];
             /** Rows */
             rows: string[][];
             /** Title */
             title: string;
+            /**
+             * Volume Columns
+             * @default []
+             */
+            volume_columns: number[];
         };
         /** ResetCodeOut */
         ResetCodeOut: {
@@ -6318,6 +6464,181 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ShiftReconciliationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    hub_api_reports_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Hub"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    filter_options_api_reports_filter_options_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FilterOptions"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    fuel_cards_api_reports_fuel_type_summary_cards_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FuelCard"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_report_api_reports__key__get: {
+        parameters: {
+            query?: {
+                date_from?: string | null;
+                date_to?: string | null;
+                employee_id?: string | null;
+                nozzle_id?: string | null;
+            };
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_report_api_reports__key__export__kind__get: {
+        parameters: {
+            query?: {
+                date_from?: string | null;
+                date_to?: string | null;
+                employee_id?: string | null;
+                nozzle_id?: string | null;
+            };
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                key: string;
+                kind: "pdf" | "xlsx" | "csv";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */

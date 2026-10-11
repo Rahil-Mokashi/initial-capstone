@@ -3,7 +3,8 @@
 // the rest are listed (so the structure is familiar) but marked "soon".
 export interface NavItem {
   label: string;
-  permission: string;
+  /** One permission, or a list where holding ANY of them is enough (the Reports entry). */
+  permission: string | string[];
   /** Route, when the screen exists in the new UI. */
   to?: string;
 }
@@ -41,6 +42,23 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    label: 'Reports',
+    items: [
+      {
+        label: 'Reports',
+        permission: [
+          'inventory.view',
+          'sale.view',
+          'expense.view',
+          'credit.view',
+          'reconciliation.view',
+          'analytics.view',
+        ],
+        to: '/reports',
+      },
+    ],
+  },
+  {
     label: 'Settings',
     items: [
       { label: 'Backups', permission: 'backup.manage' },
@@ -51,7 +69,10 @@ export const NAV_GROUPS: NavGroup[] = [
 
 /** Groups with only the items this user may see; empty groups disappear (as in Qt). */
 export function visibleGroups(can: (permission: string) => boolean): NavGroup[] {
-  return NAV_GROUPS.map((g) => ({ ...g, items: g.items.filter((i) => can(i.permission)) })).filter(
-    (g) => g.items.length > 0,
-  );
+  return NAV_GROUPS.map((g) => ({
+    ...g,
+    items: g.items.filter((i) =>
+      Array.isArray(i.permission) ? i.permission.some(can) : can(i.permission),
+    ),
+  })).filter((g) => g.items.length > 0);
 }
