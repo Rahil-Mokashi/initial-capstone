@@ -30,7 +30,28 @@ async function request<T>(method: Method, path: string, body?: unknown): Promise
   return res.status === 204 ? (undefined as T) : ((await res.json()) as T);
 }
 
+/** GET a binary file (PDF, Excel, CSV) with the same auth as every other call. */
+async function download(path: string): Promise<Blob> {
+  const headers: Record<string, string> = {};
+  const secret = launchSecret();
+  if (secret) headers['X-Launch-Secret'] = secret;
+  if (session.token) headers.Authorization = `Bearer ${session.token}`;
+  let res: Response;
+  try {
+    res = await fetch(`${apiBase()}/api${path}`, { headers });
+  } catch {
+    throw networkError();
+  }
+  if (!res.ok) {
+    const error = await toApiError(res);
+    if (error.isAuthLoss) session.lost();
+    throw error;
+  }
+  return res.blob();
+}
+
 export const api = {
+  download,
   get: <T>(path: string) => request<T>('GET', path),
   post: <T>(path: string, body?: unknown) => request<T>('POST', path, body ?? {}),
   patch: <T>(path: string, body: unknown) => request<T>('PATCH', path, body),

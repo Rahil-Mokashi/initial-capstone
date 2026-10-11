@@ -20,6 +20,9 @@ contextBridge.exposeInMainWorld('pperp', {
   files: {
     // Opens the Windows file dialog in the main process; the page only ever receives the chosen path (or null).
     pickPath: (): Promise<string | null> => ipcRenderer.invoke('files:pick'),
+    // Writes bytes the page already holds (an export) where the PERSON chooses in the Save dialog.
+    save: (suggestedName: string, base64: string) =>
+      ipcRenderer.invoke('files:save', suggestedName, base64),
   },
   print: {
     toPdf: (html: string, options?: PrintOptions) =>
@@ -27,5 +30,7 @@ contextBridge.exposeInMainWorld('pperp', {
     toPrinter: (html: string, options?: PrintOptions) =>
       ipcRenderer.invoke('print:toPrinter', html, options),
     listPrinters: () => ipcRenderer.invoke('print:list'),
+    // Opens the print-preview window (paper, zoom, Print, Save as PDF), like Qt's preview dialog.
+    preview: (html: string, options?: PrintOptions) => ipcRenderer.invoke('print:preview', html, options),
   },
 });

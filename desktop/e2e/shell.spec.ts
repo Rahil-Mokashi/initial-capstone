@@ -19,7 +19,7 @@ test.describe('electron hardening', () => {
     expect(probe.process).toBe('undefined');
     expect(probe.buffer).toBe('undefined');
     expect(probe.bridge).toEqual(['apiBase', 'files', 'launchSecret', 'print']);
-    expect(probe.print).toEqual(['listPrinters', 'toPdf', 'toPrinter']);
+    expect(probe.print).toEqual(['listPrinters', 'preview', 'toPdf', 'toPrinter']);
   });
 
   test('web preferences are locked down', async ({ launched }) => {

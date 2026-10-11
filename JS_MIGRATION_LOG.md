@@ -232,3 +232,11 @@ Not re-run at this checkpoint: Playwright (the bridge-key expectations were upda
 - api/routers/attendance.py (day list, mark, get, correct; leave list, request, approve, reject, cancel) and an optional date window on GET /shifts (the Qt dialogs list one day's shifts). web features/attendance: roster of ACTIVE employees for a chosen day with one-click Present/Absent, mark dialog (with that day's shifts), correction dialog, Leave page with per-row Approve / Reject / Cancel (pending only; approve/reject need leave.approve, cancel needs leave.manage). Approving writes the days into attendance (service does it in one transaction).
 - Judgment call: Qt's Leave screen selects a row then clicks a top button; here the buttons are on the row. The leave "Reason" text is also optional now (owner decision), stored as "No reason given".
 - Tests: tests/api 4, web 8, Playwright attendance.spec.ts (mark, correct, request, approve, see Leave on that day).
+
+### Sales + shared print/export toolkit (2026-10-11)
+- api/routers/sales.py: paged sales (50), today-by-fuel cards, sale options (free picker for shift.view, own assignment for an attendant, as in Qt), record sale, cancel, mark payment failed, refund, receipt HTML and receipt PDF (the Qt builders, unchanged), customers (list, add, status).
+- web features/sales: cards, Sales and Customers tabs, radio-select a sale then Print receipt / Export PDF / Refund / Mark failed / Cancel (Qt's select-then-click), Record sale dialog, paging.
+- NEW desktop bridge members (UI plumbing only, reviewed against the hardening tests): print.preview(html) opens a print-preview window (paper A4 or 80 mm receipt, zoom, Print, Save as PDF) like Qt's QPrintPreviewDialog; files.save(name, base64) opens the Windows Save dialog and writes the bytes (the page never chooses the path). E2E can set PPERP_E2E_SAVE_DIR. Build adds preview.html + preload-preview.js. Hardening spec updated for the new bridge key.
+- Shared web pieces for every report/receipt from here on: api.download(), lib/documents.ts (saveFile, openPreview), components/DocumentActions.tsx (Print preview + Export PDF/Excel buttons).
+- e2e helper apiAs()/setupPump() (set-up through the API, assertions through the UI).
+- Tests: tests/api 9, web 12, Playwright sales.spec.ts (sale, stock, preview window text, PDF saved and starts with %PDF).

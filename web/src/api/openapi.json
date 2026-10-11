@@ -553,6 +553,128 @@
         "title": "CorrectIn",
         "type": "object"
       },
+      "CustomerIn": {
+        "additionalProperties": false,
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "CustomerIn",
+        "type": "object"
+      },
+      "CustomerOut": {
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "status"
+        ],
+        "title": "CustomerOut",
+        "type": "object"
+      },
+      "CustomerStatusIn": {
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "default": "No reason given",
+            "maxLength": 1000,
+            "title": "Reason",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/StatusEnum"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "CustomerStatusIn",
+        "type": "object"
+      },
       "DeliveryOut": {
         "properties": {
           "arrived_at": {
@@ -1274,6 +1396,29 @@
         "title": "FuelPriceOut",
         "type": "object"
       },
+      "FuelRevenue": {
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "fuel_type": {
+            "title": "Fuel Type",
+            "type": "string"
+          },
+          "quantity": {
+            "title": "Quantity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fuel_type",
+          "quantity",
+          "amount"
+        ],
+        "title": "FuelRevenue",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -1667,6 +1812,40 @@
           "status"
         ],
         "title": "MarkIn",
+        "type": "object"
+      },
+      "MyAssignment": {
+        "properties": {
+          "employee_id": {
+            "title": "Employee Id",
+            "type": "string"
+          },
+          "nozzle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nozzle"
+          },
+          "nozzle_id": {
+            "title": "Nozzle Id",
+            "type": "string"
+          },
+          "shift_id": {
+            "title": "Shift Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "shift_id",
+          "nozzle_id",
+          "employee_id"
+        ],
+        "title": "MyAssignment",
         "type": "object"
       },
       "MyShiftOut": {
@@ -2071,6 +2250,17 @@
         "title": "PaymentIn",
         "type": "object"
       },
+      "PaymentMethod": {
+        "description": "Values stored in Sale.payment_method (problemstatement.md #16/#17).\n\nDeliberately frozen at these four rather than extended to match\ndocs/daily-report-spec.md's eight real tenders (Cash/Credit/Card/DTP\nCard/PhonePe/Paytm/Expenses/Other) - see Tender (app/models/tender.py)\nfor why new tenders are seeded rows from here on, not new enum\nmembers. This enum stays exactly as-is (still driving Sale/Payment/\nExpense's existing payment_method columns, credit checks, reports,\nand UI dropdowns) while Tender/tender_id is the new, separate\nreference the settlement/reconciliation feature uses going forward -\nsee PAYMENT_METHOD_TO_TENDER_NAME below for how the two relate.",
+        "enum": [
+          "cash",
+          "upi",
+          "card",
+          "credit"
+        ],
+        "title": "PaymentMethod",
+        "type": "string"
+      },
       "PaymentOut": {
         "properties": {
           "amount": {
@@ -2120,6 +2310,24 @@
           "payment_method"
         ],
         "title": "PaymentOut",
+        "type": "object"
+      },
+      "PaymentStatusOut": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status"
+        ],
+        "title": "PaymentStatusOut",
         "type": "object"
       },
       "PriceHistoryOut": {
@@ -2453,6 +2661,24 @@
         "title": "ReasonIn",
         "type": "object"
       },
+      "ReceiptOut": {
+        "properties": {
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "html": {
+            "title": "Html",
+            "type": "string"
+          }
+        },
+        "required": [
+          "html",
+          "filename"
+        ],
+        "title": "ReceiptOut",
+        "type": "object"
+      },
       "ReconcileIn": {
         "additionalProperties": false,
         "properties": {
@@ -2648,6 +2874,313 @@
           "name"
         ],
         "title": "RoleOut",
+        "type": "object"
+      },
+      "SaleIn": {
+        "additionalProperties": false,
+        "properties": {
+          "customer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Id"
+          },
+          "employee_id": {
+            "title": "Employee Id",
+            "type": "string"
+          },
+          "nozzle_id": {
+            "title": "Nozzle Id",
+            "type": "string"
+          },
+          "payment_method": {
+            "$ref": "#/components/schemas/PaymentMethod"
+          },
+          "quantity": {
+            "examples": [
+              "12.500"
+            ],
+            "pattern": "^-?\\d{1,9}(\\.\\d{1,3})?$",
+            "title": "Quantity",
+            "type": "string"
+          },
+          "reference_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Number"
+          },
+          "remarks": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remarks"
+          },
+          "shift_id": {
+            "title": "Shift Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "shift_id",
+          "nozzle_id",
+          "employee_id",
+          "quantity",
+          "payment_method"
+        ],
+        "title": "SaleIn",
+        "type": "object"
+      },
+      "SaleOptions": {
+        "description": "What the Record Sale dialog offers. Someone with shift.view picks shift, nozzle and attendant;\nan attendant sells from their own current assignment instead (as in Qt).",
+        "properties": {
+          "can_pick_freely": {
+            "title": "Can Pick Freely",
+            "type": "boolean"
+          },
+          "customers": {
+            "items": {
+              "$ref": "#/components/schemas/IdLabel"
+            },
+            "title": "Customers",
+            "type": "array"
+          },
+          "employees": {
+            "items": {
+              "$ref": "#/components/schemas/IdLabel"
+            },
+            "title": "Employees",
+            "type": "array"
+          },
+          "my_assignment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MyAssignment"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "nozzles": {
+            "items": {
+              "$ref": "#/components/schemas/IdLabel"
+            },
+            "title": "Nozzles",
+            "type": "array"
+          },
+          "shifts": {
+            "items": {
+              "$ref": "#/components/schemas/IdLabel"
+            },
+            "title": "Shifts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "can_pick_freely",
+          "shifts",
+          "nozzles",
+          "employees",
+          "customers"
+        ],
+        "title": "SaleOptions",
+        "type": "object"
+      },
+      "SaleOut": {
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "customer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer"
+          },
+          "fuel_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fuel Type"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "nozzle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nozzle"
+          },
+          "payment_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Id"
+          },
+          "payment_method": {
+            "title": "Payment Method",
+            "type": "string"
+          },
+          "payment_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Status"
+          },
+          "quantity": {
+            "title": "Quantity",
+            "type": "string"
+          },
+          "rate_per_liter": {
+            "title": "Rate Per Liter",
+            "type": "string"
+          },
+          "receipt_number": {
+            "title": "Receipt Number",
+            "type": "string"
+          },
+          "sale_at": {
+            "format": "date-time",
+            "title": "Sale At",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "receipt_number",
+          "sale_at",
+          "quantity",
+          "rate_per_liter",
+          "amount",
+          "payment_method",
+          "status"
+        ],
+        "title": "SaleOut",
+        "type": "object"
+      },
+      "SalePage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SaleOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "items"
+        ],
+        "title": "SalePage",
+        "type": "object"
+      },
+      "SelfSaleIn": {
+        "additionalProperties": false,
+        "description": "Attendant path: the server resolves shift, nozzle and attendant from the signed-in user's assignment.",
+        "properties": {
+          "customer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Id"
+          },
+          "payment_method": {
+            "$ref": "#/components/schemas/PaymentMethod"
+          },
+          "quantity": {
+            "examples": [
+              "12.500"
+            ],
+            "pattern": "^-?\\d{1,9}(\\.\\d{1,3})?$",
+            "title": "Quantity",
+            "type": "string"
+          },
+          "reference_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Number"
+          },
+          "remarks": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remarks"
+          }
+        },
+        "required": [
+          "quantity",
+          "payment_method"
+        ],
+        "title": "SelfSaleIn",
         "type": "object"
       },
       "ShiftOut": {
@@ -4033,6 +4566,232 @@
         "summary": "Me",
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/api/customers": {
+      "get": {
+        "operationId": "list_customers_api_customers_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CustomerOut"
+                  },
+                  "title": "Response List Customers Api Customers Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Customers",
+        "tags": [
+          "sales"
+        ]
+      },
+      "post": {
+        "operationId": "create_customer_api_customers_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomerIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Customer",
+        "tags": [
+          "sales"
+        ]
+      }
+    },
+    "/api/customers/{customer_id}/status": {
+      "post": {
+        "operationId": "set_customer_status_api_customers__customer_id__status_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "customer_id",
+            "required": true,
+            "schema": {
+              "title": "Customer Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomerStatusIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Customer Status",
+        "tags": [
+          "sales"
         ]
       }
     },
@@ -6933,6 +7692,174 @@
         ]
       }
     },
+    "/api/payments/{payment_id}/mark-failed": {
+      "post": {
+        "operationId": "mark_payment_failed_api_payments__payment_id__mark_failed_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "payment_id",
+            "required": true,
+            "schema": {
+              "title": "Payment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReasonIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentStatusOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mark Payment Failed",
+        "tags": [
+          "sales"
+        ]
+      }
+    },
+    "/api/payments/{payment_id}/refund": {
+      "post": {
+        "operationId": "refund_payment_api_payments__payment_id__refund_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "payment_id",
+            "required": true,
+            "schema": {
+              "title": "Payment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReasonIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentStatusOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Refund Payment",
+        "tags": [
+          "sales"
+        ]
+      }
+    },
     "/api/procurement/arrival-options": {
       "get": {
         "operationId": "arrival_options_api_procurement_arrival_options_get",
@@ -7520,6 +8447,607 @@
         "summary": "Record Arrival",
         "tags": [
           "procurement"
+        ]
+      }
+    },
+    "/api/sales": {
+      "get": {
+        "operationId": "list_sales_api_sales_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalePage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Sales",
+        "tags": [
+          "sales"
+        ]
+      },
+      "post": {
+        "operationId": "create_sale_api_sales_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaleIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaleOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Sale",
+        "tags": [
+          "sales"
+        ]
+      }
+    },
+    "/api/sales/mine": {
+      "post": {
+        "operationId": "create_my_sale_api_sales_mine_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SelfSaleIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaleOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create My Sale",
+        "tags": [
+          "sales"
+        ]
+      }
+    },
+    "/api/sales/options": {
+      "get": {
+        "operationId": "sale_options_api_sales_options_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaleOptions"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sale Options",
+        "tags": [
+          "sales"
+        ]
+      }
+    },
+    "/api/sales/today-by-fuel": {
+      "get": {
+        "description": "The per-fuel revenue cards: ReportService.get_sales_report for today, minus its Total row.",
+        "operationId": "today_by_fuel_api_sales_today_by_fuel_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FuelRevenue"
+                  },
+                  "title": "Response Today By Fuel Api Sales Today By Fuel Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Today By Fuel",
+        "tags": [
+          "sales"
+        ]
+      }
+    },
+    "/api/sales/{sale_id}/cancel": {
+      "post": {
+        "operationId": "cancel_sale_api_sales__sale_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sale_id",
+            "required": true,
+            "schema": {
+              "title": "Sale Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReasonIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaleOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cancel Sale",
+        "tags": [
+          "sales"
+        ]
+      }
+    },
+    "/api/sales/{sale_id}/receipt": {
+      "get": {
+        "operationId": "receipt_html_api_sales__sale_id__receipt_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sale_id",
+            "required": true,
+            "schema": {
+              "title": "Sale Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceiptOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Receipt Html",
+        "tags": [
+          "sales"
+        ]
+      }
+    },
+    "/api/sales/{sale_id}/receipt.pdf": {
+      "get": {
+        "operationId": "receipt_pdf_api_sales__sale_id__receipt_pdf_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sale_id",
+            "required": true,
+            "schema": {
+              "title": "Sale Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Receipt Pdf",
+        "tags": [
+          "sales"
         ]
       }
     },

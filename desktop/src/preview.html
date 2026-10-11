@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <!-- The previewed document is inert: no scripts, no network. Its inline <style> is allowed. -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:; frame-src about:"
+    />
+    <title>Print preview</title>
+    <style>
+      body {
+        margin: 0;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        font-family: 'Segoe UI', system-ui, sans-serif;
+        background: #e8e6df;
+        color: #1b2420;
+      }
+      header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 14px;
+        background: #fff;
+        border-bottom: 1px solid #d4d0c4;
+      }
+      header .spacer {
+        flex: 1;
+      }
+      button,
+      select {
+        min-height: 40px;
+        padding: 0 14px;
+        border-radius: 8px;
+        border: 1px solid #9c9a8f;
+        background: #fff;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button.primary {
+        background: #15663d;
+        border-color: #15663d;
+        color: #fff;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      #status {
+        font-size: 13px;
+        color: #55605a;
+      }
+      #status.error {
+        color: #9b1c1c;
+      }
+      main {
+        flex: 1;
+        overflow: auto;
+        padding: 20px;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+      }
+      #sheet {
+        background: #fff;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+        transform-origin: top center;
+      }
+      iframe {
+        border: 0;
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <label for="paper">Paper</label>
+      <select id="paper">
+        <option value="A4">A4</option>
+        <option value="receipt">80 mm receipt</option>
+      </select>
+      <button id="zoom-out" aria-label="Zoom out">&minus;</button>
+      <button id="zoom-in" aria-label="Zoom in">+</button>
+      <span id="status" role="status"></span>
+      <span class="spacer"></span>
+      <button id="pdf">Save as PDF</button>
+      <button id="print" class="primary">Print</button>
+      <button id="close">Close</button>
+    </header>
+    <main>
+      <div id="sheet"><iframe id="doc" title="Document preview" sandbox=""></iframe></div>
+    </main>
+  </body>
+</html>

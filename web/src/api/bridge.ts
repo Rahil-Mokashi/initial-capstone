@@ -8,7 +8,13 @@ export interface PrintOptions {
 export interface PperpBridge {
   apiBase: string;
   launchSecret: string;
-  files: { pickPath(): Promise<string | null> };
+  files: {
+    pickPath(): Promise<string | null>;
+    save(
+      suggestedName: string,
+      base64: string,
+    ): Promise<{ ok: boolean; path?: string; error?: string }>;
+  };
   print: {
     toPdf(
       html: string,
@@ -16,6 +22,7 @@ export interface PperpBridge {
     ): Promise<{ ok: boolean; path?: string; error?: string }>;
     toPrinter(html: string, options?: PrintOptions): Promise<{ ok: boolean; error?: string }>;
     listPrinters(): Promise<Array<{ name: string; isDefault: boolean }>>;
+    preview(html: string, options?: PrintOptions): Promise<{ ok: boolean }>;
   };
 }
 

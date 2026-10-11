@@ -124,6 +124,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/customers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Customers */
+        get: operations["list_customers_api_customers_get"];
+        put?: never;
+        /** Create Customer */
+        post: operations["create_customer_api_customers_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/customers/{customer_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Set Customer Status */
+        post: operations["set_customer_status_api_customers__customer_id__status_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/deliveries/{delivery_id}": {
         parameters: {
             query?: never;
@@ -652,6 +687,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/payments/{payment_id}/mark-failed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark Payment Failed */
+        post: operations["mark_payment_failed_api_payments__payment_id__mark_failed_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/payments/{payment_id}/refund": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Refund Payment */
+        post: operations["refund_payment_api_payments__payment_id__refund_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/procurement/arrival-options": {
         parameters: {
             query?: never;
@@ -750,6 +819,129 @@ export interface paths {
         put?: never;
         /** Record Arrival */
         post: operations["record_arrival_api_purchase_orders__po_id__deliveries_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sales": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Sales */
+        get: operations["list_sales_api_sales_get"];
+        put?: never;
+        /** Create Sale */
+        post: operations["create_sale_api_sales_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sales/mine": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create My Sale */
+        post: operations["create_my_sale_api_sales_mine_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sales/options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sale Options */
+        get: operations["sale_options_api_sales_options_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sales/today-by-fuel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Today By Fuel
+         * @description The per-fuel revenue cards: ReportService.get_sales_report for today, minus its Total row.
+         */
+        get: operations["today_by_fuel_api_sales_today_by_fuel_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sales/{sale_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel Sale */
+        post: operations["cancel_sale_api_sales__sale_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sales/{sale_id}/receipt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Receipt Html */
+        get: operations["receipt_html_api_sales__sale_id__receipt_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sales/{sale_id}/receipt.pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Receipt Pdf */
+        get: operations["receipt_pdf_api_sales__sale_id__receipt_pdf_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1419,6 +1611,41 @@ export interface components {
             shift_id?: string | null;
             status?: components["schemas"]["AttendanceStatus"] | null;
         };
+        /** CustomerIn */
+        CustomerIn: {
+            /** Address */
+            address?: string | null;
+            /** Email */
+            email?: string | null;
+            /** Name */
+            name: string;
+            /** Phone */
+            phone?: string | null;
+        };
+        /** CustomerOut */
+        CustomerOut: {
+            /** Address */
+            address?: string | null;
+            /** Email */
+            email?: string | null;
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Phone */
+            phone?: string | null;
+            /** Status */
+            status: string;
+        };
+        /** CustomerStatusIn */
+        CustomerStatusIn: {
+            /**
+             * Reason
+             * @default No reason given
+             */
+            reason: string;
+            status: components["schemas"]["StatusEnum"];
+        };
         /** DeliveryOut */
         DeliveryOut: {
             /**
@@ -1637,6 +1864,15 @@ export interface components {
             /** Rate Per Liter */
             rate_per_liter?: string | null;
         };
+        /** FuelRevenue */
+        FuelRevenue: {
+            /** Amount */
+            amount: string;
+            /** Fuel Type */
+            fuel_type: string;
+            /** Quantity */
+            quantity: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -1788,6 +2024,17 @@ export interface components {
             shift_label?: string | null;
             status: components["schemas"]["AttendanceStatus"];
         };
+        /** MyAssignment */
+        MyAssignment: {
+            /** Employee Id */
+            employee_id: string;
+            /** Nozzle */
+            nozzle?: string | null;
+            /** Nozzle Id */
+            nozzle_id: string;
+            /** Shift Id */
+            shift_id: string;
+        };
         /** MyShiftOut */
         MyShiftOut: {
             /** Dispenser */
@@ -1931,6 +2178,22 @@ export interface components {
             /** Remarks */
             remarks?: string | null;
         };
+        /**
+         * PaymentMethod
+         * @description Values stored in Sale.payment_method (problemstatement.md #16/#17).
+         *
+         *     Deliberately frozen at these four rather than extended to match
+         *     docs/daily-report-spec.md's eight real tenders (Cash/Credit/Card/DTP
+         *     Card/PhonePe/Paytm/Expenses/Other) - see Tender (app/models/tender.py)
+         *     for why new tenders are seeded rows from here on, not new enum
+         *     members. This enum stays exactly as-is (still driving Sale/Payment/
+         *     Expense's existing payment_method columns, credit checks, reports,
+         *     and UI dropdowns) while Tender/tender_id is the new, separate
+         *     reference the settlement/reconciliation feature uses going forward -
+         *     see PAYMENT_METHOD_TO_TENDER_NAME below for how the two relate.
+         * @enum {string}
+         */
+        PaymentMethod: "cash" | "upi" | "card" | "credit";
         /** PaymentOut */
         PaymentOut: {
             /** Amount */
@@ -1948,6 +2211,13 @@ export interface components {
             reference?: string | null;
             /** Remarks */
             remarks?: string | null;
+        };
+        /** PaymentStatusOut */
+        PaymentStatusOut: {
+            /** Id */
+            id: string;
+            /** Status */
+            status: string;
         };
         /** PriceHistoryOut */
         PriceHistoryOut: {
@@ -2064,6 +2334,13 @@ export interface components {
              */
             reason: string;
         };
+        /** ReceiptOut */
+        ReceiptOut: {
+            /** Filename */
+            filename: string;
+            /** Html */
+            html: string;
+        };
         /** ReconcileIn */
         ReconcileIn: {
             /**
@@ -2150,6 +2427,102 @@ export interface components {
             id: string;
             /** Name */
             name: string;
+        };
+        /** SaleIn */
+        SaleIn: {
+            /** Customer Id */
+            customer_id?: string | null;
+            /** Employee Id */
+            employee_id: string;
+            /** Nozzle Id */
+            nozzle_id: string;
+            payment_method: components["schemas"]["PaymentMethod"];
+            /**
+             * Quantity
+             * @example 12.500
+             */
+            quantity: string;
+            /** Reference Number */
+            reference_number?: string | null;
+            /** Remarks */
+            remarks?: string | null;
+            /** Shift Id */
+            shift_id: string;
+        };
+        /**
+         * SaleOptions
+         * @description What the Record Sale dialog offers. Someone with shift.view picks shift, nozzle and attendant;
+         *     an attendant sells from their own current assignment instead (as in Qt).
+         */
+        SaleOptions: {
+            /** Can Pick Freely */
+            can_pick_freely: boolean;
+            /** Customers */
+            customers: components["schemas"]["IdLabel"][];
+            /** Employees */
+            employees: components["schemas"]["IdLabel"][];
+            my_assignment?: components["schemas"]["MyAssignment"] | null;
+            /** Nozzles */
+            nozzles: components["schemas"]["IdLabel"][];
+            /** Shifts */
+            shifts: components["schemas"]["IdLabel"][];
+        };
+        /** SaleOut */
+        SaleOut: {
+            /** Amount */
+            amount: string;
+            /** Customer */
+            customer?: string | null;
+            /** Fuel Type */
+            fuel_type?: string | null;
+            /** Id */
+            id: string;
+            /** Nozzle */
+            nozzle?: string | null;
+            /** Payment Id */
+            payment_id?: string | null;
+            /** Payment Method */
+            payment_method: string;
+            /** Payment Status */
+            payment_status?: string | null;
+            /** Quantity */
+            quantity: string;
+            /** Rate Per Liter */
+            rate_per_liter: string;
+            /** Receipt Number */
+            receipt_number: string;
+            /**
+             * Sale At
+             * Format: date-time
+             */
+            sale_at: string;
+            /** Status */
+            status: string;
+        };
+        /** SalePage */
+        SalePage: {
+            /** Items */
+            items: components["schemas"]["SaleOut"][];
+            /** Total */
+            total: number;
+        };
+        /**
+         * SelfSaleIn
+         * @description Attendant path: the server resolves shift, nozzle and attendant from the signed-in user's assignment.
+         */
+        SelfSaleIn: {
+            /** Customer Id */
+            customer_id?: string | null;
+            payment_method: components["schemas"]["PaymentMethod"];
+            /**
+             * Quantity
+             * @example 12.500
+             */
+            quantity: string;
+            /** Reference Number */
+            reference_number?: string | null;
+            /** Remarks */
+            remarks?: string | null;
         };
         /** ShiftOut */
         ShiftOut: {
@@ -2682,6 +3055,112 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UserOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_customers_api_customers_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_customer_api_customers_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CustomerIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_customer_status_api_customers__customer_id__status_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                customer_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CustomerStatusIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerOut"];
                 };
             };
             /** @description Validation Error */
@@ -4040,6 +4519,82 @@ export interface operations {
             };
         };
     };
+    mark_payment_failed_api_payments__payment_id__mark_failed_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                payment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReasonIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentStatusOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    refund_payment_api_payments__payment_id__refund_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                payment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReasonIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentStatusOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     arrival_options_api_procurement_arrival_options_get: {
         parameters: {
             query?: never;
@@ -4303,6 +4858,283 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DeliveryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_sales_api_sales_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalePage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_sale_api_sales_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaleIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SaleOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_my_sale_api_sales_mine_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SelfSaleIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SaleOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sale_options_api_sales_options_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SaleOptions"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    today_by_fuel_api_sales_today_by_fuel_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FuelRevenue"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_sale_api_sales__sale_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                sale_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReasonIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SaleOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    receipt_html_api_sales__sale_id__receipt_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                sale_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReceiptOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    receipt_pdf_api_sales__sale_id__receipt_pdf_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                sale_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */

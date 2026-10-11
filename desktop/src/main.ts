@@ -1,4 +1,5 @@
 import { BrowserWindow, Menu, app, dialog, ipcMain, session } from 'electron';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { dirname } from 'node:path';
@@ -14,7 +15,13 @@ const E2E = process.env.PPERP_E2E === '1';
 if (process.env.PPERP_USER_DATA) app.setPath('userData', process.env.PPERP_USER_DATA);
 
 const errorPage = join(__dirname, 'error.html');
-const policy: Policy = { allowedOrigins: [], allowedFileUrls: [pathToFileURL(errorPage).href] };
+const previewPage = join(__dirname, 'preview.html');
+const policy: Policy = {
+  allowedOrigins: [],
+  allowedFileUrls: [pathToFileURL(errorPage).href, pathToFileURL(previewPage).href],
+};
+/** The document each open preview window shows, keyed by that window's webContents id. */
+const previews = new Map<number, { html: string; pageSize: PrintOptions['pageSize'] }>();
 
 let sidecar: RunningSidecar | null = null;
 let mainWindow: BrowserWindow | null = null;
@@ -201,6 +208,51 @@ function registerIpc(): void {
   ipcMain.handle('print:toPrinter', (_e, html: string, options: PrintOptions = {}) =>
     printToPrinter(String(html), options, policy),
   );
+  ipcMain.handle('print:preview', (_e, html: string, options: PrintOptions = {}) => {
+    const win = new BrowserWindow({
+      width: 900,
+      height: 760,
+      title: 'Print preview',
+      parent: mainWindow ?? undefined,
+      modal: false,
+      backgroundColor: '#e8e6df',
+      webPreferences: {
+        preload: join(__dirname, 'preload-preview.js'),
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: true,
+      },
+    });
+    win.setMenuBarVisibility(false);
+    const id = win.webContents.id;
+    previews.set(id, { html: String(html), pageSize: options.pageSize ?? 'A4' });
+    win.on('closed', () => previews.delete(id));
+    void win.loadFile(previewPage);
+    return { ok: true };
+  });
+  ipcMain.handle('preview:init', (event) => previews.get(event.sender.id) ?? { html: '', pageSize: 'A4' });
+  ipcMain.handle('files:save', async (event, suggestedName: string, base64: string) => {
+    const name = String(suggestedName).replace(/[\\/:*?"<>|]/g, '_') || 'export';
+    const data = Buffer.from(String(base64), 'base64');
+    // Test harness only: a fixed folder instead of a native dialog nobody can click in an automated run.
+    if (E2E && process.env.PPERP_E2E_SAVE_DIR) {
+      mkdirSync(process.env.PPERP_E2E_SAVE_DIR, { recursive: true });
+      const target = join(process.env.PPERP_E2E_SAVE_DIR, name);
+      writeFileSync(target, data);
+      return { ok: true, path: target };
+    }
+    // The page never chooses the path: the person does, in the Windows Save dialog.
+    const win = BrowserWindow.fromWebContents(event.sender) ?? undefined;
+    const ext = name.includes('.') ? name.split('.').pop()!.toLowerCase() : '';
+    const options = {
+      defaultPath: join(app.getPath('documents'), name),
+      filters: ext ? [{ name: ext.toUpperCase(), extensions: [ext] }] : [],
+    };
+    const choice = await (win ? dialog.showSaveDialog(win, options) : dialog.showSaveDialog(options));
+    if (choice.canceled || !choice.filePath) return { ok: false, error: 'cancelled' };
+    writeFileSync(choice.filePath, data);
+    return { ok: true, path: choice.filePath };
+  });
   ipcMain.handle('print:list', async (event) => {
     const win = BrowserWindow.fromWebContents(event.sender);
     return win ? listPrinters(win) : [];
