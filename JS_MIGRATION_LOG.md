@@ -214,3 +214,11 @@ Not re-run at this checkpoint: Playwright (the bridge-key expectations were upda
 
 ### Nozzles & Dispensers (2026-10-11)
 - api/routers/nozzles.py (dispensers + nozzles lists, create, status; /nozzles/options for the Add Nozzle dropdowns, gated nozzle.manage like the Qt dialog). web features/nozzles (two tabs, add dialogs, status dialogs). New shared TabbedPanel and test harness (src/test/harness.tsx). Tests: tests/api 3, web 5, Playwright nozzles.spec.ts.
+
+### Procurement (2026-10-11)
+- api/routers/procurement.py: suppliers, purchase orders (+ pending-delivery data), tanker delivery workflow (arrival, documents, quality, pre-dip, post-dip + unload into the tank, reject), supplier invoices, payments, plus two option endpoints for the dropdowns the Qt dialogs read straight from repositories. web features/procurement: one screen with Suppliers / Purchase Orders / Invoices tabs (the Suppliers and Procurement nav entries land on different tabs, as in Qt), order, delivery and invoice detail pages. Delivery buttons enable only for the current status; the service still enforces order.
+- Judgment call: Qt shows the delivery and invoice detail in popup dialogs that open further popups; here they are pages (back link) so dialogs never stack.
+- Small addition over Qt: an item can be removed from a purchase order draft before saving.
+- Offline gate: added one exact inert URL (a React Router warning message mentions a polyfill link) to the JS-only allowlist, with a test; nothing fetches it.
+- Sign-in redirect now keeps the query string (deep links like ?tab=suppliers survive a re-login).
+- Tests: tests/api 6, web 12, Playwright procurement.spec.ts (supplier to paid invoice, tank stock checked).

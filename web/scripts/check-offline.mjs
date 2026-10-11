@@ -32,6 +32,8 @@ const NAMESPACES = new Set([
 const INERT_IN_JS = [
   /^https:\/\/react\.dev\/errors\//,
   /^https:\/\/reactrouter\.com\/en\/main\/routers\/picking-a-router$/,
+  // Inside a React Router warning message about old browsers ("...load a polyfill such as <url>").
+  /^https:\/\/github\.com\/ungap\/url-search-params$/,
   /^https?:\/\/json-schema\.org\/draft[-/][\w-]+\/schema#?$/,
   /^http:\/\/\[\$\{\w+\}\]$/,
 ];

@@ -10,6 +10,12 @@ import { FuelPricesPage } from '@/features/fuel-prices/FuelPricesPage';
 import { UsersPage } from '@/features/users/UsersPage';
 import { UserDetailPage } from '@/features/users/UserDetailPage';
 import { NozzlesPage } from '@/features/nozzles/NozzlesPage';
+import { ProcurementPage } from '@/features/procurement/ProcurementPage';
+import {
+  DeliveryDetailPage,
+  InvoiceDetailPage,
+  OrderDetailPage,
+} from '@/features/procurement/DetailPages';
 import { TankDetailPage } from '@/features/tanks/TankDetailPage';
 import { TanksPage } from '@/features/tanks/TanksPage';
 
@@ -17,7 +23,8 @@ import { TanksPage } from '@/features/tanks/TanksPage';
 function RequireAuth() {
   const { user } = useAuth();
   const location = useLocation();
-  if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  if (!user)
+    return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />;
   if (user.must_change_password) return <ChangePasswordPage />;
   return <Outlet />;
 }
@@ -33,6 +40,10 @@ export function App() {
             <Route path="/users" element={<UsersPage />} />
             <Route path="/users/:id" element={<UserDetailPage />} />
             <Route path="/nozzles" element={<NozzlesPage />} />
+            <Route path="/procurement" element={<ProcurementPage />} />
+            <Route path="/procurement/orders/:id" element={<OrderDetailPage />} />
+            <Route path="/procurement/deliveries/:id" element={<DeliveryDetailPage />} />
+            <Route path="/procurement/invoices/:id" element={<InvoiceDetailPage />} />
             <Route path="/tanks" element={<TanksPage />} />
             <Route path="/tanks/:id" element={<TankDetailPage />} />
             <Route path="/fuel-prices" element={<FuelPricesPage />} />

@@ -1,6 +1,6 @@
 import { Fuel, LogOut, Moon, Sun } from 'lucide-react';
 import { useState } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthContext';
 import { cn } from '@/lib/cn';
 import { visibleGroups } from './nav';
@@ -16,6 +16,7 @@ function applyTheme(theme: Theme) {
 function Sidebar() {
   const { can } = useAuth();
   const groups = visibleGroups(can);
+  const location = useLocation();
   return (
     <aside className="flex w-[var(--sidebar-w)] shrink-0 flex-col bg-ink text-ink-fg">
       <div className="flex items-center gap-3 border-b border-ink-2 px-5 py-5">
@@ -45,7 +46,14 @@ function Sidebar() {
                       className={({ isActive }) =>
                         cn(
                           'flex min-h-[44px] items-center rounded-md px-3 text-sm font-medium',
-                          isActive ? 'bg-primary text-primary-fg' : 'text-ink-fg hover:bg-ink-2',
+                          // Two entries can open one screen on different tabs (?tab=...); then the tab decides.
+                          (
+                            item.to?.includes('?')
+                              ? item.to === location.pathname + location.search
+                              : isActive
+                          )
+                            ? 'bg-primary text-primary-fg'
+                            : 'text-ink-fg hover:bg-ink-2',
                         )
                       }
                     >

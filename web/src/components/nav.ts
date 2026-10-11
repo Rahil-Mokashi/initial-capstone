@@ -21,7 +21,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Fuel Prices', permission: 'fuel_price.view', to: '/fuel-prices' },
       { label: 'Tanks', permission: 'inventory.view', to: '/tanks' },
       { label: 'Nozzles & Dispensers', permission: 'nozzle.view', to: '/nozzles' },
-      { label: 'Suppliers', permission: 'procurement.view' },
+      { label: 'Suppliers', permission: 'procurement.view', to: '/procurement?tab=suppliers' },
       { label: 'Company Profile', permission: 'settings.view' },
     ],
   },
@@ -37,7 +37,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Credit', permission: 'credit.view' },
       { label: 'Expenses', permission: 'expense.view' },
       { label: 'Reconciliation', permission: 'reconciliation.view' },
-      { label: 'Procurement', permission: 'procurement.view' },
+      { label: 'Procurement', permission: 'procurement.view', to: '/procurement?tab=orders' },
     ],
   },
   {
