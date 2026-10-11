@@ -124,6 +124,92 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/credit/accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Accounts */
+        get: operations["list_accounts_api_credit_accounts_get"];
+        put?: never;
+        /** Open Account */
+        post: operations["open_account_api_credit_accounts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/credit/accounts/{customer_id}/limit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Change Limit */
+        post: operations["change_limit_api_credit_accounts__customer_id__limit_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/credit/accounts/{customer_id}/statement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Statement */
+        get: operations["statement_api_credit_accounts__customer_id__statement_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/credit/accounts/{customer_id}/statement.{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Statement File */
+        get: operations["statement_file_api_credit_accounts__customer_id__statement__kind__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/credit/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record Payment */
+        post: operations["record_payment_api_credit_payments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/customers": {
         parameters: {
             query?: never;
@@ -1452,6 +1538,36 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AccountIn */
+        AccountIn: {
+            /**
+             * Credit Limit
+             * @example 102.50
+             */
+            credit_limit: string;
+            /** Customer Id */
+            customer_id: string;
+            /**
+             * Payment Due Days
+             * @default 30
+             */
+            payment_due_days: number;
+        };
+        /** AccountOut */
+        AccountOut: {
+            /** Credit Limit */
+            credit_limit: string;
+            /** Customer */
+            customer?: string | null;
+            /** Customer Id */
+            customer_id: string;
+            /** Outstanding */
+            outstanding: string;
+            /** Overdue */
+            overdue: boolean;
+            /** Payment Due Days */
+            payment_due_days: number;
+        };
         /** ActiveIn */
         ActiveIn: {
             /** Is Active */
@@ -1670,6 +1786,28 @@ export interface components {
             phone?: string | null;
             /** Status */
             status: string;
+        };
+        /** CustomerPaymentIn */
+        CustomerPaymentIn: {
+            /**
+             * Amount
+             * @example 102.50
+             */
+            amount: string;
+            /** Customer Id */
+            customer_id: string;
+            payment_method: components["schemas"]["PaymentMethod"];
+            /** Reference */
+            reference?: string | null;
+            /** Remarks */
+            remarks?: string | null;
+        };
+        /** CustomerPaymentOut */
+        CustomerPaymentOut: {
+            /** Amount */
+            amount: string;
+            /** Id */
+            id: string;
         };
         /** CustomerStatusIn */
         CustomerStatusIn: {
@@ -2017,6 +2155,19 @@ export interface components {
             date_to: string;
             /** Employee Id */
             employee_id: string;
+            /**
+             * Reason
+             * @default No reason given
+             */
+            reason: string;
+        };
+        /** LimitIn */
+        LimitIn: {
+            /**
+             * New Limit
+             * @example 102.50
+             */
+            new_limit: string;
             /**
              * Reason
              * @default No reason given
@@ -2440,6 +2591,20 @@ export interface components {
              */
             reason: string;
         };
+        /**
+         * ReportView
+         * @description What a table report looks like on screen, plus its printable HTML (the same one Qt previews).
+         */
+        ReportView: {
+            /** Headers */
+            headers: string[];
+            /** Html */
+            html: string;
+            /** Rows */
+            rows: string[][];
+            /** Title */
+            title: string;
+        };
         /** ResetCodeOut */
         ResetCodeOut: {
             /** Code */
@@ -2583,6 +2748,32 @@ export interface components {
             start_time?: string | null;
             /** Status */
             status: string;
+        };
+        /** StatementEntry */
+        StatementEntry: {
+            /** Credit */
+            credit?: string | null;
+            /** Debit */
+            debit?: string | null;
+            /** Description */
+            description: string;
+            /**
+             * Entry Date
+             * Format: date
+             */
+            entry_date: string;
+            /** Running Balance */
+            running_balance: string;
+        };
+        /** StatementOut */
+        StatementOut: {
+            /** Customer */
+            customer?: string | null;
+            /** Entries */
+            entries: components["schemas"]["StatementEntry"][];
+            report: components["schemas"]["ReportView"];
+            /** Running Balance */
+            running_balance: string;
         };
         /**
          * StatusEnum
@@ -3153,6 +3344,217 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UserOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_accounts_api_credit_accounts_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    open_account_api_credit_accounts_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_limit_api_credit_accounts__customer_id__limit_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                customer_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LimitIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    statement_api_credit_accounts__customer_id__statement_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                customer_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StatementOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    statement_file_api_credit_accounts__customer_id__statement__kind__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                customer_id: string;
+                kind: "pdf" | "xlsx";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    record_payment_api_credit_payments_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CustomerPaymentIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerPaymentOut"];
                 };
             };
             /** @description Validation Error */

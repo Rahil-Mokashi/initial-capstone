@@ -245,3 +245,9 @@ Not re-run at this checkpoint: Playwright (the bridge-key expectations were upda
 - api/routers/terminal.py: context (nozzles with their rates, shifts, attendants, customers, or the attendant's own assignment) and POST /terminal/sales. In amount mode the SERVER computes quantity = amount / rate at full precision and passes it to SaleService.create_sale exactly as the Qt screen does (so the stored litres and the amount match Qt to the paisa; verified: Rs 1000 at 102.50 stores 9.756 L). The browser only previews, using exact BigInt decimal math (web/src/lib/decimalMath.ts, half-even to 2 places like Decimal.quantize).
 - web features/terminal: chip pickers (nozzle, rupees/litres, quick amounts 200/500/1000/2000, payment method), live preview, sale-recorded card with Print receipt / PDF / New sale, recent sales on this nozzle.
 - Tests: tests/api 6, web 7 + 3 (decimalMath), Playwright terminal.spec.ts.
+
+### Credit (2026-10-11)
+- api/reporting.py: shared helper that turns any TableReport into on-screen rows + the printable HTML + PDF / Excel / CSV bytes, using the Qt exporters unchanged. Every report screen after this reuses it.
+- api/routers/credit.py: accounts (with outstanding + overdue), open account, change limit, record payment, customer statement (+ PDF / Excel). web features/credit: select-an-account table, open-account dialog with "Add new customer" (swaps to the customer dialog and back - never two dialogs), payment dialog (no "Credit" method, as in Qt), limit dialog, statement dialog with Print preview / Export Excel / Export PDF.
+- New guard test (tests/api/test_api_schema_names.py): two routers defining the same model name make OpenAPI prefix both and silently break the generated types; this test fails if that ever happens (it caught Payment{In,Out} in credit vs procurement).
+- Tests: tests/api 3 + 1, web 7, Playwright credit.spec.ts (open, credit sale via the Terminal, pay, statement, PDF + Excel saved and checked).
