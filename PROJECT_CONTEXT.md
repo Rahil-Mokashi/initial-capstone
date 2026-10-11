@@ -1111,6 +1111,7 @@ A staged move of the UI from PySide6 to React inside Electron, keeping the Pytho
 - API rules: same service methods and permission names as the Qt window; per-request DB session; session token from `AuthService`; per-launch secret header on every call; Decimals as strings at 2/3 dp; error envelope with stable codes; loopback-only bind.
 - Tests added: `tests/api/` (107, in the Python suite), web Vitest, desktop Vitest, Playwright against the real Electron app.
 - Dev commands: API types `npm run api:types` (in `web/`); build UI `npm run build` (in `web/`, includes the offline check); run `npm start` in `desktop/` (needs `web/dist`); e2e `npm run e2e` in `desktop/`; sidecar `pyinstaller api/pperp_api.spec --distpath desktop/sidecar-dist --workpath desktop/sidecar-build`; installer `npx electron-builder --win nsis` in `desktop/`. This shell may set `ELECTRON_RUN_AS_NODE=1`, which makes Electron behave as plain Node: unset it first.
+- 2026-10-11: Employees screen migrated to the React UI (list, add, inline status, detail with profile / exit / documents); next screen is Fuel Prices. See `JS_MIGRATION_LOG.md`.
 - Deferred (per brief): PIN sign-in, Windows Hello, screen lock, self-service reset, locale toggle, Caps Lock warning, lockout countdown, code signing, auto-update.
 
 ## Next Task

@@ -53,6 +53,17 @@ b945d1d docs: record reset point and rollback steps before the JS front-end migr
 | Audit rows for every change | Done (asserted per endpoint, chain verified) |
 | Duplicate-instance bug | Fixed by design; proven by unit and e2e tests |
 
+## Employees parity checklist (Qt `employee_window.py` vs new UI)
+| Qt feature | New UI |
+|---|---|
+| Searchable list (name / code), columns code, name, designation, department, status, joining date | Done |
+| Status changed inline in the list row, reason required, cancel changes nothing, disabled without employee.manage | Done |
+| Add employee (10 fields, outlet default "Main Outlet", joining date today), server field errors beside the field | Done |
+| Detail: profile (contact, designation, department; blank designation/department clears), status + Apply, Record exit (today, reason) | Done |
+| Documents: add via file dialog + type, remove with reason | Done (path comes from the one new bridge method files.pickPath) |
+| Add / edit controls hidden or disabled for view-only roles | Done, server re-checks |
+| Audit rows for every change | Done (API tests, chain verified) |
+
 ## UX improvements (reasons in the log)
 Card shortcuts (Receipt / Record reading), detail as a route, level shown in words and icon, inline validation with server field errors, current stock shown in dialogs, remembered reader, reconcile result, cards/table toggle, outside clicks never discard a form, one no-access message, disabled buttons explain why.
 

@@ -220,9 +220,9 @@ describe('permission-aware navigation', () => {
     expect(visibleGroups(only())).toEqual([]);
   });
 
-  it('only Tanks is routable so far; the rest are marked as not migrated', () => {
+  it('only Tanks and Employees are routable so far; the rest are marked as not migrated', () => {
     const all = visibleGroups(() => true).flatMap((g) => g.items);
-    expect(all.filter((i) => i.to).map((i) => i.label)).toEqual(['Tanks']);
+    expect(all.filter((i) => i.to).map((i) => i.label)).toEqual(['Employees', 'Tanks']);
     expect(all.length).toBeGreaterThan(10);
   });
 });

@@ -194,3 +194,9 @@ The owner asked for ALL functionality to be migrated, in my preferred (dependenc
 2. Fuel Prices; Users; Nozzles & Dispensers; Suppliers/Procurement (largest); Shifts + My Shift; Attendance; Leave; Sales + Customers; Terminal; Credit; Expenses; Reconciliation (+ cash book, shortages); Reports hub; Analytics; Dashboard + alert strip + notifications; Company Profile; Backups; Audit Log; login extras (PIN, forgot password, lock screen, support).
 3. After each screen: update the parity checklist in JS_MIGRATION_REPORT.md, run the full suites, rebuild the installer.
 Not re-run at this checkpoint: Playwright (the bridge-key expectations were updated but not executed) and the full Python suite (only tests/api employees and route matrix were run: 75 passed).
+
+### Employees UI (2026-10-11)
+- Added web/src/features/employees: EmployeesPage (list, search, inline status with reason, add dialog), EmployeeDetailPage (profile, status/exit, documents); routes /employees and /employees/:id; nav entry enabled. No change under app/ or api/.
+- Judgment call: the detail profile edits only contact, designation and department, exactly like Qt, even though the API accepts more fields.
+- Tests: web 162 (9 new), Playwright employees.spec.ts (add, status with reason, document via stubbed file dialog, exit) passes; tests/api 182 passed.
+- NEXT: Fuel Prices, then Users, Nozzles, Procurement, ...

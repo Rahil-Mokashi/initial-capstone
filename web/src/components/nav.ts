@@ -16,7 +16,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Masters',
     items: [
-      { label: 'Employees', permission: 'employee.view' },
+      { label: 'Employees', permission: 'employee.view', to: '/employees' },
       { label: 'Users', permission: 'user.manage' },
       { label: 'Fuel Prices', permission: 'fuel_price.view' },
       { label: 'Tanks', permission: 'inventory.view', to: '/tanks' },
