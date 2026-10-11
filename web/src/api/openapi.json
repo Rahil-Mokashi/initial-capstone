@@ -485,6 +485,66 @@
         "title": "CancelIn",
         "type": "object"
       },
+      "CashBookOut": {
+        "properties": {
+          "advance_amount": {
+            "title": "Advance Amount",
+            "type": "string"
+          },
+          "bank_deposits_total": {
+            "title": "Bank Deposits Total",
+            "type": "string"
+          },
+          "closing_cash_in_hand": {
+            "title": "Closing Cash In Hand",
+            "type": "string"
+          },
+          "final_amount": {
+            "title": "Final Amount",
+            "type": "string"
+          },
+          "opening_balance": {
+            "title": "Opening Balance",
+            "type": "string"
+          },
+          "recorded_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recorded By"
+          },
+          "shift": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shift"
+          },
+          "shift_id": {
+            "title": "Shift Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "shift_id",
+          "opening_balance",
+          "advance_amount",
+          "final_amount",
+          "bank_deposits_total",
+          "closing_cash_in_hand"
+        ],
+        "title": "CashBookOut",
+        "type": "object"
+      },
       "CategoryIn": {
         "additionalProperties": false,
         "properties": {
@@ -967,6 +1027,34 @@
         "title": "DeliveryOut",
         "type": "object"
       },
+      "DepositIn": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "examples": [
+              "102.50"
+            ],
+            "pattern": "^-?\\d{1,12}(\\.\\d{1,2})?$",
+            "title": "Amount",
+            "type": "string"
+          },
+          "bank_name": {
+            "title": "Bank Name",
+            "type": "string"
+          },
+          "shift_id": {
+            "title": "Shift Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "shift_id",
+          "bank_name",
+          "amount"
+        ],
+        "title": "DepositIn",
+        "type": "object"
+      },
       "DipIn": {
         "additionalProperties": false,
         "properties": {
@@ -1112,6 +1200,19 @@
           "file_reference"
         ],
         "title": "DocumentOut",
+        "type": "object"
+      },
+      "DoneOut": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "DoneOut",
         "type": "object"
       },
       "EmployeeCreateIn": {
@@ -1500,6 +1601,29 @@
           }
         },
         "title": "ExitIn",
+        "type": "object"
+      },
+      "ExpectedOut": {
+        "properties": {
+          "expected": {
+            "title": "Expected",
+            "type": "string"
+          },
+          "tender": {
+            "title": "Tender",
+            "type": "string"
+          },
+          "tender_id": {
+            "title": "Tender Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tender_id",
+          "tender",
+          "expected"
+        ],
+        "title": "ExpectedOut",
         "type": "object"
       },
       "ExpenseIn": {
@@ -2106,6 +2230,30 @@
         "title": "LimitIn",
         "type": "object"
       },
+      "LineOut": {
+        "properties": {
+          "tender": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tender"
+          },
+          "variance": {
+            "title": "Variance",
+            "type": "string"
+          }
+        },
+        "required": [
+          "variance"
+        ],
+        "title": "LineOut",
+        "type": "object"
+      },
       "LoginIn": {
         "additionalProperties": false,
         "properties": {
@@ -2198,6 +2346,38 @@
           "status"
         ],
         "title": "MarkIn",
+        "type": "object"
+      },
+      "MovementsIn": {
+        "additionalProperties": false,
+        "properties": {
+          "advance_amount": {
+            "default": "0",
+            "examples": [
+              "102.50"
+            ],
+            "pattern": "^-?\\d{1,12}(\\.\\d{1,2})?$",
+            "title": "Advance Amount",
+            "type": "string"
+          },
+          "final_amount": {
+            "default": "0",
+            "examples": [
+              "102.50"
+            ],
+            "pattern": "^-?\\d{1,12}(\\.\\d{1,2})?$",
+            "title": "Final Amount",
+            "type": "string"
+          },
+          "shift_id": {
+            "title": "Shift Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "shift_id"
+        ],
+        "title": "MovementsIn",
         "type": "object"
       },
       "MyAssignment": {
@@ -2716,6 +2896,43 @@
         "title": "PaymentStatusOut",
         "type": "object"
       },
+      "PerformIn": {
+        "additionalProperties": false,
+        "properties": {
+          "declared_amounts": {
+            "additionalProperties": {
+              "examples": [
+                "102.50"
+              ],
+              "pattern": "^-?\\d{1,12}(\\.\\d{1,2})?$",
+              "type": "string"
+            },
+            "title": "Declared Amounts",
+            "type": "object"
+          },
+          "remarks": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remarks"
+          },
+          "shift_id": {
+            "title": "Shift Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "shift_id",
+          "declared_amounts"
+        ],
+        "title": "PerformIn",
+        "type": "object"
+      },
       "PriceHistoryOut": {
         "properties": {
           "effective_from": {
@@ -3183,6 +3400,45 @@
           "classification"
         ],
         "title": "ReconciliationOut",
+        "type": "object"
+      },
+      "RecoveryIn": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "examples": [
+              "102.50"
+            ],
+            "pattern": "^-?\\d{1,12}(\\.\\d{1,2})?$",
+            "title": "Amount",
+            "type": "string"
+          },
+          "employee_cash_shortage_id": {
+            "title": "Employee Cash Shortage Id",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "shift_id": {
+            "title": "Shift Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "employee_cash_shortage_id",
+          "shift_id",
+          "amount"
+        ],
+        "title": "RecoveryIn",
         "type": "object"
       },
       "RejectIn": {
@@ -3715,6 +3971,185 @@
           "status"
         ],
         "title": "ShiftOut",
+        "type": "object"
+      },
+      "ShiftReconciliationOut": {
+        "properties": {
+          "classification": {
+            "title": "Classification",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/LineOut"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "remarks": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remarks"
+          },
+          "shift": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shift"
+          },
+          "shift_id": {
+            "title": "Shift Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "shift_id",
+          "lines",
+          "classification",
+          "status"
+        ],
+        "title": "ShiftReconciliationOut",
+        "type": "object"
+      },
+      "ShortageIn": {
+        "additionalProperties": false,
+        "properties": {
+          "employee_id": {
+            "title": "Employee Id",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "shift_reconciliation_line_id": {
+            "title": "Shift Reconciliation Line Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "shift_reconciliation_line_id",
+          "employee_id"
+        ],
+        "title": "ShortageIn",
+        "type": "object"
+      },
+      "ShortageOptions": {
+        "description": "Dropdowns for the shortage dialogs: lines not yet booked, and shortages that still owe money.",
+        "properties": {
+          "outstanding_shortages": {
+            "items": {
+              "$ref": "#/components/schemas/IdLabel"
+            },
+            "title": "Outstanding Shortages",
+            "type": "array"
+          },
+          "unbooked_lines": {
+            "items": {
+              "$ref": "#/components/schemas/IdLabel"
+            },
+            "title": "Unbooked Lines",
+            "type": "array"
+          }
+        },
+        "required": [
+          "unbooked_lines",
+          "outstanding_shortages"
+        ],
+        "title": "ShortageOptions",
+        "type": "object"
+      },
+      "ShortageOut": {
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "employee": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Employee"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "outstanding": {
+            "title": "Outstanding",
+            "type": "string"
+          },
+          "recovered": {
+            "title": "Recovered",
+            "type": "string"
+          },
+          "shift": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shift"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "tender": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tender"
+          }
+        },
+        "required": [
+          "id",
+          "amount",
+          "recovered",
+          "outstanding",
+          "status"
+        ],
+        "title": "ShortageOut",
         "type": "object"
       },
       "StatementEntry": {
@@ -5311,6 +5746,225 @@
         "summary": "Me",
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/api/cash-book": {
+      "get": {
+        "operationId": "list_cash_books_api_cash_book_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CashBookOut"
+                  },
+                  "title": "Response List Cash Books Api Cash Book Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Cash Books",
+        "tags": [
+          "reconciliation"
+        ]
+      }
+    },
+    "/api/cash-book/deposits": {
+      "post": {
+        "operationId": "record_deposit_api_cash_book_deposits_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DepositIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DoneOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Record Deposit",
+        "tags": [
+          "reconciliation"
+        ]
+      }
+    },
+    "/api/cash-book/movements": {
+      "post": {
+        "operationId": "record_movements_api_cash_book_movements_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MovementsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DoneOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Record Movements",
+        "tags": [
+          "reconciliation"
         ]
       }
     },
@@ -10172,6 +10826,310 @@
         ]
       }
     },
+    "/api/reconciliation": {
+      "get": {
+        "operationId": "list_reconciliations_api_reconciliation_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ShiftReconciliationOut"
+                  },
+                  "title": "Response List Reconciliations Api Reconciliation Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Reconciliations",
+        "tags": [
+          "reconciliation"
+        ]
+      },
+      "post": {
+        "operationId": "perform_api_reconciliation_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PerformIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShiftReconciliationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Perform",
+        "tags": [
+          "reconciliation"
+        ]
+      }
+    },
+    "/api/reconciliation/expected": {
+      "get": {
+        "operationId": "expected_amounts_api_reconciliation_expected_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "shift_id",
+            "required": true,
+            "schema": {
+              "title": "Shift Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ExpectedOut"
+                  },
+                  "title": "Response Expected Amounts Api Reconciliation Expected Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Expected Amounts",
+        "tags": [
+          "reconciliation"
+        ]
+      }
+    },
+    "/api/reconciliation/{reconciliation_id}/approve": {
+      "post": {
+        "operationId": "approve_api_reconciliation__reconciliation_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "reconciliation_id",
+            "required": true,
+            "schema": {
+              "title": "Reconciliation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShiftReconciliationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Approve",
+        "tags": [
+          "reconciliation"
+        ]
+      }
+    },
     "/api/sales": {
       "get": {
         "operationId": "list_sales_api_sales_get",
@@ -11656,6 +12614,288 @@
         "summary": "Reopen Shift",
         "tags": [
           "shifts"
+        ]
+      }
+    },
+    "/api/shortages": {
+      "get": {
+        "operationId": "list_shortages_api_shortages_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ShortageOut"
+                  },
+                  "title": "Response List Shortages Api Shortages Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Shortages",
+        "tags": [
+          "reconciliation"
+        ]
+      },
+      "post": {
+        "operationId": "record_shortage_api_shortages_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShortageIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShortageOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Record Shortage",
+        "tags": [
+          "reconciliation"
+        ]
+      }
+    },
+    "/api/shortages/options": {
+      "get": {
+        "operationId": "shortage_options_api_shortages_options_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShortageOptions"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Shortage Options",
+        "tags": [
+          "reconciliation"
+        ]
+      }
+    },
+    "/api/shortages/recoveries": {
+      "post": {
+        "operationId": "record_recovery_api_shortages_recoveries_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecoveryIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DoneOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Record Recovery",
+        "tags": [
+          "reconciliation"
         ]
       }
     },

@@ -25,6 +25,7 @@ import { SalesPage } from '@/features/sales/SalesPage';
 import { TerminalPage } from '@/features/terminal/TerminalPage';
 import { CreditPage } from '@/features/credit/CreditPage';
 import { ExpensesPage } from '@/features/expenses/ExpensesPage';
+import { ReconciliationPage } from '@/features/reconciliation/ReconciliationPage';
 import { TankDetailPage } from '@/features/tanks/TankDetailPage';
 import { TanksPage } from '@/features/tanks/TanksPage';
 
@@ -62,6 +63,7 @@ export function App() {
             <Route path="/terminal" element={<TerminalPage />} />
             <Route path="/credit" element={<CreditPage />} />
             <Route path="/expenses" element={<ExpensesPage />} />
+            <Route path="/reconciliation" element={<ReconciliationPage />} />
             <Route path="/tanks" element={<TanksPage />} />
             <Route path="/tanks/:id" element={<TankDetailPage />} />
             <Route path="/fuel-prices" element={<FuelPricesPage />} />

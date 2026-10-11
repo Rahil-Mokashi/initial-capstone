@@ -124,6 +124,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/cash-book": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Cash Books */
+        get: operations["list_cash_books_api_cash_book_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cash-book/deposits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record Deposit */
+        post: operations["record_deposit_api_cash_book_deposits_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cash-book/movements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record Movements */
+        post: operations["record_movements_api_cash_book_movements_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/credit/accounts": {
         parameters: {
             query?: never;
@@ -998,6 +1049,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reconciliation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Reconciliations */
+        get: operations["list_reconciliations_api_reconciliation_get"];
+        put?: never;
+        /** Perform */
+        post: operations["perform_api_reconciliation_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reconciliation/expected": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Expected Amounts */
+        get: operations["expected_amounts_api_reconciliation_expected_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reconciliation/{reconciliation_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve */
+        post: operations["approve_api_reconciliation__reconciliation_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sales": {
         parameters: {
             query?: never;
@@ -1276,6 +1379,58 @@ export interface paths {
         put?: never;
         /** Reopen Shift */
         post: operations["reopen_shift_api_shifts__shift_id__reopen_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/shortages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Shortages */
+        get: operations["list_shortages_api_shortages_get"];
+        put?: never;
+        /** Record Shortage */
+        post: operations["record_shortage_api_shortages_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/shortages/options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Shortage Options */
+        get: operations["shortage_options_api_shortages_options_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/shortages/recoveries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record Recovery */
+        post: operations["record_recovery_api_shortages_recoveries_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1793,6 +1948,25 @@ export interface components {
              */
             reason: string;
         };
+        /** CashBookOut */
+        CashBookOut: {
+            /** Advance Amount */
+            advance_amount: string;
+            /** Bank Deposits Total */
+            bank_deposits_total: string;
+            /** Closing Cash In Hand */
+            closing_cash_in_hand: string;
+            /** Final Amount */
+            final_amount: string;
+            /** Opening Balance */
+            opening_balance: string;
+            /** Recorded By */
+            recorded_by?: string | null;
+            /** Shift */
+            shift?: string | null;
+            /** Shift Id */
+            shift_id: string;
+        };
         /** CategoryIn */
         CategoryIn: {
             /** Name */
@@ -1951,6 +2125,18 @@ export interface components {
             /** Tanker Number */
             tanker_number: string;
         };
+        /** DepositIn */
+        DepositIn: {
+            /**
+             * Amount
+             * @example 102.50
+             */
+            amount: string;
+            /** Bank Name */
+            bank_name: string;
+            /** Shift Id */
+            shift_id: string;
+        };
         /** DipIn */
         DipIn: {
             /**
@@ -2001,6 +2187,11 @@ export interface components {
             employee_id: string;
             /** File Reference */
             file_reference: string;
+            /** Id */
+            id: string;
+        };
+        /** DoneOut */
+        DoneOut: {
             /** Id */
             id: string;
         };
@@ -2111,6 +2302,15 @@ export interface components {
              * @default No reason given
              */
             reason: string;
+        };
+        /** ExpectedOut */
+        ExpectedOut: {
+            /** Expected */
+            expected: string;
+            /** Tender */
+            tender: string;
+            /** Tender Id */
+            tender_id: string;
         };
         /** ExpenseIn */
         ExpenseIn: {
@@ -2334,6 +2534,13 @@ export interface components {
              */
             reason: string;
         };
+        /** LineOut */
+        LineOut: {
+            /** Tender */
+            tender?: string | null;
+            /** Variance */
+            variance: string;
+        };
         /** LoginIn */
         LoginIn: {
             /** Password */
@@ -2368,6 +2575,23 @@ export interface components {
             /** Shift Label */
             shift_label?: string | null;
             status: components["schemas"]["AttendanceStatus"];
+        };
+        /** MovementsIn */
+        MovementsIn: {
+            /**
+             * Advance Amount
+             * @default 0
+             * @example 102.50
+             */
+            advance_amount: string;
+            /**
+             * Final Amount
+             * @default 0
+             * @example 102.50
+             */
+            final_amount: string;
+            /** Shift Id */
+            shift_id: string;
         };
         /** MyAssignment */
         MyAssignment: {
@@ -2564,6 +2788,17 @@ export interface components {
             /** Status */
             status: string;
         };
+        /** PerformIn */
+        PerformIn: {
+            /** Declared Amounts */
+            declared_amounts: {
+                [key: string]: string;
+            };
+            /** Remarks */
+            remarks?: string | null;
+            /** Shift Id */
+            shift_id: string;
+        };
         /** PriceHistoryOut */
         PriceHistoryOut: {
             /**
@@ -2734,6 +2969,20 @@ export interface components {
             variance: string;
             /** Variance Percent */
             variance_percent: string;
+        };
+        /** RecoveryIn */
+        RecoveryIn: {
+            /**
+             * Amount
+             * @example 102.50
+             */
+            amount: string;
+            /** Employee Cash Shortage Id */
+            employee_cash_shortage_id: string;
+            /** Notes */
+            notes?: string | null;
+            /** Shift Id */
+            shift_id: string;
         };
         /** RejectIn */
         RejectIn: {
@@ -2916,6 +3165,61 @@ export interface components {
             start_time?: string | null;
             /** Status */
             status: string;
+        };
+        /** ShiftReconciliationOut */
+        ShiftReconciliationOut: {
+            /** Classification */
+            classification: string;
+            /** Id */
+            id: string;
+            /** Lines */
+            lines: components["schemas"]["LineOut"][];
+            /** Remarks */
+            remarks?: string | null;
+            /** Shift */
+            shift?: string | null;
+            /** Shift Id */
+            shift_id: string;
+            /** Status */
+            status: string;
+        };
+        /** ShortageIn */
+        ShortageIn: {
+            /** Employee Id */
+            employee_id: string;
+            /** Notes */
+            notes?: string | null;
+            /** Shift Reconciliation Line Id */
+            shift_reconciliation_line_id: string;
+        };
+        /**
+         * ShortageOptions
+         * @description Dropdowns for the shortage dialogs: lines not yet booked, and shortages that still owe money.
+         */
+        ShortageOptions: {
+            /** Outstanding Shortages */
+            outstanding_shortages: components["schemas"]["IdLabel"][];
+            /** Unbooked Lines */
+            unbooked_lines: components["schemas"]["IdLabel"][];
+        };
+        /** ShortageOut */
+        ShortageOut: {
+            /** Amount */
+            amount: string;
+            /** Employee */
+            employee?: string | null;
+            /** Id */
+            id: string;
+            /** Outstanding */
+            outstanding: string;
+            /** Recovered */
+            recovered: string;
+            /** Shift */
+            shift?: string | null;
+            /** Status */
+            status: string;
+            /** Tender */
+            tender?: string | null;
         };
         /** StatementEntry */
         StatementEntry: {
@@ -3512,6 +3816,110 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UserOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_cash_books_api_cash_book_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CashBookOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    record_deposit_api_cash_book_deposits_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DepositIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DoneOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    record_movements_api_cash_book_movements_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MovementsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DoneOut"];
                 };
             };
             /** @description Validation Error */
@@ -5783,6 +6191,146 @@ export interface operations {
             };
         };
     };
+    list_reconciliations_api_reconciliation_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShiftReconciliationOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    perform_api_reconciliation_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PerformIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShiftReconciliationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    expected_amounts_api_reconciliation_expected_get: {
+        parameters: {
+            query: {
+                shift_id: string;
+            };
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpectedOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_api_reconciliation__reconciliation_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                reconciliation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApproveIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShiftReconciliationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_sales_api_sales_get: {
         parameters: {
             query?: {
@@ -6440,6 +6988,142 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ShiftOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_shortages_api_shortages_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShortageOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    record_shortage_api_shortages_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShortageIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShortageOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    shortage_options_api_shortages_options_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShortageOptions"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    record_recovery_api_shortages_recoveries_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecoveryIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DoneOut"];
                 };
             };
             /** @description Validation Error */

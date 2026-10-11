@@ -255,3 +255,9 @@ Not re-run at this checkpoint: Playwright (the bridge-key expectations were upda
 ### Expenses (2026-10-11)
 - api/routers/expenses.py (list, options, record, approve, reject, categories). web features/expenses: Expenses + Categories tabs, select-a-row then Approve / Reject (approvers only), record dialog (no credit method). Qt's dialog does not expose the internal-fuel tank + quantity fields, so neither does this one.
 - Tests: tests/api 3, web 7, Playwright expenses.spec.ts.
+
+### Reconciliation, cash book and employee shortages (2026-10-11)
+- api/routers/reconciliation.py: reconciliations (list, expected amounts per tender, perform, approve), shift cash book (list with recomputed opening / closing, movements, bank deposits), employee cash shortages (list, dropdown options, record, recovery). All three Qt sections are on one page, in the same order.
+- Judgment call: the declared-amount boxes start EMPTY (Qt starts them at 0), so a cashier cannot reconcile by clicking through; typing 0 is still allowed and the message says so. Everything else, including the classification and the approval rule, is the service's.
+- Shared model-name guard caught a clash (ReconciliationOut already exists for tanks): mine is ShiftReconciliationOut.
+- Tests: tests/api 4, web 8, Playwright reconciliation.spec.ts (sale, declare short, approve, book shortage, cash movements, recovery -> Recovered).
