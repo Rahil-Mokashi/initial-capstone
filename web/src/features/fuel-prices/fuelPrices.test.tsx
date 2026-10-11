@@ -44,7 +44,7 @@ async function setup(permissions: string[], extra: Parameters<typeof mockApi>[0]
   );
   await userEvent.type(await screen.findByLabelText('Username'), 'manager1');
   await userEvent.type(screen.getByLabelText('Password'), 'Passw0rd!x');
-  await userEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+  await userEvent.click(screen.getByRole('button', { name: /^Sign in/i }));
   await screen.findByRole('heading', { level: 1, name: 'Fuel Prices' });
   return api;
 }
@@ -60,7 +60,12 @@ describe('fuel prices', () => {
     expect(
       within(screen.getByRole('row', { name: /Diesel/ })).getByText('₹92.10'),
     ).toBeInTheDocument();
-    expect(screen.getByRole('status')).toHaveTextContent('1 fuel type(s) have no selling price');
+    expect(
+      screen
+        .getAllByRole('status')
+        .map((e) => e.textContent)
+        .join(' '),
+    ).toContain('1 fuel type(s) have no selling price');
   });
 
   it('changes a price: reason required, string rate sent, extra decimals refused', async () => {

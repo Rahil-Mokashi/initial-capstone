@@ -65,7 +65,7 @@ async function setup(permissions: string[], extra: Routes = {}, path = '/employe
 async function signIn() {
   await userEvent.type(await screen.findByLabelText('Username'), 'manager1');
   await userEvent.type(screen.getByLabelText('Password'), 'Passw0rd!x');
-  await userEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+  await userEvent.click(screen.getByRole('button', { name: /^Sign in/i }));
 }
 
 beforeEach(() => session.set(null));

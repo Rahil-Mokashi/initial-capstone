@@ -6,7 +6,11 @@ import { ApiError } from '@/api/errors';
 import { AuthProvider } from '@/auth/AuthContext';
 import { ToastProvider } from '@/components/ui/Toast';
 import { App } from './App';
+import { applyTheme, getTheme } from '@/lib/theme';
 import './styles/index.css';
+
+// The remembered light / dark choice is applied before the first paint.
+applyTheme(getTheme());
 
 const queryClient = new QueryClient({
   defaultOptions: {

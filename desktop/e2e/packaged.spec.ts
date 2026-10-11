@@ -32,7 +32,7 @@ test('the installed app starts, shows login, and the Tanks screen works end to e
   const browser = await attach(port);
   try {
     const page = await firstPage(browser);
-    await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible({ timeout: 60_000 });
     console.log(`PACKAGED start -> login visible: ${Date.now() - started} ms`);
 
     // The Python service really is the frozen executable inside the installation.
@@ -92,7 +92,7 @@ test('ELECTRON_RUN_AS_NODE=1 does NOT turn the installed app into plain Node (fu
   const browser = await attach(port);
   try {
     const page = await firstPage(browser);
-    await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible({ timeout: 60_000 }); // opened the app
+    await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible({ timeout: 60_000 }); // opened the app
     expect(out).not.toContain('NODE-MODE-ACTIVE'); // did not run the script as Node
     expect(sidecarRunning()).toBe(true); // the real startup happened
   } finally {
@@ -132,7 +132,7 @@ test('the installed (fused) app still enforces the offline rules: CSP, no outsid
   const browser = await attach(port);
   try {
     const page = await firstPage(browser);
-    await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible({ timeout: 60_000 });
     const requested: string[] = [];
     browser.contexts()[0]!.on('request', (r) => requested.push(r.url()));
 

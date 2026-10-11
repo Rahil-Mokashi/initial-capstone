@@ -97,7 +97,7 @@ test.describe('process lifecycle', () => {
       .click();
     await page.getByLabel('Quantity (L)').fill('5');
     await page.getByRole('button', { name: 'Record receipt' }).click();
-    await expect(page.getByRole('status')).toContainText('Receipt recorded');
+    await expect(page.getByText(/Receipt recorded/)).toBeVisible();
     await expect
       .poll(() => existsSync(`${dbPath}-wal`) && statSync(`${dbPath}-wal`).size > 0)
       .toBe(true);
@@ -139,7 +139,7 @@ test.describe('process lifecycle', () => {
       .poll(() => Boolean(findWindow('http://127.0.0.1')), { timeout: 60_000 })
       .toBe(true);
     const fresh = findWindow('http://127.0.0.1')!;
-    await expect(fresh.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+    await expect(fresh.getByRole('heading', { name: 'Welcome back' })).toBeVisible();
   });
 
   // eslint-disable-next-line no-empty-pattern -- Playwright requires a destructuring pattern

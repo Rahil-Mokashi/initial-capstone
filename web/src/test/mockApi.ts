@@ -6,6 +6,21 @@ export const json = (status: number, body: unknown) => ({ status, json: body });
 export const apiError = (status: number, code: string, message: string, details: object = {}) =>
   json(status, { error: { code, message, details } });
 
+/**
+ * What the app shell asks for in the background on every screen (alert strip, shift indicator, search box,
+ * device name). A test can still mock any of these itself; otherwise they answer "nothing to report".
+ */
+const SHELL_DEFAULTS: Record<string, Handler> = {
+  'GET /api/alerts': () =>
+    json(200, { total: 0, critical_count: 0, warning_count: 0, notifications: [] }),
+  'GET /api/dashboard/summary': () => json(200, {}),
+  'GET /api/system/device': () => json(200, { device: 'TEST-PC' }),
+  'GET /api/employees': () => json(200, []),
+  'GET /api/nozzles': () => json(200, []),
+  'GET /api/tanks': () => json(200, []),
+  'GET /api/users': () => json(200, []),
+};
+
 /** Replaces fetch with a router keyed by "METHOD /api/path". Unmatched calls fail loudly. */
 export function mockApi(routes: Record<string, Handler>) {
   const calls: Array<{ key: string; body: unknown; headers: Headers }> = [];
@@ -14,7 +29,7 @@ export function mockApi(routes: Record<string, Handler>) {
     const key = `${init?.method ?? 'GET'} ${url.pathname}`;
     const body = init?.body ? JSON.parse(String(init.body)) : undefined;
     calls.push({ key, body, headers: new Headers(init?.headers) });
-    const handler = routes[key];
+    const handler = routes[key] ?? SHELL_DEFAULTS[key];
     if (!handler) throw new Error(`Unexpected request: ${key}`);
     const result = handler(body, url) ?? { status: 204 };
     return new Response(result.json === undefined ? null : JSON.stringify(result.json), {
@@ -49,5 +64,7 @@ export const user = (permissions: string[], over: Record<string, unknown> = {}) 
   role: 'MANAGER',
   permissions,
   must_change_password: false,
+  has_pin: false,
+  last_login: null,
   ...over,
 });

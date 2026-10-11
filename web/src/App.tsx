@@ -28,6 +28,9 @@ import { ExpensesPage } from '@/features/expenses/ExpensesPage';
 import { ReconciliationPage } from '@/features/reconciliation/ReconciliationPage';
 import { ReportPage, ReportsHubPage } from '@/features/reports/ReportsPages';
 import { AnalyticsPage } from '@/features/analytics/AnalyticsPage';
+import { AlertsPage } from '@/features/alerts/alerts';
+import { DashboardPage } from '@/features/dashboard/DashboardPage';
+import { SupportPage } from '@/features/support/SupportPage';
 import { TankDetailPage } from '@/features/tanks/TankDetailPage';
 import { TanksPage } from '@/features/tanks/TanksPage';
 
@@ -69,6 +72,9 @@ export function App() {
             <Route path="/reports" element={<ReportsHubPage />} />
             <Route path="/reports/:key" element={<ReportPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
+            <Route path="/" element={<DashboardPage />} />
+            <Route path="/alerts" element={<AlertsPage />} />
+            <Route path="/support" element={<SupportPage />} />
             <Route path="/tanks" element={<TanksPage />} />
             <Route path="/tanks/:id" element={<TankDetailPage />} />
             <Route path="/fuel-prices" element={<FuelPricesPage />} />
@@ -76,7 +82,7 @@ export function App() {
             <Route path="/employees/:id" element={<EmployeeDetailPage />} />
           </Route>
         </Route>
-        <Route path="*" element={<Navigate to="/tanks" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </ErrorBoundary>
   );

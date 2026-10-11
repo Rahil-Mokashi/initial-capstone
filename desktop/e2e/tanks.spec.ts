@@ -7,14 +7,15 @@ test.describe('login', () => {
     const { page } = launched;
     await signIn(page, 'manager1', 'not-the-password');
     await expect(page.getByRole('alert')).toContainText("isn't correct");
-    await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible();
   });
 
   test('a manager signs in and lands on the tanks', async ({ launched }) => {
     const { page } = launched;
     await signIn(page, 'manager1');
     await expect(page.getByRole('heading', { level: 1, name: /Tanks & Inventory/ })).toBeVisible();
-    await expect(page.getByText('Signed in as')).toContainText('Manager1');
+    await page.getByRole('button', { name: /Account menu/ }).click();
+    await expect(page.getByRole('region', { name: /Account menu/ })).toContainText('Manager1');
   });
 });
 
@@ -57,7 +58,7 @@ test.describe('recording', () => {
     await dialog.getByLabel('Taken by').selectOption({ label: 'EMP-0001 - Ravi Kumar' });
     await dialog.getByLabel('Physical stock (L)').fill('2490.125');
     await dialog.getByRole('button', { name: 'Save reading' }).click();
-    await expect(page.getByRole('status')).toContainText('Reading recorded for T1.');
+    await expect(page.getByText('Reading recorded for T1.')).toBeVisible();
     await expect(dialog).toBeHidden();
 
     await t1.getByRole('link', { name: 'Open' }).click();
@@ -199,8 +200,9 @@ test.describe('logout and one instance of the module', () => {
     const { page } = launched;
     await signIn(page, 'manager1');
     await expect(page.getByRole('heading', { name: 'T1' })).toBeVisible();
+    await page.getByRole('button', { name: /Account menu/ }).click();
     await page.getByRole('button', { name: 'Log out' }).click();
-    await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'T1' })).toHaveCount(0);
     await signIn(page, 'manager1');
     await expect(page.getByRole('heading', { name: 'T1' })).toBeVisible();

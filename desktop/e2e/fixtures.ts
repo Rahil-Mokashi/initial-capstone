@@ -51,17 +51,27 @@ export async function launchApp(
   return { app, page, dbPath, userData, requested };
 }
 
-export async function signIn(page: Page, username: string, password = PASSWORD): Promise<void> {
+/**
+ * Signs in. By default the person was headed for Tanks (a deep link: sign-in returns you to where you were
+ * going), which is where most specs start. Pass `home: true` to land on the Dashboard instead.
+ */
+export async function signIn(
+  page: Page,
+  username: string,
+  password = PASSWORD,
+  opts: { home?: boolean } = {},
+): Promise<void> {
+  if (!opts.home) await page.evaluate(() => (location.hash = '#/tanks'));
   await page.getByLabel('Username').fill(username);
   await page.getByLabel('Password').fill(password);
-  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.getByRole('button', { name: /^Sign in/i }).click();
 }
 
 export const test = base.extend<{ launched: Launched }>({
   // eslint-disable-next-line no-empty-pattern -- Playwright requires a destructuring pattern here
   launched: async ({}, use, testInfo) => {
     const launched = await launchApp(testInfo.outputPath('run'));
-    await expect(launched.page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+    await expect(launched.page.getByRole('heading', { name: 'Welcome back' })).toBeVisible();
     await use(launched);
     await launched.app.close().catch(() => undefined);
   },

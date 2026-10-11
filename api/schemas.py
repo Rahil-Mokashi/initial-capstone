@@ -78,7 +78,9 @@ class In(BaseModel):
 # --- auth -------------------------------------------------------------------
 class LoginIn(In):
     username: str = Field(min_length=1)
+    # The password, or the quick-sign-in PIN when use_pin is true (the credential is checked the same way).
     password: str = Field(min_length=1)
+    use_pin: bool = False
 
 
 class UserOut(Out):
@@ -89,12 +91,31 @@ class UserOut(Out):
     role: Optional[str] = None
     permissions: list[str]
     must_change_password: bool
+    has_pin: bool = False
+    # When this person signed in BEFORE the current sign-in (shown in the account menu), or null.
+    last_login: Optional[str] = None
 
 
 class LoginOut(Out):
     token: str
     expires_at: str
     user: UserOut
+
+
+class ReauthIn(In):
+    credential: str = Field(min_length=1)
+    use_pin: bool = False
+
+
+class SetPinIn(In):
+    current_password: str = Field(min_length=1)
+    pin: str = Field(min_length=1)
+
+
+class ForgotPasswordIn(In):
+    username: str = Field(min_length=1)
+    code: str = Field(min_length=1)
+    new_password: str = Field(min_length=1)
 
 
 class ChangePasswordIn(In):

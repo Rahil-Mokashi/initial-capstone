@@ -94,3 +94,89 @@ def test_change_password_wrong_current_and_weak_new(client):
 
 def test_change_password_validation_422(client, manager):
     assert client.post("/api/auth/change-password", headers=manager, json={}).status_code == 422
+
+
+# ---- sign-in extras: PIN, lock screen, set PIN, forgot password, device name ------------------------
+PIN = "483920"
+
+
+def _set_pin(client, headers, pin=PIN):
+    return client.post("/api/auth/pin", headers=headers, json={"current_password": PASSWORD, "pin": pin})
+
+
+def test_set_pin_then_sign_in_with_it(client, manager, session_factory):
+    me = client.get("/api/auth/me", headers=manager).json()
+    assert me["has_pin"] is False
+    done = _set_pin(client, manager)
+    assert done.status_code == 200 and done.json()["has_pin"] is True
+    assert "pin_hash" not in done.text
+    ok = client.post("/api/auth/login", json={"username": "manager1", "password": PIN, "use_pin": True})
+    assert ok.status_code == 200 and ok.json()["user"]["has_pin"] is True
+    # the PIN is not accepted as a password, nor the password as a PIN
+    assert client.post("/api/auth/login", json={"username": "manager1", "password": PIN}).status_code == 401
+    assert client.post("/api/auth/login", json={"username": "manager1", "password": PASSWORD, "use_pin": True}).status_code == 401
+    assert len(audit_events(session_factory, "user_pin_set")) == 1 and audit_chain_ok(session_factory)
+
+
+def test_pin_rules(client, manager):
+    assert _set_pin(client, manager, "12").status_code == 422
+    assert _set_pin(client, manager, "abcdef").status_code == 422
+    wrong = client.post("/api/auth/pin", headers=manager, json={"current_password": "nope", "pin": PIN})
+    assert wrong.status_code == 401
+    # an account with no PIN fails exactly like a wrong one (no way to probe who has a PIN)
+    a = client.post("/api/auth/login", json={"username": "accountant1", "password": PIN, "use_pin": True})
+    b = client.post("/api/auth/login", json={"username": "accountant1", "password": "000000", "use_pin": True})
+    assert a.status_code == b.status_code == 401 and a.json()["error"]["message"] == b.json()["error"]["message"]
+
+
+def test_wrong_pins_lock_the_account_like_wrong_passwords(client, manager):
+    _set_pin(client, manager)
+    for _ in range(10):
+        r = client.post("/api/auth/login", json={"username": "manager1", "password": "000000", "use_pin": True})
+        if r.json()["error"]["code"] == "account_locked":
+            break
+    else:  # pragma: no cover
+        raise AssertionError("never locked")
+    assert "locked_until" in r.json()["error"]["details"]
+
+
+def test_login_reports_the_previous_sign_in_for_the_account_menu(client):
+    first = client.post("/api/auth/login", json={"username": "manager1", "password": PASSWORD}).json()
+    assert first["user"]["last_login"] is None
+    second = client.post("/api/auth/login", json={"username": "manager1", "password": PASSWORD}).json()
+    assert second["user"]["last_login"]
+
+
+def test_lock_screen_reauthenticates_without_a_new_session(client, manager, session_factory):
+    ok = client.post("/api/auth/reauthenticate", headers=manager, json={"credential": PASSWORD})
+    assert ok.status_code == 204
+    bad = client.post("/api/auth/reauthenticate", headers=manager, json={"credential": "nope"})
+    assert bad.status_code == 401 and bad.json()["error"]["code"] == "invalid_credentials"
+    assert client.get("/api/auth/me", headers=manager).status_code == 200  # same session still valid
+    assert len(audit_events(session_factory, "device_unlocked")) == 1
+    _set_pin(client, manager)
+    assert client.post("/api/auth/reauthenticate", headers=manager, json={"credential": PIN, "use_pin": True}).status_code == 204
+    assert client.post("/api/auth/reauthenticate", headers=manager, json={"credential": PIN}).status_code == 401
+
+
+def test_forgot_password_with_an_admin_code(client, admin, session_factory):
+    uid = next(u["id"] for u in client.get("/api/users", headers=admin).json() if u["username"] == "attendant1")
+    code = client.post(f"/api/users/{uid}/reset-code", headers=admin, json={}).json()["code"]
+    # no session needed
+    wrong = client.post("/api/auth/forgot-password", json={"username": "attendant1", "code": "00000000", "new_password": "N3w!Passw0rd"})
+    assert wrong.status_code == 401
+    weak = client.post("/api/auth/forgot-password", json={"username": "attendant1", "code": code, "new_password": "weak"})
+    assert weak.status_code == 422
+    ok = client.post("/api/auth/forgot-password", json={"username": "attendant1", "code": code, "new_password": "N3w!Passw0rd"})
+    assert ok.status_code == 204
+    assert client.post("/api/auth/login", json={"username": "attendant1", "password": "N3w!Passw0rd"}).status_code == 200
+    # single use
+    again = client.post("/api/auth/forgot-password", json={"username": "attendant1", "code": code, "new_password": "An0ther!Passw0rd"})
+    assert again.status_code == 401
+    ghost = client.post("/api/auth/forgot-password", json={"username": "ghost", "code": code, "new_password": "N3w!Passw0rd"})
+    assert ghost.status_code == 401 and ghost.json()["error"]["message"] == wrong.json()["error"]["message"]
+
+
+def test_device_name_for_the_sign_in_screen(client):
+    d = client.get("/api/system/device").json()
+    assert isinstance(d["device"], str) and d["device"]

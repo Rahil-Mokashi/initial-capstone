@@ -93,6 +93,86 @@
         "title": "ActiveIn",
         "type": "object"
       },
+      "AlertOut": {
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "entity_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entity Id"
+          },
+          "is_summary": {
+            "title": "Is Summary",
+            "type": "boolean"
+          },
+          "severity": {
+            "title": "Severity",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "category",
+          "severity",
+          "title",
+          "detail",
+          "action",
+          "is_summary"
+        ],
+        "title": "AlertOut",
+        "type": "object"
+      },
+      "AlertsOut": {
+        "properties": {
+          "critical_count": {
+            "title": "Critical Count",
+            "type": "integer"
+          },
+          "notifications": {
+            "items": {
+              "$ref": "#/components/schemas/AlertOut"
+            },
+            "title": "Notifications",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "warning_count": {
+            "title": "Warning Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "critical_count",
+          "warning_count",
+          "notifications"
+        ],
+        "title": "AlertsOut",
+        "type": "object"
+      },
       "ApproveIn": {
         "additionalProperties": false,
         "properties": {
@@ -1874,6 +1954,33 @@
         "title": "ForecastOut",
         "type": "object"
       },
+      "ForgotPasswordIn": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "minLength": 1,
+            "title": "Code",
+            "type": "string"
+          },
+          "new_password": {
+            "minLength": 1,
+            "title": "New Password",
+            "type": "string"
+          },
+          "username": {
+            "minLength": 1,
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "code",
+          "new_password"
+        ],
+        "title": "ForgotPasswordIn",
+        "type": "object"
+      },
       "FuelCard": {
         "properties": {
           "active_nozzle_count": {
@@ -2404,6 +2511,11 @@
             "minLength": 1,
             "title": "Password",
             "type": "string"
+          },
+          "use_pin": {
+            "default": false,
+            "title": "Use Pin",
+            "type": "boolean"
           },
           "username": {
             "minLength": 1,
@@ -3419,6 +3531,26 @@
         "title": "ReasonIn",
         "type": "object"
       },
+      "ReauthIn": {
+        "additionalProperties": false,
+        "properties": {
+          "credential": {
+            "minLength": 1,
+            "title": "Credential",
+            "type": "string"
+          },
+          "use_pin": {
+            "default": false,
+            "title": "Use Pin",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "credential"
+        ],
+        "title": "ReauthIn",
+        "type": "object"
+      },
       "ReceiptOut": {
         "properties": {
           "filename": {
@@ -3771,6 +3903,24 @@
         "title": "RoleOut",
         "type": "object"
       },
+      "RosterRow": {
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "detail"
+        ],
+        "title": "RosterRow",
+        "type": "object"
+      },
       "SaleIn": {
         "additionalProperties": false,
         "properties": {
@@ -4087,6 +4237,27 @@
           "payment_method"
         ],
         "title": "SelfSaleIn",
+        "type": "object"
+      },
+      "SetPinIn": {
+        "additionalProperties": false,
+        "properties": {
+          "current_password": {
+            "minLength": 1,
+            "title": "Current Password",
+            "type": "string"
+          },
+          "pin": {
+            "minLength": 1,
+            "title": "Pin",
+            "type": "string"
+          }
+        },
+        "required": [
+          "current_password",
+          "pin"
+        ],
+        "title": "SetPinIn",
         "type": "object"
       },
       "ShiftOut": {
@@ -4464,6 +4635,82 @@
           "status"
         ],
         "title": "StatusIn",
+        "type": "object"
+      },
+      "SummaryOut": {
+        "description": "Every field is null when the signed-in user lacks the permission that module is gated on.",
+        "properties": {
+          "low_stock_tanks_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Low Stock Tanks Count"
+          },
+          "open_shift_labels": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Open Shift Labels"
+          },
+          "open_shifts_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Open Shifts Count"
+          },
+          "pending_purchase_orders_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pending Purchase Orders Count"
+          },
+          "sales_today_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sales Today Amount"
+          },
+          "sales_today_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sales Today Count"
+          }
+        },
+        "title": "SummaryOut",
         "type": "object"
       },
       "SupplierIn": {
@@ -5127,6 +5374,25 @@
         "title": "TransactionOut",
         "type": "object"
       },
+      "TrendPoint": {
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          }
+        },
+        "required": [
+          "day",
+          "amount"
+        ],
+        "title": "TrendPoint",
+        "type": "object"
+      },
       "UserCreateIn": {
         "additionalProperties": false,
         "properties": {
@@ -5191,9 +5457,25 @@
             ],
             "title": "First Name"
           },
+          "has_pin": {
+            "default": false,
+            "title": "Has Pin",
+            "type": "boolean"
+          },
           "id": {
             "title": "Id",
             "type": "string"
+          },
+          "last_login": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Login"
           },
           "last_name": {
             "anyOf": [
@@ -5384,6 +5666,71 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/alerts": {
+      "get": {
+        "operationId": "alerts_api_alerts_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlertsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Alerts",
+        "tags": [
+          "dashboard"
+        ]
+      }
+    },
     "/api/analytics/forecast": {
       "get": {
         "operationId": "forecast_api_analytics_forecast_get",
@@ -6105,6 +6452,59 @@
         ]
       }
     },
+    "/api/auth/forgot-password": {
+      "post": {
+        "description": "Finish an administrator-issued one-time reset code. Needs no session (the person cannot sign in),\nonly the launch secret like every other call; every failure carries the same generic message.",
+        "operationId": "forgot_password_api_auth_forgot_password_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Forgot Password",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/auth/login": {
       "post": {
         "operationId": "login_api_auth_login_post",
@@ -6282,6 +6682,150 @@
           }
         },
         "summary": "Me",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/pin": {
+      "post": {
+        "operationId": "set_pin_api_auth_pin_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetPinIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Pin",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/reauthenticate": {
+      "post": {
+        "description": "The lock screen: re-confirm the signed-in person with password or PIN, WITHOUT a new session.",
+        "operationId": "reauthenticate_api_auth_reauthenticate_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReauthIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reauthenticate",
         "tags": [
           "auth"
         ]
@@ -7189,6 +7733,222 @@
         "summary": "Set Customer Status",
         "tags": [
           "sales"
+        ]
+      }
+    },
+    "/api/dashboard/roster": {
+      "get": {
+        "description": "Who is on a nozzle right now across every shift open today (the roster card of the Qt dashboard).",
+        "operationId": "roster_api_dashboard_roster_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RosterRow"
+                  },
+                  "title": "Response Roster Api Dashboard Roster Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Roster",
+        "tags": [
+          "dashboard"
+        ]
+      }
+    },
+    "/api/dashboard/sales-trend": {
+      "get": {
+        "operationId": "sales_trend_api_dashboard_sales_trend_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 7,
+              "maximum": 90,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TrendPoint"
+                  },
+                  "title": "Response Sales Trend Api Dashboard Sales Trend Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sales Trend",
+        "tags": [
+          "dashboard"
+        ]
+      }
+    },
+    "/api/dashboard/summary": {
+      "get": {
+        "operationId": "summary_api_dashboard_summary_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SummaryOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Summary",
+        "tags": [
+          "dashboard"
         ]
       }
     },
@@ -14152,6 +14912,51 @@
         "tags": [
           "procurement"
         ]
+      }
+    },
+    "/api/system/device": {
+      "get": {
+        "description": "This computer's name, shown on the sign-in screen (the Qt login screen shows the same).",
+        "operationId": "device_api_system_device_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Device"
       }
     },
     "/api/system/shutdown": {

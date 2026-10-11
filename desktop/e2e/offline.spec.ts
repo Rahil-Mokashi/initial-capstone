@@ -25,12 +25,13 @@ test.describe('offline proof', () => {
     await t1.getByRole('button', { name: 'Receipt' }).click();
     await page.getByLabel('Quantity (L)').fill('10');
     await page.getByRole('button', { name: 'Record receipt' }).click();
-    await expect(page.getByRole('status')).toContainText('Receipt recorded');
+    await expect(page.getByText(/Receipt recorded/)).toBeVisible();
     await page.getByRole('button', { name: 'Table' }).click();
     await page.getByRole('link', { name: 'T1' }).click();
     await page.getByRole('tab', { name: 'Readings' }).click();
+    await page.getByRole('button', { name: /Account menu/ }).click();
     await page.getByRole('button', { name: 'Log out' }).click();
-    await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible();
 
     expect(requested.length).toBeGreaterThan(5);
     // FAILS the test if the app ever attempted a request outside this PC - blocked or not.

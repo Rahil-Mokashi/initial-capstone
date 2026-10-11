@@ -1,6 +1,7 @@
 """App factory. Everything under /api needs the per-launch secret; everything
 except /api/health, /api/auth/login needs a session token as well."""
 
+import platform
 from pathlib import Path
 from typing import Callable, Optional
 
@@ -11,7 +12,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from api.deps import require_launch_secret
 from api.errors import install_error_handlers
-from api.routers import analytics, attendance, auth, credit, employees, expenses, reconciliation, reports, fuel_prices, nozzles, procurement, sales, shifts, tanks, terminal, users
+from api.routers import analytics, attendance, auth, credit, dashboard, employees, expenses, reconciliation, reports, fuel_prices, nozzles, procurement, sales, shifts, tanks, terminal, users
 
 ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 
@@ -72,6 +73,11 @@ def create_app(
     def health():
         return {"status": "ok"}
 
+    @api.get("/system/device")
+    def device():
+        """This computer's name, shown on the sign-in screen (the Qt login screen shows the same)."""
+        return {"device": platform.node() or "unknown-device"}
+
     @api.post("/system/shutdown", status_code=202)
     def shutdown(request: Request):
         """Graceful stop so SQLite checkpoints its WAL. Needs the launch secret only:
@@ -97,6 +103,7 @@ def create_app(
     api.include_router(reconciliation.router)
     api.include_router(reports.router)
     api.include_router(analytics.router)
+    api.include_router(dashboard.router)
     app.include_router(api)
 
     if web_dir is not None and Path(web_dir).is_dir():

@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 from api.app import create_app
 from api_helpers import SECRET
 
-PUBLIC_WITH_SECRET_ONLY = {"/api/health", "/api/system/shutdown"}
+PUBLIC_WITH_SECRET_ONLY = {"/api/health", "/api/system/shutdown", "/api/system/device", "/api/auth/forgot-password"}
 LOGIN = "/api/auth/login"
 
 

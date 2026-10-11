@@ -14,7 +14,7 @@ const VIEW_ONLY = ['inventory.view'];
 
 type Routes = Parameters<typeof mockApi>[0];
 
-function setup(permissions: string[], extra: Routes = {}, path = '/login') {
+function setup(permissions: string[], extra: Routes = {}, path = '/tanks') {
   const api = mockApi({
     'POST /api/auth/login': () =>
       json(200, { token: 'tok', expires_at: '2099-01-01T00:00:00', user: user(permissions) }),
@@ -68,7 +68,7 @@ function setup(permissions: string[], extra: Routes = {}, path = '/login') {
 async function signIn() {
   await userEvent.type(screen.getByLabelText('Username'), 'manager1');
   await userEvent.type(screen.getByLabelText('Password'), 'Passw0rd!x');
-  await userEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+  await userEvent.click(screen.getByRole('button', { name: /^Sign in/i }));
   await screen.findByRole('heading', { level: 1, name: /Tanks & Inventory/ });
   await screen.findByRole('heading', { name: 'T1' }); // the list itself has loaded
 }
@@ -77,7 +77,7 @@ async function signIn() {
 async function signIn403() {
   await userEvent.type(screen.getByLabelText('Username'), 'manager1');
   await userEvent.type(screen.getByLabelText('Password'), 'Passw0rd!x');
-  await userEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+  await userEvent.click(screen.getByRole('button', { name: /^Sign in/i }));
   await screen.findByRole('heading', { level: 1, name: /Tanks & Inventory/ });
 }
 
@@ -108,27 +108,28 @@ describe('login and the tank list', () => {
     });
     await userEvent.type(screen.getByLabelText('Username'), 'manager1');
     await userEvent.type(screen.getByLabelText('Password'), 'bad');
-    await userEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    await userEvent.click(screen.getByRole('button', { name: /^Sign in/i }));
     expect(await screen.findByRole('alert')).toHaveTextContent(/isn't correct/);
   });
 
   it('validates empty login fields without calling the server', async () => {
     const { calls } = setup(MANAGE);
-    await userEvent.click(screen.getByRole('button', { name: 'Sign in' }));
-    expect(await screen.findByText('Enter your username.')).toBeInTheDocument();
-    expect(calls).toHaveLength(0);
+    await userEvent.click(screen.getByRole('button', { name: /^Sign in/i }));
+    expect(await screen.findByText('Username is required.')).toBeInTheDocument();
+    expect(calls.filter((c) => c.key.startsWith('POST'))).toHaveLength(0);
   });
 
   it('redirects to login when signed out', () => {
     setup(MANAGE, {}, '/tanks');
-    expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Welcome back' })).toBeInTheDocument();
   });
 
   it('logs out back to the sign-in screen and forgets the token', async () => {
     const { calls } = setup(MANAGE);
     await signIn();
+    await userEvent.click(screen.getByRole('button', { name: /Account menu/ }));
     await userEvent.click(screen.getByRole('button', { name: /log out/i }));
-    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Welcome back' })).toBeInTheDocument();
     expect(calls.some((c) => c.key === 'POST /api/auth/logout')).toBe(true);
     expect(session.token).toBeNull();
   });
@@ -257,7 +258,7 @@ describe('recording a reading', () => {
     const post = calls.find((c) => c.key === 'POST /api/tanks/t1/readings')!;
     expect(post.body).toEqual({ employee_id: 'e1', physical_stock: '2490.125' });
     expect(typeof (post.body as { physical_stock: unknown }).physical_stock).toBe('string');
-    expect(screen.getByRole('status')).toHaveTextContent('Reading recorded for T1.');
+    expect(await screen.findByText('Reading recorded for T1.')).toBeInTheDocument();
     expect(window.localStorage.getItem('pperp.lastReadingEmployee')).toBe('e1');
   });
 
@@ -317,7 +318,7 @@ describe('Enter key (same as the Qt screens)', () => {
     const { calls } = setup(MANAGE);
     await userEvent.type(screen.getByLabelText('Username'), 'manager1{Enter}');
     expect(screen.getByLabelText('Password')).toHaveFocus();
-    expect(calls).toHaveLength(0); // nothing sent yet
+    expect(calls.filter((c) => c.key.startsWith('POST'))).toHaveLength(0); // nothing sent yet
     await userEvent.type(screen.getByLabelText('Password'), 'Passw0rd!x{Enter}');
     await screen.findByRole('heading', { level: 1, name: /Tanks & Inventory/ });
     expect(calls.some((c) => c.key === 'POST /api/auth/login')).toBe(true);

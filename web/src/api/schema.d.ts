@@ -4,6 +4,23 @@
  */
 
 export interface paths {
+    "/api/alerts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Alerts */
+        get: operations["alerts_api_alerts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/analytics/forecast": {
         parameters: {
             query?: never;
@@ -141,6 +158,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auth/forgot-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Forgot Password
+         * @description Finish an administrator-issued one-time reset code. Needs no session (the person cannot sign in),
+         *     only the launch secret like every other call; every failure carries the same generic message.
+         */
+        post: operations["forgot_password_api_auth_forgot_password_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/login": {
         parameters: {
             query?: never;
@@ -186,6 +224,43 @@ export interface paths {
         get: operations["me_api_auth_me_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/pin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Set Pin */
+        post: operations["set_pin_api_auth_pin_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/reauthenticate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reauthenticate
+         * @description The lock screen: re-confirm the signed-in person with password or PIN, WITHOUT a new session.
+         */
+        post: operations["reauthenticate_api_auth_reauthenticate_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -358,6 +433,60 @@ export interface paths {
         put?: never;
         /** Set Customer Status */
         post: operations["set_customer_status_api_customers__customer_id__status_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dashboard/roster": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Roster
+         * @description Who is on a nozzle right now across every shift open today (the roster card of the Qt dashboard).
+         */
+        get: operations["roster_api_dashboard_roster_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dashboard/sales-trend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sales Trend */
+        get: operations["sales_trend_api_dashboard_sales_trend_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dashboard/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Summary */
+        get: operations["summary_api_dashboard_summary_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1625,6 +1754,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/system/device": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Device
+         * @description This computer's name, shown on the sign-in screen (the Qt login screen shows the same).
+         */
+        get: operations["device_api_system_device_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/system/shutdown": {
         parameters: {
             query?: never;
@@ -1972,6 +2121,34 @@ export interface components {
              * @default No reason given
              */
             reason: string;
+        };
+        /** AlertOut */
+        AlertOut: {
+            /** Action */
+            action: string;
+            /** Category */
+            category: string;
+            /** Detail */
+            detail: string;
+            /** Entity Id */
+            entity_id?: string | null;
+            /** Is Summary */
+            is_summary: boolean;
+            /** Severity */
+            severity: string;
+            /** Title */
+            title: string;
+        };
+        /** AlertsOut */
+        AlertsOut: {
+            /** Critical Count */
+            critical_count: number;
+            /** Notifications */
+            notifications: components["schemas"]["AlertOut"][];
+            /** Total */
+            total: number;
+            /** Warning Count */
+            warning_count: number;
         };
         /** ApproveIn */
         ApproveIn: {
@@ -2544,6 +2721,15 @@ export interface components {
             explanations: string[];
             report: components["schemas"]["ReportView"];
         };
+        /** ForgotPasswordIn */
+        ForgotPasswordIn: {
+            /** Code */
+            code: string;
+            /** New Password */
+            new_password: string;
+            /** Username */
+            username: string;
+        };
         /** FuelCard */
         FuelCard: {
             /** Active Nozzle Count */
@@ -2744,6 +2930,11 @@ export interface components {
         LoginIn: {
             /** Password */
             password: string;
+            /**
+             * Use Pin
+             * @default false
+             */
+            use_pin: boolean;
             /** Username */
             username: string;
         };
@@ -3119,6 +3310,16 @@ export interface components {
              */
             reason: string;
         };
+        /** ReauthIn */
+        ReauthIn: {
+            /** Credential */
+            credential: string;
+            /**
+             * Use Pin
+             * @default false
+             */
+            use_pin: boolean;
+        };
         /** ReceiptOut */
         ReceiptOut: {
             /** Filename */
@@ -3270,6 +3471,13 @@ export interface components {
             /** Name */
             name: string;
         };
+        /** RosterRow */
+        RosterRow: {
+            /** Detail */
+            detail: string;
+            /** Name */
+            name: string;
+        };
         /** SaleIn */
         SaleIn: {
             /** Customer Id */
@@ -3367,6 +3575,13 @@ export interface components {
             reference_number?: string | null;
             /** Remarks */
             remarks?: string | null;
+        };
+        /** SetPinIn */
+        SetPinIn: {
+            /** Current Password */
+            current_password: string;
+            /** Pin */
+            pin: string;
         };
         /** ShiftOut */
         ShiftOut: {
@@ -3487,6 +3702,24 @@ export interface components {
              */
             reason: string;
             status: components["schemas"]["EmployeeStatus"];
+        };
+        /**
+         * SummaryOut
+         * @description Every field is null when the signed-in user lacks the permission that module is gated on.
+         */
+        SummaryOut: {
+            /** Low Stock Tanks Count */
+            low_stock_tanks_count?: number | null;
+            /** Open Shift Labels */
+            open_shift_labels?: string[] | null;
+            /** Open Shifts Count */
+            open_shifts_count?: number | null;
+            /** Pending Purchase Orders Count */
+            pending_purchase_orders_count?: number | null;
+            /** Sales Today Amount */
+            sales_today_amount?: string | null;
+            /** Sales Today Count */
+            sales_today_count?: number | null;
         };
         /** SupplierIn */
         SupplierIn: {
@@ -3701,6 +3934,16 @@ export interface components {
             /** Transaction Type */
             transaction_type: string;
         };
+        /** TrendPoint */
+        TrendPoint: {
+            /** Amount */
+            amount: string;
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+        };
         /** UserCreateIn */
         UserCreateIn: {
             /** Email */
@@ -3720,8 +3963,15 @@ export interface components {
         UserOut: {
             /** First Name */
             first_name?: string | null;
+            /**
+             * Has Pin
+             * @default false
+             */
+            has_pin: boolean;
             /** Id */
             id: string;
+            /** Last Login */
+            last_login?: string | null;
             /** Last Name */
             last_name?: string | null;
             /** Must Change Password */
@@ -3780,6 +4030,38 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    alerts_api_alerts_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AlertsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     forecast_api_analytics_forecast_get: {
         parameters: {
             query?: never;
@@ -4096,6 +4378,39 @@ export interface operations {
             };
         };
     };
+    forgot_password_api_auth_forgot_password_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ForgotPasswordIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     login_api_auth_login_post: {
         parameters: {
             query?: never;
@@ -4181,6 +4496,76 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["UserOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_pin_api_auth_pin_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetPinIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reauthenticate_api_auth_reauthenticate_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReauthIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -4601,6 +4986,104 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CustomerOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    roster_api_dashboard_roster_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RosterRow"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sales_trend_api_dashboard_sales_trend_get: {
+        parameters: {
+            query?: {
+                days?: number;
+            };
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrendPoint"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    summary_api_dashboard_summary_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SummaryOut"];
                 };
             };
             /** @description Validation Error */
@@ -7769,6 +8252,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SupplierOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    device_api_system_device_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */

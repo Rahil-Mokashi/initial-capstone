@@ -26,7 +26,7 @@ TOKEN_ENDPOINTS = [
     ("GET", "/api/tanks/abc/reconciliations", None),
     ("POST", "/api/tanks/abc/reconciliations", {"reconciliation_date": "2026-10-09", "physical_stock": "1"}),
 ]
-SECRET_ONLY_ENDPOINTS = [("GET", "/api/health", None), ("POST", "/api/system/shutdown", None)]
+SECRET_ONLY_ENDPOINTS = [("GET", "/api/health", None), ("GET", "/api/system/device", None), ("POST", "/api/system/shutdown", None)]
 LOGIN = ("POST", "/api/auth/login", {"username": "manager1", "password": "x"})
 
 
