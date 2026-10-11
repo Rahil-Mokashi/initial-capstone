@@ -504,6 +504,40 @@
         "title": "FuelOut",
         "type": "object"
       },
+      "FuelPriceOut": {
+        "properties": {
+          "fuel_type": {
+            "title": "Fuel Type",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "priced": {
+            "title": "Priced",
+            "type": "boolean"
+          },
+          "rate_per_liter": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate Per Liter"
+          }
+        },
+        "required": [
+          "id",
+          "fuel_type",
+          "priced"
+        ],
+        "title": "FuelPriceOut",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -558,6 +592,71 @@
           "user"
         ],
         "title": "LoginOut",
+        "type": "object"
+      },
+      "PriceHistoryOut": {
+        "properties": {
+          "effective_from": {
+            "format": "date-time",
+            "title": "Effective From",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "new_rate_per_liter": {
+            "title": "New Rate Per Liter",
+            "type": "string"
+          },
+          "old_rate_per_liter": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Old Rate Per Liter"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "effective_from",
+          "new_rate_per_liter",
+          "reason"
+        ],
+        "title": "PriceHistoryOut",
+        "type": "object"
+      },
+      "RateIn": {
+        "additionalProperties": false,
+        "properties": {
+          "new_rate_per_liter": {
+            "examples": [
+              "102.50"
+            ],
+            "pattern": "^-?\\d{1,12}(\\.\\d{1,2})?$",
+            "title": "New Rate Per Liter",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "new_rate_per_liter",
+          "reason"
+        ],
+        "title": "RateIn",
         "type": "object"
       },
       "ReadingIn": {
@@ -2163,6 +2262,237 @@
         "summary": "Change Status",
         "tags": [
           "employees"
+        ]
+      }
+    },
+    "/api/fuel-prices": {
+      "get": {
+        "operationId": "list_fuel_prices_api_fuel_prices_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FuelPriceOut"
+                  },
+                  "title": "Response List Fuel Prices Api Fuel Prices Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Fuel Prices",
+        "tags": [
+          "fuel-prices"
+        ]
+      }
+    },
+    "/api/fuel-prices/{fuel_id}/history": {
+      "get": {
+        "operationId": "price_history_api_fuel_prices__fuel_id__history_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "fuel_id",
+            "required": true,
+            "schema": {
+              "title": "Fuel Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PriceHistoryOut"
+                  },
+                  "title": "Response Price History Api Fuel Prices  Fuel Id  History Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Price History",
+        "tags": [
+          "fuel-prices"
+        ]
+      }
+    },
+    "/api/fuel-prices/{fuel_id}/rate": {
+      "post": {
+        "operationId": "set_rate_api_fuel_prices__fuel_id__rate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "fuel_id",
+            "required": true,
+            "schema": {
+              "title": "Fuel Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FuelPriceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Rate",
+        "tags": [
+          "fuel-prices"
         ]
       }
     },

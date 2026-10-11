@@ -200,3 +200,7 @@ Not re-run at this checkpoint: Playwright (the bridge-key expectations were upda
 - Judgment call: the detail profile edits only contact, designation and department, exactly like Qt, even though the API accepts more fields.
 - Tests: web 162 (9 new), Playwright employees.spec.ts (add, status with reason, document via stubbed file dialog, exit) passes; tests/api 182 passed.
 - NEXT: Fuel Prices, then Users, Nozzles, Procurement, ...
+
+### Fuel Prices (2026-10-11)
+- api/routers/fuel_prices.py (list, history, set rate; MoneyIn = strings, 2 dp), Services now wires every service like AppController (lazy, per request). web: FuelPricesPage (priced/unpriced badge, warning banner, change price with reason, per-fuel history), shared hooks in web/src/api/hooks.ts.
+- Tests: tests/api 6 new, web unit 4 new, Playwright fuel-prices.spec.ts.

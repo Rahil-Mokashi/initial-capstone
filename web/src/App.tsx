@@ -6,6 +6,7 @@ import { ChangePasswordPage } from '@/features/auth/ChangePasswordPage';
 import { LoginPage } from '@/features/auth/LoginPage';
 import { EmployeeDetailPage } from '@/features/employees/EmployeeDetailPage';
 import { EmployeesPage } from '@/features/employees/EmployeesPage';
+import { FuelPricesPage } from '@/features/fuel-prices/FuelPricesPage';
 import { TankDetailPage } from '@/features/tanks/TankDetailPage';
 import { TanksPage } from '@/features/tanks/TanksPage';
 
@@ -28,6 +29,7 @@ export function App() {
             {/* One route per screen: opening Tanks again re-uses this page, it can never stack a second copy. */}
             <Route path="/tanks" element={<TanksPage />} />
             <Route path="/tanks/:id" element={<TankDetailPage />} />
+            <Route path="/fuel-prices" element={<FuelPricesPage />} />
             <Route path="/employees" element={<EmployeesPage />} />
             <Route path="/employees/:id" element={<EmployeeDetailPage />} />
           </Route>

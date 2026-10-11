@@ -38,6 +38,15 @@ VolumeIn = Annotated[
 ]
 
 
+# Money requests: Numeric(14, 2) is the widest money column; extra places are refused, never rounded.
+MoneyIn = Annotated[
+    Decimal,
+    BeforeValidator(_strings_only),
+    Field(max_digits=14, decimal_places=2, allow_inf_nan=False),
+    WithJsonSchema({"type": "string", "pattern": r"^-?\d{1,12}(\.\d{1,2})?$", "examples": ["102.50"]}),
+]
+
+
 # A person-written explanation that must not be blank (the Qt screens refuse an empty reason in the dialog).
 Reason = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=1000)]
 

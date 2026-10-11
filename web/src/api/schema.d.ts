@@ -177,6 +177,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/fuel-prices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Fuel Prices */
+        get: operations["list_fuel_prices_api_fuel_prices_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/fuel-prices/{fuel_id}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Price History */
+        get: operations["price_history_api_fuel_prices__fuel_id__history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/fuel-prices/{fuel_id}/rate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Set Rate */
+        post: operations["set_rate_api_fuel_prices__fuel_id__rate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -524,6 +575,17 @@ export interface components {
             /** Id */
             id: string;
         };
+        /** FuelPriceOut */
+        FuelPriceOut: {
+            /** Fuel Type */
+            fuel_type: string;
+            /** Id */
+            id: string;
+            /** Priced */
+            priced: boolean;
+            /** Rate Per Liter */
+            rate_per_liter?: string | null;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -543,6 +605,32 @@ export interface components {
             /** Token */
             token: string;
             user: components["schemas"]["UserOut"];
+        };
+        /** PriceHistoryOut */
+        PriceHistoryOut: {
+            /**
+             * Effective From
+             * Format: date-time
+             */
+            effective_from: string;
+            /** Id */
+            id: string;
+            /** New Rate Per Liter */
+            new_rate_per_liter: string;
+            /** Old Rate Per Liter */
+            old_rate_per_liter?: string | null;
+            /** Reason */
+            reason: string;
+        };
+        /** RateIn */
+        RateIn: {
+            /**
+             * New Rate Per Liter
+             * @example 102.50
+             */
+            new_rate_per_liter: string;
+            /** Reason */
+            reason: string;
         };
         /** ReadingIn */
         ReadingIn: {
@@ -1223,6 +1311,110 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EmployeeFull"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_fuel_prices_api_fuel_prices_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FuelPriceOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    price_history_api_fuel_prices__fuel_id__history_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                fuel_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PriceHistoryOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_rate_api_fuel_prices__fuel_id__rate_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                fuel_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FuelPriceOut"];
                 };
             };
             /** @description Validation Error */
