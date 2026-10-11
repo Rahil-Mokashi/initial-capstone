@@ -17,8 +17,9 @@ from PyInstaller.utils.hooks import collect_submodules
 DATA_FILES = [("../alembic.ini", "."), ("../alembic", "alembic")]
 HIDDEN = ["logging.config", "logging.handlers"] + collect_submodules("uvicorn") + collect_submodules("api")
 
+# PIL is NOT excluded: ReportLab imports it at load time, and the report/receipt PDFs need ReportLab.
 EXCLUDES = [
-    "PySide6", "shiboken6", "PyQt5", "PyQt6", "tkinter", "matplotlib", "PIL", "numpy", "pandas",
+    "PySide6", "shiboken6", "PyQt5", "PyQt6", "tkinter", "matplotlib", "numpy", "pandas",
     "IPython", "jupyter", "notebook", "scipy", "pytest",
 ]
 

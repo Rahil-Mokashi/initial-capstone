@@ -289,3 +289,7 @@ Not re-run at this checkpoint: Playwright (the bridge-key expectations were upda
 - Fixes an apparent Qt gap: the Qt windows never pass the company profile to the HTML builders, so receipts and reports previewed with the "Petrol Pump ERP" fallback letterhead. The API now passes it (sales receipt, report views, analytics, credit statement), so previews and prints carry the business name, address and GSTIN. The PDF / Excel exporters in app/services take no company argument and were NOT changed (NEEDS HUMAN REVIEW: the exported PDFs still have no letterhead, as in Qt).
 - NEEDS HUMAN REVIEW: restore overwrites the live database file under a running server, exactly as Qt does; the notice tells the person to restart. The service still demands a reason for Qt; the API fills "No reason given" when the box is empty.
 - Tests: tests/api 13 (test_api_admin.py), web 12, Playwright admin.spec.ts.
+
+### Installer rebuild after the last screens (2026-10-11)
+- Real packaging bug found and fixed by the packaged test: api/pperp_api.spec excluded PIL, but ReportLab imports it when it loads, so the frozen service crashed at start-up once the report routers existed (dev runs never showed it). PIL is no longer excluded. Installer 0.1.0 rebuilt (about 138 MB), `test:packaged -- --install` 4/4 passing, offline scan clean. Qt dist/PetrolPumpERP.exe rebuilt as well.
+- Full Playwright: 45 passed, 8 opt-in skipped. One flaky assertion (receipt preview text read before it loaded) now waits for the text.
