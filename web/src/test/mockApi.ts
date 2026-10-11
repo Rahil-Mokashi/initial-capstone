@@ -23,12 +23,12 @@ const SHELL_DEFAULTS: Record<string, Handler> = {
 
 /** Replaces fetch with a router keyed by "METHOD /api/path". Unmatched calls fail loudly. */
 export function mockApi(routes: Record<string, Handler>) {
-  const calls: Array<{ key: string; body: unknown; headers: Headers }> = [];
+  const calls: Array<{ key: string; body: unknown; headers: Headers; url: string }> = [];
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(String(input), 'http://127.0.0.1');
     const key = `${init?.method ?? 'GET'} ${url.pathname}`;
     const body = init?.body ? JSON.parse(String(init.body)) : undefined;
-    calls.push({ key, body, headers: new Headers(init?.headers) });
+    calls.push({ key, body, headers: new Headers(init?.headers), url: String(input) });
     const handler = routes[key] ?? SHELL_DEFAULTS[key];
     if (!handler) throw new Error(`Unexpected request: ${key}`);
     const result = handler(body, url) ?? { status: 204 };

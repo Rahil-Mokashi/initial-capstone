@@ -20,6 +20,8 @@ contextBridge.exposeInMainWorld('pperp', {
   files: {
     // Opens the Windows file dialog in the main process; the page only ever receives the chosen path (or null).
     pickPath: (): Promise<string | null> => ipcRenderer.invoke('files:pick'),
+    // Same, for a folder (backup destination).
+    pickFolder: (): Promise<string | null> => ipcRenderer.invoke('files:pickFolder'),
     // Writes bytes the page already holds (an export) where the PERSON chooses in the Save dialog.
     save: (suggestedName: string, base64: string) =>
       ipcRenderer.invoke('files:save', suggestedName, base64),

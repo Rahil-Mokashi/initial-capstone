@@ -6,6 +6,9 @@ import { ChangePasswordPage } from '@/features/auth/ChangePasswordPage';
 import { LoginPage } from '@/features/auth/LoginPage';
 import { EmployeeDetailPage } from '@/features/employees/EmployeeDetailPage';
 import { EmployeesPage } from '@/features/employees/EmployeesPage';
+import { AuditPage } from '@/features/audit/AuditPage';
+import { BackupsPage } from '@/features/backups/BackupsPage';
+import { SettingsPage } from '@/features/settings/SettingsPage';
 import { FuelPricesPage } from '@/features/fuel-prices/FuelPricesPage';
 import { UsersPage } from '@/features/users/UsersPage';
 import { UserDetailPage } from '@/features/users/UserDetailPage';
@@ -78,6 +81,9 @@ export function App() {
             <Route path="/tanks" element={<TanksPage />} />
             <Route path="/tanks/:id" element={<TankDetailPage />} />
             <Route path="/fuel-prices" element={<FuelPricesPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/backups" element={<BackupsPage />} />
+            <Route path="/audit" element={<AuditPage />} />
             <Route path="/employees" element={<EmployeesPage />} />
             <Route path="/employees/:id" element={<EmployeeDetailPage />} />
           </Route>

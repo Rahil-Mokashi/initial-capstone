@@ -29,14 +29,14 @@ class ReportView(Out):
     html: str
 
 
-def view(report: TableReport) -> ReportView:
+def view(report: TableReport, company=None) -> ReportView:
     return ReportView(
         title=report.title,
         headers=list(report.headers),
         rows=[[("" if c is None else str(c)) for c in row] for row in report.rows],
         money_columns=sorted(getattr(report, "money_columns", ())),
         volume_columns=sorted(getattr(report, "volume_columns", ())),
-        html=build_table_report_html(report),
+        html=build_table_report_html(report, company),
     )
 
 

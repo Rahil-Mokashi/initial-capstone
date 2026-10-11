@@ -10,7 +10,7 @@ test('dashboard, set a PIN, lock and unlock, sign in with the PIN', async ({ lau
   // Set a quick sign-in PIN
   await page.getByRole('button', { name: /Account menu/ }).click();
   await page.getByRole('button', { name: 'Set a quick sign-in PIN' }).click();
-  let dialog = page.getByRole('dialog');
+  const dialog = page.getByRole('dialog');
   await dialog.getByLabel('Current password').fill(PASSWORD);
   await dialog.getByLabel('New PIN').fill('483920');
   await dialog.getByLabel('Confirm PIN').fill('483920');

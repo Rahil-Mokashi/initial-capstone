@@ -78,8 +78,8 @@ class ForecastOut(Out):
     explanations: list[str]
 
 
-def _forecast_html(forecasts) -> str:
-    return build_table_report_html(forecast_report(forecasts)) + "<p>" + "</p><p>".join(f.explanation for f in forecasts) + "</p>"
+def _forecast_html(forecasts, company) -> str:
+    return build_table_report_html(forecast_report(forecasts), company) + "<p>" + "</p><p>".join(f.explanation for f in forecasts) + "</p>"
 
 
 @router.get("/analytics/performance", response_model=reporting.ReportView)
@@ -90,7 +90,7 @@ def performance(
     services: Services = Depends(get_services),
 ):
     result = services.analytics.get_period_performance(user.id, period, as_of or date.today())
-    return reporting.view(performance_report(result))
+    return reporting.view(performance_report(result), services.settings.get_company_profile())
 
 
 @router.get("/analytics/performance/export.{kind}")
@@ -108,8 +108,8 @@ def performance_export(
 @router.get("/analytics/forecast", response_model=ForecastOut)
 def forecast(user: CurrentUser = Depends(current_user), services: Services = Depends(get_services)):
     forecasts = services.analytics.get_sales_forecast(user.id)
-    view = reporting.view(forecast_report(forecasts))
-    view.html = _forecast_html(forecasts)  # Qt prints the explanations after the table
+    view = reporting.view(forecast_report(forecasts), services.settings.get_company_profile())
+    view.html = _forecast_html(forecasts, services.settings.get_company_profile())  # Qt prints the explanations after the table
     return ForecastOut(report=view, explanations=[f.explanation for f in forecasts])
 
 

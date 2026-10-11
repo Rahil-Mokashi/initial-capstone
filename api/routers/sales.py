@@ -229,7 +229,7 @@ def cancel_sale(sale_id: str, body: ReasonIn, user: CurrentUser = Depends(curren
 def receipt_html(sale_id: str, user: CurrentUser = Depends(current_user), services: Services = Depends(get_services)):
     sale = services.sales.get_sale(user.id, sale_id)
     payment = services.sales.get_payment_for_sale(user.id, sale_id)
-    return ReceiptOut(html=build_sale_receipt_html(sale, payment), filename=f"receipt_{sale.receipt_number}.pdf")
+    return ReceiptOut(html=build_sale_receipt_html(sale, payment, services.settings.get_company_profile()), filename=f"receipt_{sale.receipt_number}.pdf")
 
 
 @router.get("/sales/{sale_id}/receipt.pdf")

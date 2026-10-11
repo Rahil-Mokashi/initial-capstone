@@ -64,6 +64,20 @@ b945d1d docs: record reset point and rollback steps before the JS front-end migr
 | Add / edit controls hidden or disabled for view-only roles | Done, server re-checks |
 | Audit rows for every change | Done (API tests, chain verified) |
 
+## Parity of the screens built after Employees
+Each screen was built from its Qt window's code (fields, defaults, permissions, messages) and calls the same service methods. Per-screen detail, judgment calls and tests are in `JS_MIGRATION_LOG.md`; the table below is the one-line status per Qt window.
+| Qt window | New UI |
+|---|---|
+| Fuel Prices, Users, Nozzles & Dispensers, Suppliers / Procurement (orders, deliveries, invoices, payments) | Done |
+| Shifts, My Shift, Attendance, Leave | Done |
+| Sales + Customers, Sales Terminal (live preview in exact decimals), Credit (accounts, payments, statements) | Done |
+| Expenses (+ categories), Reconciliation, Shift Cash Book, Employee Shortages | Done |
+| Reports hub (12 reports, filters), Business Insights (performance, forecast), print preview, PDF / Excel / CSV | Done |
+| Dashboard, Alerts, global search, account menu, lock screen, PIN, forgot password, Support, Hindi / English sign-in | Done |
+| Company Profile, Backups (create, check, copy off-device, restore), Audit Log (filters, verify trail) | Done |
+| Windows Hello on the lock screen | NOT done (needs a native Windows module); password or PIN always works |
+| Printing to real paper / thermal hardware | NOT verified (no printer on the build PC) |
+
 ## UX improvements (reasons in the log)
 Card shortcuts (Receipt / Record reading), detail as a route, level shown in words and icon, inline validation with server field errors, current stock shown in dialogs, remembered reader, reconcile result, cards/table toggle, outside clicks never discard a form, one no-access message, disabled buttons explain why.
 

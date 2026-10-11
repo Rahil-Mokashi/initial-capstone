@@ -202,6 +202,13 @@ function registerIpc(): void {
       : dialog.showOpenDialog({ properties: ['openFile'] }));
     return result.canceled || result.filePaths.length === 0 ? null : (result.filePaths[0] ?? null);
   });
+  ipcMain.handle('files:pickFolder', async (event) => {
+    if (E2E && process.env.PPERP_E2E_PICK_FOLDER) return process.env.PPERP_E2E_PICK_FOLDER;
+    const win = BrowserWindow.fromWebContents(event.sender) ?? undefined;
+    const options = { properties: ['openDirectory', 'createDirectory'] as Array<'openDirectory' | 'createDirectory'> };
+    const result = await (win ? dialog.showOpenDialog(win, options) : dialog.showOpenDialog(options));
+    return result.canceled || result.filePaths.length === 0 ? null : (result.filePaths[0] ?? null);
+  });
   ipcMain.handle('print:toPdf', (_e, html: string, options: PrintOptions = {}) =>
     printToPdf(String(html), options, policy),
   );

@@ -130,7 +130,7 @@ def statement(customer_id: str, user: CurrentUser = Depends(current_user), servi
             for e in entries
         ],
         running_balance=entries[-1].running_balance if entries else Decimal("0"),
-        report=reporting.view(_statement_report(name, entries)),
+        report=reporting.view(_statement_report(name, entries), services.settings.get_company_profile()),
     )
 
 

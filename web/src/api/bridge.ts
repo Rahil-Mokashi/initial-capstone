@@ -10,6 +10,7 @@ export interface PperpBridge {
   launchSecret: string;
   files: {
     pickPath(): Promise<string | null>;
+    pickFolder(): Promise<string | null>;
     save(
       suggestedName: string,
       base64: string,

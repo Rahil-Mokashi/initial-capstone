@@ -12,7 +12,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from api.deps import require_launch_secret
 from api.errors import install_error_handlers
-from api.routers import analytics, attendance, auth, credit, dashboard, employees, expenses, reconciliation, reports, fuel_prices, nozzles, procurement, sales, shifts, tanks, terminal, users
+from api.routers import analytics, attendance, audit, backups, settings as settings_router, auth, credit, dashboard, employees, expenses, reconciliation, reports, fuel_prices, nozzles, procurement, sales, shifts, tanks, terminal, users
 
 ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 
@@ -104,6 +104,9 @@ def create_app(
     api.include_router(reports.router)
     api.include_router(analytics.router)
     api.include_router(dashboard.router)
+    api.include_router(settings_router.router)
+    api.include_router(backups.router)
+    api.include_router(audit.router)
     app.include_router(api)
 
     if web_dir is not None and Path(web_dir).is_dir():

@@ -161,7 +161,7 @@ def run_report(
     user: CurrentUser = Depends(current_user),
     services: Services = Depends(get_services),
 ):
-    return reporting.view(_build(key, services, user.id, date_from, date_to, employee_id, nozzle_id))
+    return reporting.view(_build(key, services, user.id, date_from, date_to, employee_id, nozzle_id), services.settings.get_company_profile())
 
 
 @router.get("/reports/{key}/export.{kind}")

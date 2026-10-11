@@ -189,7 +189,7 @@ The owner asked for ALL functionality to be migrated, in my preferred (dependenc
 - Preload bridge extended by ONE method, files.pickPath() (Windows file dialog in the main process; the page only receives a path or null), needed because Qt stores the picked file path for employee documents. Bridge-key tests updated. E2E can set PPERP_E2E_PICK_PATH.
 - web/src/features/employees/queries.ts (hooks for all employee calls); API types regenerated.
 
-### NOT done yet (next steps, in this order)
+### NOT done yet (next steps, in this order) - SUPERSEDED: every screen in this list has since been built, see the sections below
 1. Employees UI: list (search, inline status with reason), add dialog (outlet default "Main Outlet", joining date today), detail page (profile edit, status apply, record exit, documents add via files.pickPath / remove), nav entry + routes, unit + Playwright tests, then the Employees commit.
 2. Fuel Prices; Users; Nozzles & Dispensers; Suppliers/Procurement (largest); Shifts + My Shift; Attendance; Leave; Sales + Customers; Terminal; Credit; Expenses; Reconciliation (+ cash book, shortages); Reports hub; Analytics; Dashboard + alert strip + notifications; Company Profile; Backups; Audit Log; login extras (PIN, forgot password, lock screen, support).
 3. After each screen: update the parity checklist in JS_MIGRATION_REPORT.md, run the full suites, rebuild the installer.
@@ -281,3 +281,11 @@ Not re-run at this checkpoint: Playwright (the bridge-key expectations were upda
 - NOT done / NEEDS HUMAN REVIEW: (1) Windows Hello on the lock screen needs a native Windows module (Qt used an optional winsdk package that was not in requirements.lock); not offered, the password or PIN always works. (2) The Qt "group landing pages" (Masters / Operations / Settings tiles with descriptions) are replaced by the always-visible sidebar groups; no function is lost. (3) Idle auto-lock: Qt has none, so none was added (session expiry already signs out).
 - Test-harness changes that were needed because the shell now makes background calls: mockApi gives quiet defaults for them; the e2e signIn deep-links to Tanks; "Sign in" heading became "Welcome back" (Qt's text).
 - Tests: tests/api +7 (auth extras), web +35 (login 11, shell 24), Playwright account.spec.ts (2); full web 305, full e2e 45 passing.
+
+### Company Profile, Backups, Audit Log (2026-10-11)
+- API: /settings (GET, PUT with the same AppSettingUpdate the Qt screen uses, so GST / phone / email errors name their box), /backups (list with off-device status, create, integrity check, copy, restore), /audit (search, actor list, verify). A backup is named by file name only and resolved against the service's own list, so the API can never be pointed at an arbitrary path.
+- Web: Company Profile (warning banner when no business name, read-only without settings.manage, Discard changes, folder Browse button), Backups (table, Back Up Now, Check Integrity, per-row Copy to USB / Network and Restore; restore = strong confirmation, then an optional reason, then a "close and reopen the app" notice), Audit Log (event / user / date filters applied on Filter, Verify Trail with the tamper list). Nav entries and the alert links (/audit, /backups) now resolve.
+- Electron bridge gained files.pickFolder() (folder dialog; E2E env PPERP_E2E_PICK_FOLDER).
+- Fixes an apparent Qt gap: the Qt windows never pass the company profile to the HTML builders, so receipts and reports previewed with the "Petrol Pump ERP" fallback letterhead. The API now passes it (sales receipt, report views, analytics, credit statement), so previews and prints carry the business name, address and GSTIN. The PDF / Excel exporters in app/services take no company argument and were NOT changed (NEEDS HUMAN REVIEW: the exported PDFs still have no letterhead, as in Qt).
+- NEEDS HUMAN REVIEW: restore overwrites the live database file under a running server, exactly as Qt does; the notice tells the person to restart. The service still demands a reason for Qt; the API fills "No reason given" when the box is empty.
+- Tests: tests/api 13 (test_api_admin.py), web 12, Playwright admin.spec.ts.

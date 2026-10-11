@@ -23,7 +23,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Tanks', permission: 'inventory.view', to: '/tanks' },
       { label: 'Nozzles & Dispensers', permission: 'nozzle.view', to: '/nozzles' },
       { label: 'Suppliers', permission: 'procurement.view', to: '/procurement?tab=suppliers' },
-      { label: 'Company Profile', permission: 'settings.view' },
+      { label: 'Company Profile', permission: 'settings.view', to: '/settings' },
     ],
   },
   {
@@ -61,8 +61,8 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Settings',
     items: [
-      { label: 'Backups', permission: 'backup.manage' },
-      { label: 'Audit Log', permission: 'audit.view' },
+      { label: 'Backups', permission: 'backup.manage', to: '/backups' },
+      { label: 'Audit Log', permission: 'audit.view', to: '/audit' },
     ],
   },
 ];
