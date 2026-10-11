@@ -3045,6 +3045,17 @@
             ],
             "title": "Nozzle"
           },
+          "nozzle_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nozzle Id"
+          },
           "payment_id": {
             "anyOf": [
               {
@@ -3627,6 +3638,221 @@
           "status"
         ],
         "title": "TankStatusIn",
+        "type": "object"
+      },
+      "TerminalAssignment": {
+        "properties": {
+          "employee_id": {
+            "title": "Employee Id",
+            "type": "string"
+          },
+          "nozzle": {
+            "$ref": "#/components/schemas/TerminalNozzle"
+          },
+          "shift_id": {
+            "title": "Shift Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "shift_id",
+          "employee_id",
+          "nozzle"
+        ],
+        "title": "TerminalAssignment",
+        "type": "object"
+      },
+      "TerminalContext": {
+        "properties": {
+          "can_pick_freely": {
+            "title": "Can Pick Freely",
+            "type": "boolean"
+          },
+          "customers": {
+            "items": {
+              "$ref": "#/components/schemas/IdLabel"
+            },
+            "title": "Customers",
+            "type": "array"
+          },
+          "employees": {
+            "items": {
+              "$ref": "#/components/schemas/IdLabel"
+            },
+            "title": "Employees",
+            "type": "array"
+          },
+          "my_assignment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TerminalAssignment"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "nozzles": {
+            "items": {
+              "$ref": "#/components/schemas/TerminalNozzle"
+            },
+            "title": "Nozzles",
+            "type": "array"
+          },
+          "shifts": {
+            "items": {
+              "$ref": "#/components/schemas/IdLabel"
+            },
+            "title": "Shifts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "can_pick_freely",
+          "shifts",
+          "employees",
+          "nozzles",
+          "customers"
+        ],
+        "title": "TerminalContext",
+        "type": "object"
+      },
+      "TerminalNozzle": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "fuel_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fuel Type"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "rate_per_liter": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate Per Liter"
+          }
+        },
+        "required": [
+          "id",
+          "code"
+        ],
+        "title": "TerminalNozzle",
+        "type": "object"
+      },
+      "TerminalSaleIn": {
+        "additionalProperties": false,
+        "description": "`mode` says what `value` is: rupees (the quantity is value / rate, as Qt does) or litres.",
+        "properties": {
+          "customer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Id"
+          },
+          "employee_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Employee Id"
+          },
+          "mode": {
+            "enum": [
+              "amount",
+              "litres"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "nozzle_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nozzle Id"
+          },
+          "payment_method": {
+            "$ref": "#/components/schemas/PaymentMethod"
+          },
+          "reference_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Number"
+          },
+          "remarks": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remarks"
+          },
+          "shift_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shift Id"
+          },
+          "value": {
+            "examples": [
+              "102.50"
+            ],
+            "pattern": "^-?\\d{1,12}(\\.\\d{1,2})?$",
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode",
+          "value",
+          "payment_method"
+        ],
+        "title": "TerminalSaleIn",
         "type": "object"
       },
       "TransactionIn": {
@@ -11066,6 +11292,146 @@
         "summary": "Record Transaction",
         "tags": [
           "tanks"
+        ]
+      }
+    },
+    "/api/terminal/context": {
+      "get": {
+        "operationId": "terminal_context_api_terminal_context_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TerminalContext"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Terminal Context",
+        "tags": [
+          "terminal"
+        ]
+      }
+    },
+    "/api/terminal/sales": {
+      "post": {
+        "operationId": "terminal_sale_api_terminal_sales_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TerminalSaleIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaleOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Terminal Sale",
+        "tags": [
+          "terminal"
         ]
       }
     },

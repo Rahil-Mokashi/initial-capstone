@@ -240,3 +240,8 @@ Not re-run at this checkpoint: Playwright (the bridge-key expectations were upda
 - Shared web pieces for every report/receipt from here on: api.download(), lib/documents.ts (saveFile, openPreview), components/DocumentActions.tsx (Print preview + Export PDF/Excel buttons).
 - e2e helper apiAs()/setupPump() (set-up through the API, assertions through the UI).
 - Tests: tests/api 9, web 12, Playwright sales.spec.ts (sale, stock, preview window text, PDF saved and starts with %PDF).
+
+### Terminal (2026-10-11)
+- api/routers/terminal.py: context (nozzles with their rates, shifts, attendants, customers, or the attendant's own assignment) and POST /terminal/sales. In amount mode the SERVER computes quantity = amount / rate at full precision and passes it to SaleService.create_sale exactly as the Qt screen does (so the stored litres and the amount match Qt to the paisa; verified: Rs 1000 at 102.50 stores 9.756 L). The browser only previews, using exact BigInt decimal math (web/src/lib/decimalMath.ts, half-even to 2 places like Decimal.quantize).
+- web features/terminal: chip pickers (nozzle, rupees/litres, quick amounts 200/500/1000/2000, payment method), live preview, sale-recorded card with Print receipt / PDF / New sale, recent sales on this nozzle.
+- Tests: tests/api 6, web 7 + 3 (decimalMath), Playwright terminal.spec.ts.

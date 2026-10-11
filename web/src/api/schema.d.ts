@@ -1288,6 +1288,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/terminal/context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Terminal Context */
+        get: operations["terminal_context_api_terminal_context_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/terminal/sales": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Terminal Sale */
+        post: operations["terminal_sale_api_terminal_sales_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/users": {
         parameters: {
             query?: never;
@@ -2479,6 +2513,8 @@ export interface components {
             id: string;
             /** Nozzle */
             nozzle?: string | null;
+            /** Nozzle Id */
+            nozzle_id?: string | null;
             /** Payment Id */
             payment_id?: string | null;
             /** Payment Method */
@@ -2672,6 +2708,68 @@ export interface components {
              */
             reason: string;
             status: components["schemas"]["TankStatus"];
+        };
+        /** TerminalAssignment */
+        TerminalAssignment: {
+            /** Employee Id */
+            employee_id: string;
+            nozzle: components["schemas"]["TerminalNozzle"];
+            /** Shift Id */
+            shift_id: string;
+        };
+        /** TerminalContext */
+        TerminalContext: {
+            /** Can Pick Freely */
+            can_pick_freely: boolean;
+            /** Customers */
+            customers: components["schemas"]["IdLabel"][];
+            /** Employees */
+            employees: components["schemas"]["IdLabel"][];
+            my_assignment?: components["schemas"]["TerminalAssignment"] | null;
+            /** Nozzles */
+            nozzles: components["schemas"]["TerminalNozzle"][];
+            /** Shifts */
+            shifts: components["schemas"]["IdLabel"][];
+        };
+        /** TerminalNozzle */
+        TerminalNozzle: {
+            /** Code */
+            code: string;
+            /** Fuel Type */
+            fuel_type?: string | null;
+            /** Id */
+            id: string;
+            /** Rate Per Liter */
+            rate_per_liter?: string | null;
+        };
+        /**
+         * TerminalSaleIn
+         * @description `mode` says what `value` is: rupees (the quantity is value / rate, as Qt does) or litres.
+         */
+        TerminalSaleIn: {
+            /** Customer Id */
+            customer_id?: string | null;
+            /** Employee Id */
+            employee_id?: string | null;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "amount" | "litres";
+            /** Nozzle Id */
+            nozzle_id?: string | null;
+            payment_method: components["schemas"]["PaymentMethod"];
+            /** Reference Number */
+            reference_number?: string | null;
+            /** Remarks */
+            remarks?: string | null;
+            /** Shift Id */
+            shift_id?: string | null;
+            /**
+             * Value
+             * @example 102.50
+             */
+            value: string;
         };
         /** TransactionIn */
         TransactionIn: {
@@ -6055,6 +6153,74 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TransactionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    terminal_context_api_terminal_context_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TerminalContext"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    terminal_sale_api_terminal_sales_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TerminalSaleIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SaleOut"];
                 };
             };
             /** @description Validation Error */

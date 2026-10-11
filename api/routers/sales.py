@@ -26,6 +26,7 @@ class SaleOut(Out):
     receipt_number: str
     sale_at: datetime
     fuel_type: Optional[str] = None
+    nozzle_id: Optional[str] = None
     nozzle: Optional[str] = None
     customer: Optional[str] = None
     quantity: VolumeOut
@@ -135,6 +136,7 @@ def sale_out(services: Services, user_id: str, sale) -> SaleOut:
         receipt_number=sale.receipt_number,
         sale_at=sale.sale_at,
         fuel_type=sale.fuel.fuel_type if sale.fuel else None,
+        nozzle_id=sale.nozzle_id,
         nozzle=sale.nozzle.code if sale.nozzle else None,
         customer=sale.customer.name if sale.customer else None,
         quantity=sale.quantity,
