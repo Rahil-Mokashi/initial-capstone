@@ -251,3 +251,7 @@ Not re-run at this checkpoint: Playwright (the bridge-key expectations were upda
 - api/routers/credit.py: accounts (with outstanding + overdue), open account, change limit, record payment, customer statement (+ PDF / Excel). web features/credit: select-an-account table, open-account dialog with "Add new customer" (swaps to the customer dialog and back - never two dialogs), payment dialog (no "Credit" method, as in Qt), limit dialog, statement dialog with Print preview / Export Excel / Export PDF.
 - New guard test (tests/api/test_api_schema_names.py): two routers defining the same model name make OpenAPI prefix both and silently break the generated types; this test fails if that ever happens (it caught Payment{In,Out} in credit vs procurement).
 - Tests: tests/api 3 + 1, web 7, Playwright credit.spec.ts (open, credit sale via the Terminal, pay, statement, PDF + Excel saved and checked).
+
+### Expenses (2026-10-11)
+- api/routers/expenses.py (list, options, record, approve, reject, categories). web features/expenses: Expenses + Categories tabs, select-a-row then Approve / Reject (approvers only), record dialog (no credit method). Qt's dialog does not expose the internal-fuel tank + quantity fields, so neither does this one.
+- Tests: tests/api 3, web 7, Playwright expenses.spec.ts.
