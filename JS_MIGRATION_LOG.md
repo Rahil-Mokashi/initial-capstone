@@ -222,3 +222,8 @@ Not re-run at this checkpoint: Playwright (the bridge-key expectations were upda
 - Offline gate: added one exact inert URL (a React Router warning message mentions a polyfill link) to the JS-only allowlist, with a test; nothing fetches it.
 - Sign-in redirect now keeps the query string (deep links like ?tab=suppliers survive a re-login).
 - Tests: tests/api 6, web 12, Playwright procurement.spec.ts (supplier to paid invoice, tank stock checked).
+
+### Shifts and My Shift (2026-10-11)
+- api/routers/shifts.py (list, open, get, close, reopen, assignments: assign / complete with testing and internal-consumption litres / cancel, assign-options, /shifts/mine). web features/shifts: list + open dialog, detail page, My Shift card. Completing an assignment settles a sale in the service, so an unpriced fuel is refused (message shown in the dialog), same as Qt.
+- Judgment call: Qt asks "complete or cancel?" in a popup then a chain of three number prompts; here each active row has Complete and Cancel buttons and one Complete dialog with the three numbers. Shared ConfirmDialog added for the close-shift confirmation.
+- Tests: tests/api 4, web 9, Playwright shifts.spec.ts (price, nozzle, shift, assign, blocked close, complete, close, reopen).

@@ -635,6 +635,164 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/shift-assignments/{assignment_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel Assignment */
+        post: operations["cancel_assignment_api_shift_assignments__assignment_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/shift-assignments/{assignment_id}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Complete Assignment */
+        post: operations["complete_assignment_api_shift_assignments__assignment_id__complete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/shifts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Shifts */
+        get: operations["list_shifts_api_shifts_get"];
+        put?: never;
+        /** Open Shift */
+        post: operations["open_shift_api_shifts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/shifts/assign-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Assign Options
+         * @description What the Assign Nozzle dialog lists: every employee and every active nozzle.
+         */
+        get: operations["assign_options_api_shifts_assign_options_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/shifts/mine": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** My Shift */
+        get: operations["my_shift_api_shifts_mine_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/shifts/{shift_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Shift */
+        get: operations["get_shift_api_shifts__shift_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/shifts/{shift_id}/assignments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Assignments */
+        get: operations["list_assignments_api_shifts__shift_id__assignments_get"];
+        put?: never;
+        /** Assign Nozzle */
+        post: operations["assign_nozzle_api_shifts__shift_id__assignments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/shifts/{shift_id}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Close Shift */
+        post: operations["close_shift_api_shifts__shift_id__close_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/shifts/{shift_id}/reopen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reopen Shift */
+        post: operations["reopen_shift_api_shifts__shift_id__reopen_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/suppliers": {
         parameters: {
             query?: never;
@@ -974,6 +1132,62 @@ export interface components {
             /** Tanks */
             tanks: components["schemas"]["IdLabel"][];
         };
+        /** AssignIn */
+        AssignIn: {
+            /** Employee Id */
+            employee_id: string;
+            /** Nozzle Id */
+            nozzle_id: string;
+            /**
+             * Opening Meter
+             * @example 12.500
+             */
+            opening_meter: string;
+        };
+        /** AssignOptions */
+        AssignOptions: {
+            /** Employees */
+            employees: components["schemas"]["IdLabel"][];
+            /** Nozzles */
+            nozzles: components["schemas"]["IdLabel"][];
+        };
+        /** AssignmentOut */
+        AssignmentOut: {
+            /** Closing Meter */
+            closing_meter?: string | null;
+            /** Employee */
+            employee?: string | null;
+            /** Employee Id */
+            employee_id: string;
+            /** End Time */
+            end_time?: string | null;
+            /** Id */
+            id: string;
+            /** Internal Consumption Volume */
+            internal_consumption_volume: string;
+            /** Nozzle */
+            nozzle?: string | null;
+            /** Nozzle Id */
+            nozzle_id: string;
+            /** Opening Meter */
+            opening_meter: string;
+            /** Shift Id */
+            shift_id: string;
+            /** Start Time */
+            start_time?: string | null;
+            /** Status */
+            status: string;
+            /** Testing Volume */
+            testing_volume: string;
+        };
+        /** CancelAssignmentIn */
+        CancelAssignmentIn: {
+            /**
+             * Reason
+             * @default No reason given
+             */
+            reason: string;
+        };
         /** CancelIn */
         CancelIn: {
             /**
@@ -998,6 +1212,31 @@ export interface components {
             reason: string;
             /** Role Id */
             role_id: string;
+        };
+        /** CloseShiftIn */
+        CloseShiftIn: {
+            /** Notes */
+            notes?: string | null;
+        };
+        /** CompleteIn */
+        CompleteIn: {
+            /**
+             * Closing Meter
+             * @example 12.500
+             */
+            closing_meter: string;
+            /**
+             * Internal Consumption Volume
+             * @default 0
+             * @example 12.500
+             */
+            internal_consumption_volume: string;
+            /**
+             * Testing Volume
+             * @default 0
+             * @example 12.500
+             */
+            testing_volume: string;
         };
         /** DeliveryOut */
         DeliveryOut: {
@@ -1293,6 +1532,26 @@ export interface components {
             token: string;
             user: components["schemas"]["UserOut"];
         };
+        /** MyShiftOut */
+        MyShiftOut: {
+            /** Dispenser */
+            dispenser?: string | null;
+            /** Fuel Type */
+            fuel_type?: string | null;
+            /** Nozzle */
+            nozzle?: string | null;
+            /** Opening Meter */
+            opening_meter: string;
+            /**
+             * Shift Date
+             * Format: date
+             */
+            shift_date: string;
+            /** Shift Label */
+            shift_label: string;
+            /** Status */
+            status: string;
+        };
         /** NozzleIn */
         NozzleIn: {
             /** Code */
@@ -1349,6 +1608,18 @@ export interface components {
              */
             reason: string;
             status: components["schemas"]["NozzleStatus"];
+        };
+        /** OpenShiftIn */
+        OpenShiftIn: {
+            /** Notes */
+            notes?: string | null;
+            /**
+             * Shift Date
+             * Format: date
+             */
+            shift_date: string;
+            /** Shift Label */
+            shift_label: string;
         };
         /** OrderItemIn */
         OrderItemIn: {
@@ -1594,6 +1865,14 @@ export interface components {
              */
             reason: string;
         };
+        /** ReopenIn */
+        ReopenIn: {
+            /**
+             * Reason
+             * @default No reason given
+             */
+            reason: string;
+        };
         /** ResetCodeOut */
         ResetCodeOut: {
             /** Code */
@@ -1615,6 +1894,30 @@ export interface components {
             id: string;
             /** Name */
             name: string;
+        };
+        /** ShiftOut */
+        ShiftOut: {
+            /** End Time */
+            end_time?: string | null;
+            /** Id */
+            id: string;
+            /** Notes */
+            notes?: string | null;
+            /** Opened By */
+            opened_by?: string | null;
+            /** Reopen Reason */
+            reopen_reason?: string | null;
+            /**
+             * Shift Date
+             * Format: date
+             */
+            shift_date: string;
+            /** Shift Label */
+            shift_label: string;
+            /** Start Time */
+            start_time?: string | null;
+            /** Status */
+            status: string;
         };
         /**
          * StatusEnum
@@ -3420,6 +3723,396 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DeliveryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_assignment_api_shift_assignments__assignment_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelAssignmentIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssignmentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    complete_assignment_api_shift_assignments__assignment_id__complete_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompleteIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssignmentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_shifts_api_shifts_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShiftOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    open_shift_api_shifts_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OpenShiftIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShiftOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    assign_options_api_shifts_assign_options_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssignOptions"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    my_shift_api_shifts_mine_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyShiftOut"] | null;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_shift_api_shifts__shift_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                shift_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShiftOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_assignments_api_shifts__shift_id__assignments_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                shift_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssignmentOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    assign_nozzle_api_shifts__shift_id__assignments_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                shift_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssignmentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    close_shift_api_shifts__shift_id__close_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                shift_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CloseShiftIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShiftOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reopen_shift_api_shifts__shift_id__reopen_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                shift_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReopenIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShiftOut"];
                 };
             };
             /** @description Validation Error */

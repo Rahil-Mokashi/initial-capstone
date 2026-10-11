@@ -30,8 +30,8 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: 'Terminal', permission: 'sale.manage' },
       { label: 'Sales', permission: 'sale.view' },
-      { label: 'Shifts', permission: 'shift.view' },
-      { label: 'My Shift', permission: 'my_assignment.view' },
+      { label: 'Shifts', permission: 'shift.view', to: '/shifts' },
+      { label: 'My Shift', permission: 'my_assignment.view', to: '/my-shift' },
       { label: 'Attendance', permission: 'attendance.view' },
       { label: 'Leave', permission: 'leave.view' },
       { label: 'Credit', permission: 'credit.view' },
