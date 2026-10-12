@@ -1,3 +1,5 @@
+from datetime import date
+
 import pytest
 
 from api_helpers import audit_chain_ok, audit_events
@@ -9,7 +11,7 @@ def pump(client, manager, fuel_id, tank, employee_id):
     client.post(f"/api/fuel-prices/{fuel_id}/rate", headers=manager, json={"new_rate_per_liter": "100.00"})
     d = client.post("/api/dispensers", headers=manager, json={"code": "D1"}).json()
     n = client.post("/api/nozzles", headers=manager, json={"code": "N1", "dispenser_id": d["id"], "fuel_id": fuel_id, "tank_id": tank["id"]}).json()
-    s = client.post("/api/shifts", headers=manager, json={"shift_date": "2026-10-11", "shift_label": "Morning"}).json()
+    s = client.post("/api/shifts", headers=manager, json={"shift_date": date.today().isoformat(), "shift_label": "Morning"}).json()
     a = client.post(f"/api/shifts/{s['id']}/assignments", headers=manager, json={"employee_id": employee_id, "nozzle_id": n["id"], "opening_meter": "0"})
     assert a.status_code == 201, a.text
     return {"shift": s, "nozzle": n, "employee_id": employee_id, "tank": tank}
@@ -111,7 +113,7 @@ def test_attendant_sells_from_their_own_assignment(client, session_factory, mana
     client.post(f"/api/fuel-prices/{fuel_id}/rate", headers=manager, json={"new_rate_per_liter": "100.00"})
     d = client.post("/api/dispensers", headers=manager, json={"code": "D1"}).json()
     n = client.post("/api/nozzles", headers=manager, json={"code": "N1", "dispenser_id": d["id"], "fuel_id": fuel_id, "tank_id": tank["id"]}).json()
-    s = client.post("/api/shifts", headers=manager, json={"shift_date": "2026-10-11", "shift_label": "Morning"}).json()
+    s = client.post("/api/shifts", headers=manager, json={"shift_date": date.today().isoformat(), "shift_label": "Morning"}).json()
     client.post(f"/api/shifts/{s['id']}/assignments", headers=manager, json={"employee_id": emp_id, "nozzle_id": n["id"], "opening_meter": "0"})
     opts = client.get("/api/sales/options", headers=attendant).json()
     assert opts["can_pick_freely"] is False and opts["my_assignment"]["nozzle"] == "N1"

@@ -1,3 +1,5 @@
+from datetime import date
+
 import pytest
 
 from test_api_sales import pump  # noqa: F401  (fixture)
@@ -58,7 +60,7 @@ def test_attendant_uses_their_own_assignment(client, session_factory, manager, a
     client.post(f"/api/fuel-prices/{fuel_id}/rate", headers=manager, json={"new_rate_per_liter": "100.00"})
     d = client.post("/api/dispensers", headers=manager, json={"code": "D1"}).json()
     n = client.post("/api/nozzles", headers=manager, json={"code": "N1", "dispenser_id": d["id"], "fuel_id": fuel_id, "tank_id": tank["id"]}).json()
-    s = client.post("/api/shifts", headers=manager, json={"shift_date": "2026-10-11", "shift_label": "Morning"}).json()
+    s = client.post("/api/shifts", headers=manager, json={"shift_date": date.today().isoformat(), "shift_label": "Morning"}).json()
     client.post(f"/api/shifts/{s['id']}/assignments", headers=manager, json={"employee_id": emp_id, "nozzle_id": n["id"], "opening_meter": "0"})
     ctx = client.get("/api/terminal/context", headers=attendant).json()
     assert ctx["can_pick_freely"] is False and ctx["my_assignment"]["nozzle"]["code"] == "N1"
