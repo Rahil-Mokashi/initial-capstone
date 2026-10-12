@@ -166,3 +166,6 @@ private_samples/
 PROMPT_12H.md
 SITE_NOTES.md
 run_12h.ps1
+
+# The web UI source under web/src/lib/ must be tracked (the generic lib/ rule above would hide it)
+!web/src/lib/
