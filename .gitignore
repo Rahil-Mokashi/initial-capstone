@@ -160,3 +160,9 @@ app/reports/
 
 # New: the API sidecar spec (the two above are the Qt app's).
 !api/pperp_api.spec
+
+# 12-hour site-visit build: private inputs, never commit
+private_samples/
+PROMPT_12H.md
+SITE_NOTES.md
+run_12h.ps1
