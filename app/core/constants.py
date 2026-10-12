@@ -12,6 +12,12 @@ class UserRole(str, Enum):
     ACCOUNTANT = "ACCOUNTANT"
     SHIFT_SUPERVISOR = "SHIFT_SUPERVISOR"
     ATTENDANT = "ATTENDANT"
+    # The cashier who types the paper bundle in at shift end (site visit
+    # 2026-10-12: attendants never touch the computer). Added, not mapped
+    # onto SHIFT_SUPERVISOR, because that role carries attendance and
+    # leave management a data-entry person should not have. NEEDS HUMAN
+    # REVIEW (questionnaire V-03, V-04): confirm the exact permission list.
+    DATA_ENTRY = "DATA_ENTRY"
 
 
 class Permission(str, Enum):
@@ -99,6 +105,11 @@ class Permission(str, Enum):
     LEAVE_VIEW = "leave.view"
     LEAVE_MANAGE = "leave.manage"
     LEAVE_APPROVE = "leave.approve"
+    # Checks engine (site visit 2026-10-12): the owners want to SEE every
+    # verification. VIEW reads results; EXPLAIN adds a note to a failing
+    # result - it can never turn a failure into a pass.
+    CHECK_VIEW = "check.view"
+    CHECK_EXPLAIN = "check.explain"
 
 
 class EmployeeStatus(str, Enum):
@@ -437,6 +448,8 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
         Permission.LEAVE_VIEW,
         Permission.LEAVE_MANAGE,
         Permission.LEAVE_APPROVE,
+        Permission.CHECK_VIEW,
+        Permission.CHECK_EXPLAIN,
     ),
     UserRole.ACCOUNTANT: (
         Permission.INVENTORY_VIEW,
@@ -455,6 +468,8 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
         Permission.RECONCILIATION_VIEW,
         Permission.ANALYTICS_VIEW,
         Permission.LEAVE_VIEW,
+        Permission.CHECK_VIEW,
+        Permission.CHECK_EXPLAIN,
     ),
     UserRole.SHIFT_SUPERVISOR: (
         Permission.INVENTORY_VIEW,
@@ -472,6 +487,24 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
         Permission.RECONCILIATION_MANAGE,
         Permission.LEAVE_VIEW,
         Permission.LEAVE_MANAGE,
+    ),
+    # Cashier / data entry: enters the shift bundle (readings, sales, expenses,
+    # tender totals, cash book). No approvals, no attendance/leave/users/prices.
+    UserRole.DATA_ENTRY: (
+        Permission.INVENTORY_VIEW,
+        Permission.SETTINGS_VIEW,
+        Permission.FUEL_PRICE_VIEW,
+        Permission.EMPLOYEE_VIEW,
+        Permission.SHIFT_VIEW,
+        Permission.SHIFT_MANAGE,
+        Permission.NOZZLE_VIEW,
+        Permission.SALE_VIEW,
+        Permission.SALE_MANAGE,
+        Permission.CREDIT_VIEW,
+        Permission.EXPENSE_VIEW,
+        Permission.EXPENSE_MANAGE,
+        Permission.RECONCILIATION_VIEW,
+        Permission.RECONCILIATION_MANAGE,
     ),
     UserRole.ATTENDANT: (
         Permission.MY_ASSIGNMENT_VIEW,

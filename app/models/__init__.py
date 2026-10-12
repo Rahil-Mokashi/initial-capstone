@@ -3,6 +3,7 @@
 from .app_setting import AppSetting
 from .attendance import Attendance
 from .audit_log import AuditLog
+from .check_result import CheckExplanation, CheckResult
 from .credit_account import CreditAccount
 from .customer import Customer
 from .customer_payment import CustomerPayment
@@ -20,6 +21,7 @@ from .nozzle import Nozzle
 from .nozzle_assignment import NozzleAssignment
 from .payment import Payment
 from .permission import Permission
+from .pump_setting import PumpSetting
 from .purchase_order import PurchaseOrder, PurchaseOrderItem
 from .role import Role
 from .role_permission import role_permissions
@@ -42,6 +44,8 @@ __all__ = [
     "AppSetting",
     "Attendance",
     "AuditLog",
+    "CheckExplanation",
+    "CheckResult",
     "CreditAccount",
     "Customer",
     "CustomerPayment",
@@ -61,6 +65,7 @@ __all__ = [
     "NozzleAssignment",
     "Payment",
     "Permission",
+    "PumpSetting",
     "PurchaseOrder",
     "PurchaseOrderItem",
     "Role",

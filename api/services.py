@@ -15,6 +15,7 @@ from app.database import connection as db_connection
 from app.repositories.app_setting_repository import AppSettingRepository
 from app.repositories.attendance_repository import AttendanceRepository
 from app.repositories.audit_log_repository import AuditLogRepository
+from app.repositories.check_repository import CheckExplanationRepository, CheckResultRepository
 from app.repositories.credit_account_repository import CreditAccountRepository
 from app.repositories.customer_payment_repository import CustomerPaymentRepository
 from app.repositories.customer_repository import CustomerRepository
@@ -32,6 +33,7 @@ from app.repositories.leave_request_repository import LeaveRequestRepository
 from app.repositories.nozzle_assignment_repository import NozzleAssignmentRepository
 from app.repositories.nozzle_repository import NozzleRepository
 from app.repositories.payment_repository import PaymentRepository
+from app.repositories.pump_setting_repository import PumpSettingRepository
 from app.repositories.purchase_order_repository import PurchaseOrderItemRepository, PurchaseOrderRepository
 from app.repositories.role_repository import RoleRepository
 from app.repositories.sale_repository import SaleRepository
@@ -53,6 +55,7 @@ from app.services.attendance_service import AttendanceService
 from app.services.audit_service import AuditService
 from app.services.auth_service import AuthService
 from app.services.backup_service import BackupService
+from app.services.check_service import CheckService
 from app.services.credit_service import CreditService
 from app.services.dashboard_service import DashboardService
 from app.services.employee_service import EmployeeService
@@ -63,6 +66,7 @@ from app.services.leave_service import LeaveService
 from app.services.notification_service import NotificationService
 from app.services.nozzle_service import NozzleService
 from app.services.procurement_service import ProcurementService
+from app.services.pump_settings_service import PumpSettingsService
 from app.services.reconciliation_service import ReconciliationService
 from app.services.report_service import ReportService
 from app.services.sale_service import SaleService
@@ -401,3 +405,12 @@ class Services:
             auth_service=self.auth,
             db_path=db_connection.DB_PATH,
         )
+
+    # ---- site-visit build (2026-10-12) --------------------------------------------
+    @cached_property
+    def pump_settings(self) -> PumpSettingsService:
+        return PumpSettingsService(PumpSettingRepository(self.db), self.audit_repo, self.auth)
+
+    @cached_property
+    def checks(self) -> CheckService:
+        return CheckService(CheckResultRepository(self.db), CheckExplanationRepository(self.db), self.audit_repo, self.auth)
