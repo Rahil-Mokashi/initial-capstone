@@ -49,3 +49,17 @@ Copy the bundle and the reset folder to safe storage (adjust the drive letter):
 Copy-Item "C:\Users\Asus\Projects\PetrolPumpERP-pre-js-2026-10-09.bundle" "E:\Backups\" 
 Copy-Item -Recurse "C:\Users\Asus\Projects\PetrolPumpERP-reset-2026-10-09" "E:\Backups\"
 ```
+
+---
+
+# Reset Point - before the 12-hour site-visit build (2026-10-12)
+
+| Item | Value |
+|---|---|
+| Annotated tag | `reset/pre-12h-2026-10-12` |
+| Commit | `923fd87dc8813705a2522d33182bc156c41db482` on `feature/js-frontend` |
+| Bundle | `C:\Users\Asus\Projects\PetrolPumpERP-pre-12h-2026-10-12.bundle` (`git bundle verify`: okay) |
+| Baseline tests | Python 1523 passed; web 317; desktop 33; Playwright 46 passed, 8 opt-in skipped |
+| Work branch | `feature/site-visit-build` (never pushed) |
+
+Rollback: `git switch feature/js-frontend`, or `git switch --detach reset/pre-12h-2026-10-12`.
