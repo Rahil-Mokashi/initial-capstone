@@ -352,3 +352,43 @@ report-generation code to — not a defect in `money.py` itself. See Open Questi
     (`TankTransactionType.INTERNAL_CONSUMPTION`, no meter involvement) would need the same
     fix applied to it. This isn't guessable from the report or the codebase and needs the
     owner to describe how these fills are actually done at this pump.
+
+---
+
+## Status after the site visit (2026-10-12) and the first build (2026-10-13)
+
+Nothing above was rewritten; this section records what the visit settled and what is still open, by
+questionnaire ID. Built: `docs/daily-report-gap-analysis.md`; the Classic report renders from the database.
+
+### Resolved
+- **Lubricants are sold (K-09).** The "fuel only" answer of 2026-08-18 is superseded for lubricants; they are a new
+  module (`LubricantItem`, `LubricantMovement`), not an edit of the fuel rules. Open Question 1 is answered.
+- **The bowser is in scope (Open Question 4).** The van is filled from the pump as a "Stock Transfer" (a credit sale to
+  an internal account) and sells on bills with a transport charge. Its bills belong to ordinary credit customers.
+- **The bowser "mismatch" is resolved.** The 5,750 on the Bowser Van section is **litres**, not rupees, and it matches the
+  litres on the bills; Net Sale = End - Start - Testing must equal the bills' Qty, and a check now verifies it each day.
+- **Advance / Final** are modelled as typed cash collections on the shift cash book (they already were: `ShiftCashBook`).
+  Whether they mean exactly "cash taken during the shift" and "cash at the end" stays open as **T-06**.
+- **The 0.227 gap (Open Question 9)** cannot occur in our report: every bill is rounded to paise before it is stored,
+  totals are sums of rounded lines, and the shift's Total is checked against its Total Sale. How the owner wants halves
+  rounded is **T-03/T-04**, a setting (`rounding_rule`, default: each bill to paise, ROUND_HALF_UP).
+- **Internal fuel (Open Question 10).** Recorded as the report does it: an expense at selling price with litres and
+  vehicle, NOT deducted from tank stock again (setting `internal_fuel_deducts_tank`, default off, **T-12**).
+
+### Still open (with the default used meanwhile)
+| ID | Question | Default |
+|---|---|---|
+| T-01 | Are shift litres already net of testing? | Testing shown, not added back (`add_testing_back` off) |
+| T-02 | Allowed gap between dip and book stock | 0.5% (`dip_tolerance_percent`) |
+| T-03/T-04 | Rounding of bills and totals | Per bill to paise; totals add rounded lines |
+| T-06 | Exact meaning of Advance and Final | Typed cash collections on the shift cash book |
+| T-12 | Internal fuel also reduces tank stock? | No |
+| T-13 | How the bowser's opening stock is valued in rupees | Yesterday's closing litres at the weighted-average transfer cost; manual override |
+| T-14 | Do unapproved expenses belong on the printed report? | Yes, flagged by a check until approved |
+| V-18 | Which product (incl. Power) is in MS-22 and MS-16 | Column heads are tank codes (data), so it does not matter to the report |
+| Q3 | What DTP Card is and how it differs from CARD | Two separate bank-settled payment modes |
+| Q7 | Is the bill-number series shared across shifts and days? | The app's own receipt number is printed |
+
+A site-visit note conflicts with an existing rule: **4 nozzles per dispenser (12 in all)** versus the app's confirmed
+"exactly two nozzles per dispenser" (`MAX_NOZZLES_PER_DISPENSER`, 2026-08-15). The rule was not changed; model each
+physical dispenser face as one dispenser until the owner decides. See `TWELVE_HOUR_LOG.md` (NEEDS HUMAN REVIEW).
