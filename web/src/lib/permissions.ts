@@ -41,4 +41,9 @@ export const P = {
   LEAVE_APPROVE: 'leave.approve',
   CHECK_VIEW: 'check.view',
   CHECK_EXPLAIN: 'check.explain',
+  DAILY_REPORT_VIEW: 'daily_report.view',
+  LUBRICANT_VIEW: 'lubricant.view',
+  LUBRICANT_MANAGE: 'lubricant.manage',
+  BOWSER_VIEW: 'bowser.view',
+  BOWSER_MANAGE: 'bowser.manage',
 } as const;

@@ -390,6 +390,108 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/bowser/bills": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Bill */
+        post: operations["bill_api_bowser_bills_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/bowser/bills/{bill_id}/void": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Void Bill */
+        post: operations["void_bill_api_bowser_bills__bill_id__void_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/bowser/day": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Bowser Day */
+        get: operations["bowser_day_api_bowser_day_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/bowser/meter": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Meter */
+        post: operations["meter_api_bowser_meter_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/bowser/opening": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Opening */
+        post: operations["opening_api_bowser_opening_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/bowser/transfers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Transfer */
+        post: operations["transfer_api_bowser_transfers_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/cash-book": {
         parameters: {
             query?: never;
@@ -641,6 +743,23 @@ export interface paths {
         put?: never;
         /** Set Customer Status */
         post: operations["set_customer_status_api_customers__customer_id__status_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/daily-report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Daily Report */
+        get: operations["daily_report_api_daily_report_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1098,6 +1217,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/internal-fuel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Internal Fuel */
+        post: operations["internal_fuel_api_internal_fuel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/invoices": {
         parameters: {
             query?: never;
@@ -1255,6 +1391,59 @@ export interface paths {
         get: operations["list_fuels_api_lookups_fuels_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/lubricants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Lubricants */
+        get: operations["list_lubricants_api_lubricants_get"];
+        put?: never;
+        /** Create Lubricant */
+        post: operations["create_lubricant_api_lubricants_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/lubricants/{item_id}/movements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Movements */
+        get: operations["movements_api_lubricants__item_id__movements_get"];
+        put?: never;
+        /** Record */
+        post: operations["record_api_lubricants__item_id__movements_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/lubricants/{item_id}/rate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Set Rate */
+        post: operations["set_rate_api_lubricants__item_id__rate_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1794,6 +1983,40 @@ export interface paths {
         put?: never;
         /** Complete Assignment */
         post: operations["complete_assignment_api_shift_assignments__assignment_id__complete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/shift-totals/{shift_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Shift Totals */
+        get: operations["shift_totals_api_shift_totals__shift_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/shift-totals/{shift_id}/{tender_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Set Total */
+        put: operations["set_total_api_shift_totals__shift_id___tender_id__put"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2594,6 +2817,71 @@ export interface components {
             /** Size Bytes */
             size_bytes: number;
         };
+        /** BillIn */
+        BillIn: {
+            /**
+             * Bill Date
+             * Format: date
+             */
+            bill_date: string;
+            /** Bill No */
+            bill_no: string;
+            /** Customer Id */
+            customer_id: string;
+            /**
+             * Quantity
+             * @example 12.500
+             */
+            quantity: string;
+            /**
+             * Rate
+             * @example 102.50
+             */
+            rate: string;
+            /** Shift Id */
+            shift_id?: string | null;
+            /** Slip No */
+            slip_no?: string | null;
+            /**
+             * Transport
+             * @default 0
+             * @example 102.50
+             */
+            transport: string;
+            /** Vehicle No */
+            vehicle_no?: string | null;
+        };
+        /** BillOut */
+        BillOut: {
+            /** Amount */
+            amount: string;
+            /** Bill No */
+            bill_no: string;
+            /** Id */
+            id: string;
+            /** Quantity */
+            quantity: string;
+            /** Rate */
+            rate: string;
+            /** Status */
+            status: string;
+            /** Total */
+            total: string;
+            /** Transport */
+            transport: string;
+        };
+        /** BowserDayOut */
+        BowserDayOut: {
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Day Report */
+            day_report: {
+                [key: string]: unknown;
+            };
+        };
         /** CancelAssignmentIn */
         CancelAssignmentIn: {
             /**
@@ -2824,6 +3112,22 @@ export interface components {
              */
             reason: string;
             status: components["schemas"]["StatusEnum"];
+        };
+        /** DailyReportOut */
+        DailyReportOut: {
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Html */
+            html: string;
+            /** Report */
+            report: {
+                [key: string]: unknown;
+            };
+            /** Style */
+            style: string;
         };
         /** DayChecksOut */
         DayChecksOut: {
@@ -3232,6 +3536,35 @@ export interface components {
             /** Ok */
             ok: boolean;
         };
+        /** InternalFuelIn */
+        InternalFuelIn: {
+            /** Employee Id */
+            employee_id: string;
+            /** Fuel Id */
+            fuel_id: string;
+            /**
+             * Litres
+             * @example 12.500
+             */
+            litres: string;
+            /** Shift Id */
+            shift_id: string;
+            /** Vehicle */
+            vehicle: string;
+        };
+        /** InternalFuelOut */
+        InternalFuelOut: {
+            /** Expense Id */
+            expense_id: string;
+            /** Id */
+            id: string;
+            /** Litres */
+            litres: string;
+            /** Rate */
+            rate: string;
+            /** Vehicle */
+            vehicle: string;
+        };
         /** InvoiceIn */
         InvoiceIn: {
             /**
@@ -3376,6 +3709,44 @@ export interface components {
             token: string;
             user: components["schemas"]["UserOut"];
         };
+        /** LubricantIn */
+        LubricantIn: {
+            /**
+             * Default Rate
+             * @example 102.50
+             */
+            default_rate: string;
+            /** Name */
+            name: string;
+            /** Pack Size */
+            pack_size?: string | null;
+        };
+        /** LubricantOut */
+        LubricantOut: {
+            /** Default Rate */
+            default_rate: string;
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Pack Size */
+            pack_size?: string | null;
+            /** Stock */
+            stock: string;
+        };
+        /** LubricantRateIn */
+        LubricantRateIn: {
+            /**
+             * New Rate
+             * @example 102.50
+             */
+            new_rate: string;
+            /**
+             * Reason
+             * @default No reason given
+             */
+            reason: string;
+        };
         /** MarkIn */
         MarkIn: {
             /**
@@ -3395,6 +3766,88 @@ export interface components {
             /** Shift Label */
             shift_label?: string | null;
             status: components["schemas"]["AttendanceStatus"];
+        };
+        /** MeterIn */
+        MeterIn: {
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /**
+             * End Reading
+             * @example 12.500
+             */
+            end_reading: string;
+            /**
+             * Start Reading
+             * @example 12.500
+             */
+            start_reading: string;
+            /**
+             * Testing
+             * @default 0
+             * @example 12.500
+             */
+            testing: string;
+        };
+        /** MeterOut */
+        MeterOut: {
+            /** End Reading */
+            end_reading: string;
+            /** Id */
+            id: string;
+            /** Start Reading */
+            start_reading: string;
+            /** Testing */
+            testing: string;
+        };
+        /** MovementIn */
+        MovementIn: {
+            /** Customer Name */
+            customer_name?: string | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "opening" | "purchase" | "sale" | "adjustment";
+            /** Movement Date */
+            movement_date?: string | null;
+            /**
+             * Quantity
+             * @example 12.500
+             */
+            quantity: string;
+            /** Remarks */
+            remarks?: string | null;
+            /** Shift Id */
+            shift_id?: string | null;
+            /** Unit Rate */
+            unit_rate?: string | null;
+        };
+        /** MovementOut */
+        MovementOut: {
+            /** Amount */
+            amount?: string | null;
+            /** Customer Name */
+            customer_name?: string | null;
+            /** Id */
+            id: string;
+            /** Kind */
+            kind: string;
+            /**
+             * Movement Date
+             * Format: date
+             */
+            movement_date: string;
+            /** Quantity */
+            quantity: string;
+            /** Remarks */
+            remarks?: string | null;
+            /** Shift Id */
+            shift_id?: string | null;
+            /** Unit Rate */
+            unit_rate?: string | null;
         };
         /** MovementsIn */
         MovementsIn: {
@@ -3526,6 +3979,38 @@ export interface components {
             shift_date: string;
             /** Shift Label */
             shift_label: string;
+        };
+        /** OpeningIn */
+        OpeningIn: {
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /**
+             * Litres
+             * @example 12.500
+             */
+            litres: string;
+            /**
+             * Reason
+             * @default No reason given
+             */
+            reason: string;
+            /**
+             * Rupees
+             * @example 102.50
+             */
+            rupees: string;
+        };
+        /** OpeningOut */
+        OpeningOut: {
+            /** Id */
+            id: string;
+            /** Litres */
+            litres: string;
+            /** Rupees */
+            rupees: string;
         };
         /** OrderItemIn */
         OrderItemIn: {
@@ -4339,6 +4824,19 @@ export interface components {
             reason: string;
             status: components["schemas"]["TankStatus"];
         };
+        /** TenderTotalOut */
+        TenderTotalOut: {
+            /** Amount */
+            amount?: string | null;
+            /** Label */
+            label: string;
+            /** Name */
+            name: string;
+            /** Reference */
+            reference?: string | null;
+            /** Tender Id */
+            tender_id: string;
+        };
         /** TerminalAssignment */
         TerminalAssignment: {
             /** Employee Id */
@@ -4401,6 +4899,21 @@ export interface components {
              */
             value: string;
         };
+        /** TotalIn */
+        TotalIn: {
+            /**
+             * Amount
+             * @example 102.50
+             */
+            amount: string;
+            /**
+             * Reason
+             * @default No reason given
+             */
+            reason: string;
+            /** Reference */
+            reference?: string | null;
+        };
         /** TransactionIn */
         TransactionIn: {
             /**
@@ -4441,6 +4954,33 @@ export interface components {
             transaction_at: string;
             /** Transaction Type */
             transaction_type: string;
+        };
+        /** TransferIn */
+        TransferIn: {
+            /** Employee Id */
+            employee_id: string;
+            /**
+             * Litres
+             * @example 12.500
+             */
+            litres: string;
+            /** Nozzle Id */
+            nozzle_id: string;
+            /** Shift Id */
+            shift_id: string;
+        };
+        /** TransferOut */
+        TransferOut: {
+            /** Amount */
+            amount: string;
+            /** Id */
+            id: string;
+            /** Litres */
+            litres: string;
+            /** Rate */
+            rate: string;
+            /** Sale Id */
+            sale_id: string;
         };
         /** TrendPoint */
         TrendPoint: {
@@ -4535,6 +5075,14 @@ export interface components {
             intact: boolean;
             /** Problems */
             problems: string[];
+        };
+        /** VoidIn */
+        VoidIn: {
+            /**
+             * Reason
+             * @default No reason given
+             */
+            reason: string;
         };
     };
     responses: never;
@@ -5364,6 +5912,222 @@ export interface operations {
             };
         };
     };
+    bill_api_bowser_bills_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BillIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    void_bill_api_bowser_bills__bill_id__void_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                bill_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VoidIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bowser_day_api_bowser_day_get: {
+        parameters: {
+            query?: {
+                day?: string | null;
+            };
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BowserDayOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    meter_api_bowser_meter_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MeterIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeterOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    opening_api_bowser_opening_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OpeningIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OpeningOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    transfer_api_bowser_transfers_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransferIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransferOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_cash_books_api_cash_book_get: {
         parameters: {
             query?: never;
@@ -5947,6 +6711,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CustomerOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    daily_report_api_daily_report_get: {
+        parameters: {
+            query?: {
+                day?: string | null;
+                style?: ("classic" | "plus") | null;
+            };
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyReportOut"];
                 };
             };
             /** @description Validation Error */
@@ -7089,6 +7888,42 @@ export interface operations {
             };
         };
     };
+    internal_fuel_api_internal_fuel_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InternalFuelIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InternalFuelOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_invoices_api_invoices_get: {
         parameters: {
             query?: never;
@@ -7496,6 +8331,184 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FuelOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_lubricants_api_lubricants_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LubricantOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_lubricant_api_lubricants_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LubricantIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LubricantOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    movements_api_lubricants__item_id__movements_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MovementOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    record_api_lubricants__item_id__movements_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MovementIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MovementOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_rate_api_lubricants__item_id__rate_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LubricantRateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LubricantOut"];
                 };
             };
             /** @description Validation Error */
@@ -8792,6 +9805,79 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AssignmentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    shift_totals_api_shift_totals__shift_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                shift_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenderTotalOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_total_api_shift_totals__shift_id___tender_id__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                shift_id: string;
+                tender_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TotalIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenderTotalOut"][];
                 };
             };
             /** @description Validation Error */

@@ -59,7 +59,14 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Leave', permission: 'leave.view', to: '/leave' },
       { label: 'Checks', permission: 'check.view', to: '/checks' },
       { label: 'Credit', permission: 'credit.view', to: '/credit' },
+      {
+        label: 'Card / Phone Pay totals',
+        permission: 'reconciliation.manage',
+        to: '/shift-totals',
+      },
       { label: 'Expenses', permission: 'expense.view', to: '/expenses' },
+      { label: 'Oil / Lubricants', permission: 'lubricant.view', to: '/lubricants' },
+      { label: 'Bowser Van', permission: 'bowser.view', to: '/bowser' },
       { label: 'Reconciliation', permission: 'reconciliation.view', to: '/reconciliation' },
       { label: 'Procurement', permission: 'procurement.view', to: '/procurement?tab=orders' },
     ],
@@ -67,6 +74,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Reports',
     items: [
+      { label: 'Daily Report', permission: 'daily_report.view', to: '/daily-report' },
       {
         label: 'Reports',
         permission: [

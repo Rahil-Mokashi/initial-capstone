@@ -110,6 +110,12 @@ class Permission(str, Enum):
     # result - it can never turn a failure into a pass.
     CHECK_VIEW = "check.view"
     CHECK_EXPLAIN = "check.explain"
+    # Daily report (Classic / Plus), lubricants and the bowser van (site visit 2026-10-12).
+    DAILY_REPORT_VIEW = "daily_report.view"
+    LUBRICANT_VIEW = "lubricant.view"
+    LUBRICANT_MANAGE = "lubricant.manage"
+    BOWSER_VIEW = "bowser.view"
+    BOWSER_MANAGE = "bowser.manage"
 
 
 class EmployeeStatus(str, Enum):
@@ -450,6 +456,11 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
         Permission.LEAVE_APPROVE,
         Permission.CHECK_VIEW,
         Permission.CHECK_EXPLAIN,
+        Permission.DAILY_REPORT_VIEW,
+        Permission.LUBRICANT_VIEW,
+        Permission.LUBRICANT_MANAGE,
+        Permission.BOWSER_VIEW,
+        Permission.BOWSER_MANAGE,
     ),
     UserRole.ACCOUNTANT: (
         Permission.INVENTORY_VIEW,
@@ -470,6 +481,9 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
         Permission.LEAVE_VIEW,
         Permission.CHECK_VIEW,
         Permission.CHECK_EXPLAIN,
+        Permission.DAILY_REPORT_VIEW,
+        Permission.LUBRICANT_VIEW,
+        Permission.BOWSER_VIEW,
     ),
     UserRole.SHIFT_SUPERVISOR: (
         Permission.INVENTORY_VIEW,
@@ -505,6 +519,11 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
         Permission.EXPENSE_MANAGE,
         Permission.RECONCILIATION_VIEW,
         Permission.RECONCILIATION_MANAGE,
+        Permission.DAILY_REPORT_VIEW,
+        Permission.LUBRICANT_VIEW,
+        Permission.LUBRICANT_MANAGE,
+        Permission.BOWSER_VIEW,
+        Permission.BOWSER_MANAGE,
     ),
     UserRole.ATTENDANT: (
         Permission.MY_ASSIGNMENT_VIEW,

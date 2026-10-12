@@ -26,6 +26,10 @@ import { AttendancePage } from '@/features/attendance/AttendancePage';
 import { LeavePage } from '@/features/attendance/LeavePage';
 import { SalesPage } from '@/features/sales/SalesPage';
 import { TerminalPage } from '@/features/terminal/TerminalPage';
+import { BowserPage } from '@/features/bowser/BowserPage';
+import { DailyReportPage } from '@/features/daily-report/DailyReportPage';
+import { LubricantsPage } from '@/features/lubricants/LubricantsPage';
+import { ShiftTotalsPage } from '@/features/shift-totals/ShiftTotalsPage';
 import { ChecksPage } from '@/features/checks/ChecksPage';
 import { CreditPage } from '@/features/credit/CreditPage';
 import { ExpensesPage } from '@/features/expenses/ExpensesPage';
@@ -71,6 +75,10 @@ export function App() {
             <Route path="/sales" element={<SalesPage />} />
             <Route path="/terminal" element={<TerminalPage />} />
             <Route path="/checks" element={<ChecksPage />} />
+            <Route path="/daily-report" element={<DailyReportPage />} />
+            <Route path="/lubricants" element={<LubricantsPage />} />
+            <Route path="/bowser" element={<BowserPage />} />
+            <Route path="/shift-totals" element={<ShiftTotalsPage />} />
             <Route path="/credit" element={<CreditPage />} />
             <Route path="/expenses" element={<ExpensesPage />} />
             <Route path="/reconciliation" element={<ReconciliationPage />} />

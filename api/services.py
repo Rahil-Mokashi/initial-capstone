@@ -34,6 +34,14 @@ from app.repositories.nozzle_assignment_repository import NozzleAssignmentReposi
 from app.repositories.nozzle_repository import NozzleRepository
 from app.repositories.payment_repository import PaymentRepository
 from app.repositories.pump_setting_repository import PumpSettingRepository
+from app.repositories.site_repositories import (
+    BowserRepository,
+    InternalFuelUseRepository,
+    LubricantItemRepository,
+    LubricantMovementRepository,
+    ReportQueryRepository,
+    ShiftTenderEntryRepository,
+)
 from app.repositories.purchase_order_repository import PurchaseOrderItemRepository, PurchaseOrderRepository
 from app.repositories.role_repository import RoleRepository
 from app.repositories.sale_repository import SaleRepository
@@ -55,7 +63,9 @@ from app.services.attendance_service import AttendanceService
 from app.services.audit_service import AuditService
 from app.services.auth_service import AuthService
 from app.services.backup_service import BackupService
+from app.services.bowser_service import BowserService
 from app.services.check_runners import ExistingDataChecks
+from app.services.daily_report_service import DailyReportService
 from app.services.check_service import CheckService
 from app.services.credit_service import CreditService
 from app.services.dashboard_service import DashboardService
@@ -63,11 +73,14 @@ from app.services.employee_service import EmployeeService
 from app.services.employee_shortage_service import EmployeeShortageService
 from app.services.expense_service import ExpenseService
 from app.services.fuel_service import FuelService
+from app.services.internal_fuel_service import InternalFuelService
 from app.services.leave_service import LeaveService
+from app.services.lubricant_service import LubricantService
 from app.services.notification_service import NotificationService
 from app.services.nozzle_service import NozzleService
 from app.services.procurement_service import ProcurementService
 from app.services.pump_settings_service import PumpSettingsService
+from app.services.report_checks import ReportChecks
 from app.services.reconciliation_service import ReconciliationService
 from app.services.report_service import ReportService
 from app.services.sale_service import SaleService
@@ -75,6 +88,7 @@ from app.services.settings_service import SettingsService
 from app.services.shift_cash_book_service import ShiftCashBookService
 from app.services.shift_service import ShiftService
 from app.services.tank_service import TankService
+from app.services.tender_entry_service import TenderEntryService
 from app.services.user_service import UserService
 
 
@@ -424,9 +438,54 @@ class Services:
             self.credit_account_repo, CustomerPaymentRepository(self.db),
         )
 
+    @cached_property
+    def lubricants(self) -> LubricantService:
+        return LubricantService(
+            LubricantItemRepository(self.db), LubricantMovementRepository(self.db), self.shift_repo, self.audit_repo, self.auth
+        )
+
+    @cached_property
+    def bowser(self) -> BowserService:
+        return BowserService(
+            BowserRepository(self.db), self.customer_repo, self.credit_account_repo, self.sales, self.shift_repo,
+            self.audit_repo, self.auth,
+        )
+
+    @cached_property
+    def tender_entries(self) -> TenderEntryService:
+        return TenderEntryService(
+            ShiftTenderEntryRepository(self.db), self.tender_repo, self.shift_repo, self.audit_repo, self.auth
+        )
+
+    @cached_property
+    def internal_fuel(self) -> InternalFuelService:
+        return InternalFuelService(
+            InternalFuelUseRepository(self.db), ExpenseCategoryRepository(self.db), self.fuel_repo, self.expenses,
+            self.pump_settings, self.audit_repo, self.auth,
+        )
+
+    @cached_property
+    def daily_report(self) -> DailyReportService:
+        return DailyReportService(
+            self.shift_repo, self.tank_repo, self.sale_repo, self.expense_repo, self.assignment_repo,
+            ReportQueryRepository(self.db), self.cash_book, self.tender_entries, self.lubricants, self.bowser,
+            self.pump_settings, InternalFuelUseRepository(self.db), self.auth, self.audit_repo,
+        )
+
+    @cached_property
+    def report_checks(self) -> ReportChecks:
+        return ReportChecks(self.checks, self.daily_report, self.pump_settings)
+
+    def render_report(self, report, company, style, actor_id):
+        """Classic is the exact replica. Plus (Track 6) adds the checks strip and extras around the same layout."""
+        from app.services.daily_report_html import render_daily_report
+
+        return render_daily_report(report, company)
+
     def run_all_checks(self, actor_id, day):
         """Every check runner for one business date. Later tracks append their runners here."""
         results = list(self.existing_checks.run_day(actor_id, day))
+        results += self.report_checks.run_day(actor_id, day)
         return results
 
     def days_to_check(self):

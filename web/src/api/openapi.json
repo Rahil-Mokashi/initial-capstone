@@ -807,6 +807,159 @@
         "title": "BackupOut",
         "type": "object"
       },
+      "BillIn": {
+        "additionalProperties": false,
+        "properties": {
+          "bill_date": {
+            "format": "date",
+            "title": "Bill Date",
+            "type": "string"
+          },
+          "bill_no": {
+            "title": "Bill No",
+            "type": "string"
+          },
+          "customer_id": {
+            "title": "Customer Id",
+            "type": "string"
+          },
+          "quantity": {
+            "examples": [
+              "12.500"
+            ],
+            "pattern": "^-?\\d{1,9}(\\.\\d{1,3})?$",
+            "title": "Quantity",
+            "type": "string"
+          },
+          "rate": {
+            "examples": [
+              "102.50"
+            ],
+            "pattern": "^-?\\d{1,12}(\\.\\d{1,2})?$",
+            "title": "Rate",
+            "type": "string"
+          },
+          "shift_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shift Id"
+          },
+          "slip_no": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slip No"
+          },
+          "transport": {
+            "default": "0",
+            "examples": [
+              "102.50"
+            ],
+            "pattern": "^-?\\d{1,12}(\\.\\d{1,2})?$",
+            "title": "Transport",
+            "type": "string"
+          },
+          "vehicle_no": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vehicle No"
+          }
+        },
+        "required": [
+          "bill_no",
+          "bill_date",
+          "customer_id",
+          "quantity",
+          "rate"
+        ],
+        "title": "BillIn",
+        "type": "object"
+      },
+      "BillOut": {
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "bill_no": {
+            "title": "Bill No",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "quantity": {
+            "title": "Quantity",
+            "type": "string"
+          },
+          "rate": {
+            "title": "Rate",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "total": {
+            "title": "Total",
+            "type": "string"
+          },
+          "transport": {
+            "title": "Transport",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "bill_no",
+          "quantity",
+          "rate",
+          "amount",
+          "transport",
+          "total",
+          "status"
+        ],
+        "title": "BillOut",
+        "type": "object"
+      },
+      "BowserDayOut": {
+        "properties": {
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "day_report": {
+            "additionalProperties": true,
+            "title": "Day Report",
+            "type": "object"
+          }
+        },
+        "required": [
+          "day",
+          "day_report"
+        ],
+        "title": "BowserDayOut",
+        "type": "object"
+      },
       "CancelAssignmentIn": {
         "additionalProperties": false,
         "properties": {
@@ -1447,6 +1600,36 @@
           "status"
         ],
         "title": "CustomerStatusIn",
+        "type": "object"
+      },
+      "DailyReportOut": {
+        "properties": {
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "html": {
+            "title": "Html",
+            "type": "string"
+          },
+          "report": {
+            "additionalProperties": true,
+            "title": "Report",
+            "type": "object"
+          },
+          "style": {
+            "title": "Style",
+            "type": "string"
+          }
+        },
+        "required": [
+          "day",
+          "style",
+          "html",
+          "report"
+        ],
+        "title": "DailyReportOut",
         "type": "object"
       },
       "DayChecksOut": {
@@ -2713,6 +2896,77 @@
         "title": "IntegrityOut",
         "type": "object"
       },
+      "InternalFuelIn": {
+        "additionalProperties": false,
+        "properties": {
+          "employee_id": {
+            "title": "Employee Id",
+            "type": "string"
+          },
+          "fuel_id": {
+            "title": "Fuel Id",
+            "type": "string"
+          },
+          "litres": {
+            "examples": [
+              "12.500"
+            ],
+            "pattern": "^-?\\d{1,9}(\\.\\d{1,3})?$",
+            "title": "Litres",
+            "type": "string"
+          },
+          "shift_id": {
+            "title": "Shift Id",
+            "type": "string"
+          },
+          "vehicle": {
+            "title": "Vehicle",
+            "type": "string"
+          }
+        },
+        "required": [
+          "shift_id",
+          "employee_id",
+          "fuel_id",
+          "litres",
+          "vehicle"
+        ],
+        "title": "InternalFuelIn",
+        "type": "object"
+      },
+      "InternalFuelOut": {
+        "properties": {
+          "expense_id": {
+            "title": "Expense Id",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "litres": {
+            "title": "Litres",
+            "type": "string"
+          },
+          "rate": {
+            "title": "Rate",
+            "type": "string"
+          },
+          "vehicle": {
+            "title": "Vehicle",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "expense_id",
+          "litres",
+          "rate",
+          "vehicle"
+        ],
+        "title": "InternalFuelOut",
+        "type": "object"
+      },
       "InvoiceIn": {
         "additionalProperties": false,
         "properties": {
@@ -3079,6 +3333,103 @@
         "title": "LoginOut",
         "type": "object"
       },
+      "LubricantIn": {
+        "additionalProperties": false,
+        "properties": {
+          "default_rate": {
+            "examples": [
+              "102.50"
+            ],
+            "pattern": "^-?\\d{1,12}(\\.\\d{1,2})?$",
+            "title": "Default Rate",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "pack_size": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pack Size"
+          }
+        },
+        "required": [
+          "name",
+          "default_rate"
+        ],
+        "title": "LubricantIn",
+        "type": "object"
+      },
+      "LubricantOut": {
+        "properties": {
+          "default_rate": {
+            "title": "Default Rate",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "pack_size": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pack Size"
+          },
+          "stock": {
+            "title": "Stock",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "default_rate",
+          "stock"
+        ],
+        "title": "LubricantOut",
+        "type": "object"
+      },
+      "LubricantRateIn": {
+        "additionalProperties": false,
+        "properties": {
+          "new_rate": {
+            "examples": [
+              "102.50"
+            ],
+            "pattern": "^-?\\d{1,12}(\\.\\d{1,2})?$",
+            "title": "New Rate",
+            "type": "string"
+          },
+          "reason": {
+            "default": "No reason given",
+            "maxLength": 1000,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "new_rate"
+        ],
+        "title": "LubricantRateIn",
+        "type": "object"
+      },
       "MarkIn": {
         "additionalProperties": false,
         "properties": {
@@ -3128,6 +3479,249 @@
           "status"
         ],
         "title": "MarkIn",
+        "type": "object"
+      },
+      "MeterIn": {
+        "additionalProperties": false,
+        "properties": {
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "end_reading": {
+            "examples": [
+              "12.500"
+            ],
+            "pattern": "^-?\\d{1,9}(\\.\\d{1,3})?$",
+            "title": "End Reading",
+            "type": "string"
+          },
+          "start_reading": {
+            "examples": [
+              "12.500"
+            ],
+            "pattern": "^-?\\d{1,9}(\\.\\d{1,3})?$",
+            "title": "Start Reading",
+            "type": "string"
+          },
+          "testing": {
+            "default": "0",
+            "examples": [
+              "12.500"
+            ],
+            "pattern": "^-?\\d{1,9}(\\.\\d{1,3})?$",
+            "title": "Testing",
+            "type": "string"
+          }
+        },
+        "required": [
+          "day",
+          "start_reading",
+          "end_reading"
+        ],
+        "title": "MeterIn",
+        "type": "object"
+      },
+      "MeterOut": {
+        "properties": {
+          "end_reading": {
+            "title": "End Reading",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "start_reading": {
+            "title": "Start Reading",
+            "type": "string"
+          },
+          "testing": {
+            "title": "Testing",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "start_reading",
+          "testing",
+          "end_reading"
+        ],
+        "title": "MeterOut",
+        "type": "object"
+      },
+      "MovementIn": {
+        "additionalProperties": false,
+        "properties": {
+          "customer_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Name"
+          },
+          "kind": {
+            "enum": [
+              "opening",
+              "purchase",
+              "sale",
+              "adjustment"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "movement_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Movement Date"
+          },
+          "quantity": {
+            "examples": [
+              "12.500"
+            ],
+            "pattern": "^-?\\d{1,9}(\\.\\d{1,3})?$",
+            "title": "Quantity",
+            "type": "string"
+          },
+          "remarks": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remarks"
+          },
+          "shift_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shift Id"
+          },
+          "unit_rate": {
+            "anyOf": [
+              {
+                "examples": [
+                  "102.50"
+                ],
+                "pattern": "^-?\\d{1,12}(\\.\\d{1,2})?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Rate"
+          }
+        },
+        "required": [
+          "kind",
+          "quantity"
+        ],
+        "title": "MovementIn",
+        "type": "object"
+      },
+      "MovementOut": {
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "customer_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Name"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "movement_date": {
+            "format": "date",
+            "title": "Movement Date",
+            "type": "string"
+          },
+          "quantity": {
+            "title": "Quantity",
+            "type": "string"
+          },
+          "remarks": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remarks"
+          },
+          "shift_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shift Id"
+          },
+          "unit_rate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Rate"
+          }
+        },
+        "required": [
+          "id",
+          "movement_date",
+          "kind",
+          "quantity"
+        ],
+        "title": "MovementOut",
         "type": "object"
       },
       "MovementsIn": {
@@ -3490,6 +4084,68 @@
           "shift_label"
         ],
         "title": "OpenShiftIn",
+        "type": "object"
+      },
+      "OpeningIn": {
+        "additionalProperties": false,
+        "properties": {
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "litres": {
+            "examples": [
+              "12.500"
+            ],
+            "pattern": "^-?\\d{1,9}(\\.\\d{1,3})?$",
+            "title": "Litres",
+            "type": "string"
+          },
+          "reason": {
+            "default": "No reason given",
+            "maxLength": 1000,
+            "title": "Reason",
+            "type": "string"
+          },
+          "rupees": {
+            "examples": [
+              "102.50"
+            ],
+            "pattern": "^-?\\d{1,12}(\\.\\d{1,2})?$",
+            "title": "Rupees",
+            "type": "string"
+          }
+        },
+        "required": [
+          "day",
+          "litres",
+          "rupees"
+        ],
+        "title": "OpeningIn",
+        "type": "object"
+      },
+      "OpeningOut": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "litres": {
+            "title": "Litres",
+            "type": "string"
+          },
+          "rupees": {
+            "title": "Rupees",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "litres",
+          "rupees"
+        ],
+        "title": "OpeningOut",
         "type": "object"
       },
       "OrderItemIn": {
@@ -5853,6 +6509,51 @@
         "title": "TankStatusIn",
         "type": "object"
       },
+      "TenderTotalOut": {
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference"
+          },
+          "tender_id": {
+            "title": "Tender Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tender_id",
+          "name",
+          "label"
+        ],
+        "title": "TenderTotalOut",
+        "type": "object"
+      },
       "TerminalAssignment": {
         "properties": {
           "employee_id": {
@@ -6068,6 +6769,41 @@
         "title": "TerminalSaleIn",
         "type": "object"
       },
+      "TotalIn": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "examples": [
+              "102.50"
+            ],
+            "pattern": "^-?\\d{1,12}(\\.\\d{1,2})?$",
+            "title": "Amount",
+            "type": "string"
+          },
+          "reason": {
+            "default": "No reason given",
+            "maxLength": 1000,
+            "title": "Reason",
+            "type": "string"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference"
+          }
+        },
+        "required": [
+          "amount"
+        ],
+        "title": "TotalIn",
+        "type": "object"
+      },
       "TransactionIn": {
         "additionalProperties": false,
         "properties": {
@@ -6182,6 +6918,72 @@
           "recorded_by"
         ],
         "title": "TransactionOut",
+        "type": "object"
+      },
+      "TransferIn": {
+        "additionalProperties": false,
+        "properties": {
+          "employee_id": {
+            "title": "Employee Id",
+            "type": "string"
+          },
+          "litres": {
+            "examples": [
+              "12.500"
+            ],
+            "pattern": "^-?\\d{1,9}(\\.\\d{1,3})?$",
+            "title": "Litres",
+            "type": "string"
+          },
+          "nozzle_id": {
+            "title": "Nozzle Id",
+            "type": "string"
+          },
+          "shift_id": {
+            "title": "Shift Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "shift_id",
+          "nozzle_id",
+          "employee_id",
+          "litres"
+        ],
+        "title": "TransferIn",
+        "type": "object"
+      },
+      "TransferOut": {
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "litres": {
+            "title": "Litres",
+            "type": "string"
+          },
+          "rate": {
+            "title": "Rate",
+            "type": "string"
+          },
+          "sale_id": {
+            "title": "Sale Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "litres",
+          "rate",
+          "amount",
+          "sale_id"
+        ],
+        "title": "TransferOut",
         "type": "object"
       },
       "TrendPoint": {
@@ -6487,6 +7289,19 @@
           "problems"
         ],
         "title": "VerifyOut",
+        "type": "object"
+      },
+      "VoidIn": {
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "default": "No reason given",
+            "maxLength": 1000,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "title": "VoidIn",
         "type": "object"
       }
     }
@@ -8286,6 +9101,472 @@
         ]
       }
     },
+    "/api/bowser/bills": {
+      "post": {
+        "operationId": "bill_api_bowser_bills_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Bill",
+        "tags": [
+          "bowser"
+        ]
+      }
+    },
+    "/api/bowser/bills/{bill_id}/void": {
+      "post": {
+        "operationId": "void_bill_api_bowser_bills__bill_id__void_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bill_id",
+            "required": true,
+            "schema": {
+              "title": "Bill Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoidIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Void Bill",
+        "tags": [
+          "bowser"
+        ]
+      }
+    },
+    "/api/bowser/day": {
+      "get": {
+        "operationId": "bowser_day_api_bowser_day_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "day",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Day"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BowserDayOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Bowser Day",
+        "tags": [
+          "bowser"
+        ]
+      }
+    },
+    "/api/bowser/meter": {
+      "post": {
+        "operationId": "meter_api_bowser_meter_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MeterIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeterOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Meter",
+        "tags": [
+          "bowser"
+        ]
+      }
+    },
+    "/api/bowser/opening": {
+      "post": {
+        "operationId": "opening_api_bowser_opening_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpeningIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpeningOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Opening",
+        "tags": [
+          "bowser"
+        ]
+      }
+    },
+    "/api/bowser/transfers": {
+      "post": {
+        "operationId": "transfer_api_bowser_transfers_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Transfer",
+        "tags": [
+          "bowser"
+        ]
+      }
+    },
     "/api/cash-book": {
       "get": {
         "operationId": "list_cash_books_api_cash_book_get",
@@ -9594,6 +10875,108 @@
         "summary": "Set Customer Status",
         "tags": [
           "sales"
+        ]
+      }
+    },
+    "/api/daily-report": {
+      "get": {
+        "operationId": "daily_report_api_daily_report_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "day",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Day"
+            }
+          },
+          {
+            "in": "query",
+            "name": "style",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "classic",
+                    "plus"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Style"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DailyReportOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Daily Report",
+        "tags": [
+          "daily-report"
         ]
       }
     },
@@ -12025,6 +13408,81 @@
         "summary": "Health"
       }
     },
+    "/api/internal-fuel": {
+      "post": {
+        "operationId": "internal_fuel_api_internal_fuel_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InternalFuelIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalFuelOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Internal Fuel",
+        "tags": [
+          "shift-totals"
+        ]
+      }
+    },
     "/api/invoices": {
       "get": {
         "operationId": "list_invoices_api_invoices_get",
@@ -12932,6 +14390,392 @@
         "summary": "List Fuels",
         "tags": [
           "tanks"
+        ]
+      }
+    },
+    "/api/lubricants": {
+      "get": {
+        "operationId": "list_lubricants_api_lubricants_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/LubricantOut"
+                  },
+                  "title": "Response List Lubricants Api Lubricants Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Lubricants",
+        "tags": [
+          "lubricants"
+        ]
+      },
+      "post": {
+        "operationId": "create_lubricant_api_lubricants_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LubricantIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LubricantOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Lubricant",
+        "tags": [
+          "lubricants"
+        ]
+      }
+    },
+    "/api/lubricants/{item_id}/movements": {
+      "get": {
+        "operationId": "movements_api_lubricants__item_id__movements_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "title": "Item Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MovementOut"
+                  },
+                  "title": "Response Movements Api Lubricants  Item Id  Movements Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Movements",
+        "tags": [
+          "lubricants"
+        ]
+      },
+      "post": {
+        "operationId": "record_api_lubricants__item_id__movements_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "title": "Item Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MovementIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MovementOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Record",
+        "tags": [
+          "lubricants"
+        ]
+      }
+    },
+    "/api/lubricants/{item_id}/rate": {
+      "post": {
+        "operationId": "set_rate_api_lubricants__item_id__rate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "title": "Item Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LubricantRateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LubricantOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Rate",
+        "tags": [
+          "lubricants"
         ]
       }
     },
@@ -15837,6 +17681,181 @@
         "summary": "Complete Assignment",
         "tags": [
           "shifts"
+        ]
+      }
+    },
+    "/api/shift-totals/{shift_id}": {
+      "get": {
+        "operationId": "shift_totals_api_shift_totals__shift_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "shift_id",
+            "required": true,
+            "schema": {
+              "title": "Shift Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TenderTotalOut"
+                  },
+                  "title": "Response Shift Totals Api Shift Totals  Shift Id  Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Shift Totals",
+        "tags": [
+          "shift-totals"
+        ]
+      }
+    },
+    "/api/shift-totals/{shift_id}/{tender_id}": {
+      "put": {
+        "operationId": "set_total_api_shift_totals__shift_id___tender_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "shift_id",
+            "required": true,
+            "schema": {
+              "title": "Shift Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "tender_id",
+            "required": true,
+            "schema": {
+              "title": "Tender Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TotalIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TenderTotalOut"
+                  },
+                  "title": "Response Set Total Api Shift Totals  Shift Id   Tender Id  Put",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Total",
+        "tags": [
+          "shift-totals"
         ]
       }
     },

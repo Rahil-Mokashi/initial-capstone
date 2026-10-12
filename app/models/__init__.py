@@ -4,6 +4,7 @@ from .app_setting import AppSetting
 from .attendance import Attendance
 from .audit_log import AuditLog
 from .check_result import CheckExplanation, CheckResult
+from .bowser import BowserBill, BowserMeterReading, BowserOpening, BowserTransfer
 from .credit_account import CreditAccount
 from .customer import Customer
 from .customer_payment import CustomerPayment
@@ -16,7 +17,9 @@ from .fuel import Fuel
 from .fuel_delivery import FuelDelivery
 from .fuel_price_history import FuelPriceHistory
 from .fuel_reconciliation import FuelReconciliation
+from .internal_fuel_use import InternalFuelUse
 from .leave_request import LeaveRequest
+from .lubricant import LubricantItem, LubricantMovement
 from .nozzle import Nozzle
 from .nozzle_assignment import NozzleAssignment
 from .payment import Payment
@@ -30,6 +33,7 @@ from .shift import Shift
 from .shift_bank_deposit import ShiftBankDeposit
 from .shift_cash_book import ShiftCashBook
 from .shift_reconciliation import ShiftReconciliation
+from .shift_tender_entry import ShiftTenderEntry
 from .shift_reconciliation_line import ShiftReconciliationLine
 from .supplier import Supplier
 from .supplier_invoice import SupplierInvoice, SupplierPayment
@@ -44,6 +48,10 @@ __all__ = [
     "AppSetting",
     "Attendance",
     "AuditLog",
+    "BowserBill",
+    "BowserMeterReading",
+    "BowserOpening",
+    "BowserTransfer",
     "CheckExplanation",
     "CheckResult",
     "CreditAccount",
@@ -60,7 +68,10 @@ __all__ = [
     "FuelDelivery",
     "FuelPriceHistory",
     "FuelReconciliation",
+    "InternalFuelUse",
     "LeaveRequest",
+    "LubricantItem",
+    "LubricantMovement",
     "Nozzle",
     "NozzleAssignment",
     "Payment",
@@ -74,6 +85,7 @@ __all__ = [
     "ShiftBankDeposit",
     "ShiftCashBook",
     "ShiftReconciliation",
+    "ShiftTenderEntry",
     "ShiftReconciliationLine",
     "Supplier",
     "SupplierInvoice",

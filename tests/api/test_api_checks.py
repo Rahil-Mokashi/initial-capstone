@@ -32,13 +32,18 @@ def _by_key(body):
 
 
 def test_closing_a_nozzle_runs_the_checks_without_being_asked(client, owner, manager, pump, session_factory):
-    assert _shift_checks(client, owner)["results"] == []
+    assert "shift.litres_match_meters" not in _by_key(_shift_checks(client, owner))  # nothing metered yet
     _close_pump(client, manager, pump)
     body = _shift_checks(client, owner)  # nobody called /checks/run: the save did
     litres = _by_key(body)["shift.litres_match_meters"]
     assert litres["status"] == "pass" and litres["expected"] == "40.000" and litres["actual"] == "40.000"
     assert litres["unit"] == "litres" and litres["links"][0]["route"] == f"/shifts/{pump['shift']['id']}"
-    assert body["summary"]["passed"] >= 1 and body["summary"]["failed"] == 0
+    # The cashier has not typed Advance / Final / payment modes yet, so the money does not add up to the 4,000
+    # of fuel sold: the report check says so in front of the owner. Everything else on the day is fine.
+    assert [r["key"] for r in body["results"] if r["status"] == "fail"] == ["report.shift_total_equals_total_sale"]
+    gap = _by_key(body)["report.shift_total_equals_total_sale"]
+    assert (gap["expected"], gap["actual"], gap["difference"]) == ("4000.00", "0.00", "-4000.00")
+    assert body["summary"]["passed"] >= 1
     assert audit_events(session_factory, "check_recorded") and audit_chain_ok(session_factory)
 
 
@@ -50,7 +55,9 @@ def test_a_wrong_dip_fails_and_sorts_first_and_history_keeps_it(client, owner, m
     body = _shift_checks(client, owner)
     dip = _by_key(body)["tank.dip_matches_book"]
     assert dip["status"] == "fail" and dip["actual"] == "2000.000" and dip["expected"] == "2460.500"
-    assert body["results"][0]["status"] == "fail" and body["summary"]["failed"] == 1
+    # the dip also disagrees with the daily report's Total Stock, so two checks name the same problem
+    assert body["results"][0]["status"] == "fail" and body["summary"]["failed"] >= 1
+    assert {r["key"] for r in body["results"] if r["status"] == "fail"} >= {"tank.dip_matches_book"}
     hist = client.get(f"/api/checks/history?day={TODAY}", headers=owner).json()
     assert len(hist) >= len(body["results"]) and TODAY in client.get("/api/checks/days", headers=owner).json()
 

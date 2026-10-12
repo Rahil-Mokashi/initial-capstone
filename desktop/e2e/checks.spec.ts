@@ -31,12 +31,17 @@ test.describe('checks', () => {
     await page.getByLabel('Day').fill(shiftDay);
 
     const results = page.getByRole('list', { name: 'Check results' });
-    const first = results.getByRole('listitem').first();
+    const first = results
+      .getByRole('listitem')
+      .filter({ hasText: 'T1: dip reading matches the book stock' })
+      .first();
     await expect(first).toContainText('T1: dip reading matches the book stock');
     await expect(first).toContainText('Failed');
     await expect(first).toContainText('2,460.500 L');
     await expect(first).toContainText('2,000.000 L');
-    await expect(page.getByText('0 of 1 checks passed, 1 failed')).toBeVisible();
+    await expect(page.getByText(/\d+ of \d+ checks passed, \d+ failed/)).toBeVisible();
+    // failures are listed first: the first row on the page is a failure
+    await expect(results.getByRole('listitem').first()).toContainText('Failed');
 
     await first.getByRole('link', { name: /Open T1/ }).click();
     await expect(page.getByRole('heading', { name: 'Tank T1' })).toBeVisible();

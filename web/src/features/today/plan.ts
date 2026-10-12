@@ -54,7 +54,7 @@ export const SHIFT_ENTRY_STEPS: EntryStep[] = [
   {
     label: 'Card, DTP Card, Phone Pay, PTM',
     hint: 'Totals per payment mode for the shift',
-    to: '/reconciliation',
+    to: '/shift-totals',
     permission: 'reconciliation.manage',
   },
   {
@@ -62,6 +62,18 @@ export const SHIFT_ENTRY_STEPS: EntryStep[] = [
     hint: 'Tea, trips, repairs, diesel for own vehicles, cash short',
     to: '/expenses',
     permission: 'expense.manage',
+  },
+  {
+    label: 'Oil sales',
+    hint: 'HP Racer, Milcy Turbo: stock in, sold per shift',
+    to: '/lubricants',
+    permission: 'lubricant.manage',
+  },
+  {
+    label: 'Bouser',
+    hint: 'Stock Transfer, delivery bills with transport, bowser meter',
+    to: '/bowser',
+    permission: 'bowser.manage',
   },
   {
     label: 'Advance, Final and bank deposits',
