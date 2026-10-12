@@ -11,6 +11,8 @@ import { useTanks } from '@/features/tanks/queries';
 import { cn } from '@/lib/cn';
 import { formatMoney } from '@/lib/format';
 import { P } from '@/lib/permissions';
+import { TodayFocus } from '@/features/today/TodayFocus';
+import { todayPlan } from '@/features/today/plan';
 
 type S = components['schemas'];
 
@@ -296,6 +298,7 @@ export function DashboardPage() {
     year: 'numeric',
   }).format(new Date());
   const name = user?.first_name || user?.username;
+  const plan = todayPlan(user?.role);
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-8">
       <header>
@@ -304,7 +307,8 @@ export function DashboardPage() {
         </h1>
         <p className="text-sm text-muted">{today}</p>
       </header>
-      {summary.isLoading ? (
+      <TodayFocus />
+      {!plan.overview ? null : summary.isLoading ? (
         <LoadingBlock label="Loading today" rows={2} />
       ) : summary.isError ? (
         // The KPI strip is an aid, never a gate: say so and carry on with the rest.
@@ -315,10 +319,10 @@ export function DashboardPage() {
       ) : summary.data ? (
         <Tiles s={summary.data} />
       ) : null}
-      <Attention />
-      {can(P.SALE_VIEW) && <SalesTrend />}
-      {can(P.INVENTORY_VIEW) && <TankGauges />}
-      {can(P.SHIFT_VIEW) && <Roster />}
+      {plan.overview && <Attention />}
+      {plan.overview && can(P.SALE_VIEW) && <SalesTrend />}
+      {plan.overview && can(P.INVENTORY_VIEW) && <TankGauges />}
+      {plan.overview && can(P.SHIFT_VIEW) && <Roster />}
     </div>
   );
 }

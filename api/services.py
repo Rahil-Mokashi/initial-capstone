@@ -55,6 +55,7 @@ from app.services.attendance_service import AttendanceService
 from app.services.audit_service import AuditService
 from app.services.auth_service import AuthService
 from app.services.backup_service import BackupService
+from app.services.check_runners import ExistingDataChecks
 from app.services.check_service import CheckService
 from app.services.credit_service import CreditService
 from app.services.dashboard_service import DashboardService
@@ -414,3 +415,29 @@ class Services:
     @cached_property
     def checks(self) -> CheckService:
         return CheckService(CheckResultRepository(self.db), CheckExplanationRepository(self.db), self.audit_repo, self.auth)
+
+    @cached_property
+    def existing_checks(self) -> ExistingDataChecks:
+        return ExistingDataChecks(
+            self.checks, self.pump_settings, self.shift_repo, self.assignment_repo, self.sale_repo,
+            ShiftReconciliationRepository(self.db), FuelReconciliationRepository(self.db), self.tank_repo,
+            self.credit_account_repo, CustomerPaymentRepository(self.db),
+        )
+
+    def run_all_checks(self, actor_id, day):
+        """Every check runner for one business date. Later tracks append their runners here."""
+        results = list(self.existing_checks.run_day(actor_id, day))
+        return results
+
+    def days_to_check(self):
+        """Today, every day that still has an open shift, and days whose shifts changed in the last minutes."""
+        from datetime import date, datetime, timedelta, timezone
+
+        from app.core.constants import ShiftStatus
+        from app.models.shift import Shift
+
+        days = {date.today()}
+        cutoff = datetime.now(timezone.utc) - timedelta(minutes=3)
+        for shift in self.db.query(Shift).filter((Shift.status == ShiftStatus.OPEN.value) | (Shift.updated_at >= cutoff)).all():
+            days.add(shift.shift_date)
+        return sorted(days)

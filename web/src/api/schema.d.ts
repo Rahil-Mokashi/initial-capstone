@@ -441,6 +441,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/checks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Checks For Day */
+        get: operations["checks_for_day_api_checks_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/checks/days": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Checks Days */
+        get: operations["checks_days_api_checks_days_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/checks/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Checks History */
+        get: operations["checks_history_api_checks_history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/checks/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run Checks */
+        post: operations["run_checks_api_checks_run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/checks/{result_id}/explanations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Explain */
+        post: operations["explain_api_checks__result_id__explanations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/credit/accounts": {
         parameters: {
             query?: never;
@@ -1292,6 +1377,40 @@ export interface paths {
         /** Order Options */
         get: operations["order_options_api_procurement_order_options_get"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pump-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Pump Settings */
+        get: operations["list_pump_settings_api_pump_settings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pump-settings/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Set Pump Setting */
+        put: operations["set_pump_setting_api_pump_settings__key__put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -2541,6 +2660,58 @@ export interface components {
             /** Role Id */
             role_id: string;
         };
+        /** CheckOut */
+        CheckOut: {
+            /** Actual */
+            actual: string | null;
+            /** Area */
+            area: string;
+            /**
+             * Business Date
+             * Format: date
+             */
+            business_date: string;
+            /** Difference */
+            difference: string | null;
+            /** Expected */
+            expected: string | null;
+            /** Explanations */
+            explanations: components["schemas"]["ExplanationOut"][];
+            /** Id */
+            id: string;
+            /** Key */
+            key: string;
+            /** Links */
+            links: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Run At
+             * Format: date-time
+             */
+            run_at: string;
+            /** Scope Id */
+            scope_id: string;
+            /** Scope Type */
+            scope_type: string;
+            /** Sentence */
+            sentence: string;
+            /** Status */
+            status: string;
+            /** Unit */
+            unit: string;
+        };
+        /** ChecksSummaryOut */
+        ChecksSummaryOut: {
+            /** Failed */
+            failed: number;
+            /** Passed */
+            passed: number;
+            /** Total */
+            total: number;
+            /** Warned */
+            warned: number;
+        };
         /** Choice */
         Choice: {
             /** Label */
@@ -2653,6 +2824,17 @@ export interface components {
              */
             reason: string;
             status: components["schemas"]["StatusEnum"];
+        };
+        /** DayChecksOut */
+        DayChecksOut: {
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Results */
+            results: components["schemas"]["CheckOut"][];
+            summary: components["schemas"]["ChecksSummaryOut"];
         };
         /** DeliveryOut */
         DeliveryOut: {
@@ -2931,6 +3113,23 @@ export interface components {
             receipt_reference?: string | null;
             /** Status */
             status: string;
+        };
+        /** ExplainIn */
+        ExplainIn: {
+            /** Text */
+            text: string;
+        };
+        /** ExplanationOut */
+        ExplanationOut: {
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /** By */
+            by: string;
+            /** Text */
+            text: string;
         };
         /** FilterOptions */
         FilterOptions: {
@@ -3456,6 +3655,28 @@ export interface components {
             /** Reason */
             reason: string;
         };
+        /** PumpSettingIn */
+        PumpSettingIn: {
+            /** Value */
+            value: string;
+        };
+        /** PumpSettingOut */
+        PumpSettingOut: {
+            /** Choices */
+            choices?: string[] | null;
+            /** Default */
+            default: string;
+            /** Help */
+            help: string;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Question Id */
+            question_id: string;
+            /** Value */
+            value: string;
+        };
         /** PurchaseOrderIn */
         PurchaseOrderIn: {
             /** Expected Delivery Date */
@@ -3730,6 +3951,11 @@ export interface components {
             detail: string;
             /** Name */
             name: string;
+        };
+        /** RunIn */
+        RunIn: {
+            /** Day */
+            day?: string | null;
         };
         /** SaleIn */
         SaleIn: {
@@ -5229,6 +5455,181 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DoneOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    checks_for_day_api_checks_get: {
+        parameters: {
+            query?: {
+                day?: string | null;
+                area?: string | null;
+            };
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DayChecksOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    checks_days_api_checks_days_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    checks_history_api_checks_history_get: {
+        parameters: {
+            query: {
+                day: string;
+            };
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CheckOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_checks_api_checks_run_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RunIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DayChecksOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    explain_api_checks__result_id__explanations_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                result_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExplainIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CheckOut"];
                 };
             };
             /** @description Validation Error */
@@ -7373,6 +7774,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OrderOptions"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_pump_settings_api_pump_settings_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PumpSettingOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_pump_setting_api_pump_settings__key__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PumpSettingIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PumpSettingOut"];
                 };
             };
             /** @description Validation Error */

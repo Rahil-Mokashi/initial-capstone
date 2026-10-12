@@ -95,3 +95,10 @@ def test_summary_counts():
     from app.services.check_service import CheckService
 
     assert CheckService.summary([R("pass"), R("pass"), R("fail"), R("warn")]) == {"total": 4, "passed": 2, "warned": 1, "failed": 1}
+
+
+def test_at_most_rule_is_a_limit_not_an_equality():
+    assert evaluate(spec(expected="1000", actual="400", rule="at_most")) == "pass"
+    assert evaluate(spec(expected="1000", actual="1000", rule="at_most")) == "pass"
+    assert evaluate(spec(expected="1000", actual="1001", rule="at_most")) == "fail"
+    assert evaluate(spec(expected="1000", actual="1001", rule="at_most", warn_within=D("5"))) == "warn"

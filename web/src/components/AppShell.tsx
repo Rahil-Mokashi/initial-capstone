@@ -47,8 +47,8 @@ function NavItemLink({ to, label }: { to: string; label: string }) {
 }
 
 function Sidebar() {
-  const { can } = useAuth();
-  const groups = visibleGroups(can);
+  const { can, user } = useAuth();
+  const groups = visibleGroups(can, user?.role);
   return (
     <aside className="flex w-[var(--sidebar-w)] shrink-0 flex-col bg-ink text-ink-fg">
       <div className="flex items-center gap-3 border-b border-ink-2 px-5 py-5">
@@ -66,7 +66,7 @@ function Sidebar() {
       >
         <ul className="mb-5 flex flex-col gap-0.5">
           <li>
-            <NavItemLink to="/" label="Dashboard" />
+            <NavItemLink to="/" label="Today" />
           </li>
         </ul>
         {groups.map((group) => (

@@ -10,9 +10,10 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from api.check_hook import RunChecksAfterWrites
 from api.deps import require_launch_secret
 from api.errors import install_error_handlers
-from api.routers import analytics, attendance, audit, backups, settings as settings_router, auth, credit, dashboard, employees, expenses, reconciliation, reports, fuel_prices, nozzles, procurement, sales, shifts, tanks, terminal, users
+from api.routers import analytics, attendance, audit, backups, checks, pump_settings, settings as settings_router, auth, credit, dashboard, employees, expenses, reconciliation, reports, fuel_prices, nozzles, procurement, sales, shifts, tanks, terminal, users
 
 ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 
@@ -63,6 +64,7 @@ def create_app(
     app.state.shutdown_callback = shutdown_callback
 
     # Added last = outermost: host check runs before anything else.
+    app.add_middleware(RunChecksAfterWrites)
     app.add_middleware(SecurityHeaders)
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=ALLOWED_HOSTS)
     install_error_handlers(app)
@@ -107,6 +109,8 @@ def create_app(
     api.include_router(settings_router.router)
     api.include_router(backups.router)
     api.include_router(audit.router)
+    api.include_router(checks.router)
+    api.include_router(pump_settings.router)
     app.include_router(api)
 
     if web_dir is not None and Path(web_dir).is_dir():

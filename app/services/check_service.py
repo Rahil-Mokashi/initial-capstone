@@ -43,12 +43,21 @@ class CheckSpec:
     # Differences up to pass_within count as a pass (e.g. a half-paisa rounding).
     pass_within: Decimal = _ZERO
     links: List[dict] = field(default_factory=list)
+    # "equal": actual must equal expected. "at_most": actual must not exceed expected (a limit).
+    # "at_least": actual must not fall below expected (a floor, e.g. cash in hand never below zero).
+    rule: str = "equal"
 
 
 def evaluate(spec: CheckSpec) -> str:
     """pass / warn / fail from the two numbers. A missing side is a failure, never a pass."""
     if spec.expected is None or spec.actual is None:
         return FAIL
+    if spec.rule == "at_most":
+        over = spec.actual - spec.expected
+        return PASS if over <= spec.pass_within else (WARN if over <= spec.warn_within else FAIL)
+    if spec.rule == "at_least":
+        short = spec.expected - spec.actual
+        return PASS if short <= spec.pass_within else (WARN if short <= spec.warn_within else FAIL)
     gap = abs(spec.actual - spec.expected)
     if gap <= spec.pass_within:
         return PASS

@@ -7,6 +7,8 @@ export interface NavItem {
   permission: string | string[];
   /** Route, when the screen exists in the new UI. */
   to?: string;
+  /** Roles that hold the permission (for dropdowns) but should not see this in their short menu. */
+  hideFor?: string[];
 }
 export interface NavGroup {
   label: string;
@@ -17,13 +19,33 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Masters',
     items: [
-      { label: 'Employees', permission: 'employee.view', to: '/employees' },
+      {
+        label: 'Employees',
+        permission: 'employee.view',
+        to: '/employees',
+        hideFor: ['DATA_ENTRY'],
+      },
       { label: 'Users', permission: 'user.manage', to: '/users' },
-      { label: 'Fuel Prices', permission: 'fuel_price.view', to: '/fuel-prices' },
+      {
+        label: 'Fuel Prices',
+        permission: 'fuel_price.view',
+        to: '/fuel-prices',
+        hideFor: ['DATA_ENTRY'],
+      },
       { label: 'Tanks', permission: 'inventory.view', to: '/tanks' },
-      { label: 'Nozzles & Dispensers', permission: 'nozzle.view', to: '/nozzles' },
+      {
+        label: 'Nozzles & Dispensers',
+        permission: 'nozzle.view',
+        to: '/nozzles',
+        hideFor: ['DATA_ENTRY'],
+      },
       { label: 'Suppliers', permission: 'procurement.view', to: '/procurement?tab=suppliers' },
-      { label: 'Company Profile', permission: 'settings.view', to: '/settings' },
+      {
+        label: 'Company Profile',
+        permission: 'settings.view',
+        to: '/settings',
+        hideFor: ['DATA_ENTRY'],
+      },
     ],
   },
   {
@@ -35,6 +57,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'My Shift', permission: 'my_assignment.view', to: '/my-shift' },
       { label: 'Attendance', permission: 'attendance.view', to: '/attendance' },
       { label: 'Leave', permission: 'leave.view', to: '/leave' },
+      { label: 'Checks', permission: 'check.view', to: '/checks' },
       { label: 'Credit', permission: 'credit.view', to: '/credit' },
       { label: 'Expenses', permission: 'expense.view', to: '/expenses' },
       { label: 'Reconciliation', permission: 'reconciliation.view', to: '/reconciliation' },
@@ -55,6 +78,7 @@ export const NAV_GROUPS: NavGroup[] = [
           'analytics.view',
         ],
         to: '/reports',
+        hideFor: ['DATA_ENTRY'],
       },
     ],
   },
@@ -68,11 +92,16 @@ export const NAV_GROUPS: NavGroup[] = [
 ];
 
 /** Groups with only the items this user may see; empty groups disappear (as in Qt). */
-export function visibleGroups(can: (permission: string) => boolean): NavGroup[] {
+export function visibleGroups(
+  can: (permission: string) => boolean,
+  role?: string | null,
+): NavGroup[] {
   return NAV_GROUPS.map((g) => ({
     ...g,
-    items: g.items.filter((i) =>
-      Array.isArray(i.permission) ? i.permission.some(can) : can(i.permission),
+    items: g.items.filter(
+      (i) =>
+        (Array.isArray(i.permission) ? i.permission.some(can) : can(i.permission)) &&
+        !(role && i.hideFor?.includes(role)),
     ),
   })).filter((g) => g.items.length > 0);
 }

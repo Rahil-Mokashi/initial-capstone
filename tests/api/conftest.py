@@ -70,6 +70,8 @@ def users(db):
     _make_user(db, UserRole.MANAGER.value, "manager1")
     _make_user(db, UserRole.ACCOUNTANT.value, "accountant1")
     _make_user(db, UserRole.ATTENDANT.value, "attendant1")
+    _make_user(db, UserRole.OWNER.value, "owner1")
+    _make_user(db, UserRole.DATA_ENTRY.value, "dataentry1")
     _make_user(db, UserRole.MANAGER.value, "newhire1", must_change_password=True)
     return ["manager1", "accountant1", "attendant1", "newhire1"]
 
@@ -115,6 +117,16 @@ def admin(client):
 @pytest.fixture()
 def accountant(client):
     return login(client, "accountant1")
+
+
+@pytest.fixture()
+def owner(client):
+    return login(client, "owner1")
+
+
+@pytest.fixture()
+def data_entry(client):
+    return login(client, "dataentry1")
 
 
 @pytest.fixture()

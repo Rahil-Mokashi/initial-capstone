@@ -41,6 +41,8 @@ def main() -> None:
             ("manager1", UserRole.MANAGER),
             ("accountant1", UserRole.ACCOUNTANT),
             ("attendant1", UserRole.ATTENDANT),
+            ("owner1", UserRole.OWNER),
+            ("dataentry1", UserRole.DATA_ENTRY),
         ):
             session.add(
                 User(

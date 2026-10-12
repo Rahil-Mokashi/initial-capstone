@@ -27,10 +27,8 @@ def test_existing_roles_keep_their_old_permissions():
     assert Permission.EXPENSE_MANAGE in acc
 
 
-def test_several_owner_logins_are_allowed(db, svc):
-    from conftest import make_user
-
-    a, b, c = (make_user(db, UserRole.OWNER.value, n) for n in ("owner_a", "owner_b", "owner_c"))
+def test_several_owner_logins_are_allowed(new_user):
+    a, b, c = (new_user(UserRole.OWNER.value, n) for n in ("owner_a", "owner_b", "owner_c"))
     assert len({a.id, b.id, c.id}) == 3 and all(u.role.name == "OWNER" for u in (a, b, c))
 
 

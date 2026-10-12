@@ -26,6 +26,7 @@ import { AttendancePage } from '@/features/attendance/AttendancePage';
 import { LeavePage } from '@/features/attendance/LeavePage';
 import { SalesPage } from '@/features/sales/SalesPage';
 import { TerminalPage } from '@/features/terminal/TerminalPage';
+import { ChecksPage } from '@/features/checks/ChecksPage';
 import { CreditPage } from '@/features/credit/CreditPage';
 import { ExpensesPage } from '@/features/expenses/ExpensesPage';
 import { ReconciliationPage } from '@/features/reconciliation/ReconciliationPage';
@@ -69,6 +70,7 @@ export function App() {
             <Route path="/leave" element={<LeavePage />} />
             <Route path="/sales" element={<SalesPage />} />
             <Route path="/terminal" element={<TerminalPage />} />
+            <Route path="/checks" element={<ChecksPage />} />
             <Route path="/credit" element={<CreditPage />} />
             <Route path="/expenses" element={<ExpensesPage />} />
             <Route path="/reconciliation" element={<ReconciliationPage />} />

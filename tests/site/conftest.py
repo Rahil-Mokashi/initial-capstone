@@ -52,6 +52,12 @@ def make_user(db, role_name: str, username: str) -> User:
 
 
 @pytest.fixture()
+def new_user(db):
+    """A function that creates one more user of a role (a fixture, so tests never import 'conftest' by name)."""
+    return lambda role, username: make_user(db, role, username)
+
+
+@pytest.fixture()
 def uid(db):
     """role name -> a user id of that role."""
     return {r.value: make_user(db, r.value, r.value.lower()).id for r in UserRole if r is not UserRole.ADMIN} | {
