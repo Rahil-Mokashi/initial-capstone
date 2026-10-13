@@ -9,6 +9,7 @@ import { EmployeesPage } from '@/features/employees/EmployeesPage';
 import { AuditPage } from '@/features/audit/AuditPage';
 import { BackupsPage } from '@/features/backups/BackupsPage';
 import { CloseShiftPage } from '@/features/close-shift/CloseShiftPage';
+import { ReviewPage } from '@/features/review/ReviewPage';
 import { DevicesPage } from '@/features/devices/DevicesPage';
 import { OwnerChoicesPage } from '@/features/settings/OwnerChoicesPage';
 import { SettingsPage } from '@/features/settings/SettingsPage';
@@ -109,6 +110,7 @@ export function App() {
             <Route path="/owner-choices" element={<OwnerChoicesPage />} />
             <Route path="/backups" element={<BackupsPage />} />
             <Route path="/devices" element={<DevicesPage />} />
+            <Route path="/review" element={<ReviewPage />} />
             <Route path="/audit" element={<AuditPage />} />
             <Route path="/employees" element={<EmployeesPage />} />
             <Route path="/employees/:id" element={<EmployeeDetailPage />} />

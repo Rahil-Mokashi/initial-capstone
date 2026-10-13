@@ -2,7 +2,7 @@
 // Two Client PCs and a Main PC (real mutual TLS on loopback): pairing through the setup window, a device file,
 // shared live data, removing a device, and the Main PC going away.
 import { join } from 'node:path';
-import { type Launched, apiAs, expect, launchApp, signIn, test } from './fixtures';
+import { type Launched, apiAs, expect, launchApp, setupPump, signIn, test } from './fixtures';
 import { MainPcFixture } from './lanFixture';
 import { repoRoot } from './global-setup';
 
@@ -109,4 +109,56 @@ test('the window says plainly when the Main PC cannot be reached, and recovers',
   await pc.stop();
   await page.reload();
   await expect(page.getByText('Cannot reach the Main PC')).toBeVisible();
+});
+
+test('a shift is entered on one PC, verified on a second, approved and locked by an owner, and the second PC sees it live', async ({}, testInfo) => {
+  const a = await launchApp(testInfo.outputPath('client-a'));
+  apps.push(a);
+  await pairThroughSetup(a, 'Counter PC');
+  const pageA = await clientWindow(a);
+  await setupPump(pageA); // Petrol at 100.00, nozzle N1 (opening 0), an open shift - on the Main PC's database
+
+  const file = testInfo.outputPath('office.json');
+  await pc.local('Office PC', file);
+  const b = await launchApp(testInfo.outputPath('client-b'), { env: { PPERP_E2E_DEVICE_FILE: file } });
+  apps.push(b);
+  const setupOpened = b.app.waitForEvent('window');
+  await b.page.getByRole('button', { name: 'Network setup' }).click();
+  const setup = await setupOpened;
+  await setup.getByRole('button', { name: 'Import a device file...' }).click();
+  await setup.waitForEvent('close');
+  const pageB = await clientWindow(b);
+
+  // 1. the cashier closes the shift on the counter PC
+  await pageA.evaluate(() => (location.hash = '#/close-shift'));
+  await signIn(pageA, 'dataentry1', undefined, { home: true });
+  await pageA.getByLabel('Closing for N1').fill('505');
+  await pageA.getByLabel('CARD', { exact: true }).fill('11000');
+  await pageA.getByLabel('Advance', { exact: true }).fill('20000');
+  await pageA.getByLabel('Final', { exact: true }).fill('14000');
+  await expect(pageA.getByText('Balanced')).toBeVisible();
+  await pageA.getByRole('button', { name: /Close shift/ }).click();
+  await expect(pageA.getByText('Shift closed and saved.')).toBeVisible();
+
+  // 2. the accountant, on the office PC, sees it Entered and verifies it
+  await pageB.evaluate(() => (location.hash = '#/review'));
+  await signIn(pageB, 'accountant1', undefined, { home: true });
+  const row = pageB.getByRole('listitem').filter({ hasText: 'Morning' });
+  await expect(row.getByText('Entered', { exact: true }).first()).toBeVisible();
+  await row.getByRole('button', { name: /^Verify/ }).click();
+  await expect(row.getByText('Verified', { exact: true }).first()).toBeVisible();
+
+  // 3. an owner on the counter PC approves and locks
+  await pageA.getByRole('button', { name: /Account menu/ }).click();
+  await pageA.getByRole('button', { name: 'Log out' }).click();
+  await pageA.evaluate(() => (location.hash = '#/review'));
+  await signIn(pageA, 'owner1', undefined, { home: true });
+  const ownerRow = pageA.getByRole('listitem').filter({ hasText: 'Morning' });
+  await ownerRow.getByRole('button', { name: /^Approve/ }).click();
+  await ownerRow.getByRole('button', { name: /^Lock/ }).click();
+  await expect(ownerRow.getByText('Locked', { exact: true }).first()).toBeVisible();
+
+  // 4. the accountant's screen changed on its own, with no reload
+  await expect(row.getByText('Locked', { exact: true }).first()).toBeVisible({ timeout: 25_000 });
+  await expect(row.getByRole('button', { name: /^Verify|^Approve|^Lock/ })).toHaveCount(0);
 });

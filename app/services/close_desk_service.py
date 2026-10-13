@@ -76,7 +76,7 @@ class _PreviewDone(Exception):
 
 
 class CloseDeskService:
-    def __init__(self, shift_close, tender_entries, cash_book, daily_report, shift_repo, settings, auth_service):
+    def __init__(self, shift_close, tender_entries, cash_book, daily_report, shift_repo, settings, auth_service, workflow=None):
         self._close = shift_close
         self._tenders = tender_entries
         self._cash = cash_book
@@ -84,6 +84,7 @@ class CloseDeskService:
         self._shifts = shift_repo
         self._settings = settings
         self._auth_service = auth_service
+        self._workflow = workflow
         self._session = session_for(shift_repo)
 
     @require_permission(Permission.SHIFT_VIEW.value)
@@ -112,6 +113,8 @@ class CloseDeskService:
                     self._tenders.set_total(actor_user_id, shift_id, tender_id, amount)
                 self._record_cash(actor_user_id, shift_id, advance, final)
                 self._session.flush()
+                if self._workflow is not None:
+                    self._workflow.mark_entered(actor_user_id, shift_id)  # the figures were typed: the review chain starts
                 desk = self._build(actor_user_id, shift_id)
                 if preview:
                     raise _PreviewDone(desk)

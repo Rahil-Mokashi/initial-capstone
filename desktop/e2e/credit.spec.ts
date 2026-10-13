@@ -26,7 +26,8 @@ test('credit account: sell on credit, pay part, read the statement, export PDF a
 
   // A credit sale through the Terminal, as an attendant would do it
   await page.getByRole('link', { name: 'Terminal' }).click();
-  await page.getByRole('button', { name: 'Credit' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Terminal' })).toBeVisible(); // wait for the route change: the Credit screen has buttons with 'Credit' in their names too
+  await page.getByRole('button', { name: 'Credit', exact: true }).click();
   await page.getByLabel('Customer (required for credit)').selectOption({ label: 'ACME Transport' });
   await page.getByLabel('Amount (₹)').fill('');
   await page.getByLabel('Amount (₹)').pressSequentially('1500');

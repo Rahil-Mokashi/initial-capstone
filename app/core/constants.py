@@ -140,6 +140,13 @@ class Permission(str, Enum):
     PAYROLL_APPROVE = "payroll.approve"
     # Devices on the pump's network (LAN multi-user): enrol a PC with a pairing code, list, revoke. Owners/admins only.
     DEVICE_MANAGE = "device.manage"
+    # Review of shift entries (Entered -> Verified -> Approved -> Locked). The accountant verifies; owners approve, lock and reopen
+    # (a reopen needs a reason). Everybody who works on shifts can SEE where a shift stands.
+    ENTRY_VIEW = "entry.view"
+    ENTRY_VERIFY = "entry.verify"
+    ENTRY_APPROVE = "entry.approve"
+    ENTRY_LOCK = "entry.lock"
+    ENTRY_REOPEN = "entry.reopen"
 
 
 class EmployeeStatus(str, Enum):
@@ -487,6 +494,7 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
         Permission.LUBRICANT_MANAGE,
         Permission.BOWSER_VIEW,
         Permission.BOWSER_MANAGE,
+        Permission.ENTRY_VIEW,
     ),
     UserRole.ACCOUNTANT: (
         Permission.INVENTORY_VIEW,
@@ -515,6 +523,8 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
         Permission.PAYROLL_MANAGE,
         Permission.LUBRICANT_VIEW,
         Permission.BOWSER_VIEW,
+        Permission.ENTRY_VIEW,
+        Permission.ENTRY_VERIFY,
     ),
     UserRole.SHIFT_SUPERVISOR: (
         Permission.INVENTORY_VIEW,
@@ -555,6 +565,7 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
         Permission.LUBRICANT_MANAGE,
         Permission.BOWSER_VIEW,
         Permission.BOWSER_MANAGE,
+        Permission.ENTRY_VIEW,
     ),
     UserRole.ATTENDANT: (
         Permission.MY_ASSIGNMENT_VIEW,

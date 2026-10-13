@@ -72,6 +72,8 @@ from app.services.audit_service import AuditService
 from app.services.auth_service import AuthService
 from app.services.backup_service import BackupService
 from app.services.close_desk_service import CloseDeskService
+from app.services.entry_workflow_service import EntryWorkflowService
+from app.services.workflow_checks import WorkflowChecks
 from app.services.shift_close_service import ShiftCloseService
 from app.services.payroll_checks import PayrollChecks
 from app.services.payroll_service import PayrollService
@@ -520,8 +522,16 @@ class Services:
         )
 
     @cached_property
+    def entries(self) -> EntryWorkflowService:
+        return EntryWorkflowService(self.db, self.audit_repo, self.auth, self.pump_settings)
+
+    @cached_property
+    def workflow_checks(self) -> WorkflowChecks:
+        return WorkflowChecks(self.checks, self.entries)
+
+    @cached_property
     def close_desk(self) -> CloseDeskService:
-        return CloseDeskService(self.shift_close, self.tender_entries, self.cash_book, self.daily_report, self.shift_repo, self.pump_settings, self.auth)
+        return CloseDeskService(self.shift_close, self.tender_entries, self.cash_book, self.daily_report, self.shift_repo, self.pump_settings, self.auth, self.entries)
 
     @cached_property
     def payroll(self) -> PayrollService:
@@ -593,6 +603,7 @@ class Services:
         results += self.credit_checks.run_day(actor_id, day)
         results += self.bank_checks.run_day(actor_id, day)
         results += self.payroll_checks.run_day(actor_id, day)
+        results += self.workflow_checks.run_day(actor_id, day)
         return results
 
     def days_to_check(self):

@@ -58,6 +58,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Attendance', permission: 'attendance.view', to: '/attendance' },
       { label: 'Leave', permission: 'leave.view', to: '/leave' },
       { label: 'Checks', permission: 'check.view', to: '/checks' },
+      { label: 'Review', permission: 'entry.view', to: '/review', hideFor: ['DATA_ENTRY'] },
       { label: 'Bank Matching', permission: 'bank_recon.view', to: '/bank' },
       { label: 'Payroll', permission: 'payroll.view', to: '/payroll' },
       { label: 'Credit', permission: 'credit.view', to: '/credit' },

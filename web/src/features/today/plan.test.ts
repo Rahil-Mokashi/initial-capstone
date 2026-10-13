@@ -4,7 +4,7 @@ import { SHIFT_ENTRY_STEPS, todayPlan } from './plan';
 describe('today plan', () => {
   it('gives the owner checks, day status and credit, and the overview', () => {
     expect(todayPlan('OWNER')).toEqual({
-      focus: ['checks', 'day_status', 'credit_outstanding', 'credit_chase', 'payroll'],
+      focus: ['review', 'checks', 'day_status', 'credit_outstanding', 'credit_chase', 'payroll'],
       overview: true,
     });
     expect(todayPlan('ADMIN').focus).toContain('checks');

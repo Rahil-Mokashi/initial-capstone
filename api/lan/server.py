@@ -23,6 +23,7 @@ from api.lan import fs_security
 from api.lan.config import LanConfig, LanConfigError, lan_dir, load
 from api.lan.devices import DeviceService, PairingManager
 from api.lan.guard import LanGuard
+from api.lan.live import EventHub, ResourceVersions
 from api.lan.pki import DpapiProtector, Pki, Protector
 
 
@@ -139,6 +140,7 @@ class LanContext:
     allowed_hosts: list[str] = field(default_factory=list)
     session_factory: Optional[Callable] = None
     _blocked: dict = field(default_factory=dict)
+    hub: EventHub = field(default_factory=EventHub)
 
     def record_block(self, kind: str, ip: str, detail: str) -> None:
         """Audit a refusal, at most once per kind and address every five minutes (a flood must not flood the audit log)."""
@@ -181,7 +183,7 @@ def build_main_asgi(config: LanConfig, lan: LanContext, session_factory: Callabl
     from api.app import create_app
 
     inner = create_app(secrets.token_hex(16), session_factory=session_factory, web_dir=web_dir, lan=lan)
-    return LanGuard(inner, lan.devices, config.allowed_subnets, lan.allowed_hosts, config.max_body_bytes, config.requests_per_minute,
+    return LanGuard(ResourceVersions(inner, session_factory, lan.hub), lan.devices, config.allowed_subnets, lan.allowed_hosts, config.max_body_bytes, config.requests_per_minute,
                     on_block or lan.record_block)
 
 

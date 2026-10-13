@@ -5,6 +5,8 @@ from .attendance import Attendance
 from .audit_log import AuditLog
 from .check_result import CheckExplanation, CheckResult
 from .lan_device import LanDevice
+from .record_version import RecordVersion
+from .shift_entry import ShiftEntry, ShiftEntryEvent
 from .bank import (
     BankAccount,
     BankAccountMode,
@@ -76,6 +78,9 @@ __all__ = [
     "CheckExplanation",
     "CheckResult",
     "LanDevice",
+    "RecordVersion",
+    "ShiftEntry",
+    "ShiftEntryEvent",
     "CreditAccount",
     "CreditBillDetail",
     "CreditFollowUp",

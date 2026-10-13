@@ -73,7 +73,23 @@ def _serialise_audit_records() -> None:
     AuditLogRepository.record = record  # type: ignore[method-assign]
 
 
+POOL_SIZE = 40  # connections kept ready
+POOL_OVERFLOW = 40
+
+
+def _roomier_pool(engine) -> None:
+    """The default pool holds 15 connections. A request keeps one while it waits for the write lock and its follow-up work (the
+    automatic checks, the device lookup, the version counter) needs more, so sixteen PCs saving at once used them all up and every
+    request waited 30 seconds. A Main PC gets a pool that is comfortably larger than the number of PCs."""
+    from sqlalchemy.pool import QueuePool
+
+    old = engine.pool
+    if isinstance(old, QueuePool) and old.size() < POOL_SIZE and hasattr(old, "_creator"):
+        engine.pool = QueuePool(old._creator, pool_size=POOL_SIZE, max_overflow=POOL_OVERFLOW, timeout=30, pre_ping=False)
+
+
 def install(engine) -> None:
+    _roomier_pool(engine)
     engine.dispose()  # connections opened earlier would not get the busy timeout below
     state = _states[engine] = _State()
     _serialise_audit_records()

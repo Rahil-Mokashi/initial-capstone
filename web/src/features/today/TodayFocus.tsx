@@ -35,6 +35,38 @@ function OpenLink({ to, children }: { to: string; children: string }) {
   );
 }
 
+/** How many shifts are waiting for THIS person: entries to verify (accountant), to approve or lock (owner). */
+function ReviewCard() {
+  const { can } = useAuth();
+  const allowed = can(P.ENTRY_VIEW);
+  const entries = useGet<S['EntryOut'][]>(['entries', 'today'], '/entries', allowed, 60_000);
+  if (!allowed) return null;
+  const rows = entries.data ?? [];
+  const waiting = [
+    can(P.ENTRY_VERIFY) ? { n: rows.filter((e) => e.status === 'entered').length, what: 'to verify' } : null,
+    can(P.ENTRY_APPROVE) ? { n: rows.filter((e) => e.status === 'verified').length, what: 'to approve' } : null,
+    can(P.ENTRY_LOCK) ? { n: rows.filter((e) => e.status === 'approved').length, what: 'to lock' } : null,
+  ].filter((w): w is { n: number; what: string } => w !== null && w.n > 0);
+  return (
+    <Card title="Shifts waiting for you">
+      {!entries.data ? (
+        <p className="text-sm text-muted">Loading...</p>
+      ) : waiting.length === 0 ? (
+        <p className="text-lg font-bold">Nothing is waiting for you.</p>
+      ) : (
+        <ul className="flex flex-col gap-1">
+          {waiting.map((w) => (
+            <li key={w.what} className="num text-2xl font-bold">
+              {w.n} {w.n === 1 ? 'shift' : 'shifts'} {w.what}
+            </li>
+          ))}
+        </ul>
+      )}
+      <OpenLink to="/review">Open Review</OpenLink>
+    </Card>
+  );
+}
+
 function ChecksCard() {
   const { can } = useAuth();
   const allowed = can(P.CHECK_VIEW);
@@ -178,9 +210,10 @@ function ShiftEntryCard() {
 function ManagerCard() {
   return (
     <Card title="Shift close">
-      <p className="text-sm text-muted">Readings, then the cash book, then close the shift.</p>
+      <p className="text-sm text-muted">Type the closing readings and how the money was collected; the tally and any shortage show beside them.</p>
       <div className="flex flex-wrap gap-3">
-        <OpenLink to="/shifts">Shifts and readings</OpenLink>
+        <OpenLink to="/close-shift">Close Shift</OpenLink>
+        <OpenLink to="/shifts">Shifts</OpenLink>
         <OpenLink to="/reconciliation">Cash book and reconciliation</OpenLink>
       </div>
     </Card>
@@ -188,6 +221,7 @@ function ManagerCard() {
 }
 
 const CARDS: Record<FocusId, () => React.ReactElement | null> = {
+  review: ReviewCard,
   checks: ChecksCard,
   day_status: DayStatusCard,
   credit_outstanding: CreditCard,

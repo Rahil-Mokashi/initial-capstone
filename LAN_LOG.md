@@ -28,3 +28,19 @@ The owner asked for one place to type the closing master readings and how the mo
 - Advance and Final are written once per shift (existing rule); after saving they are shown, not typed. Card/Phone Pay totals can be retyped (the old one is voided with a reason, as today).
 - Menu: the cashier sees one `Close Shift` entry instead of three; Today's list for the cashier is shorter. `docs/SOFTWARE_MAP.md` explains the screens by rhythm (every shift / every day / now and then) and where each kind of change lives in the code.
 - NEEDS HUMAN REVIEW: shortage cannot be pinned on a person (nobody is named per nozzle); T-15 default of 5 litres is the owner's statement, to be confirmed.
+
+## Phase 3 - live data (10:45 - 11:45)
+- `api/lan/live.py`: `EventHub` + `GET /api/events` (server-sent events; hello, changed, 15 s heartbeat; closed streams are forgotten), `ResourceVersions` (ETag on a read of `/api/<collection>/<id>`; a later change may send `If-Match`; stale = 409 `conflict_stale`, "Changed by Asha at 14:05"; same-record saves are serialised so exactly one of two simultaneous saves wins). Table `record_versions` (migration `1c09165ec454`).
+- Web: `connection.ts` (live / polling / offline), `live.ts` (stream with 20 s polling fallback and retry), the top bar's connection light with "updated hh:mm:ss", a red read-only strip and no saving while the Main PC is unreachable.
+- A REAL finding by the 16-PC test: the default database pool (15 connections) ran out when many PCs saved at once, every request then waited 30 s. A Main PC now gets a pool of 80 (`writelock._roomier_pool`). Checked: 16 PCs, 80 requests, 6 s.
+- Audit chain under concurrency, WAL and the busy timeout were done in Phase 2 (`writelock.py`) and are exercised again here.
+- WHAT IS NOT DONE: conflict messages show through the existing error text of each form; there is no special "reload" button on every form.
+
+## Phase 4 - Entered, Verified, Approved, Locked (11:20 - 11:50)
+- `shift_entries` and `shift_entry_events` (append-only history), `EntryWorkflowService`, new permissions `entry.view / verify / approve / lock / reopen` (accountant verifies; owners approve, lock, reopen; managers and the cashier can see). Owner Choice V-06 `owner_lock_rule`: one_owner (default) or two_owners.
+- `entry_lock_guard.py`: one SQLAlchemy listener enforces the chain for EVERY write path: a locked shift refuses saves, voids and edits of its sales, payments, readings, totals, cash book, expenses, oil, bowser and reconciliation; a change under a Verified or Approved shift sends it back to Entered by itself and says so.
+- A correction = an owner's reopen with a required reason (kept, audit-logged).
+- Check `workflow.entries_verified`: "Day 13 Oct: 2 entries not yet verified" (a warning). Review screen, Today card "Shifts waiting for you".
+- Tests: 7 Python (`tests/api/test_api_entries.py`), 3 web, Playwright with two PCs: entered on the counter PC, verified on the office PC, approved and locked by an owner, and the office PC's screen turns to Locked on its own.
+- Full suites at the end of Phase 3 and 4: Python `tests/api + tests/site` 909 passed (+ the one flaky 16-PC test, fixed), the rest 999 passed 1 skipped; web 378; desktop 46; Playwright 57 passed 10 skipped (+ `credit.spec` made robust against a route-change race it had always had).
+- NEEDS HUMAN REVIEW: V-06 default (one owner approves and locks) is the brief's; nobody is stopped from verifying their own entry (no rule was given).
