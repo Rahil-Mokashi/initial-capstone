@@ -63,3 +63,17 @@ Copy-Item -Recurse "C:\Users\Asus\Projects\PetrolPumpERP-reset-2026-10-09" "E:\B
 | Work branch | `feature/site-visit-build` (never pushed) |
 
 Rollback: `git switch feature/js-frontend`, or `git switch --detach reset/pre-12h-2026-10-12`.
+
+---
+
+# Reset Point - before the LAN multi-user build (2026-10-13)
+
+| Item | Value |
+|---|---|
+| Annotated tag | `reset/pre-lan-2026-10-13` |
+| Commit | `d17a399` on `feature/site-visit-build` |
+| Bundle | `C:\Users\Asus\Projects\PetrolPumpERP-pre-lan-2026-10-13.bundle` |
+| Baseline tests | Python 1804 passed, 1 skipped; web 360; desktop 33; Playwright 53 passed, 9 opt-in skipped |
+| Work branch | `feature/lan-multi-user` (never pushed) |
+
+Rollback: `git switch feature/site-visit-build`, or `git switch --detach reset/pre-lan-2026-10-13`.

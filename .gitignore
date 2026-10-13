@@ -169,3 +169,7 @@ run_12h.ps1
 
 # The web UI source under web/src/lib/ must be tracked (the generic lib/ rule above would hide it)
 !web/src/lib/
+
+# Owner prompts for unattended runs
+PROMPT_LAN.md
+run_prompt.ps1
