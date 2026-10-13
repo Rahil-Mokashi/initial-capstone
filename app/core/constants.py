@@ -138,6 +138,8 @@ class Permission(str, Enum):
     PAYROLL_VIEW = "payroll.view"
     PAYROLL_MANAGE = "payroll.manage"
     PAYROLL_APPROVE = "payroll.approve"
+    # Devices on the pump's network (LAN multi-user): enrol a PC with a pairing code, list, revoke. Owners/admins only.
+    DEVICE_MANAGE = "device.manage"
 
 
 class EmployeeStatus(str, Enum):

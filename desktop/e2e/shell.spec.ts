@@ -4,7 +4,7 @@ import { desktopDir } from './global-setup';
 import { expect, launchApp, signIn, test } from './fixtures';
 
 test.describe('electron hardening', () => {
-  test('the page has no Node, no require, and only the three bridge members', async ({
+  test('the page has no Node, no require, and only the listed bridge members', async ({
     launched,
   }) => {
     const { page } = launched;
@@ -14,11 +14,14 @@ test.describe('electron hardening', () => {
       buffer: typeof (window as unknown as { Buffer?: unknown }).Buffer,
       bridge: Object.keys(window.pperp ?? {}).sort(),
       print: Object.keys((window.pperp as unknown as { print: object }).print).sort(),
+      shell: Object.keys((window.pperp as unknown as { shell: object }).shell).sort(),
     }));
     expect(probe.require).toBe('undefined');
     expect(probe.process).toBe('undefined');
     expect(probe.buffer).toBe('undefined');
-    expect(probe.bridge).toEqual(['apiBase', 'files', 'launchSecret', 'print']);
+    // mode and shell.openNetworkSetup came with the LAN build: the window can only ASK the shell to open Network setup.
+    expect(probe.bridge).toEqual(['apiBase', 'files', 'launchSecret', 'mode', 'print', 'shell']);
+    expect(probe.shell).toEqual(['openNetworkSetup']);
     expect(probe.print).toEqual(['listPrinters', 'preview', 'toPdf', 'toPrinter']);
   });
 

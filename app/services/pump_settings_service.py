@@ -38,6 +38,9 @@ _DEFS = [
                "Classic is the exact copy of the old report; Plus adds checks and extra lines."),
     SettingDef("dip_tolerance_percent", "0.5", None, "T-02", "Dip difference tolerance (%)",
                "A tank whose dip differs from book stock by more than this share of the book is flagged."),
+    SettingDef("default_testing_litres", "5", None, "T-15", "Usual testing per nozzle (litres)",
+               "At the end of a shift each nozzle pours this much for testing and it goes back into the tank. The meter counts it, "
+               "so the Close Shift screen pre-fills it; the cashier can change it for a nozzle."),
     SettingDef("bank_fee_tolerance_percent", "2.0", None, "H-09", "Bank charge tolerance (%)",
                "How much less than expected a bank credit may be and still count as the same receipt."),
     SettingDef("bank_date_window_days", "4", None, "H-02", "Bank date window (days)",

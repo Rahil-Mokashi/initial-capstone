@@ -137,6 +137,11 @@ export function AuditPage() {
               header: 'Actor',
               cell: ({ getValue }) => getValue<string | null>() ?? '',
             },
+            {
+              accessorKey: 'device',
+              header: 'From PC',
+              cell: ({ getValue }) => getValue<string | null>() ?? '',
+            },
             { accessorKey: 'entity', header: 'Entity' },
             { accessorKey: 'description', header: 'Description' },
           ]}

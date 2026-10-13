@@ -101,16 +101,15 @@ describe('Today, by role', () => {
     );
     expect(
       steps.map(
-        (li) => /\d(.*?)(Bill|End master|Totals|Tea|Cash handed)/.exec(li.textContent ?? '')?.[1],
+        (li) => /\d(.*?)(Bill|Closing readings|Tea|Cash handed)/.exec(li.textContent ?? '')?.[1],
       ),
     ).toEqual([
       'Credit bills',
-      'Closing readings',
-      'Card, DTP Card, Phone Pay, PTM',
+      'Close shift',
       'Expenses',
       'Advance, Final and bank deposits',
     ]);
-    expect(screen.getByText(/Card, DTP Card, Phone Pay, PTM/)).toBeInTheDocument();
+    expect(screen.getByText(/Card \/ DTP Card \/ Phone Pay \/ PTM totals/)).toBeInTheDocument();
     expect(screen.getByText(/Advance, Final and bank deposits/)).toBeInTheDocument();
     expect(screen.queryByText('Sales Trend')).not.toBeInTheDocument();
     expect(screen.queryByText('Checks today')).not.toBeInTheDocument();

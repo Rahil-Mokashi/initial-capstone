@@ -11,7 +11,9 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { useConnection } from '@/api/connection';
 import { useGet } from '@/api/hooks';
+import { useLiveUpdates } from '@/api/live';
 import type { components } from '@/api/schema';
 import { useAuth } from '@/auth/AuthContext';
 import { GlobalSearch } from '@/components/GlobalSearch';
@@ -240,6 +242,44 @@ function AccountMenu({ onDialog }: { onDialog: (d: 'password' | 'pin') => void }
   );
 }
 
+/** Single PC: the old "works offline" badge. Client PC: whether the Main PC is reachable, and when the screen last heard from it. */
+function ConnectionBadge() {
+  const { link, lastOk } = useConnection();
+  if (link === 'local') {
+    return (
+      <span
+        title="This app runs entirely on this computer. It never needs, and never uses, an internet connection."
+        className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface-2 px-3 py-1 text-xs font-semibold"
+      >
+        <WifiOff className="size-3.5" aria-hidden /> Offline — Local Only
+      </span>
+    );
+  }
+  const look = {
+    live: { tone: 'bg-ok-bg text-ok-fg border-ok', dot: 'bg-ok-fg', text: 'Main PC connected' },
+    polling: { tone: 'bg-warn-bg text-warn-fg border-warn', dot: 'bg-warn-fg', text: 'Main PC connected (refreshing every 20 s)' },
+    offline: { tone: 'bg-danger-bg text-danger-fg border-danger', dot: 'bg-danger-fg', text: 'Main PC not reachable - read only' },
+  }[link];
+  const updated = lastOk ? new Date(lastOk).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : null;
+  return (
+    <span role="status" className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${look.tone}`} title="Your data is on the pump's Main PC. This PC keeps no copy.">
+      <span className={`size-2 rounded-full ${look.dot}`} aria-hidden />
+      {look.text}
+      {updated && <span className="font-normal">· updated {updated}</span>}
+    </span>
+  );
+}
+
+function OfflineStrip() {
+  const { link } = useConnection();
+  if (link !== 'offline') return null;
+  return (
+    <p role="alert" className="border-b border-danger bg-danger-bg px-6 py-2 text-sm font-medium text-danger-fg">
+      The Main PC cannot be reached. You can still read what is on screen, but nothing can be saved until it is back. Trying again every few seconds.
+    </p>
+  );
+}
+
 function TopBar() {
   const [dialog, setDialog] = useState<'password' | 'pin' | null>(null);
   return (
@@ -247,12 +287,7 @@ function TopBar() {
       <header className="flex min-h-16 flex-wrap items-center gap-3 border-b border-line bg-surface px-6 py-2">
         <GlobalSearch />
         <div className="ml-auto flex flex-wrap items-center gap-3">
-          <span
-            title="This app runs entirely on this computer. It never needs, and never uses, an internet connection."
-            className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface-2 px-3 py-1 text-xs font-semibold"
-          >
-            <WifiOff className="size-3.5" aria-hidden /> Offline — Local Only
-          </span>
+          <ConnectionBadge />
           <ShiftIndicator />
           <Clock />
           <AlertsMenu />
@@ -267,6 +302,7 @@ function TopBar() {
 
 export function AppShell() {
   const { locked } = useAuth();
+  useLiveUpdates();
   return (
     <>
       {/* While locked nothing behind the overlay can be reached by mouse, keyboard or screen reader. */}
@@ -274,6 +310,7 @@ export function AppShell() {
         <Sidebar />
         <div className="flex min-w-0 flex-1 flex-col">
           <TopBar />
+          <OfflineStrip />
           <AlertStrip />
           <main id="main" className="flex-1 overflow-y-auto p-6">
             <Outlet />

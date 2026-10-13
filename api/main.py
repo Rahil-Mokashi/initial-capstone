@@ -45,7 +45,26 @@ def _checkpoint_and_close() -> None:
         connection.engine.dispose()
 
 
+def _refuse_if_this_pc_is_the_main_pc() -> bool:
+    """Two programs writing to one database would break the audit chain: on a Main PC the window must be a Client."""
+    try:
+        from api.lan.config import LanConfigError, load
+
+        return load().mode == "main"
+    except LanConfigError:
+        return True  # an unreadable lan.json is never treated as "no Main PC"
+    except Exception:
+        return False
+
+
 def main() -> int:
+    if len(sys.argv) > 1 and sys.argv[1] == "lan":
+        from api.lan.cli import run as lan_run
+
+        return lan_run(sys.argv[2:])
+    if _refuse_if_this_pc_is_the_main_pc():
+        print("This PC is the Main PC. Open the program in Client mode instead of Single PC mode.", file=sys.stderr)
+        return 3
     secret = os.environ.get("PPERP_API_SECRET", "")
     port_text = os.environ.get("PPERP_API_PORT", "")
     if not secret or not port_text.isdigit():

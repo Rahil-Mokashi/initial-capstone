@@ -8,6 +8,8 @@ import { EmployeeDetailPage } from '@/features/employees/EmployeeDetailPage';
 import { EmployeesPage } from '@/features/employees/EmployeesPage';
 import { AuditPage } from '@/features/audit/AuditPage';
 import { BackupsPage } from '@/features/backups/BackupsPage';
+import { CloseShiftPage } from '@/features/close-shift/CloseShiftPage';
+import { DevicesPage } from '@/features/devices/DevicesPage';
 import { OwnerChoicesPage } from '@/features/settings/OwnerChoicesPage';
 import { SettingsPage } from '@/features/settings/SettingsPage';
 import { FuelPricesPage } from '@/features/fuel-prices/FuelPricesPage';
@@ -83,6 +85,7 @@ export function App() {
             <Route path="/checks" element={<ChecksPage />} />
             <Route path="/bank" element={<BankPage />} />
             <Route path="/shift-close" element={<ShiftClosePage />} />
+            <Route path="/close-shift" element={<CloseShiftPage />} />
             <Route path="/payroll" element={<PayrollPage />} />
             <Route path="/daily-report" element={<DailyReportPage />} />
             <Route path="/lubricants" element={<LubricantsPage />} />
@@ -105,6 +108,7 @@ export function App() {
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/owner-choices" element={<OwnerChoicesPage />} />
             <Route path="/backups" element={<BackupsPage />} />
+            <Route path="/devices" element={<DevicesPage />} />
             <Route path="/audit" element={<AuditPage />} />
             <Route path="/employees" element={<EmployeesPage />} />
             <Route path="/employees/:id" element={<EmployeeDetailPage />} />

@@ -71,6 +71,7 @@ from app.services.attendance_service import AttendanceService
 from app.services.audit_service import AuditService
 from app.services.auth_service import AuthService
 from app.services.backup_service import BackupService
+from app.services.close_desk_service import CloseDeskService
 from app.services.shift_close_service import ShiftCloseService
 from app.services.payroll_checks import PayrollChecks
 from app.services.payroll_service import PayrollService
@@ -517,6 +518,10 @@ class Services:
         return ShiftCloseService(
             self.shifts, self.shift_repo, self.assignment_repo, self.nozzle_repo, self.employee_repo, self.audit_repo, self.auth
         )
+
+    @cached_property
+    def close_desk(self) -> CloseDeskService:
+        return CloseDeskService(self.shift_close, self.tender_entries, self.cash_book, self.daily_report, self.shift_repo, self.pump_settings, self.auth)
 
     @cached_property
     def payroll(self) -> PayrollService:

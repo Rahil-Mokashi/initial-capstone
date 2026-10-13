@@ -23,6 +23,7 @@ class RunChecksAfterWrites(BaseHTTPMiddleware):
             and response.status_code < 400
             and path.startswith("/api")
             and not path.startswith(_SKIP)
+            and not (path.startswith("/api/close-shift/") and path.endswith("/tally"))  # a preview saves nothing
         ):
             self._run(request)
         return response

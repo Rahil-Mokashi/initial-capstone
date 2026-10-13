@@ -53,16 +53,10 @@ export const SHIFT_ENTRY_STEPS: EntryStep[] = [
     permission: 'sale.manage',
   },
   {
-    label: 'Closing readings',
-    hint: 'End master reading of each MS and HSD nozzle, testing litres',
-    to: '/shift-close',
+    label: 'Close shift',
+    hint: 'Closing readings, cash, Card / DTP Card / Phone Pay / PTM totals, and the tally with any shortage - all on one screen',
+    to: '/close-shift',
     permission: 'shift.manage',
-  },
-  {
-    label: 'Card, DTP Card, Phone Pay, PTM',
-    hint: 'Totals per payment mode for the shift',
-    to: '/shift-totals',
-    permission: 'reconciliation.manage',
   },
   {
     label: 'Expenses',

@@ -8,6 +8,9 @@ export interface PrintOptions {
 export interface PperpBridge {
   apiBase: string;
   launchSecret: string;
+  /** 'client' when this PC uses the pump's Main PC over the network. */
+  mode?: 'single' | 'client';
+  shell?: { openNetworkSetup(): Promise<void> };
   files: {
     pickPath(): Promise<string | null>;
     pickFolder(): Promise<string | null>;

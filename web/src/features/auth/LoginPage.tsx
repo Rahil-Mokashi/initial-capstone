@@ -107,7 +107,9 @@ export function LoginPage() {
           </p>
         </div>
         <p className="text-xs text-ink-muted">
-          Works offline. Your data stays on this computer.
+          {window.pperp?.mode === 'client'
+            ? "Works offline. Your data stays on the pump's Main PC."
+            : 'Works offline. Your data stays on this computer.'}
           {device.data?.device ? ` Device: ${device.data.device}.` : ''}
         </p>
       </section>
@@ -125,6 +127,11 @@ export function LoginPage() {
           >
             {locale === 'hi' ? 'EN' : '\u0939\u093F\u0902'}
           </Button>
+          {window.pperp?.shell && (
+            <Button variant="ghost" onClick={() => void window.pperp?.shell?.openNetworkSetup()}>
+              Network setup
+            </Button>
+          )}
           <Button
             variant="ghost"
             aria-label={dark ? 'Switch to light theme' : 'Switch to dark theme'}

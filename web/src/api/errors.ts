@@ -16,6 +16,9 @@ export type ErrorCode =
   | 'password_change_required'
   | 'launch_secret_invalid'
   | 'internal_error'
+  | 'main_pc_unreachable'
+  | 'device_not_recognised'
+  | 'conflict_stale'
   | 'network_error'
   | 'unknown';
 
@@ -61,6 +64,9 @@ const KNOWN: ReadonlySet<string> = new Set<ErrorCode>([
   'password_change_required',
   'launch_secret_invalid',
   'internal_error',
+  'main_pc_unreachable',
+  'device_not_recognised',
+  'conflict_stale',
 ]);
 
 export async function toApiError(res: Response): Promise<ApiError> {

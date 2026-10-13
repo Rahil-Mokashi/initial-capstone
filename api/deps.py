@@ -15,9 +15,24 @@ SECRET_HEADER = "X-Launch-Secret"
 def require_launch_secret(request: Request, x_launch_secret: Optional[str] = Header(default=None)) -> None:
     """Only the process that started the sidecar knows the secret, so other
     local programs cannot call the API. Checked before anything else."""
+    if request.app.state.lan is not None:
+        # Main PC: the device was already recognised by api.lan.guard (certificate + token). Fail closed without it.
+        if "pperp_device" not in request.scope:
+            raise ApiError(403, "device_not_recognised", "This PC is not enrolled on the Main PC.")
+        return
     expected: str = request.app.state.launch_secret
     if x_launch_secret is None or not hmac.compare_digest(x_launch_secret.encode(), expected.encode()):
         raise ApiError(403, "launch_secret_invalid", "Missing or wrong launch secret.")
+
+
+def device_name(request: Request) -> str:
+    """Who is at the keyboard, for the audit log: this PC's name; on a Main PC, the enrolled device and its address."""
+    device = request.scope.get("pperp_device")
+    if device:
+        return f"{device['name']} ({device['ip']})"
+    import platform
+
+    return platform.node() or "unknown-device"
 
 
 def get_db(request: Request) -> Iterator[Session]:

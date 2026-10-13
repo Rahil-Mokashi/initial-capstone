@@ -4,6 +4,7 @@ from .app_setting import AppSetting
 from .attendance import Attendance
 from .audit_log import AuditLog
 from .check_result import CheckExplanation, CheckResult
+from .lan_device import LanDevice
 from .bank import (
     BankAccount,
     BankAccountMode,
@@ -74,6 +75,7 @@ __all__ = [
     "BowserTransfer",
     "CheckExplanation",
     "CheckResult",
+    "LanDevice",
     "CreditAccount",
     "CreditBillDetail",
     "CreditFollowUp",

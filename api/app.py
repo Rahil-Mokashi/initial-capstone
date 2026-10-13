@@ -1,7 +1,6 @@
 """App factory. Everything under /api needs the per-launch secret; everything
 except /api/health, /api/auth/login needs a session token as well."""
 
-import platform
 from pathlib import Path
 from typing import Callable, Optional
 
@@ -11,9 +10,9 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from api.check_hook import RunChecksAfterWrites
-from api.deps import require_launch_secret
-from api.errors import install_error_handlers
-from api.routers import analytics, attendance, audit, backups, bank_recon, bowser, checks, credit_control, daily_report, lubricants, payroll, pump_settings, shift_close, shift_totals, settings as settings_router, auth, credit, dashboard, employees, expenses, reconciliation, reports, fuel_prices, nozzles, procurement, sales, shifts, tanks, terminal, users
+from api.deps import device_name, require_launch_secret
+from api.errors import ApiError, install_error_handlers
+from api.routers import close_desk, devices, analytics, attendance, audit, backups, bank_recon, bowser, checks, credit_control, daily_report, lubricants, payroll, pump_settings, shift_close, shift_totals, settings as settings_router, auth, credit, dashboard, employees, expenses, reconciliation, reports, fuel_prices, nozzles, procurement, sales, shifts, tanks, terminal, users
 
 ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 
@@ -33,6 +32,8 @@ class SecurityHeaders(BaseHTTPMiddleware):
         response.headers["Content-Security-Policy"] = CSP
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Referrer-Policy"] = "no-referrer"
+        if request.app.state.lan is not None:
+            response.headers["Strict-Transport-Security"] = "max-age=31536000"
         response.headers["Cache-Control"] = "no-store" if request.url.path.startswith("/api") else "no-cache"
         return response
 
@@ -43,7 +44,10 @@ def create_app(
     session_timeout_hours: Optional[int] = None,
     web_dir: Optional[Path] = None,
     shutdown_callback: Optional[Callable[[], None]] = None,
+    lan: Optional[object] = None,
 ) -> FastAPI:
+    """`lan` is set only on a Main PC (api.lan.server): the devices service and the allowed host names.
+    Single PC mode never passes it and behaves exactly as before."""
     if not launch_secret:
         raise ValueError("launch_secret is required")
 
@@ -62,11 +66,12 @@ def create_app(
     app.state.session_factory = session_factory
     app.state.session_timeout_hours = session_timeout_hours
     app.state.shutdown_callback = shutdown_callback
+    app.state.lan = lan
 
     # Added last = outermost: host check runs before anything else.
     app.add_middleware(RunChecksAfterWrites)
     app.add_middleware(SecurityHeaders)
-    app.add_middleware(TrustedHostMiddleware, allowed_hosts=ALLOWED_HOSTS)
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=lan.allowed_hosts if lan else ALLOWED_HOSTS)
     install_error_handlers(app)
 
     api = APIRouter(prefix="/api", dependencies=[Depends(require_launch_secret)])
@@ -76,14 +81,16 @@ def create_app(
         return {"status": "ok"}
 
     @api.get("/system/device")
-    def device():
+    def device(request: Request):
         """This computer's name, shown on the sign-in screen (the Qt login screen shows the same)."""
-        return {"device": platform.node() or "unknown-device"}
+        return {"device": device_name(request)}
 
     @api.post("/system/shutdown", status_code=202)
     def shutdown(request: Request):
         """Graceful stop so SQLite checkpoints its WAL. Needs the launch secret only:
         Electron's main process calls this on quit, when nobody is signed in."""
+        if request.app.state.lan is not None:  # nobody on the network may stop the Main PC
+            raise ApiError(404, "not_found", "Not found.")
         callback = request.app.state.shutdown_callback
         if callback is not None:
             callback()
@@ -116,9 +123,11 @@ def create_app(
     api.include_router(lubricants.router)
     api.include_router(payroll.router)
     api.include_router(shift_close.router)
+    api.include_router(close_desk.router)
     api.include_router(bowser.router)
     api.include_router(shift_totals.router)
     api.include_router(pump_settings.router)
+    api.include_router(devices.router)  # answers 404 unless this is a Main PC
     app.include_router(api)
 
     if web_dir is not None and Path(web_dir).is_dir():

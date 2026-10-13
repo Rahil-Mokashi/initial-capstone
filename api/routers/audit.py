@@ -18,6 +18,8 @@ class AuditEntryOut(Out):
     created_at: datetime
     event_type: str
     actor: Optional[str] = None
+    # The PC (and, on a Main PC, its address) the action came from.
+    device: Optional[str] = None
     entity: str
     description: str
 
@@ -50,6 +52,7 @@ def search(
             created_at=e.created_at,
             event_type=e.event_type,
             actor=e.actor.username if e.actor else None,
+            device=e.device_info or None,
             entity=f"{e.entity_type} {e.entity_id}" if e.entity_type else "",
             description=e.description or "",
         )

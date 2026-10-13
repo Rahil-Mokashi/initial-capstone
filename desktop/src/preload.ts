@@ -17,6 +17,12 @@ interface PrintOptions {
 contextBridge.exposeInMainWorld('pperp', {
   apiBase: arg('pperp-api-base'),
   launchSecret: arg('pperp-secret'),
+  // 'client' when this PC uses the pump's Main PC over the network, otherwise 'single'.
+  mode: arg('pperp-mode') === 'client' ? 'client' : 'single',
+  shell: {
+    // Opens the Network setup window (Single PC / Client PC / Main PC) owned by the desktop shell.
+    openNetworkSetup: (): Promise<void> => ipcRenderer.invoke('shell:networkSetup'),
+  },
   files: {
     // Opens the Windows file dialog in the main process; the page only ever receives the chosen path (or null).
     pickPath: (): Promise<string | null> => ipcRenderer.invoke('files:pick'),

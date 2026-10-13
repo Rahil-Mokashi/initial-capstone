@@ -35,6 +35,12 @@ await build({
 
 await build({
   ...common,
+  entryPoints: [resolve(root, 'src/preload-setup.ts')],
+  outfile: resolve(root, 'dist/preload-setup.js'),
+});
+
+await build({
+  ...common,
   entryPoints: [resolve(root, 'src/preload-preview.ts')],
   outfile: resolve(root, 'dist/preload-preview.js'),
 });
@@ -42,4 +48,5 @@ await build({
 mkdirSync(resolve(root, 'dist'), { recursive: true });
 copyFileSync(resolve(root, 'src/error.html'), resolve(root, 'dist/error.html'));
 copyFileSync(resolve(root, 'src/preview.html'), resolve(root, 'dist/preview.html'));
+copyFileSync(resolve(root, 'src/setup.html'), resolve(root, 'dist/setup.html'));
 console.log('desktop build complete');

@@ -989,6 +989,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/close-shift/{shift_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Desk */
+        get: operations["desk_api_close_shift__shift_id__get"];
+        put?: never;
+        /** Close */
+        post: operations["close_api_close_shift__shift_id__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/close-shift/{shift_id}/tally": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Tally
+         * @description What the tally WOULD be with these figures. Nothing is saved.
+         */
+        post: operations["tally_api_close_shift__shift_id__tally_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/credit/accounts": {
         parameters: {
             query?: never;
@@ -1501,6 +1539,74 @@ export interface paths {
         put?: never;
         /** Verify Quality */
         post: operations["verify_quality_api_deliveries__delivery_id__verify_quality_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Devices */
+        get: operations["list_devices_api_devices_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/devices/pairing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start Pairing */
+        post: operations["start_pairing_api_devices_pairing_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/devices/pairing/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel Pairing */
+        post: operations["cancel_pairing_api_devices_pairing_cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/devices/{device_id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revoke */
+        post: operations["revoke_api_devices__device_id__revoke_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3649,6 +3755,8 @@ export interface components {
             created_at: string;
             /** Description */
             description: string;
+            /** Device */
+            device?: string | null;
             /** Entity */
             entity: string;
             /** Event Type */
@@ -4586,6 +4694,126 @@ export interface components {
             bank_name: string;
             /** Shift Id */
             shift_id: string;
+        };
+        /** DeskCashOut */
+        DeskCashOut: {
+            /** Advance */
+            advance: string;
+            /** Final */
+            final: string;
+            /** Recorded */
+            recorded: boolean;
+        };
+        /** DeskIn */
+        DeskIn: {
+            /** Advance */
+            advance?: string | null;
+            /** Final */
+            final?: string | null;
+            /**
+             * Modes
+             * @default []
+             */
+            modes: components["schemas"]["DeskModeIn"][];
+            /**
+             * Readings
+             * @default []
+             */
+            readings: components["schemas"]["ShiftCloseReadingIn"][];
+        };
+        /** DeskLineOut */
+        DeskLineOut: {
+            /** Amount */
+            amount: string;
+            /** Label */
+            label: string;
+        };
+        /** DeskModeIn */
+        DeskModeIn: {
+            /**
+             * Amount
+             * @example 102.50
+             */
+            amount: string;
+            /** Tender Id */
+            tender_id: string;
+        };
+        /** DeskModeOut */
+        DeskModeOut: {
+            /** Amount */
+            amount?: string | null;
+            /** Label */
+            label: string;
+            /** Name */
+            name: string;
+            /** Tender Id */
+            tender_id: string;
+        };
+        /** DeskOut */
+        DeskOut: {
+            cash: components["schemas"]["DeskCashOut"];
+            /** Default Testing */
+            default_testing: string;
+            /** Modes */
+            modes: components["schemas"]["DeskModeOut"][];
+            /** Nozzles */
+            nozzles: components["schemas"]["CloseLineOut"][];
+            /** Shift Id */
+            shift_id: string;
+            tally: components["schemas"]["DeskTallyOut"];
+        };
+        /** DeskTallyOut */
+        DeskTallyOut: {
+            /** Collected */
+            collected: string;
+            /** Credit Count */
+            credit_count: number;
+            /** Difference */
+            difference: string;
+            /** Expenses Count */
+            expenses_count: number;
+            /** Fuel Rs */
+            fuel_rs: string;
+            /** Lines */
+            lines: components["schemas"]["DeskLineOut"][];
+            /** Oil Rs */
+            oil_rs: string;
+            /** Pending Expenses */
+            pending_expenses: number;
+            /** Status */
+            status: string;
+            /** Total Sale */
+            total_sale: string;
+        };
+        /** DeviceOut */
+        DeviceOut: {
+            /**
+             * Enrolled At
+             * Format: date-time
+             */
+            enrolled_at: string;
+            /** Enrolled Ip */
+            enrolled_ip?: string | null;
+            /** Id */
+            id: string;
+            /** Last Ip */
+            last_ip?: string | null;
+            /** Last Seen At */
+            last_seen_at?: string | null;
+            /** Name */
+            name: string;
+            /** Revoke Reason */
+            revoke_reason?: string | null;
+            /** Revoked At */
+            revoked_at?: string | null;
+        };
+        /** DeviceRevokeIn */
+        DeviceRevokeIn: {
+            /**
+             * Reason
+             * @default
+             */
+            reason: string;
         };
         /** DipIn */
         DipIn: {
@@ -5590,6 +5818,21 @@ export interface components {
             outstanding_before: string;
             /** Reason */
             reason: string;
+        };
+        /** PairingCodeOut */
+        PairingCodeOut: {
+            /** Address */
+            address: string;
+            /** Ca Fingerprint */
+            ca_fingerprint: string;
+            /** Code */
+            code: string;
+            /** Minutes */
+            minutes: number;
+            /** Pairing Port */
+            pairing_port: number;
+            /** Port */
+            port: number;
         };
         /** PaymentIn */
         PaymentIn: {
@@ -8992,6 +9235,116 @@ export interface operations {
             };
         };
     };
+    desk_api_close_shift__shift_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                shift_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeskOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    close_api_close_shift__shift_id__post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                shift_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeskIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeskOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    tally_api_close_shift__shift_id__tally_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                shift_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeskIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeskOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_accounts_api_credit_accounts_get: {
         parameters: {
             query?: never;
@@ -10115,6 +10468,138 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DeliveryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_devices_api_devices_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_pairing_api_devices_pairing_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PairingCodeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_pairing_api_devices_pairing_cancel_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_api_devices__device_id__revoke_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeviceRevokeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceOut"];
                 };
             };
             /** @description Validation Error */

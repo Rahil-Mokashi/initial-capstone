@@ -23,7 +23,7 @@ export interface Launched {
 
 export async function launchApp(
   dir: string,
-  opts: { userData?: string; dbPath?: string } = {},
+  opts: { userData?: string; dbPath?: string; env?: Record<string, string> } = {},
 ): Promise<Launched> {
   mkdirSync(dir, { recursive: true });
   const dbPath = opts.dbPath ?? join(dir, 'pump.db');
@@ -42,6 +42,7 @@ export async function launchApp(
     PYTHONUTF8: '1',
     // What the file dialog returns in tests (a native dialog cannot be clicked in an automated run).
     PPERP_E2E_PICK_PATH: 'C:\\docs\\id-proof.pdf',
+    ...opts.env,
   });
 
   const app = await electron.launch({ args: [desktopDir], cwd: desktopDir, env });

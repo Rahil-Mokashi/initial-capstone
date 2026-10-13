@@ -3,12 +3,11 @@
 AuthService is the only authority; this just carries its answers.
 """
 
-import platform
 from typing import Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 
-from api.deps import CurrentUser, current_user_allow_pending, get_services
+from api.deps import CurrentUser, current_user_allow_pending, device_name, get_services
 from api.errors import ApiError
 from api.schemas import ChangePasswordIn, ForgotPasswordIn, LoginIn, LoginOut, ReauthIn, SetPinIn, UserOut
 from api.services import Services
@@ -31,10 +30,10 @@ def user_out(user, last_login: Optional[str] = None) -> UserOut:
 
 
 @router.post("/login", response_model=LoginOut)
-def login(body: LoginIn, services: Services = Depends(get_services)):
-    # The device name is what Qt records in the audit log (platform.node()).
+def login(body: LoginIn, request: Request, services: Services = Depends(get_services)):
+    # The device name is what Qt records in the audit log (platform.node()); on a Main PC it is the enrolled device + address.
     authenticate = services.auth.authenticate_with_pin if body.use_pin else services.auth.authenticate
-    ok, data, error = authenticate(body.username, body.password, device_info=platform.node() or "unknown-device")
+    ok, data, error = authenticate(body.username, body.password, device_info=device_name(request))
     if not ok:
         details = data or {}
         code = "account_locked" if "locked_until" in details else "invalid_credentials"
@@ -65,10 +64,10 @@ def change_password(
 
 @router.post("/reauthenticate", status_code=204)
 def reauthenticate(
-    body: ReauthIn, current: CurrentUser = Depends(current_user_allow_pending), services: Services = Depends(get_services)
+    body: ReauthIn, request: Request, current: CurrentUser = Depends(current_user_allow_pending), services: Services = Depends(get_services)
 ):
     """The lock screen: re-confirm the signed-in person with password or PIN, WITHOUT a new session."""
-    ok, error = services.auth.reauthenticate(current.id, body.credential, use_pin=body.use_pin, device_info=platform.node() or "unknown-device")
+    ok, error = services.auth.reauthenticate(current.id, body.credential, use_pin=body.use_pin, device_info=device_name(request))
     if not ok:
         raise ApiError(401, "invalid_credentials", error or "Could not unlock.")
 

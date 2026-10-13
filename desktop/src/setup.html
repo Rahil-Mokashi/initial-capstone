@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src 'unsafe-inline'; img-src data:"
+    />
+    <title>Network setup - Petrol Pump ERP</title>
+    <style>
+      body { margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; background: #f4f2ed; color: #1b2420; }
+      main { max-width: 760px; margin: 0 auto; padding: 28px 24px 48px; }
+      h1 { font-size: 24px; margin: 0 0 4px; }
+      h2 { font-size: 17px; margin: 0 0 6px; }
+      p, li { color: #55605a; line-height: 1.5; margin: 4px 0; }
+      section { background: #fff; border: 1px solid #e2dfd6; border-radius: 12px; padding: 16px 18px; margin-top: 16px; }
+      label { display: block; font-size: 13px; font-weight: 600; margin: 10px 0 4px; }
+      input { box-sizing: border-box; width: 100%; min-height: 40px; border: 1px solid #c9c5b8; border-radius: 8px; padding: 0 10px; font-size: 15px; }
+      .row { display: flex; gap: 12px; } .row > div { flex: 1; }
+      button { min-height: 42px; padding: 0 18px; border-radius: 10px; border: 1px solid #c9c5b8; background: #fff; font-size: 14px; cursor: pointer; margin: 12px 8px 0 0; }
+      button.primary { background: #1f6f50; border-color: #1f6f50; color: #fff; }
+      button:disabled { opacity: 0.5; cursor: default; }
+      #current { font-weight: 600; color: #1b2420; }
+      .msg { margin-top: 10px; padding: 8px 12px; border-radius: 8px; background: #eef4f0; color: #1b2420; min-height: 20px; }
+      .msg.bad { background: #fbeceb; } .msg:empty { display: none; }
+      #fingerprint { font-family: Consolas, monospace; font-size: 16px; letter-spacing: 1px; background: #f4f2ed; padding: 8px 12px; border-radius: 8px; word-break: break-word; }
+      [hidden] { display: none !important; }
+      code { background: #f4f2ed; padding: 1px 5px; border-radius: 4px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Network setup</h1>
+      <p id="current">Loading...</p>
+
+      <section aria-labelledby="h-single">
+        <h2 id="h-single">Single PC</h2>
+        <p>This PC keeps its own data and works on its own, exactly as before. This is the normal choice for one computer.</p>
+        <button id="use-single">Use this PC on its own</button>
+      </section>
+
+      <section aria-labelledby="h-client">
+        <h2 id="h-client">Client PC</h2>
+        <p>Use the pump's Main PC over the network. This PC keeps no data of its own. The owner presses "Add a device" on the Main PC and gives you a code.</p>
+        <div class="row">
+          <div><label for="host">Main PC address</label><input id="host" autocomplete="off" placeholder="for example 192.168.1.10" /></div>
+          <div><label for="port">Port</label><input id="port" value="8443" inputmode="numeric" /></div>
+          <div><label for="pairing-port">Pairing port</label><input id="pairing-port" value="8444" inputmode="numeric" /></div>
+        </div>
+        <div class="row">
+          <div><label for="device-name">Name for this PC</label><input id="device-name" autocomplete="off" placeholder="for example Counter PC" /></div>
+          <div><label for="code">Pairing code</label><input id="code" autocomplete="off" placeholder="XXXXX-XXXXX" /></div>
+        </div>
+        <button id="check">Check the Main PC</button>
+        <div id="confirm" hidden>
+          <p>The Main PC introduced itself with this fingerprint. It must be the same as the one shown on the owner's screen:</p>
+          <p id="fingerprint"></p>
+          <button id="pair" class="primary">They match - pair this PC</button>
+        </div>
+        <button id="test">Test connection</button>
+        <button id="import">Import a device file...</button>
+        <div id="client-msg" class="msg" role="status"></div>
+      </section>
+
+      <section aria-labelledby="h-main">
+        <h2 id="h-main">Main PC</h2>
+        <p>The Main PC is set up once by whoever installs the system, in an Administrator PowerShell, with <code>scripts\lan\install-main-pc.ps1</code>. It keeps the database and runs all day, with or without a window.</p>
+        <p>The Main PC's own window is a Client too: after installing, run <code>pperp_api.exe lan enrol-local --name "Main PC window" --out device.json</code>, then use "Import a device file" above.</p>
+      </section>
+    </main>
+  </body>
+</html>

@@ -1,5 +1,6 @@
-import { BrowserWindow, Menu, app, dialog, ipcMain, session } from 'electron';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { BrowserWindow, Menu, app, dialog, ipcMain, safeStorage, session } from 'electron';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { hostname } from 'node:os';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { dirname } from 'node:path';
@@ -7,7 +8,22 @@ import { readFileSync } from 'node:fs';
 import { checkInstallPath, tooLongMessage } from './preflight';
 import { listPrinters, printToPdf, printToPrinter, type PrintOptions } from './print';
 import { isAllowedNavigation, isAllowedRequest, type Policy } from './security';
-import { startSidecar, stopSidecar, waitUntilHealthy, type RunningSidecar } from './sidecar';
+import {
+  type DeviceBundle,
+  type RunningProxy,
+  type SecretBox,
+  describeClient,
+  enrol,
+  fetchAuthority,
+  forgetBundle,
+  groupFingerprint,
+  loadBundle,
+  parseBundle,
+  saveBundle,
+  startProxy,
+  testConnection,
+} from './lan-client';
+import { newSecret, startSidecar, stopSidecar, waitUntilHealthy, type RunningSidecar } from './sidecar';
 
 // E2E hooks are inert unless the test harness sets this.
 const E2E = process.env.PPERP_E2E === '1';
@@ -16,14 +32,22 @@ if (process.env.PPERP_USER_DATA) app.setPath('userData', process.env.PPERP_USER_
 
 const errorPage = join(__dirname, 'error.html');
 const previewPage = join(__dirname, 'preview.html');
+const setupPage = join(__dirname, 'setup.html');
 const policy: Policy = {
   allowedOrigins: [],
-  allowedFileUrls: [pathToFileURL(errorPage).href, pathToFileURL(previewPage).href],
+  allowedFileUrls: [
+    pathToFileURL(errorPage).href,
+    pathToFileURL(previewPage).href,
+    pathToFileURL(setupPage).href,
+  ],
 };
 /** The document each open preview window shows, keyed by that window's webContents id. */
 const previews = new Map<number, { html: string; pageSize: PrintOptions['pageSize'] }>();
 
 let sidecar: RunningSidecar | null = null;
+/** Client PC mode: the loopback proxy that carries the device certificate to the Main PC. */
+let proxy: RunningProxy | null = null;
+let setupWindow: BrowserWindow | null = null;
 let mainWindow: BrowserWindow | null = null;
 let errorWindow: BrowserWindow | null = null;
 let quitting = false;
@@ -34,7 +58,8 @@ if (E2E) {
   (globalThis as Record<string, unknown>).__pperp = {
     blocked,
     policy,
-    getOrigin: () => sidecar?.origin,
+    getOrigin: () => sidecar?.origin ?? proxy?.origin,
+    getProxyStatus: () => proxy?.status(),
     getSidecarPid: () => sidecar?.child.pid,
   };
 }
@@ -81,7 +106,30 @@ function sidecarConfig() {
   };
 }
 
-function createMainWindow(running: RunningSidecar): BrowserWindow {
+const secretBox: SecretBox = {
+  available: () => safeStorage.isEncryptionAvailable(),
+  encrypt: (text) => safeStorage.encryptString(text),
+  decrypt: (data) => safeStorage.decryptString(data),
+};
+
+/** True when this PC was installed as the Main PC (lan.json says so, or is unreadable): Single PC mode must not run here. */
+function mainPcHere(): boolean {
+  const dir =
+    process.env.PPERP_LAN_DIR ??
+    join(process.env.ProgramData ?? 'C:\\ProgramData', 'PetrolPumpERP', 'lan');
+  const file = join(dir, 'lan.json');
+  if (!existsSync(file)) return false;
+  try {
+    return (JSON.parse(readFileSync(file, 'utf8')) as { mode?: string }).mode === 'main';
+  } catch {
+    return true;
+  }
+}
+
+function createMainWindow(
+  running: { origin: string; secret: string },
+  mode: 'single' | 'client' = 'single',
+): BrowserWindow {
   const win = new BrowserWindow({
     width: 1360,
     height: 860,
@@ -100,6 +148,7 @@ function createMainWindow(running: RunningSidecar): BrowserWindow {
       additionalArguments: [
         `--pperp-api-base=${running.origin}`,
         `--pperp-secret=${running.secret}`,
+        `--pperp-mode=${mode}`,
       ],
     },
   });
@@ -155,10 +204,42 @@ function installPathProblem(): string | null {
   }
 }
 
+async function launchClient(bundle: DeviceBundle): Promise<void> {
+  try {
+    const running = await startProxy(bundle, newSecret());
+    proxy = running;
+    policy.allowedOrigins = [running.origin];
+    const previousError = errorWindow;
+    mainWindow = createMainWindow(running, 'client');
+    previousError?.destroy();
+  } catch (error) {
+    if (proxy) await proxy.close().catch(() => undefined);
+    proxy = null;
+    showError(error instanceof Error ? error.message : String(error));
+  }
+}
+
 async function launch(): Promise<void> {
   const pathProblem = installPathProblem();
   if (pathProblem) {
     showError(pathProblem);
+    return;
+  }
+  const dir = app.getPath('userData');
+  if (describeClient(dir)) {
+    try {
+      const bundle = loadBundle(dir, secretBox);
+      if (bundle) return await launchClient(bundle);
+    } catch {
+      showError(
+        "This PC's saved connection to the Main PC could not be read. Open Network setup and pair this PC again.",
+      );
+      openSetup();
+      return;
+    }
+  }
+  if (mainPcHere()) {
+    openSetup(); // this PC IS the Main PC: its own window has to be a Client
     return;
   }
   try {
@@ -184,13 +265,131 @@ async function launch(): Promise<void> {
   }
 }
 
-async function restart(): Promise<void> {
+async function stopBackends(): Promise<void> {
   if (sidecar) await stopSidecar(sidecar, 3000).catch(() => undefined);
   sidecar = null;
+  if (proxy) await proxy.close().catch(() => undefined);
+  proxy = null;
+}
+
+async function restart(): Promise<void> {
+  await stopBackends();
   await launch();
 }
 
+function openSetup(): void {
+  if (setupWindow) {
+    setupWindow.focus();
+    return;
+  }
+  setupWindow = new BrowserWindow({
+    width: 820,
+    height: 760,
+    title: 'Network setup - Petrol Pump ERP',
+    backgroundColor: '#f4f2ed',
+    webPreferences: {
+      preload: join(__dirname, 'preload-setup.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+  setupWindow.setMenuBarVisibility(false);
+  setupWindow.on('closed', () => {
+    setupWindow = null;
+  });
+  void setupWindow.loadFile(setupPage);
+}
+
+const HOST_OK = /^(?:\d{1,3}(?:\.\d{1,3}){3}|[A-Za-z0-9](?:[A-Za-z0-9.-]{0,251}[A-Za-z0-9])?)$/;
+function checkTarget(host: unknown, ...ports: unknown[]): string {
+  if (typeof host !== 'string' || !HOST_OK.test(host.trim()))
+    throw new Error('Type the Main PC address like 192.168.1.10.');
+  for (const p of ports)
+    if (!Number.isInteger(p) || (p as number) < 1024 || (p as number) > 65535)
+      throw new Error('A port is a number from 1024 to 65535.');
+  return host.trim();
+}
+
+function registerSetupIpc(): void {
+  // Only the setup window may use these: the application window never can.
+  const guard = (event: Electron.IpcMainInvokeEvent): void => {
+    if (!setupWindow || event.sender.id !== setupWindow.webContents.id) throw new Error('Not allowed.');
+  };
+  ipcMain.handle('shell:networkSetup', (event) => {
+    if (!mainWindow || event.sender.id !== mainWindow.webContents.id) throw new Error('Not allowed.');
+    openSetup();
+  });
+  ipcMain.handle('lan:state', (event) => {
+    guard(event);
+    const client = describeClient(app.getPath('userData'));
+    return { mode: client ? 'client' : 'single', client, mainPcHere: mainPcHere(), defaultDeviceName: hostname() };
+  });
+  ipcMain.handle('lan:fetchCa', async (event, host: unknown, pairingPort: unknown) => {
+    guard(event);
+    const offer = await fetchAuthority(checkTarget(host, pairingPort), pairingPort as number);
+    return { fingerprint: offer.fingerprint, grouped: groupFingerprint(offer.fingerprint) };
+  });
+  ipcMain.handle('lan:enrol', async (event, a: Record<string, unknown>) => {
+    guard(event);
+    const host = checkTarget(a.host, a.port, a.pairingPort);
+    const name = String(a.deviceName ?? '').trim();
+    if (!name || name.length > 80) throw new Error('Give this PC a name (up to 80 letters).');
+    const bundle = await enrol({
+      host,
+      port: a.port as number,
+      pairingPort: a.pairingPort as number,
+      code: String(a.code ?? ''),
+      deviceName: name,
+      confirmedFingerprint: String(a.confirmedFingerprint ?? ''),
+    });
+    saveBundle(app.getPath('userData'), bundle, secretBox);
+    return { ok: true };
+  });
+  ipcMain.handle('lan:test', async (event) => {
+    guard(event);
+    const bundle = loadBundle(app.getPath('userData'), secretBox);
+    return bundle ? testConnection(bundle) : { ok: false, message: 'This PC is not paired yet.' };
+  });
+  ipcMain.handle('lan:importFile', async (event) => {
+    guard(event);
+    const picked =
+      E2E && process.env.PPERP_E2E_DEVICE_FILE
+        ? process.env.PPERP_E2E_DEVICE_FILE
+        : (
+            await dialog.showOpenDialog(setupWindow!, {
+              properties: ['openFile'],
+              filters: [{ name: 'Device file', extensions: ['json'] }],
+            })
+          ).filePaths[0];
+    if (!picked) return { ok: false, cancelled: true };
+    const bundle = parseBundle(readFileSync(picked, 'utf8'));
+    const test = await testConnection(bundle);
+    if (!test.ok) return { ok: false, message: test.message };
+    saveBundle(app.getPath('userData'), bundle, secretBox);
+    return { ok: true, message: "Imported. Delete the device file now: it holds this PC's private key." };
+  });
+  ipcMain.handle('lan:useSingle', async (event) => {
+    guard(event);
+    if (mainPcHere())
+      throw new Error('This PC is the Main PC, so it cannot run on its own. Import a device file instead.');
+    forgetBundle(app.getPath('userData'));
+    await finishSetup();
+  });
+  ipcMain.handle('lan:finish', async (event) => {
+    guard(event);
+    await finishSetup();
+  });
+}
+
+async function finishSetup(): Promise<void> {
+  const window = setupWindow;
+  await restart();
+  window?.destroy();
+}
+
 function registerIpc(): void {
+  registerSetupIpc();
   ipcMain.handle('shell:restart', () => restart());
   ipcMain.handle('shell:quit', () => app.quit());
   ipcMain.handle('files:pick', async (event) => {
@@ -283,7 +482,9 @@ if (!app.requestSingleInstanceLock()) {
     event.preventDefault();
     // Graceful first so SQLite checkpoints its WAL; force-kill only after a timeout.
     const done = sidecar ? stopSidecar(sidecar) : Promise.resolve('already-stopped' as const);
-    void done.finally(() => app.exit(0));
+    void done
+      .finally(() => (proxy ? proxy.close().catch(() => undefined) : undefined))
+      .finally(() => app.exit(0));
   });
 
   app.on('window-all-closed', () => app.quit());

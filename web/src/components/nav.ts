@@ -67,11 +67,12 @@ export const NAV_GROUPS: NavGroup[] = [
         to: '/credit/ageing',
         hideFor: ['DATA_ENTRY'],
       },
-      { label: 'Shift Close', permission: 'shift.manage', to: '/shift-close' },
+      { label: 'Close Shift', permission: 'shift.manage', to: '/close-shift' },
       {
         label: 'Card / Phone Pay totals',
         permission: 'reconciliation.manage',
         to: '/shift-totals',
+        hideFor: ['DATA_ENTRY'],
       },
       { label: 'Expenses', permission: 'expense.view', to: '/expenses' },
       { label: 'Oil / Lubricants', permission: 'lubricant.view', to: '/lubricants' },
@@ -104,6 +105,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: 'Owner Choices', permission: 'owner_choice.manage', to: '/owner-choices' },
       { label: 'Backups', permission: 'backup.manage', to: '/backups' },
+      { label: 'Devices', permission: 'device.manage', to: '/devices' },
       { label: 'Audit Log', permission: 'audit.view', to: '/audit' },
     ],
   },
