@@ -4,7 +4,7 @@ Every business rule the owner has not decided yet is a key here, tagged with
 the questionnaire ID it answers, so the code asks the setting instead of
 hard-coding a guess. Reading needs SETTINGS_VIEW (or no actor at all for
 internal use by the report and check builders); changing needs
-SETTINGS_MANAGE and is audit-logged with old and new value.
+OWNER_CHOICE_MANAGE (owners only) and is audit-logged with old and new value.
 """
 
 from dataclasses import dataclass
@@ -69,7 +69,7 @@ class PumpSettingsService:
         stored = self._repo.all()
         return [(d, stored.get(d.key, d.default)) for d in _DEFS]
 
-    @require_permission(Permission.SETTINGS_MANAGE.value)
+    @require_permission(Permission.OWNER_CHOICE_MANAGE.value)
     def set(self, actor_user_id: str, key: str, value: str) -> str:
         d = DEFS.get(key)
         if d is None:

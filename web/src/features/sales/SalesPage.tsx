@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { useAuth } from '@/auth/AuthContext';
+import { OverrideDialog, isLimitError, type CreditOverride } from '@/features/credit/CreditLimit';
 import { DataTable } from '@/components/DataTable';
 import { DocumentActions } from '@/components/DocumentActions';
 import { PageHeader } from '@/components/PageHeader';
@@ -100,6 +101,11 @@ function RecordSaleDialog({ onClose }: { onClose: () => void }) {
   const create = useCreateSale();
   const createMine = useCreateMySale();
   const [formError, setFormError] = useState<string | null>(null);
+  // A credit bill past the customer's limit, waiting for an owner to allow it (V-14).
+  const [limitIssue, setLimitIssue] = useState<{
+    message: string;
+    send: (o: CreditOverride) => Promise<unknown>;
+  } | null>(null);
   const {
     register,
     handleSubmit,
@@ -140,97 +146,117 @@ function RecordSaleDialog({ onClose }: { onClose: () => void }) {
       reference_number: blank(v.reference_number),
       remarks: blank(v.remarks),
     };
+    const sendFree = (override?: CreditOverride) =>
+      create.mutateAsync({
+        shift_id: v.shift_id,
+        nozzle_id: v.nozzle_id,
+        employee_id: v.employee_id,
+        ...common,
+        ...(override ? { credit_override: override } : {}),
+      });
     try {
-      if (free) {
-        await create.mutateAsync({
-          shift_id: v.shift_id,
-          nozzle_id: v.nozzle_id,
-          employee_id: v.employee_id,
-          ...common,
-        });
-      } else {
-        await createMine.mutateAsync(common);
-      }
+      if (free) await sendFree();
+      else await createMine.mutateAsync(common);
       toast.success('Sale recorded.');
       onClose();
     } catch (error) {
-      setFormError(applyApiError(error, setError, ['quantity', 'payment_method']));
+      if (free && isLimitError(error)) {
+        setLimitIssue({
+          message: error.message,
+          send: async (override) => {
+            await sendFree(override);
+            toast.success("Sale recorded with an owner's approval.");
+            onClose();
+          },
+        });
+      } else {
+        setFormError(applyApiError(error, setError, ['quantity', 'payment_method']));
+      }
     }
   });
 
   return (
-    <FormDialog
-      title="Record sale"
-      submitLabel="Record sale"
-      busy={create.isPending || createMine.isPending}
-      error={formError}
-      onSubmit={submit}
-      onClose={onClose}
-    >
-      {free ? (
-        <>
-          <SelectField label="Shift" {...register('shift_id')}>
-            <option value="">Choose an open shift</option>
-            {o?.shifts.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.label}
-              </option>
-            ))}
-          </SelectField>
-          <SelectField label="Nozzle" {...register('nozzle_id')}>
-            <option value="">Choose a nozzle</option>
-            {o?.nozzles.map((n) => (
-              <option key={n.id} value={n.id}>
-                {n.label}
-              </option>
-            ))}
-          </SelectField>
-          <SelectField label="Attendant" {...register('employee_id')}>
-            <option value="">Choose an attendant</option>
-            {o?.employees.map((e) => (
-              <option key={e.id} value={e.id}>
-                {e.label}
-              </option>
-            ))}
-          </SelectField>
-        </>
-      ) : (
-        o && (
-          <p className="text-sm text-muted">
-            {o.my_assignment
-              ? `Selling from your current assignment: ${o.my_assignment.nozzle ?? ''}`
-              : 'You have no active nozzle assignment - ask a supervisor to assign you one first.'}
-          </p>
-        )
-      )}
-      <DecimalField
-        label="Quantity (L)"
-        error={errors.quantity?.message}
-        {...register('quantity')}
-      />
-      <SelectField label="Payment method" {...register('payment_method')}>
-        {METHODS.map((m) => (
-          <option key={m} value={m}>
-            {titleCase(m)}
-          </option>
-        ))}
-      </SelectField>
-      <SelectField
-        label={method === 'credit' ? 'Customer (required for credit)' : 'Customer'}
-        {...register('customer_id')}
+    <>
+      <FormDialog
+        title="Record sale"
+        submitLabel="Record sale"
+        busy={create.isPending || createMine.isPending}
+        error={formError}
+        onSubmit={submit}
+        onClose={onClose}
       >
-        <option value="">(none)</option>
-        {o?.customers.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.label}
-          </option>
-        ))}
-      </SelectField>
-      {(method === 'upi' || method === 'card') && (
-        <TextField label="UPI/Card reference" {...register('reference_number')} />
+        {free ? (
+          <>
+            <SelectField label="Shift" {...register('shift_id')}>
+              <option value="">Choose an open shift</option>
+              {o?.shifts.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.label}
+                </option>
+              ))}
+            </SelectField>
+            <SelectField label="Nozzle" {...register('nozzle_id')}>
+              <option value="">Choose a nozzle</option>
+              {o?.nozzles.map((n) => (
+                <option key={n.id} value={n.id}>
+                  {n.label}
+                </option>
+              ))}
+            </SelectField>
+            <SelectField label="Attendant" {...register('employee_id')}>
+              <option value="">Choose an attendant</option>
+              {o?.employees.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.label}
+                </option>
+              ))}
+            </SelectField>
+          </>
+        ) : (
+          o && (
+            <p className="text-sm text-muted">
+              {o.my_assignment
+                ? `Selling from your current assignment: ${o.my_assignment.nozzle ?? ''}`
+                : 'You have no active nozzle assignment - ask a supervisor to assign you one first.'}
+            </p>
+          )
+        )}
+        <DecimalField
+          label="Quantity (L)"
+          error={errors.quantity?.message}
+          {...register('quantity')}
+        />
+        <SelectField label="Payment method" {...register('payment_method')}>
+          {METHODS.map((m) => (
+            <option key={m} value={m}>
+              {titleCase(m)}
+            </option>
+          ))}
+        </SelectField>
+        <SelectField
+          label={method === 'credit' ? 'Customer (required for credit)' : 'Customer'}
+          {...register('customer_id')}
+        >
+          <option value="">(none)</option>
+          {o?.customers.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.label}
+            </option>
+          ))}
+        </SelectField>
+        {(method === 'upi' || method === 'card') && (
+          <TextField label="UPI/Card reference" {...register('reference_number')} />
+        )}
+        <TextField label="Remarks" optional {...register('remarks')} />
+      </FormDialog>
+      {limitIssue && (
+        <OverrideDialog
+          message={limitIssue.message}
+          onClose={() => setLimitIssue(null)}
+          onConfirm={limitIssue.send}
+        />
       )}
-      <TextField label="Remarks" optional {...register('remarks')} />
-    </FormDialog>
+    </>
   );
 }
 

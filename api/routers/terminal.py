@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends
 
 from api.deps import CurrentUser, current_user, get_services
 from api.routers.sales import IdLabel, SaleOut, sale_out
-from api.schemas import In, MoneyIn, MoneyOut, Out, VolumeIn
+from api.schemas import CreditOverrideIn, In, MoneyIn, MoneyOut, Out, VolumeIn
 from api.services import Services
 from app.core.constants import PaymentMethod, Permission
 from app.database.base import StatusEnum
@@ -53,6 +53,8 @@ class TerminalSaleIn(In):
     shift_id: Optional[str] = None
     nozzle_id: Optional[str] = None
     employee_id: Optional[str] = None
+    # An owner allowing this credit sale past the customer's limit (V-14); only used when the limit is passed.
+    credit_override: Optional[CreditOverrideIn] = None
 
 
 def _nozzle(n) -> TerminalNozzle:
@@ -127,4 +129,4 @@ def terminal_sale(body: TerminalSaleIn, user: CurrentUser = Depends(current_user
         reference_number=body.reference_number,
         remarks=body.remarks,
     )
-    return sale_out(services, user.id, services.sales.create_sale(user.id, data))
+    return sale_out(services, user.id, services.create_credit_aware_sale(user.id, data, body.credit_override))

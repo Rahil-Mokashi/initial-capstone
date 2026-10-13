@@ -45,6 +45,19 @@ describe('Today, by role', () => {
           }),
         'GET /api/dashboard/summary': () =>
           json(200, { open_shifts_count: 1, open_shift_labels: ['Morning'] }),
+        'GET /api/credit/chase': () =>
+          json(200, [
+            {
+              customer_id: 'c2',
+              name: 'B',
+              reason: 'promise',
+              detail: 'Promised to pay today',
+              promised_date: '2026-10-12',
+              promised_amount: '5000.00',
+              balance: '9000.00',
+              follow_up_id: 'f1',
+            },
+          ]),
         'GET /api/credit/accounts': () =>
           json(200, [
             {
@@ -72,6 +85,7 @@ describe('Today, by role', () => {
     expect(await screen.findByText('Morning shift open')).toBeInTheDocument();
     expect(await screen.findByText('₹0.30')).toBeInTheDocument(); // exact sum, no 0.30000000000000004
     expect(screen.getByText('2 credit customers, 1 overdue')).toBeInTheDocument();
+    expect(await screen.findByText(/Promised to pay today/)).toBeInTheDocument(); // the promised-date reminder
   });
 
   it('shows the cashier only the shift entry list, in order, in the staff words', async () => {

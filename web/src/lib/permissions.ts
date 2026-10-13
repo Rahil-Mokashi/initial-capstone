@@ -41,9 +41,13 @@ export const P = {
   LEAVE_APPROVE: 'leave.approve',
   CHECK_VIEW: 'check.view',
   CHECK_EXPLAIN: 'check.explain',
+  OWNER_CHOICE_MANAGE: 'owner_choice.manage',
   DAILY_REPORT_VIEW: 'daily_report.view',
   LUBRICANT_VIEW: 'lubricant.view',
   LUBRICANT_MANAGE: 'lubricant.manage',
   BOWSER_VIEW: 'bowser.view',
   BOWSER_MANAGE: 'bowser.manage',
+  CREDIT_APPROVE: 'credit.approve',
+  CREDIT_OVERRIDE: 'credit.override',
+  CREDIT_RECOVERY: 'credit.recovery',
 } as const;

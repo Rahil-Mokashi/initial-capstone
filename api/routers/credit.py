@@ -103,6 +103,7 @@ def list_accounts(user: CurrentUser = Depends(current_user), services: Services 
 @router.post("/credit/accounts", response_model=AccountOut, status_code=201)
 def open_account(body: AccountIn, user: CurrentUser = Depends(current_user), services: Services = Depends(get_services)):
     a = services.credit.create_credit_account(user.id, CreditAccountCreate(**body.model_dump()))
+    services.credit_control.on_account_created(user.id, a.customer_id)  # V-10: who allowed this customer credit
     return _account(services, user.id, a)
 
 

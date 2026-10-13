@@ -97,4 +97,7 @@ def test_pump_settings_read_and_owner_only_write(client, owner, manager, data_en
     assert ok.status_code == 200 and ok.json()["value"] == "block"
     assert client.put("/api/pump-settings/credit_over_limit", headers=owner, json={"value": "nope"}).status_code == 422
     assert client.put("/api/pump-settings/credit_over_limit", headers=data_entry, json={"value": "warn"}).status_code == 403
+    # the owners' rules are the owners' to change: a manager (who can edit the company profile) cannot
+    assert client.put("/api/pump-settings/credit_over_limit", headers=manager, json={"value": "warn"}).status_code == 403
+    assert client.get("/api/pump-settings", headers=manager).status_code == 200
     assert audit_events(session_factory, "pump_setting_changed")

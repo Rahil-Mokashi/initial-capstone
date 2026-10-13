@@ -697,6 +697,213 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/credit/ageing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ageing */
+        get: operations["ageing_api_credit_ageing_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/credit/approvals/{customer_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Decide */
+        post: operations["decide_api_credit_approvals__customer_id__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/credit/approvers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Approvers */
+        get: operations["approvers_api_credit_approvers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/credit/bills/{sale_id}/details": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Bill Details */
+        put: operations["bill_details_api_credit_bills__sale_id__details_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/credit/chase": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Chase */
+        get: operations["chase_api_credit_chase_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/credit/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Check Limit
+         * @description Balance and limit while a credit bill is being typed: what the customer owes, and what this bill would make it.
+         */
+        get: operations["check_limit_api_credit_check_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/credit/customers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Customers */
+        get: operations["customers_api_credit_customers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/credit/customers/{customer_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Customer Detail */
+        get: operations["customer_detail_api_credit_customers__customer_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/credit/customers/{customer_id}/follow-ups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add Follow Up */
+        post: operations["add_follow_up_api_credit_customers__customer_id__follow_ups_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/credit/customers/{customer_id}/statement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Customer Statement */
+        get: operations["customer_statement_api_credit_customers__customer_id__statement_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/credit/customers/{customer_id}/statement.{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Customer Statement File */
+        get: operations["customer_statement_file_api_credit_customers__customer_id__statement__kind__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/credit/follow-ups/{follow_up_id}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Close Follow Up */
+        post: operations["close_follow_up_api_credit_follow_ups__follow_up_id__close_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/credit/payments": {
         parameters: {
             query?: never;
@@ -2612,6 +2819,49 @@ export interface components {
             /** Username */
             username: string;
         };
+        /** AgeingOut */
+        AgeingOut: {
+            /**
+             * As Of
+             * Format: date
+             */
+            as_of: string;
+            /** Bucket Names */
+            bucket_names: string[];
+            /** Rows */
+            rows: components["schemas"]["AgeingRowOut"][];
+            /** Total Balance */
+            total_balance: string;
+            /** Totals */
+            totals: {
+                [key: string]: string;
+            };
+        };
+        /** AgeingRowOut */
+        AgeingRowOut: {
+            /** Balance */
+            balance: string;
+            /** Buckets */
+            buckets: {
+                [key: string]: string;
+            };
+            /** Credit Limit */
+            credit_limit?: string | null;
+            /** Customer Id */
+            customer_id: string;
+            /** Name */
+            name: string;
+            /** Oldest Unpaid Age */
+            oldest_unpaid_age?: number | null;
+            /** Oldest Unpaid Date */
+            oldest_unpaid_date?: string | null;
+            /** Oldest Unpaid Ref */
+            oldest_unpaid_ref?: string | null;
+            /** Over Limit */
+            over_limit: boolean;
+            /** Overdue */
+            overdue: boolean;
+        };
         /** AlertOut */
         AlertOut: {
             /** Action */
@@ -2674,6 +2924,13 @@ export interface components {
              * @default
              */
             remarks: string;
+        };
+        /** ApproverOut */
+        ApproverOut: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
         };
         /** ArrivalIn */
         ArrivalIn: {
@@ -2817,6 +3074,13 @@ export interface components {
             /** Size Bytes */
             size_bytes: number;
         };
+        /** BillDetailsIn */
+        BillDetailsIn: {
+            /** Slip No */
+            slip_no?: string | null;
+            /** Vehicle No */
+            vehicle_no?: string | null;
+        };
         /** BillIn */
         BillIn: {
             /**
@@ -2851,8 +3115,8 @@ export interface components {
             /** Vehicle No */
             vehicle_no?: string | null;
         };
-        /** BillOut */
-        BillOut: {
+        /** BowserBillOut */
+        BowserBillOut: {
             /** Amount */
             amount: string;
             /** Bill No */
@@ -2881,6 +3145,14 @@ export interface components {
             day_report: {
                 [key: string]: unknown;
             };
+        };
+        /** BowserVoidIn */
+        BowserVoidIn: {
+            /**
+             * Reason
+             * @default No reason given
+             */
+            reason: string;
         };
         /** CancelAssignmentIn */
         CancelAssignmentIn: {
@@ -3007,6 +3279,14 @@ export interface components {
             /** Value */
             value: string;
         };
+        /** CloseFollowUpIn */
+        CloseFollowUpIn: {
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "kept" | "broken" | "cancelled";
+        };
         /** CloseShiftIn */
         CloseShiftIn: {
             /** Notes */
@@ -3056,6 +3336,81 @@ export interface components {
             shift_id?: string | null;
             status?: components["schemas"]["AttendanceStatus"] | null;
         };
+        /** CreditDoneOut */
+        CreditDoneOut: {
+            /** Id */
+            id: string;
+        };
+        /**
+         * CreditOverrideIn
+         * @description An owner allowing one credit sale past the limit: who, their own password (or PIN) and why (V-14).
+         */
+        CreditOverrideIn: {
+            /** Approver Id */
+            approver_id: string;
+            /** Credential */
+            credential: string;
+            /**
+             * Reason
+             * @default No reason given
+             */
+            reason: string;
+            /**
+             * Use Pin
+             * @default false
+             */
+            use_pin: boolean;
+        };
+        /** CustomerDetailOut */
+        CustomerDetailOut: {
+            /** Approval */
+            approval: string;
+            /** Approved At */
+            approved_at?: string | null;
+            /** Approved By */
+            approved_by?: string | null;
+            /** Available */
+            available?: string | null;
+            /** Average Days To Pay */
+            average_days_to_pay?: string | null;
+            /** Balance */
+            balance: string;
+            /** Bills */
+            bills: components["schemas"]["LedgerBillOut"][];
+            /** Buckets */
+            buckets: {
+                [key: string]: string;
+            };
+            /** Credit Limit */
+            credit_limit?: string | null;
+            /** Customer Id */
+            customer_id: string;
+            /** Follow Ups */
+            follow_ups: components["schemas"]["FollowUpOut"][];
+            /** Largest Outstanding Ever */
+            largest_outstanding_ever: string;
+            /** Name */
+            name: string;
+            oldest_unpaid?: components["schemas"]["LedgerBillOut"] | null;
+            /** Overdue */
+            overdue: boolean;
+            /** Overdue Days */
+            overdue_days: number;
+            /** Overrides */
+            overrides: components["schemas"]["OverrideRowOut"][];
+            /** Payment Due Days */
+            payment_due_days?: number | null;
+            /** Payments */
+            payments: components["schemas"]["PaymentRowOut"][];
+            /** Phone */
+            phone?: string | null;
+            /** Total Billed */
+            total_billed: string;
+            /** Total Paid */
+            total_paid: string;
+            /** Unapplied */
+            unapplied: string;
+        };
         /** CustomerIn */
         CustomerIn: {
             /** Address */
@@ -3104,6 +3459,55 @@ export interface components {
             /** Id */
             id: string;
         };
+        /** CustomerRowOut */
+        CustomerRowOut: {
+            /** Approval */
+            approval: string;
+            /** Available */
+            available?: string | null;
+            /** Balance */
+            balance: string;
+            /** Credit Limit */
+            credit_limit?: string | null;
+            /** Customer Id */
+            customer_id: string;
+            /** Name */
+            name: string;
+            /** Oldest Unpaid Age */
+            oldest_unpaid_age?: number | null;
+            /** Overdue */
+            overdue: boolean;
+            /** Overdue Days */
+            overdue_days: number;
+        };
+        /** CustomerStatementOut */
+        CustomerStatementOut: {
+            /** Bills */
+            bills: components["schemas"]["LedgerBillOut"][];
+            /** Closing Balance */
+            closing_balance: string;
+            /** Customer Id */
+            customer_id: string;
+            /**
+             * Date From
+             * Format: date
+             */
+            date_from: string;
+            /**
+             * Date To
+             * Format: date
+             */
+            date_to: string;
+            /** Lines */
+            lines: {
+                [key: string]: unknown;
+            }[];
+            /** Name */
+            name: string;
+            /** Opening Balance */
+            opening_balance: string;
+            report: components["schemas"]["ReportView"];
+        };
         /** CustomerStatusIn */
         CustomerStatusIn: {
             /**
@@ -3139,6 +3543,16 @@ export interface components {
             /** Results */
             results: components["schemas"]["CheckOut"][];
             summary: components["schemas"]["ChecksSummaryOut"];
+        };
+        /** DecideIn */
+        DecideIn: {
+            /** Approve */
+            approve: boolean;
+            /**
+             * Note
+             * @default No reason given
+             */
+            note: string;
         };
         /** DeliveryOut */
         DeliveryOut: {
@@ -3241,6 +3655,25 @@ export interface components {
         DoneOut: {
             /** Id */
             id: string;
+        };
+        /** DueOut */
+        DueOut: {
+            /** Balance */
+            balance: string;
+            /** Customer Id */
+            customer_id: string;
+            /** Detail */
+            detail: string;
+            /** Follow Up Id */
+            follow_up_id?: string | null;
+            /** Name */
+            name: string;
+            /** Promised Amount */
+            promised_amount?: string | null;
+            /** Promised Date */
+            promised_date?: string | null;
+            /** Reason */
+            reason: string;
         };
         /** EmployeeCreateIn */
         EmployeeCreateIn: {
@@ -3441,6 +3874,46 @@ export interface components {
             employees: components["schemas"]["Choice"][];
             /** Nozzles */
             nozzles: components["schemas"]["Choice"][];
+        };
+        /** FollowUpIn */
+        FollowUpIn: {
+            /** Followed On */
+            followed_on?: string | null;
+            /**
+             * Method
+             * @enum {string}
+             */
+            method: "call" | "visit" | "message" | "other";
+            /** Note */
+            note?: string | null;
+            /** Promised Amount */
+            promised_amount?: string | null;
+            /** Promised Date */
+            promised_date?: string | null;
+        };
+        /** FollowUpOut */
+        FollowUpOut: {
+            /** By */
+            by?: string | null;
+            /** Customer Id */
+            customer_id: string;
+            /**
+             * Followed On
+             * Format: date
+             */
+            followed_on: string;
+            /** Id */
+            id: string;
+            /** Method */
+            method: string;
+            /** Note */
+            note?: string | null;
+            /** Promised Amount */
+            promised_amount?: string | null;
+            /** Promised Date */
+            promised_date?: string | null;
+            /** Status */
+            status: string;
         };
         /** ForecastOut */
         ForecastOut: {
@@ -3668,6 +4141,59 @@ export interface components {
              * @default No reason given
              */
             reason: string;
+        };
+        /** LedgerBillOut */
+        LedgerBillOut: {
+            /** Age Days */
+            age_days: number;
+            /** Amount */
+            amount: string;
+            /**
+             * Bill Date
+             * Format: date
+             */
+            bill_date: string;
+            /** Days To Pay */
+            days_to_pay?: number | null;
+            /** Kind */
+            kind: string;
+            /** Outstanding */
+            outstanding: string;
+            /** Paid */
+            paid: string;
+            /** Ref */
+            ref: string;
+            /** Sale Id */
+            sale_id?: string | null;
+            /** Slip No */
+            slip_no?: string | null;
+            /** Vehicle No */
+            vehicle_no?: string | null;
+        };
+        /** LimitCheckOut */
+        LimitCheckOut: {
+            /** Approval */
+            approval: string;
+            /** Available */
+            available?: string | null;
+            /** Credit Limit */
+            credit_limit?: string | null;
+            /** Customer Id */
+            customer_id: string;
+            /** Customer Name */
+            customer_name: string;
+            /** Mode */
+            mode: string;
+            /** Outstanding */
+            outstanding: string;
+            /** Over Limit */
+            over_limit: boolean;
+            /** Problem */
+            problem?: string | null;
+            /** This Bill */
+            this_bill: string;
+            /** Would Become */
+            would_become: string;
         };
         /** LimitIn */
         LimitIn: {
@@ -4047,6 +4573,21 @@ export interface components {
             /** Suppliers */
             suppliers: components["schemas"]["IdLabel"][];
         };
+        /** OverrideRowOut */
+        OverrideRowOut: {
+            /** Amount */
+            amount: string;
+            /** Approved By */
+            approved_by: string;
+            /** Created At */
+            created_at: string;
+            /** Credit Limit */
+            credit_limit: string;
+            /** Outstanding Before */
+            outstanding_before: string;
+            /** Reason */
+            reason: string;
+        };
         /** PaymentIn */
         PaymentIn: {
             /**
@@ -4099,6 +4640,20 @@ export interface components {
             reference?: string | null;
             /** Remarks */
             remarks?: string | null;
+        };
+        /** PaymentRowOut */
+        PaymentRowOut: {
+            /** Amount */
+            amount: string;
+            /** Method */
+            method: string;
+            /**
+             * Pay Date
+             * Format: date
+             */
+            pay_date: string;
+            /** Reference */
+            reference?: string | null;
         };
         /** PaymentStatusOut */
         PaymentStatusOut: {
@@ -4444,6 +4999,7 @@ export interface components {
         };
         /** SaleIn */
         SaleIn: {
+            credit_override?: components["schemas"]["CreditOverrideIn"] | null;
             /** Customer Id */
             customer_id?: string | null;
             /** Employee Id */
@@ -4875,6 +5431,7 @@ export interface components {
          * @description `mode` says what `value` is: rupees (the quantity is value / rate, as Qt does) or litres.
          */
         TerminalSaleIn: {
+            credit_override?: components["schemas"]["CreditOverrideIn"] | null;
             /** Customer Id */
             customer_id?: string | null;
             /** Employee Id */
@@ -5075,14 +5632,6 @@ export interface components {
             intact: boolean;
             /** Problems */
             problems: string[];
-        };
-        /** VoidIn */
-        VoidIn: {
-            /**
-             * Reason
-             * @default No reason given
-             */
-            reason: string;
         };
     };
     responses: never;
@@ -5934,7 +6483,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["BillOut"];
+                    "application/json": components["schemas"]["BowserBillOut"];
                 };
             };
             /** @description Validation Error */
@@ -5962,7 +6511,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["VoidIn"];
+                "application/json": components["schemas"]["BowserVoidIn"];
             };
         };
         responses: {
@@ -5972,7 +6521,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["BillOut"];
+                    "application/json": components["schemas"]["BowserBillOut"];
                 };
             };
             /** @description Validation Error */
@@ -6569,6 +7118,436 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ageing_api_credit_ageing_get: {
+        parameters: {
+            query?: {
+                as_of?: string | null;
+            };
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgeingOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decide_api_credit_approvals__customer_id__post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                customer_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DecideIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreditDoneOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approvers_api_credit_approvers_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApproverOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bill_details_api_credit_bills__sale_id__details_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                sale_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BillDetailsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreditDoneOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    chase_api_credit_chase_get: {
+        parameters: {
+            query?: {
+                as_of?: string | null;
+            };
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DueOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    check_limit_api_credit_check_get: {
+        parameters: {
+            query: {
+                customer_id: string;
+                amount: string;
+            };
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LimitCheckOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    customers_api_credit_customers_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerRowOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    customer_detail_api_credit_customers__customer_id__get: {
+        parameters: {
+            query?: {
+                as_of?: string | null;
+            };
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                customer_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_follow_up_api_credit_customers__customer_id__follow_ups_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                customer_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FollowUpIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FollowUpOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    customer_statement_api_credit_customers__customer_id__statement_get: {
+        parameters: {
+            query: {
+                date_from: string;
+                date_to: string;
+            };
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                customer_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerStatementOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    customer_statement_file_api_credit_customers__customer_id__statement__kind__get: {
+        parameters: {
+            query: {
+                date_from: string;
+                date_to: string;
+            };
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                customer_id: string;
+                kind: "pdf" | "xlsx";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    close_follow_up_api_credit_follow_ups__follow_up_id__close_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                follow_up_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CloseFollowUpIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FollowUpOut"];
                 };
             };
             /** @description Validation Error */

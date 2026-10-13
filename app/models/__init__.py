@@ -6,6 +6,7 @@ from .audit_log import AuditLog
 from .check_result import CheckExplanation, CheckResult
 from .bowser import BowserBill, BowserMeterReading, BowserOpening, BowserTransfer
 from .credit_account import CreditAccount
+from .credit_recovery import CreditBillDetail, CreditFollowUp, CreditLimitOverride, CustomerApproval
 from .customer import Customer
 from .customer_payment import CustomerPayment
 from .dispenser import Dispenser
@@ -55,6 +56,10 @@ __all__ = [
     "CheckExplanation",
     "CheckResult",
     "CreditAccount",
+    "CreditBillDetail",
+    "CreditFollowUp",
+    "CreditLimitOverride",
+    "CustomerApproval",
     "Customer",
     "CustomerPayment",
     "Dispenser",

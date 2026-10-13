@@ -111,6 +111,135 @@
         "title": "ActorOut",
         "type": "object"
       },
+      "AgeingOut": {
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "bucket_names": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Bucket Names",
+            "type": "array"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/AgeingRowOut"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "total_balance": {
+            "title": "Total Balance",
+            "type": "string"
+          },
+          "totals": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Totals",
+            "type": "object"
+          }
+        },
+        "required": [
+          "as_of",
+          "bucket_names",
+          "rows",
+          "totals",
+          "total_balance"
+        ],
+        "title": "AgeingOut",
+        "type": "object"
+      },
+      "AgeingRowOut": {
+        "properties": {
+          "balance": {
+            "title": "Balance",
+            "type": "string"
+          },
+          "buckets": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Buckets",
+            "type": "object"
+          },
+          "credit_limit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credit Limit"
+          },
+          "customer_id": {
+            "title": "Customer Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "oldest_unpaid_age": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oldest Unpaid Age"
+          },
+          "oldest_unpaid_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oldest Unpaid Date"
+          },
+          "oldest_unpaid_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oldest Unpaid Ref"
+          },
+          "over_limit": {
+            "title": "Over Limit",
+            "type": "boolean"
+          },
+          "overdue": {
+            "title": "Overdue",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "customer_id",
+          "name",
+          "balance",
+          "buckets",
+          "over_limit",
+          "overdue"
+        ],
+        "title": "AgeingRowOut",
+        "type": "object"
+      },
       "AlertOut": {
         "properties": {
           "action": {
@@ -351,6 +480,24 @@
           }
         },
         "title": "ApproveIn",
+        "type": "object"
+      },
+      "ApproverOut": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "ApproverOut",
         "type": "object"
       },
       "ArrivalIn": {
@@ -807,6 +954,35 @@
         "title": "BackupOut",
         "type": "object"
       },
+      "BillDetailsIn": {
+        "additionalProperties": false,
+        "properties": {
+          "slip_no": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slip No"
+          },
+          "vehicle_no": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vehicle No"
+          }
+        },
+        "title": "BillDetailsIn",
+        "type": "object"
+      },
       "BillIn": {
         "additionalProperties": false,
         "properties": {
@@ -892,7 +1068,7 @@
         "title": "BillIn",
         "type": "object"
       },
-      "BillOut": {
+      "BowserBillOut": {
         "properties": {
           "amount": {
             "title": "Amount",
@@ -937,7 +1113,7 @@
           "total",
           "status"
         ],
-        "title": "BillOut",
+        "title": "BowserBillOut",
         "type": "object"
       },
       "BowserDayOut": {
@@ -958,6 +1134,19 @@
           "day_report"
         ],
         "title": "BowserDayOut",
+        "type": "object"
+      },
+      "BowserVoidIn": {
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "default": "No reason given",
+            "maxLength": 1000,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "title": "BowserVoidIn",
         "type": "object"
       },
       "CancelAssignmentIn": {
@@ -1283,6 +1472,25 @@
         "title": "Choice",
         "type": "object"
       },
+      "CloseFollowUpIn": {
+        "additionalProperties": false,
+        "properties": {
+          "outcome": {
+            "enum": [
+              "kept",
+              "broken",
+              "cancelled"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          }
+        },
+        "required": [
+          "outcome"
+        ],
+        "title": "CloseFollowUpIn",
+        "type": "object"
+      },
       "CloseShiftIn": {
         "additionalProperties": false,
         "properties": {
@@ -1411,6 +1619,236 @@
           }
         },
         "title": "CorrectIn",
+        "type": "object"
+      },
+      "CreditDoneOut": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "CreditDoneOut",
+        "type": "object"
+      },
+      "CreditOverrideIn": {
+        "additionalProperties": false,
+        "description": "An owner allowing one credit sale past the limit: who, their own password (or PIN) and why (V-14).",
+        "properties": {
+          "approver_id": {
+            "title": "Approver Id",
+            "type": "string"
+          },
+          "credential": {
+            "minLength": 1,
+            "title": "Credential",
+            "type": "string"
+          },
+          "reason": {
+            "default": "No reason given",
+            "maxLength": 1000,
+            "title": "Reason",
+            "type": "string"
+          },
+          "use_pin": {
+            "default": false,
+            "title": "Use Pin",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "approver_id",
+          "credential"
+        ],
+        "title": "CreditOverrideIn",
+        "type": "object"
+      },
+      "CustomerDetailOut": {
+        "properties": {
+          "approval": {
+            "title": "Approval",
+            "type": "string"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "approved_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By"
+          },
+          "available": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Available"
+          },
+          "average_days_to_pay": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Average Days To Pay"
+          },
+          "balance": {
+            "title": "Balance",
+            "type": "string"
+          },
+          "bills": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerBillOut"
+            },
+            "title": "Bills",
+            "type": "array"
+          },
+          "buckets": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Buckets",
+            "type": "object"
+          },
+          "credit_limit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credit Limit"
+          },
+          "customer_id": {
+            "title": "Customer Id",
+            "type": "string"
+          },
+          "follow_ups": {
+            "items": {
+              "$ref": "#/components/schemas/FollowUpOut"
+            },
+            "title": "Follow Ups",
+            "type": "array"
+          },
+          "largest_outstanding_ever": {
+            "title": "Largest Outstanding Ever",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "oldest_unpaid": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LedgerBillOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "overdue": {
+            "title": "Overdue",
+            "type": "boolean"
+          },
+          "overdue_days": {
+            "title": "Overdue Days",
+            "type": "integer"
+          },
+          "overrides": {
+            "items": {
+              "$ref": "#/components/schemas/OverrideRowOut"
+            },
+            "title": "Overrides",
+            "type": "array"
+          },
+          "payment_due_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Due Days"
+          },
+          "payments": {
+            "items": {
+              "$ref": "#/components/schemas/PaymentRowOut"
+            },
+            "title": "Payments",
+            "type": "array"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "total_billed": {
+            "title": "Total Billed",
+            "type": "string"
+          },
+          "total_paid": {
+            "title": "Total Paid",
+            "type": "string"
+          },
+          "unapplied": {
+            "title": "Unapplied",
+            "type": "string"
+          }
+        },
+        "required": [
+          "customer_id",
+          "name",
+          "balance",
+          "total_billed",
+          "total_paid",
+          "unapplied",
+          "largest_outstanding_ever",
+          "overdue",
+          "overdue_days",
+          "buckets",
+          "approval",
+          "bills",
+          "payments",
+          "follow_ups",
+          "overrides"
+        ],
+        "title": "CustomerDetailOut",
         "type": "object"
       },
       "CustomerIn": {
@@ -1583,6 +2021,138 @@
         "title": "CustomerPaymentOut",
         "type": "object"
       },
+      "CustomerRowOut": {
+        "properties": {
+          "approval": {
+            "title": "Approval",
+            "type": "string"
+          },
+          "available": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Available"
+          },
+          "balance": {
+            "title": "Balance",
+            "type": "string"
+          },
+          "credit_limit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credit Limit"
+          },
+          "customer_id": {
+            "title": "Customer Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "oldest_unpaid_age": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oldest Unpaid Age"
+          },
+          "overdue": {
+            "title": "Overdue",
+            "type": "boolean"
+          },
+          "overdue_days": {
+            "title": "Overdue Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "customer_id",
+          "name",
+          "balance",
+          "overdue",
+          "overdue_days",
+          "approval"
+        ],
+        "title": "CustomerRowOut",
+        "type": "object"
+      },
+      "CustomerStatementOut": {
+        "properties": {
+          "bills": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerBillOut"
+            },
+            "title": "Bills",
+            "type": "array"
+          },
+          "closing_balance": {
+            "title": "Closing Balance",
+            "type": "string"
+          },
+          "customer_id": {
+            "title": "Customer Id",
+            "type": "string"
+          },
+          "date_from": {
+            "format": "date",
+            "title": "Date From",
+            "type": "string"
+          },
+          "date_to": {
+            "format": "date",
+            "title": "Date To",
+            "type": "string"
+          },
+          "lines": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "opening_balance": {
+            "title": "Opening Balance",
+            "type": "string"
+          },
+          "report": {
+            "$ref": "#/components/schemas/ReportView"
+          }
+        },
+        "required": [
+          "customer_id",
+          "name",
+          "date_from",
+          "date_to",
+          "opening_balance",
+          "closing_balance",
+          "lines",
+          "bills",
+          "report"
+        ],
+        "title": "CustomerStatementOut",
+        "type": "object"
+      },
       "CustomerStatusIn": {
         "additionalProperties": false,
         "properties": {
@@ -1656,6 +2226,26 @@
           "results"
         ],
         "title": "DayChecksOut",
+        "type": "object"
+      },
+      "DecideIn": {
+        "additionalProperties": false,
+        "properties": {
+          "approve": {
+            "title": "Approve",
+            "type": "boolean"
+          },
+          "note": {
+            "default": "No reason given",
+            "maxLength": 1000,
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "approve"
+        ],
+        "title": "DecideIn",
         "type": "object"
       },
       "DeliveryOut": {
@@ -1960,6 +2550,73 @@
           "id"
         ],
         "title": "DoneOut",
+        "type": "object"
+      },
+      "DueOut": {
+        "properties": {
+          "balance": {
+            "title": "Balance",
+            "type": "string"
+          },
+          "customer_id": {
+            "title": "Customer Id",
+            "type": "string"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "follow_up_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Follow Up Id"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "promised_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Promised Amount"
+          },
+          "promised_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Promised Date"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "customer_id",
+          "name",
+          "reason",
+          "detail",
+          "balance"
+        ],
+        "title": "DueOut",
         "type": "object"
       },
       "EmployeeCreateIn": {
@@ -2623,6 +3280,155 @@
         "title": "FilterOptions",
         "type": "object"
       },
+      "FollowUpIn": {
+        "additionalProperties": false,
+        "properties": {
+          "followed_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Followed On"
+          },
+          "method": {
+            "enum": [
+              "call",
+              "visit",
+              "message",
+              "other"
+            ],
+            "title": "Method",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "promised_amount": {
+            "anyOf": [
+              {
+                "examples": [
+                  "102.50"
+                ],
+                "pattern": "^-?\\d{1,12}(\\.\\d{1,2})?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Promised Amount"
+          },
+          "promised_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Promised Date"
+          }
+        },
+        "required": [
+          "method"
+        ],
+        "title": "FollowUpIn",
+        "type": "object"
+      },
+      "FollowUpOut": {
+        "properties": {
+          "by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "By"
+          },
+          "customer_id": {
+            "title": "Customer Id",
+            "type": "string"
+          },
+          "followed_on": {
+            "format": "date",
+            "title": "Followed On",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "promised_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Promised Amount"
+          },
+          "promised_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Promised Date"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "customer_id",
+          "followed_on",
+          "method",
+          "status"
+        ],
+        "title": "FollowUpOut",
+        "type": "object"
+      },
       "ForecastOut": {
         "properties": {
           "explanations": {
@@ -3235,6 +4041,175 @@
           "date_to"
         ],
         "title": "LeaveRequestIn",
+        "type": "object"
+      },
+      "LedgerBillOut": {
+        "properties": {
+          "age_days": {
+            "title": "Age Days",
+            "type": "integer"
+          },
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "bill_date": {
+            "format": "date",
+            "title": "Bill Date",
+            "type": "string"
+          },
+          "days_to_pay": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days To Pay"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "outstanding": {
+            "title": "Outstanding",
+            "type": "string"
+          },
+          "paid": {
+            "title": "Paid",
+            "type": "string"
+          },
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          },
+          "sale_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sale Id"
+          },
+          "slip_no": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slip No"
+          },
+          "vehicle_no": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vehicle No"
+          }
+        },
+        "required": [
+          "kind",
+          "ref",
+          "bill_date",
+          "amount",
+          "paid",
+          "outstanding",
+          "age_days"
+        ],
+        "title": "LedgerBillOut",
+        "type": "object"
+      },
+      "LimitCheckOut": {
+        "properties": {
+          "approval": {
+            "title": "Approval",
+            "type": "string"
+          },
+          "available": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Available"
+          },
+          "credit_limit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credit Limit"
+          },
+          "customer_id": {
+            "title": "Customer Id",
+            "type": "string"
+          },
+          "customer_name": {
+            "title": "Customer Name",
+            "type": "string"
+          },
+          "mode": {
+            "title": "Mode",
+            "type": "string"
+          },
+          "outstanding": {
+            "title": "Outstanding",
+            "type": "string"
+          },
+          "over_limit": {
+            "title": "Over Limit",
+            "type": "boolean"
+          },
+          "problem": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Problem"
+          },
+          "this_bill": {
+            "title": "This Bill",
+            "type": "string"
+          },
+          "would_become": {
+            "title": "Would Become",
+            "type": "string"
+          }
+        },
+        "required": [
+          "customer_id",
+          "customer_name",
+          "outstanding",
+          "this_bill",
+          "would_become",
+          "over_limit",
+          "mode",
+          "approval"
+        ],
+        "title": "LimitCheckOut",
         "type": "object"
       },
       "LimitIn": {
@@ -4243,6 +5218,44 @@
         "title": "OrderOptions",
         "type": "object"
       },
+      "OverrideRowOut": {
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "approved_by": {
+            "title": "Approved By",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "credit_limit": {
+            "title": "Credit Limit",
+            "type": "string"
+          },
+          "outstanding_before": {
+            "title": "Outstanding Before",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "created_at",
+          "amount",
+          "outstanding_before",
+          "credit_limit",
+          "reason",
+          "approved_by"
+        ],
+        "title": "OverrideRowOut",
+        "type": "object"
+      },
       "PaymentIn": {
         "additionalProperties": false,
         "properties": {
@@ -4354,6 +5367,41 @@
           "payment_method"
         ],
         "title": "PaymentOut",
+        "type": "object"
+      },
+      "PaymentRowOut": {
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "pay_date": {
+            "format": "date",
+            "title": "Pay Date",
+            "type": "string"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference"
+          }
+        },
+        "required": [
+          "pay_date",
+          "amount",
+          "method"
+        ],
+        "title": "PaymentRowOut",
         "type": "object"
       },
       "PaymentStatusOut": {
@@ -5245,6 +6293,16 @@
       "SaleIn": {
         "additionalProperties": false,
         "properties": {
+          "credit_override": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CreditOverrideIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "customer_id": {
             "anyOf": [
               {
@@ -6675,6 +7733,16 @@
         "additionalProperties": false,
         "description": "`mode` says what `value` is: rupees (the quantity is value / rate, as Qt does) or litres.",
         "properties": {
+          "credit_override": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CreditOverrideIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "customer_id": {
             "anyOf": [
               {
@@ -7289,19 +8357,6 @@
           "problems"
         ],
         "title": "VerifyOut",
-        "type": "object"
-      },
-      "VoidIn": {
-        "additionalProperties": false,
-        "properties": {
-          "reason": {
-            "default": "No reason given",
-            "maxLength": 1000,
-            "title": "Reason",
-            "type": "string"
-          }
-        },
-        "title": "VoidIn",
         "type": "object"
       }
     }
@@ -9153,7 +10208,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/BillOut"
+                  "$ref": "#/components/schemas/BowserBillOut"
                 }
               }
             },
@@ -9226,7 +10281,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/VoidIn"
+                "$ref": "#/components/schemas/BowserVoidIn"
               }
             }
           },
@@ -9237,7 +10292,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/BillOut"
+                  "$ref": "#/components/schemas/BowserBillOut"
                 }
               }
             },
@@ -10574,6 +11629,1022 @@
         "summary": "Statement File",
         "tags": [
           "credit"
+        ]
+      }
+    },
+    "/api/credit/ageing": {
+      "get": {
+        "operationId": "ageing_api_credit_ageing_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgeingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ageing",
+        "tags": [
+          "credit-control"
+        ]
+      }
+    },
+    "/api/credit/approvals/{customer_id}": {
+      "post": {
+        "operationId": "decide_api_credit_approvals__customer_id__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "customer_id",
+            "required": true,
+            "schema": {
+              "title": "Customer Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecideIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreditDoneOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Decide",
+        "tags": [
+          "credit-control"
+        ]
+      }
+    },
+    "/api/credit/approvers": {
+      "get": {
+        "operationId": "approvers_api_credit_approvers_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ApproverOut"
+                  },
+                  "title": "Response Approvers Api Credit Approvers Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Approvers",
+        "tags": [
+          "credit-control"
+        ]
+      }
+    },
+    "/api/credit/bills/{sale_id}/details": {
+      "put": {
+        "operationId": "bill_details_api_credit_bills__sale_id__details_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sale_id",
+            "required": true,
+            "schema": {
+              "title": "Sale Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillDetailsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreditDoneOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Bill Details",
+        "tags": [
+          "credit-control"
+        ]
+      }
+    },
+    "/api/credit/chase": {
+      "get": {
+        "operationId": "chase_api_credit_chase_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DueOut"
+                  },
+                  "title": "Response Chase Api Credit Chase Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Chase",
+        "tags": [
+          "credit-control"
+        ]
+      }
+    },
+    "/api/credit/check": {
+      "get": {
+        "description": "Balance and limit while a credit bill is being typed: what the customer owes, and what this bill would make it.",
+        "operationId": "check_limit_api_credit_check_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "customer_id",
+            "required": true,
+            "schema": {
+              "title": "Customer Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "amount",
+            "required": true,
+            "schema": {
+              "title": "Amount",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LimitCheckOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Check Limit",
+        "tags": [
+          "credit-control"
+        ]
+      }
+    },
+    "/api/credit/customers": {
+      "get": {
+        "operationId": "customers_api_credit_customers_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CustomerRowOut"
+                  },
+                  "title": "Response Customers Api Credit Customers Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Customers",
+        "tags": [
+          "credit-control"
+        ]
+      }
+    },
+    "/api/credit/customers/{customer_id}": {
+      "get": {
+        "operationId": "customer_detail_api_credit_customers__customer_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "customer_id",
+            "required": true,
+            "schema": {
+              "title": "Customer Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerDetailOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Customer Detail",
+        "tags": [
+          "credit-control"
+        ]
+      }
+    },
+    "/api/credit/customers/{customer_id}/follow-ups": {
+      "post": {
+        "operationId": "add_follow_up_api_credit_customers__customer_id__follow_ups_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "customer_id",
+            "required": true,
+            "schema": {
+              "title": "Customer Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FollowUpIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FollowUpOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Follow Up",
+        "tags": [
+          "credit-control"
+        ]
+      }
+    },
+    "/api/credit/customers/{customer_id}/statement": {
+      "get": {
+        "operationId": "customer_statement_api_credit_customers__customer_id__statement_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "customer_id",
+            "required": true,
+            "schema": {
+              "title": "Customer Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_from",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Date From",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Date To",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerStatementOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Customer Statement",
+        "tags": [
+          "credit-control"
+        ]
+      }
+    },
+    "/api/credit/customers/{customer_id}/statement.{kind}": {
+      "get": {
+        "operationId": "customer_statement_file_api_credit_customers__customer_id__statement__kind__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "customer_id",
+            "required": true,
+            "schema": {
+              "title": "Customer Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "enum": [
+                "pdf",
+                "xlsx"
+              ],
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_from",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Date From",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Date To",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Customer Statement File",
+        "tags": [
+          "credit-control"
+        ]
+      }
+    },
+    "/api/credit/follow-ups/{follow_up_id}/close": {
+      "post": {
+        "operationId": "close_follow_up_api_credit_follow_ups__follow_up_id__close_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "follow_up_id",
+            "required": true,
+            "schema": {
+              "title": "Follow Up Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CloseFollowUpIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FollowUpOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Close Follow Up",
+        "tags": [
+          "credit-control"
         ]
       }
     },

@@ -45,7 +45,7 @@ class BillIn(In):
     shift_id: Optional[str] = None
 
 
-class BillOut(Out):
+class BowserBillOut(Out):
     id: str
     bill_no: str
     quantity: VolumeOut
@@ -56,7 +56,7 @@ class BillOut(Out):
     status: str
 
 
-class VoidIn(In):
+class BowserVoidIn(In):
     reason: OptionalReason
 
 
@@ -100,17 +100,17 @@ def transfer(body: TransferIn, user: CurrentUser = Depends(current_user), servic
     )
 
 
-@router.post("/bowser/bills", response_model=BillOut, status_code=201)
+@router.post("/bowser/bills", response_model=BowserBillOut, status_code=201)
 def bill(body: BillIn, user: CurrentUser = Depends(current_user), services: Services = Depends(get_services)):
-    return BillOut.model_validate(services.bowser.record_bill(
+    return BowserBillOut.model_validate(services.bowser.record_bill(
         user.id, body.bill_no, body.bill_date, body.customer_id, body.quantity, body.rate, body.transport,
         body.vehicle_no, body.slip_no, body.shift_id,
     ))
 
 
-@router.post("/bowser/bills/{bill_id}/void", response_model=BillOut)
-def void_bill(bill_id: str, body: VoidIn, user: CurrentUser = Depends(current_user), services: Services = Depends(get_services)):
-    return BillOut.model_validate(services.bowser.void_bill(user.id, bill_id, body.reason))
+@router.post("/bowser/bills/{bill_id}/void", response_model=BowserBillOut)
+def void_bill(bill_id: str, body: BowserVoidIn, user: CurrentUser = Depends(current_user), services: Services = Depends(get_services)):
+    return BowserBillOut.model_validate(services.bowser.void_bill(user.id, bill_id, body.reason))
 
 
 @router.post("/bowser/meter", response_model=MeterOut, status_code=201)

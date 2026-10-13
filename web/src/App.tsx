@@ -8,6 +8,7 @@ import { EmployeeDetailPage } from '@/features/employees/EmployeeDetailPage';
 import { EmployeesPage } from '@/features/employees/EmployeesPage';
 import { AuditPage } from '@/features/audit/AuditPage';
 import { BackupsPage } from '@/features/backups/BackupsPage';
+import { OwnerChoicesPage } from '@/features/settings/OwnerChoicesPage';
 import { SettingsPage } from '@/features/settings/SettingsPage';
 import { FuelPricesPage } from '@/features/fuel-prices/FuelPricesPage';
 import { UsersPage } from '@/features/users/UsersPage';
@@ -31,7 +32,9 @@ import { DailyReportPage } from '@/features/daily-report/DailyReportPage';
 import { LubricantsPage } from '@/features/lubricants/LubricantsPage';
 import { ShiftTotalsPage } from '@/features/shift-totals/ShiftTotalsPage';
 import { ChecksPage } from '@/features/checks/ChecksPage';
+import { AgeingPage } from '@/features/credit/AgeingPage';
 import { CreditPage } from '@/features/credit/CreditPage';
+import { CustomerPage } from '@/features/credit/CustomerPage';
 import { ExpensesPage } from '@/features/expenses/ExpensesPage';
 import { ReconciliationPage } from '@/features/reconciliation/ReconciliationPage';
 import { ReportPage, ReportsHubPage } from '@/features/reports/ReportsPages';
@@ -80,6 +83,8 @@ export function App() {
             <Route path="/bowser" element={<BowserPage />} />
             <Route path="/shift-totals" element={<ShiftTotalsPage />} />
             <Route path="/credit" element={<CreditPage />} />
+            <Route path="/credit/ageing" element={<AgeingPage />} />
+            <Route path="/credit/customers/:id" element={<CustomerPage />} />
             <Route path="/expenses" element={<ExpensesPage />} />
             <Route path="/reconciliation" element={<ReconciliationPage />} />
             <Route path="/reports" element={<ReportsHubPage />} />
@@ -92,6 +97,7 @@ export function App() {
             <Route path="/tanks/:id" element={<TankDetailPage />} />
             <Route path="/fuel-prices" element={<FuelPricesPage />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/owner-choices" element={<OwnerChoicesPage />} />
             <Route path="/backups" element={<BackupsPage />} />
             <Route path="/audit" element={<AuditPage />} />
             <Route path="/employees" element={<EmployeesPage />} />

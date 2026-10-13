@@ -2,6 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import type { ColumnDef } from '@tanstack/react-table';
 import { Plus, UserPlus } from 'lucide-react';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { api } from '@/api/client';
@@ -385,7 +386,18 @@ export function CreditPage() {
         />
       ),
     },
-    { accessorKey: 'customer', header: 'Customer', cell: ({ getValue }) => getValue() ?? '' },
+    {
+      accessorKey: 'customer',
+      header: 'Customer',
+      cell: ({ row, getValue }) => (
+        <Link
+          className="font-semibold underline-offset-4 hover:underline"
+          to={`/credit/customers/${row.original.customer_id}`}
+        >
+          {(getValue() as string | null) ?? 'Customer'}
+        </Link>
+      ),
+    },
     {
       accessorKey: 'credit_limit',
       header: 'Credit limit',
@@ -413,6 +425,9 @@ export function CreditPage() {
         title="Credit Management"
         subtitle="Customer credit accounts, balances, payments and statements."
       >
+        <Link to="/credit/ageing" className="text-sm font-semibold underline">
+          Ageing and chase list
+        </Link>
         <Button
           disabled={!account}
           onClick={() => account && setDialog({ kind: 'statement', account })}

@@ -67,6 +67,16 @@ OptionalReason = Annotated[
 ]
 
 
+class CreditOverrideIn(BaseModel):
+    """An owner allowing one credit sale past the limit: who, their own password (or PIN) and why (V-14)."""
+
+    model_config = ConfigDict(extra="forbid")
+    approver_id: str
+    credential: str = Field(min_length=1)
+    use_pin: bool = False
+    reason: OptionalReason
+
+
 class Out(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

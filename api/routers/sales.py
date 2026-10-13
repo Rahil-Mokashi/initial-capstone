@@ -10,7 +10,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query, Response
 
 from api.deps import CurrentUser, current_user, get_services
-from api.schemas import In, MoneyOut, OptionalReason, Out, VolumeIn, VolumeOut
+from api.schemas import CreditOverrideIn, In, MoneyOut, OptionalReason, Out, VolumeIn, VolumeOut
 from api.services import Services
 from app.core.constants import PaymentMethod, Permission
 from app.database.base import StatusEnum
@@ -91,6 +91,8 @@ class SaleIn(In):
     customer_id: Optional[str] = None
     reference_number: Optional[str] = None
     remarks: Optional[str] = None
+    # An owner allowing this credit sale past the customer's limit (V-14); only used when the limit is passed.
+    credit_override: Optional[CreditOverrideIn] = None
 
 
 class SelfSaleIn(In):
@@ -207,7 +209,7 @@ def sale_options(user: CurrentUser = Depends(current_user), services: Services =
 
 @router.post("/sales", response_model=SaleOut, status_code=201)
 def create_sale(body: SaleIn, user: CurrentUser = Depends(current_user), services: Services = Depends(get_services)):
-    sale = services.sales.create_sale(user.id, SaleCreate(**body.model_dump()))
+    sale = services.create_credit_aware_sale(user.id, SaleCreate(**body.model_dump(exclude={"credit_override"})), body.credit_override)
     return sale_out(services, user.id, sale)
 
 
@@ -217,7 +219,7 @@ def create_my_sale(body: SelfSaleIn, user: CurrentUser = Depends(current_user), 
     if a is None:
         raise ValueError("You have no active nozzle assignment.")
     data = SaleCreate(shift_id=a.shift_id, nozzle_id=a.nozzle_id, employee_id=a.employee_id, **body.model_dump())
-    return sale_out(services, user.id, services.sales.create_sale(user.id, data))
+    return sale_out(services, user.id, services.create_credit_aware_sale(user.id, data, None))  # no override from the attendant path
 
 
 @router.post("/sales/{sale_id}/cancel", response_model=SaleOut)

@@ -10,6 +10,7 @@ import { DecimalField } from '@/components/ui/DecimalField';
 import { SelectField, TextField } from '@/components/ui/Field';
 import { FormError } from '@/components/ui/FormDialog';
 import { ErrorState, LoadingBlock } from '@/components/ui/States';
+import { CreditLimitPanel, OverrideDialog, isLimitError } from '@/features/credit/CreditLimit';
 import { getReceiptHtml, useSalesPage, type Sale } from '@/features/sales/queries';
 import { cn } from '@/lib/cn';
 import { divide2, multiply2 } from '@/lib/decimalMath';
@@ -96,6 +97,11 @@ export function TerminalPage() {
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<Sale | null>(null);
+  // A credit bill that passed the customer's limit, waiting for an owner to allow it (V-14).
+  const [limitIssue, setLimitIssue] = useState<{
+    message: string;
+    body: S['TerminalSaleIn'];
+  } | null>(null);
 
   const c = ctx.data;
   const free = c?.can_pick_freely ?? false;
@@ -129,25 +135,26 @@ export function TerminalPage() {
       );
     if (!/^\d{1,12}(\.\d{1,2})?$/.test(value) || Number(value) <= 0)
       return setError('Enter an amount above zero, such as 500.');
+    const body: S['TerminalSaleIn'] = {
+      mode,
+      value,
+      payment_method: method,
+      customer_id: customerId || undefined,
+      reference_number: reference.trim() || undefined,
+      remarks: note.trim() || undefined,
+      ...(free
+        ? {
+            shift_id: shiftId || c!.shifts[0]!.id,
+            employee_id: employeeId || c!.employees[0]!.id,
+            nozzle_id: nozzle!.id,
+          }
+        : {}),
+    };
     try {
-      const sale = await sell.mutateAsync({
-        mode,
-        value,
-        payment_method: method,
-        customer_id: customerId || undefined,
-        reference_number: reference.trim() || undefined,
-        remarks: note.trim() || undefined,
-        ...(free
-          ? {
-              shift_id: shiftId || c!.shifts[0]!.id,
-              employee_id: employeeId || c!.employees[0]!.id,
-              nozzle_id: nozzle!.id,
-            }
-          : {}),
-      });
-      setDone(sale);
+      setDone(await sell.mutateAsync(body));
     } catch (e) {
-      setError(friendlyMessage(e));
+      if (isLimitError(e)) setLimitIssue({ message: e.message, body });
+      else setError(friendlyMessage(e));
     }
   }
 
@@ -333,6 +340,9 @@ export function TerminalPage() {
               </option>
             ))}
           </SelectField>
+          {method === 'credit' && customerId && (
+            <CreditLimitPanel customerId={customerId} amount={preview?.amount ?? null} />
+          )}
           {(method === 'upi' || method === 'card') && (
             <TextField
               label="UPI/Card reference"
@@ -360,6 +370,15 @@ export function TerminalPage() {
         </form>
       )}
       {nozzle && !done && <Recent nozzleId={nozzle.id} />}
+      {limitIssue && (
+        <OverrideDialog
+          message={limitIssue.message}
+          onClose={() => setLimitIssue(null)}
+          onConfirm={async (override) =>
+            setDone(await sell.mutateAsync({ ...limitIssue.body, credit_override: override }))
+          }
+        />
+      )}
     </div>
   );
 }

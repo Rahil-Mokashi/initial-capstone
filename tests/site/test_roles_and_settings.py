@@ -16,8 +16,18 @@ def test_new_role_and_permissions_are_seeded(svc, uid):
 def test_data_entry_is_narrow(svc, uid):
     for perm in (Permission.USER_MANAGE, Permission.ATTENDANCE_MANAGE, Permission.EXPENSE_APPROVE, Permission.SHIFT_REOPEN,
                  Permission.FUEL_PRICE_MANAGE, Permission.SETTINGS_MANAGE, Permission.RECONCILIATION_APPROVE,
-                 Permission.CHECK_VIEW, Permission.SHORTAGE_MANAGE, Permission.CREDIT_MANAGE):
+                 Permission.CHECK_VIEW, Permission.SHORTAGE_MANAGE, Permission.CREDIT_MANAGE, Permission.OWNER_CHOICE_MANAGE,
+                 Permission.CREDIT_OVERRIDE, Permission.CREDIT_APPROVE):
         assert not can(svc, uid["DATA_ENTRY"], perm), perm
+
+
+def test_only_owners_hold_the_owner_only_permissions(svc, uid):
+    for role in ("MANAGER", "ACCOUNTANT", "SHIFT_SUPERVISOR", "ATTENDANT", "DATA_ENTRY"):
+        for perm in (Permission.OWNER_CHOICE_MANAGE, Permission.CREDIT_OVERRIDE, Permission.CREDIT_APPROVE):
+            assert not can(svc, uid[role], perm), (role, perm)
+    for role in ("OWNER", "ADMIN"):
+        for perm in (Permission.OWNER_CHOICE_MANAGE, Permission.CREDIT_OVERRIDE, Permission.CREDIT_APPROVE):
+            assert can(svc, uid[role], perm)
 
 
 def test_existing_roles_keep_their_old_permissions():

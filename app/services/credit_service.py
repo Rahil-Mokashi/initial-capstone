@@ -17,6 +17,7 @@ perform (SALE_MANAGE), the same reasoning behind TankService's
 
 from dataclasses import dataclass
 from datetime import date, timedelta
+from contextlib import contextmanager
 from decimal import Decimal
 from typing import List, Optional
 
@@ -48,6 +49,8 @@ class CreditService:
         self._audit_repo = audit_repo
         self._auth_service = auth_service
         self._session = session_for(credit_account_repo)
+        # Set only inside limit_override(); see CreditControlService (site visit 2026-10-12, V-14).
+        self._override_customer_id: Optional[str] = None
 
     @require_permission(Permission.CREDIT_MANAGE.value)
     def create_credit_account(self, actor_user_id: str, data: CreditAccountCreate) -> CreditAccount:
@@ -166,10 +169,23 @@ class CreditService:
             entries.append(CustomerStatementEntry(entry_date, description, debit, credit, running_balance))
         return entries
 
+    @contextmanager
+    def limit_override(self, customer_id: str):
+        """Lets ONE credit sale for this customer pass the limit check below. Added for the owner override (V-14):
+        CreditControlService only opens it after an owner has re-entered their password, and records the override.
+        Without it, behaviour is exactly as before."""
+        self._override_customer_id = customer_id
+        try:
+            yield
+        finally:
+            self._override_customer_id = None
+
     def ensure_credit_available(self, customer_id: str, additional_amount: Decimal) -> None:
         account = self._credit_account_repo.get_by_customer_id(customer_id)
         if not account:
             raise ConflictError("This customer has no credit account - open one before recording a credit sale")
+        if self._override_customer_id == customer_id:
+            return
 
         outstanding = self._compute_outstanding_balance(customer_id)
         if outstanding + additional_amount > account.credit_limit:

@@ -2,7 +2,13 @@
 // V-01 / V-02 (open): the order of the data-entry steps follows how the paper bundle usually arrives.
 
 export type FocusId =
-  'checks' | 'day_status' | 'credit_outstanding' | 'shift_entry' | 'manager_close' | 'my_shift';
+  | 'checks'
+  | 'day_status'
+  | 'credit_outstanding'
+  | 'credit_chase'
+  | 'shift_entry'
+  | 'manager_close'
+  | 'my_shift';
 
 export interface TodayPlan {
   focus: FocusId[];
@@ -14,11 +20,14 @@ export function todayPlan(role: string | null | undefined): TodayPlan {
   switch (role) {
     case 'OWNER':
     case 'ADMIN':
-      return { focus: ['checks', 'day_status', 'credit_outstanding'], overview: true };
+      return {
+        focus: ['checks', 'day_status', 'credit_outstanding', 'credit_chase'],
+        overview: true,
+      };
     case 'MANAGER':
       return { focus: ['manager_close', 'checks'], overview: true };
     case 'ACCOUNTANT':
-      return { focus: ['checks', 'credit_outstanding'], overview: true };
+      return { focus: ['checks', 'credit_outstanding', 'credit_chase'], overview: true };
     case 'DATA_ENTRY':
       return { focus: ['shift_entry'], overview: false };
     case 'SHIFT_SUPERVISOR':

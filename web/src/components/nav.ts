@@ -60,6 +60,12 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Checks', permission: 'check.view', to: '/checks' },
       { label: 'Credit', permission: 'credit.view', to: '/credit' },
       {
+        label: 'Credit Ageing',
+        permission: 'credit.view',
+        to: '/credit/ageing',
+        hideFor: ['DATA_ENTRY'],
+      },
+      {
         label: 'Card / Phone Pay totals',
         permission: 'reconciliation.manage',
         to: '/shift-totals',
@@ -93,6 +99,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Settings',
     items: [
+      { label: 'Owner Choices', permission: 'owner_choice.manage', to: '/owner-choices' },
       { label: 'Backups', permission: 'backup.manage', to: '/backups' },
       { label: 'Audit Log', permission: 'audit.view', to: '/audit' },
     ],

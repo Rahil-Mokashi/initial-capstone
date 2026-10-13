@@ -6,6 +6,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { formatCheckValue } from '@/features/checks/checkText';
 import { sumMoney } from '@/lib/decimalMath';
 import { formatMoney } from '@/lib/format';
+import { ChaseList } from '@/features/credit/ChaseList';
 import { P } from '@/lib/permissions';
 import { SHIFT_ENTRY_STEPS, todayPlan, type FocusId } from './plan';
 
@@ -112,6 +113,17 @@ function CreditCard() {
   );
 }
 
+function ChaseCard() {
+  const { can } = useAuth();
+  if (!can(P.CREDIT_VIEW)) return null;
+  return (
+    <Card title="Credit to chase">
+      <ChaseList limit={4} />
+      <OpenLink to="/credit/ageing">Open ageing</OpenLink>
+    </Card>
+  );
+}
+
 function ShiftEntryCard() {
   const { can } = useAuth();
   const steps = SHIFT_ENTRY_STEPS.filter((s) => can(s.permission));
@@ -163,6 +175,7 @@ const CARDS: Record<FocusId, () => React.ReactElement | null> = {
   checks: ChecksCard,
   day_status: DayStatusCard,
   credit_outstanding: CreditCard,
+  credit_chase: ChaseCard,
   shift_entry: ShiftEntryCard,
   manager_close: ManagerCard,
   my_shift: MyShiftCard,

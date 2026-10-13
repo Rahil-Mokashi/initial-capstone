@@ -34,6 +34,12 @@ from app.repositories.nozzle_assignment_repository import NozzleAssignmentReposi
 from app.repositories.nozzle_repository import NozzleRepository
 from app.repositories.payment_repository import PaymentRepository
 from app.repositories.pump_setting_repository import PumpSettingRepository
+from app.repositories.credit_repositories import (
+    BillDetailRepository,
+    CreditOverrideRepository,
+    CustomerApprovalRepository,
+    FollowUpRepository,
+)
 from app.repositories.site_repositories import (
     BowserRepository,
     InternalFuelUseRepository,
@@ -65,6 +71,9 @@ from app.services.auth_service import AuthService
 from app.services.backup_service import BackupService
 from app.services.bowser_service import BowserService
 from app.services.check_runners import ExistingDataChecks
+from app.services.credit_checks import CreditChecks
+from app.services.credit_control_service import CreditControlService
+from app.services.customer_ledger_service import CustomerLedgerService
 from app.services.daily_report_service import DailyReportService
 from app.services.check_service import CheckService
 from app.services.credit_service import CreditService
@@ -473,6 +482,61 @@ class Services:
         )
 
     @cached_property
+    def credit_ledger(self) -> CustomerLedgerService:
+        return CustomerLedgerService(
+            self.customer_repo, self.credit_account_repo, self.sale_repo, CustomerPaymentRepository(self.db),
+            BowserRepository(self.db), BillDetailRepository(self.db), self.auth,
+        )
+
+    @cached_property
+    def credit_control(self) -> CreditControlService:
+        return CreditControlService(
+            self.credit_ledger, self.credit_account_repo, CustomerApprovalRepository(self.db), CreditOverrideRepository(self.db),
+            FollowUpRepository(self.db), BillDetailRepository(self.db), self.sale_repo, self.pump_settings, self.user_repo,
+            self.auth, self.audit_repo, self.credit,
+        )
+
+    @cached_property
+    def credit_checks(self) -> CreditChecks:
+        return CreditChecks(
+            self.credit_ledger, self.credit_control, self.checks, self.sale_repo, self.shift_repo, self.credit_account_repo
+        )
+
+    def estimate_sale_amount(self, nozzle_id, quantity):
+        """What a sale of `quantity` litres at this nozzle will come to (the fuel's current price), for the credit check."""
+        from decimal import Decimal
+
+        from app.core.money import money, volume
+
+        nozzle = self.nozzle_repo.get_by_id(nozzle_id)
+        rate = Decimal(str(nozzle.fuel.rate_per_liter)) if nozzle and nozzle.fuel and nozzle.fuel.rate_per_liter else Decimal("0")
+        return money(volume(quantity) * rate)
+
+    def create_credit_aware_sale(self, user_id, data, override=None):
+        """Create a sale; if it is on credit, apply the approval rule and the limit first (V-14).
+        With an owner's override the existing limit check is stepped over for this one sale and the override is recorded."""
+        from app.core.constants import PaymentMethod
+        from app.repositories.base import unit_of_work
+        from app.services.credit_control_service import Override
+
+        if data.payment_method != PaymentMethod.CREDIT or not data.customer_id:
+            return self.sales.create_sale(user_id, data)
+        amount = self.estimate_sale_amount(data.nozzle_id, data.quantity)
+        ov = (
+            Override(override.approver_id, override.credential, override.use_pin, override.reason)
+            if override is not None else None
+        )
+        approved = self.credit_control.authorize_sale(user_id, data.customer_id, amount, ov)
+        if approved is None:
+            return self.sales.create_sale(user_id, data)
+        before = self.credit_control.check_sale(data.customer_id, amount)
+        with unit_of_work(self.db):
+            with self.credit.limit_override(data.customer_id):
+                sale = self.sales.create_sale(user_id, data)
+            self.credit_control.record_override(user_id, sale, before, approved)
+        return sale
+
+    @cached_property
     def report_checks(self) -> ReportChecks:
         return ReportChecks(self.checks, self.daily_report, self.pump_settings)
 
@@ -486,6 +550,7 @@ class Services:
         """Every check runner for one business date. Later tracks append their runners here."""
         results = list(self.existing_checks.run_day(actor_id, day))
         results += self.report_checks.run_day(actor_id, day)
+        results += self.credit_checks.run_day(actor_id, day)
         return results
 
     def days_to_check(self):

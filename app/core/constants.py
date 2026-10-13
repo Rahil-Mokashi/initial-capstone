@@ -110,12 +110,21 @@ class Permission(str, Enum):
     # result - it can never turn a failure into a pass.
     CHECK_VIEW = "check.view"
     CHECK_EXPLAIN = "check.explain"
+    # The rules the pump owners decide (rounding, credit over the limit, ...): owners only. No role below
+    # OWNER/ADMIN is granted it, so a manager can see the company profile but not change these.
+    OWNER_CHOICE_MANAGE = "owner_choice.manage"
     # Daily report (Classic / Plus), lubricants and the bowser van (site visit 2026-10-12).
     DAILY_REPORT_VIEW = "daily_report.view"
     LUBRICANT_VIEW = "lubricant.view"
     LUBRICANT_MANAGE = "lubricant.manage"
     BOWSER_VIEW = "bowser.view"
     BOWSER_MANAGE = "bowser.manage"
+    # Credit control (site visit 2026-10-12). APPROVE: let a new customer have credit (V-10). OVERRIDE: allow one
+    # credit sale past the limit (V-14). RECOVERY: keep the follow-up log. APPROVE and OVERRIDE are held by the
+    # owners only (OWNER/ADMIN get every permission); no other role is granted them below.
+    CREDIT_APPROVE = "credit.approve"
+    CREDIT_OVERRIDE = "credit.override"
+    CREDIT_RECOVERY = "credit.recovery"
 
 
 class EmployeeStatus(str, Enum):
@@ -457,6 +466,7 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
         Permission.CHECK_VIEW,
         Permission.CHECK_EXPLAIN,
         Permission.DAILY_REPORT_VIEW,
+        Permission.CREDIT_RECOVERY,
         Permission.LUBRICANT_VIEW,
         Permission.LUBRICANT_MANAGE,
         Permission.BOWSER_VIEW,
@@ -482,6 +492,7 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
         Permission.CHECK_VIEW,
         Permission.CHECK_EXPLAIN,
         Permission.DAILY_REPORT_VIEW,
+        Permission.CREDIT_RECOVERY,
         Permission.LUBRICANT_VIEW,
         Permission.BOWSER_VIEW,
     ),
