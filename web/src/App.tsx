@@ -29,6 +29,7 @@ import { SalesPage } from '@/features/sales/SalesPage';
 import { TerminalPage } from '@/features/terminal/TerminalPage';
 import { BankPage } from '@/features/bank/BankPage';
 import { PayrollPage } from '@/features/payroll/PayrollPage';
+import { ShiftClosePage } from '@/features/shift-close/ShiftClosePage';
 import { BowserPage } from '@/features/bowser/BowserPage';
 import { DailyReportPage } from '@/features/daily-report/DailyReportPage';
 import { LubricantsPage } from '@/features/lubricants/LubricantsPage';
@@ -81,6 +82,7 @@ export function App() {
             <Route path="/terminal" element={<TerminalPage />} />
             <Route path="/checks" element={<ChecksPage />} />
             <Route path="/bank" element={<BankPage />} />
+            <Route path="/shift-close" element={<ShiftClosePage />} />
             <Route path="/payroll" element={<PayrollPage />} />
             <Route path="/daily-report" element={<DailyReportPage />} />
             <Route path="/lubricants" element={<LubricantsPage />} />

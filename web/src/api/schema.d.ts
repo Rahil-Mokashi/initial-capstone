@@ -2780,6 +2780,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/shift-close/{shift_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sheet */
+        get: operations["sheet_api_shift_close__shift_id__get"];
+        put?: never;
+        /** Submit */
+        post: operations["submit_api_shift_close__shift_id__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/shift-totals/{shift_id}": {
         parameters: {
             query?: never;
@@ -4220,6 +4238,11 @@ export interface components {
             /** Value */
             value: string;
         };
+        /** CloseEntryIn */
+        CloseEntryIn: {
+            /** Readings */
+            readings: components["schemas"]["ShiftCloseReadingIn"][];
+        };
         /** CloseFollowUpIn */
         CloseFollowUpIn: {
             /**
@@ -4227,6 +4250,25 @@ export interface components {
              * @enum {string}
              */
             outcome: "kept" | "broken" | "cancelled";
+        };
+        /** CloseLineOut */
+        CloseLineOut: {
+            /** Closed */
+            closed: boolean;
+            /** Closing */
+            closing?: string | null;
+            /** Code */
+            code: string;
+            /** Fuel */
+            fuel: string;
+            /** Nozzle Id */
+            nozzle_id: string;
+            /** Opening */
+            opening?: string | null;
+            /** Tank */
+            tank?: string | null;
+            /** Testing */
+            testing: string;
         };
         /** CloseShiftIn */
         CloseShiftIn: {
@@ -6317,6 +6359,24 @@ export interface components {
             receipt_footer?: string | null;
             /** State */
             state?: string | null;
+        };
+        /** ShiftCloseReadingIn */
+        ShiftCloseReadingIn: {
+            /**
+             * Closing
+             * @example 12.500
+             */
+            closing: string;
+            /** Nozzle Id */
+            nozzle_id: string;
+            /** Opening */
+            opening?: string | null;
+            /**
+             * Testing
+             * @default 0
+             * @example 12.500
+             */
+            testing: string;
         };
         /** ShiftOut */
         ShiftOut: {
@@ -13293,6 +13353,78 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AssignmentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sheet_api_shift_close__shift_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                shift_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CloseLineOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_api_shift_close__shift_id__post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                shift_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CloseEntryIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CloseLineOut"][];
                 };
             };
             /** @description Validation Error */

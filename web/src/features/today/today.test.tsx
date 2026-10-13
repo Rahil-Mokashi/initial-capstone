@@ -101,11 +101,11 @@ describe('Today, by role', () => {
     );
     expect(
       steps.map(
-        (li) => /\d(.*?)(Bill|Closing|Totals|Tea|Cash handed)/.exec(li.textContent ?? '')?.[1],
+        (li) => /\d(.*?)(Bill|End master|Totals|Tea|Cash handed)/.exec(li.textContent ?? '')?.[1],
       ),
     ).toEqual([
-      'Nozzle readings',
       'Credit bills',
+      'Closing readings',
       'Card, DTP Card, Phone Pay, PTM',
       'Expenses',
       'Advance, Final and bank deposits',

@@ -47,16 +47,16 @@ export interface EntryStep {
 /** The shift bundle in the order it arrives, in the staff's own words. Only screens that exist are linked. */
 export const SHIFT_ENTRY_STEPS: EntryStep[] = [
   {
-    label: 'Nozzle readings',
-    hint: 'Closing meter for MS and HSD nozzles, testing litres',
-    to: '/shifts',
-    permission: 'shift.manage',
-  },
-  {
     label: 'Credit bills',
     hint: 'Bill no., name, amount (including Stock Transfer to Bouser)',
     to: '/terminal',
     permission: 'sale.manage',
+  },
+  {
+    label: 'Closing readings',
+    hint: 'End master reading of each MS and HSD nozzle, testing litres',
+    to: '/shift-close',
+    permission: 'shift.manage',
   },
   {
     label: 'Card, DTP Card, Phone Pay, PTM',

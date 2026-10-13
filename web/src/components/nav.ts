@@ -67,6 +67,7 @@ export const NAV_GROUPS: NavGroup[] = [
         to: '/credit/ageing',
         hideFor: ['DATA_ENTRY'],
       },
+      { label: 'Shift Close', permission: 'shift.manage', to: '/shift-close' },
       {
         label: 'Card / Phone Pay totals',
         permission: 'reconciliation.manage',

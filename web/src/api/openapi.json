@@ -2496,6 +2496,23 @@
         "title": "Choice",
         "type": "object"
       },
+      "CloseEntryIn": {
+        "additionalProperties": false,
+        "properties": {
+          "readings": {
+            "items": {
+              "$ref": "#/components/schemas/ShiftCloseReadingIn"
+            },
+            "title": "Readings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "readings"
+        ],
+        "title": "CloseEntryIn",
+        "type": "object"
+      },
       "CloseFollowUpIn": {
         "additionalProperties": false,
         "properties": {
@@ -2513,6 +2530,72 @@
           "outcome"
         ],
         "title": "CloseFollowUpIn",
+        "type": "object"
+      },
+      "CloseLineOut": {
+        "properties": {
+          "closed": {
+            "title": "Closed",
+            "type": "boolean"
+          },
+          "closing": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closing"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "fuel": {
+            "title": "Fuel",
+            "type": "string"
+          },
+          "nozzle_id": {
+            "title": "Nozzle Id",
+            "type": "string"
+          },
+          "opening": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opening"
+          },
+          "tank": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tank"
+          },
+          "testing": {
+            "title": "Testing",
+            "type": "string"
+          }
+        },
+        "required": [
+          "nozzle_id",
+          "code",
+          "fuel",
+          "closed",
+          "testing"
+        ],
+        "title": "CloseLineOut",
         "type": "object"
       },
       "CloseShiftIn": {
@@ -8456,6 +8539,53 @@
           "has_company_profile"
         ],
         "title": "SettingsOut",
+        "type": "object"
+      },
+      "ShiftCloseReadingIn": {
+        "additionalProperties": false,
+        "properties": {
+          "closing": {
+            "examples": [
+              "12.500"
+            ],
+            "pattern": "^-?\\d{1,9}(\\.\\d{1,3})?$",
+            "title": "Closing",
+            "type": "string"
+          },
+          "nozzle_id": {
+            "title": "Nozzle Id",
+            "type": "string"
+          },
+          "opening": {
+            "anyOf": [
+              {
+                "examples": [
+                  "12.500"
+                ],
+                "pattern": "^-?\\d{1,9}(\\.\\d{1,3})?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opening"
+          },
+          "testing": {
+            "default": "0",
+            "examples": [
+              "12.500"
+            ],
+            "pattern": "^-?\\d{1,9}(\\.\\d{1,3})?$",
+            "title": "Testing",
+            "type": "string"
+          }
+        },
+        "required": [
+          "nozzle_id",
+          "closing"
+        ],
+        "title": "ShiftCloseReadingIn",
         "type": "object"
       },
       "ShiftOut": {
@@ -24399,6 +24529,170 @@
         "summary": "Complete Assignment",
         "tags": [
           "shifts"
+        ]
+      }
+    },
+    "/api/shift-close/{shift_id}": {
+      "get": {
+        "operationId": "sheet_api_shift_close__shift_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "shift_id",
+            "required": true,
+            "schema": {
+              "title": "Shift Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CloseLineOut"
+                  },
+                  "title": "Response Sheet Api Shift Close  Shift Id  Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sheet",
+        "tags": [
+          "shift-close"
+        ]
+      },
+      "post": {
+        "operationId": "submit_api_shift_close__shift_id__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "shift_id",
+            "required": true,
+            "schema": {
+              "title": "Shift Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CloseEntryIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CloseLineOut"
+                  },
+                  "title": "Response Submit Api Shift Close  Shift Id  Post",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Submit",
+        "tags": [
+          "shift-close"
         ]
       }
     },
