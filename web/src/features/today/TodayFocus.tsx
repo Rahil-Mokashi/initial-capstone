@@ -124,6 +124,30 @@ function ChaseCard() {
   );
 }
 
+function PayrollCard() {
+  const { can } = useAuth();
+  const runs = useGet<S['PayrollRunRowOut'][]>(
+    ['payroll', 'runs'],
+    '/payroll/runs',
+    can(P.PAYROLL_VIEW),
+  );
+  if (!can(P.PAYROLL_VIEW)) return null;
+  const latest = runs.data?.[0];
+  const words = !latest
+    ? 'No month has been prepared yet.'
+    : latest.status === 'draft'
+      ? `${latest.month}: prepared, waiting for an owner to approve`
+      : latest.status === 'approved'
+        ? `${latest.month}: approved, salaries still to be paid`
+        : `${latest.month}: all paid`;
+  return (
+    <Card title="Payroll">
+      <p className="text-lg font-bold">{words}</p>
+      <OpenLink to="/payroll">Open Payroll</OpenLink>
+    </Card>
+  );
+}
+
 function ShiftEntryCard() {
   const { can } = useAuth();
   const steps = SHIFT_ENTRY_STEPS.filter((s) => can(s.permission));
@@ -163,22 +187,14 @@ function ManagerCard() {
   );
 }
 
-function MyShiftCard() {
-  return (
-    <Card title="My shift">
-      <OpenLink to="/my-shift">Open My Shift</OpenLink>
-    </Card>
-  );
-}
-
 const CARDS: Record<FocusId, () => React.ReactElement | null> = {
   checks: ChecksCard,
   day_status: DayStatusCard,
   credit_outstanding: CreditCard,
   credit_chase: ChaseCard,
+  payroll: PayrollCard,
   shift_entry: ShiftEntryCard,
   manager_close: ManagerCard,
-  my_shift: MyShiftCard,
 };
 
 /** The short list for this person's role, shown at the top of Today. */

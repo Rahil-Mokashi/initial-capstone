@@ -4,7 +4,7 @@ import { SHIFT_ENTRY_STEPS, todayPlan } from './plan';
 describe('today plan', () => {
   it('gives the owner checks, day status and credit, and the overview', () => {
     expect(todayPlan('OWNER')).toEqual({
-      focus: ['checks', 'day_status', 'credit_outstanding', 'credit_chase'],
+      focus: ['checks', 'day_status', 'credit_outstanding', 'credit_chase', 'payroll'],
       overview: true,
     });
     expect(todayPlan('ADMIN').focus).toContain('checks');
@@ -14,9 +14,9 @@ describe('today plan', () => {
     expect(todayPlan('DATA_ENTRY')).toEqual({ focus: ['shift_entry'], overview: false });
   });
 
-  it('gives the manager shift close and checks; the attendant only their shift', () => {
+  it('gives the manager shift close and checks; attendants never sign in, so they have no list', () => {
     expect(todayPlan('MANAGER').focus).toEqual(['manager_close', 'checks']);
-    expect(todayPlan('ATTENDANT')).toEqual({ focus: ['my_shift'], overview: false });
+    expect(todayPlan('ATTENDANT')).toEqual({ focus: [], overview: true });
   });
 
   it('falls back to the plain dashboard for an unknown role', () => {

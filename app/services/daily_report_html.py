@@ -5,6 +5,7 @@ Pure formatting (no database, no permissions). The same layout serves Classic an
 renderer slots them in without changing the order of the Classic sections.
 """
 
+from contextvars import ContextVar
 from decimal import Decimal
 from html import escape
 from typing import Optional
@@ -51,6 +52,11 @@ def _group(int_digits: str) -> str:
     return ",".join(parts) + "," + tail
 
 
+# 'classic' prints exactly as the old report; 'plus' adds the rupee sign and fixed two-place litres. Set only inside
+# render_daily_report, so every other caller (bank check sentences, statements) always gets the classic form.
+_STYLE: ContextVar[str] = ContextVar("daily_report_style", default="classic")
+
+
 def inr(value: Optional[Decimal], places: int = 2) -> str:
     """12,34,567.89 - the Indian digit grouping the old report uses. None prints as blank."""
     if value is None:
@@ -58,17 +64,18 @@ def inr(value: Optional[Decimal], places: int = 2) -> str:
     text = f"{abs(value):.{places}f}"
     whole, _, frac = text.partition(".")
     out = _group(whole) + (f".{frac}" if frac else "")
-    return f"-{out}" if value < 0 and Decimal(text) != 0 else out
+    out = f"-{out}" if value < 0 and Decimal(text) != 0 else out
+    return ("₹" + out if not out.startswith("-") else "-₹" + out[1:]) if _STYLE.get() == "plus" else out
 
 
 def litres(value: Optional[Decimal]) -> str:
     """Litres with up to three decimals and no trailing zeros (35,485 / 13,477.25), as the old report prints them."""
     if value is None:
         return ""
-    text = f"{abs(value):.3f}".rstrip("0").rstrip(".")
+    text = f"{abs(value):.2f}" if _STYLE.get() == "plus" else f"{abs(value):.3f}".rstrip("0").rstrip(".")
     whole, _, frac = text.partition(".")
     out = _group(whole) + (f".{frac}" if frac else "")
-    return f"-{out}" if value < 0 and text != "0" else out
+    return f"-{out}" if value < 0 and Decimal(text) != 0 else out
 
 
 def signed_litres(value: Optional[Decimal]) -> str:
@@ -89,7 +96,11 @@ def _cells(values, cls="n"):
 def render_daily_report(report: DailyReport, company=None, extras: Optional[dict] = None) -> str:
     extras = extras or {}
     title = extras.get("title", "DAILY REPORT")
-    return f'{CSS}<div class="dr">{_front(report, company, title, extras)}{_back(report, extras)}</div>'
+    token = _STYLE.set(extras.get("style", "classic"))
+    try:
+        return f'{CSS}<div class="dr">{_front(report, company, title, extras)}{_back(report, extras)}</div>'
+    finally:
+        _STYLE.reset(token)
 
 
 # ----------------------------------------------------------------------------------------- FRONT
@@ -115,6 +126,7 @@ def _front(r: DailyReport, company, title: str, extras: dict) -> str:
         parts.append(f"<div>{_credit_sales(s)}</div>")
     parts.append("</div>")
     parts.append(extras.get("front_extra_html", ""))
+    parts.append(extras.get("footer_html", "").replace("{page}", "1"))
     parts.append("</div>")
     return "".join(parts)
 
@@ -218,6 +230,7 @@ def _back(r: DailyReport, extras: dict) -> str:
     parts.append(_oil(r))
     parts.append(_bowser(r, extras))
     parts.append(extras.get("back_extra_html", ""))
+    parts.append(extras.get("footer_html", "").replace("{page}", "2"))
     parts.append("</div>")
     return "".join(parts)
 

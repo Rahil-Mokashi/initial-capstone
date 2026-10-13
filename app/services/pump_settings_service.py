@@ -42,6 +42,12 @@ _DEFS = [
                "How much less than expected a bank credit may be and still count as the same receipt."),
     SettingDef("bank_date_window_days", "4", None, "H-02", "Bank date window (days)",
                "How many days after a sale a bank credit may arrive and still be matched."),
+    SettingDef("payroll_leave_paid", "off", ("on", "off"), "U-04", "Approved leave counts as a paid day",
+               "Off: salary is prorated by days present only. On: a day of leave is paid."),
+    SettingDef("payroll_holiday_paid", "off", ("on", "off"), "U-04", "Holidays count as paid days",
+               "Off: salary is prorated by days present only. On: a holiday is paid."),
+    SettingDef("payroll_days_basis", "calendar", ("calendar", "30"), "U-04", "Days in a month for proration",
+               "calendar: the real days of the month. 30: always thirty."),
     SettingDef("new_customer_approval", "off", ("on", "off"), "V-10", "New credit customers need owner approval",
                "On: a credit customer cannot be sold to until an owner approves them."),
 ]

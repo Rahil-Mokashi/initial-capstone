@@ -115,6 +115,8 @@ class Permission(str, Enum):
     OWNER_CHOICE_MANAGE = "owner_choice.manage"
     # Daily report (Classic / Plus), lubricants and the bowser van (site visit 2026-10-12).
     DAILY_REPORT_VIEW = "daily_report.view"
+    # Finalising a day stores a fingerprint of what the report printed (managers and owners).
+    DAILY_REPORT_FINALISE = "daily_report.finalise"
     LUBRICANT_VIEW = "lubricant.view"
     LUBRICANT_MANAGE = "lubricant.manage"
     BOWSER_VIEW = "bowser.view"
@@ -125,6 +127,17 @@ class Permission(str, Enum):
     CREDIT_APPROVE = "credit.approve"
     CREDIT_OVERRIDE = "credit.override"
     CREDIT_RECOVERY = "credit.recovery"
+    # Bank statement reconciliation. VIEW reads; MANAGE imports statements and matches/unmatches; LOCK lets an owner
+    # freeze a confirmed match (H-25). The Accountant gets VIEW and MANAGE by default (H-24, owner's answer pending);
+    # nobody else does. LOCK is held by the owners only.
+    BANK_RECON_VIEW = "bank_recon.view"
+    BANK_RECON_MANAGE = "bank_recon.manage"
+    BANK_RECON_LOCK = "bank_recon.lock"
+    # Payroll (U-09/U-08 defaults, owner's answers pending): the Accountant prepares salaries and pays them; ONLY an owner
+    # approves a month before anyone is paid. Nobody else is granted payroll access.
+    PAYROLL_VIEW = "payroll.view"
+    PAYROLL_MANAGE = "payroll.manage"
+    PAYROLL_APPROVE = "payroll.approve"
 
 
 class EmployeeStatus(str, Enum):
@@ -466,6 +479,7 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
         Permission.CHECK_VIEW,
         Permission.CHECK_EXPLAIN,
         Permission.DAILY_REPORT_VIEW,
+        Permission.DAILY_REPORT_FINALISE,
         Permission.CREDIT_RECOVERY,
         Permission.LUBRICANT_VIEW,
         Permission.LUBRICANT_MANAGE,
@@ -493,6 +507,10 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
         Permission.CHECK_EXPLAIN,
         Permission.DAILY_REPORT_VIEW,
         Permission.CREDIT_RECOVERY,
+        Permission.BANK_RECON_VIEW,
+        Permission.BANK_RECON_MANAGE,
+        Permission.PAYROLL_VIEW,
+        Permission.PAYROLL_MANAGE,
         Permission.LUBRICANT_VIEW,
         Permission.BOWSER_VIEW,
     ),

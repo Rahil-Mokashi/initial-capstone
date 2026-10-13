@@ -34,6 +34,8 @@ from app.repositories.nozzle_assignment_repository import NozzleAssignmentReposi
 from app.repositories.nozzle_repository import NozzleRepository
 from app.repositories.payment_repository import PaymentRepository
 from app.repositories.pump_setting_repository import PumpSettingRepository
+from app.repositories.bank_repositories import BankRepository
+from app.repositories.payroll_repositories import PayrollRepository
 from app.repositories.credit_repositories import (
     BillDetailRepository,
     CreditOverrideRepository,
@@ -69,11 +71,16 @@ from app.services.attendance_service import AttendanceService
 from app.services.audit_service import AuditService
 from app.services.auth_service import AuthService
 from app.services.backup_service import BackupService
+from app.services.payroll_checks import PayrollChecks
+from app.services.payroll_service import PayrollService
+from app.services.bank_checks import BankChecks
+from app.services.bank_recon_service import BankReconService
 from app.services.bowser_service import BowserService
 from app.services.check_runners import ExistingDataChecks
 from app.services.credit_checks import CreditChecks
 from app.services.credit_control_service import CreditControlService
 from app.services.customer_ledger_service import CustomerLedgerService
+from app.services.daily_report_plus import ReportFinaliser, build_extras
 from app.services.daily_report_service import DailyReportService
 from app.services.check_service import CheckService
 from app.services.credit_service import CreditService
@@ -497,6 +504,22 @@ class Services:
         )
 
     @cached_property
+    def bank(self) -> BankReconService:
+        return BankReconService(BankRepository(self.db), self.pump_settings, self.audit_repo, self.auth)
+
+    @cached_property
+    def bank_checks(self) -> BankChecks:
+        return BankChecks(self.bank, BankRepository(self.db), self.checks, self.pump_settings)
+
+    @cached_property
+    def payroll(self) -> PayrollService:
+        return PayrollService(PayrollRepository(self.db), self.pump_settings, self.audit_repo, self.auth)
+
+    @cached_property
+    def payroll_checks(self) -> PayrollChecks:
+        return PayrollChecks(self.payroll, PayrollRepository(self.db), self.checks, BankRepository(self.db))
+
+    @cached_property
     def credit_checks(self) -> CreditChecks:
         return CreditChecks(
             self.credit_ledger, self.credit_control, self.checks, self.sale_repo, self.shift_repo, self.credit_account_repo
@@ -540,17 +563,24 @@ class Services:
     def report_checks(self) -> ReportChecks:
         return ReportChecks(self.checks, self.daily_report, self.pump_settings)
 
+    @cached_property
+    def report_finaliser(self) -> ReportFinaliser:
+        return ReportFinaliser(self.db, self.daily_report, self.audit_repo, self.auth)
+
     def render_report(self, report, company, style, actor_id):
-        """Classic is the exact replica. Plus (Track 6) adds the checks strip and extras around the same layout."""
+        """Classic is the exact replica. Plus adds the checks strip and extras around the same layout."""
         from app.services.daily_report_html import render_daily_report
 
-        return render_daily_report(report, company)
+        extras = build_extras(self, report, actor_id) if style == "plus" else None
+        return render_daily_report(report, company, extras)
 
     def run_all_checks(self, actor_id, day):
         """Every check runner for one business date. Later tracks append their runners here."""
         results = list(self.existing_checks.run_day(actor_id, day))
         results += self.report_checks.run_day(actor_id, day)
         results += self.credit_checks.run_day(actor_id, day)
+        results += self.bank_checks.run_day(actor_id, day)
+        results += self.payroll_checks.run_day(actor_id, day)
         return results
 
     def days_to_check(self):

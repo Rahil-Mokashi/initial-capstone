@@ -57,3 +57,14 @@ def test_settings_default_validate_and_audit(svc, uid):
         svc.pump_settings.set(uid["OWNER"], "nope", "x")
     with pytest.raises(PermissionDeniedError):
         svc.pump_settings.set(uid["DATA_ENTRY"], "credit_over_limit", "warn")
+
+
+def test_accountant_and_owner_defaults_for_bank_and_payroll(svc, uid):
+    for perm in (Permission.BANK_RECON_VIEW, Permission.BANK_RECON_MANAGE, Permission.PAYROLL_VIEW, Permission.PAYROLL_MANAGE):
+        assert can(svc, uid["ACCOUNTANT"], perm) and can(svc, uid["OWNER"], perm)
+        for role in ("MANAGER", "DATA_ENTRY", "ATTENDANT", "SHIFT_SUPERVISOR"):
+            assert not can(svc, uid[role], perm), (role, perm)
+    # approving a month and locking a bank match are the owners' alone; the accountant prepares but never approves
+    for perm in (Permission.PAYROLL_APPROVE, Permission.BANK_RECON_LOCK):
+        assert can(svc, uid["OWNER"], perm) and not can(svc, uid["ACCOUNTANT"], perm)
+    assert can(svc, uid["MANAGER"], Permission.DAILY_REPORT_FINALISE) and not can(svc, uid["ACCOUNTANT"], Permission.DAILY_REPORT_FINALISE)

@@ -332,3 +332,12 @@ While building for offline-only operation, the architecture should not prevent f
   - IoT tank sensors possibility
 - Modular architecture
   - Dispenser integration possibility
+## Site-visit build (2026-10-13, branch `feature/site-visit-build`)
+- [x] Checks engine, roles (DATA_ENTRY), role-based Today, Owner Choices
+- [x] Daily report Classic (exact replica) and Plus, lubricants, bowser van, per-mode totals, internal fuel use
+- [x] Credit: history, ageing, limit check with owner override, follow-ups, statements, approvals
+- [x] Bank statement reconciliation (CSV/XLSX import, deterministic matcher, owner lock)
+- [x] Payroll v1 (accountant prepares, owner approves, cash/bank, payslips)
+- [ ] Shift close entry screen (closing meter readings + amounts by source, concise, for the data-entry person)
+- [ ] Payroll Excel import (needs the real files, U-02), PDF bank statements (H-07)
+- [ ] Owner answers to the questionnaire IDs listed in TWELVE_HOUR_REPORT.md

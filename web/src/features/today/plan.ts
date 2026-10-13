@@ -6,9 +6,9 @@ export type FocusId =
   | 'day_status'
   | 'credit_outstanding'
   | 'credit_chase'
+  | 'payroll'
   | 'shift_entry'
-  | 'manager_close'
-  | 'my_shift';
+  | 'manager_close';
 
 export interface TodayPlan {
   focus: FocusId[];
@@ -21,19 +21,17 @@ export function todayPlan(role: string | null | undefined): TodayPlan {
     case 'OWNER':
     case 'ADMIN':
       return {
-        focus: ['checks', 'day_status', 'credit_outstanding', 'credit_chase'],
+        focus: ['checks', 'day_status', 'credit_outstanding', 'credit_chase', 'payroll'],
         overview: true,
       };
     case 'MANAGER':
       return { focus: ['manager_close', 'checks'], overview: true };
     case 'ACCOUNTANT':
-      return { focus: ['checks', 'credit_outstanding', 'credit_chase'], overview: true };
+      return { focus: ['checks', 'credit_outstanding', 'credit_chase', 'payroll'], overview: true };
     case 'DATA_ENTRY':
       return { focus: ['shift_entry'], overview: false };
     case 'SHIFT_SUPERVISOR':
       return { focus: ['manager_close'], overview: false };
-    case 'ATTENDANT':
-      return { focus: ['my_shift'], overview: false };
     default:
       return { focus: [], overview: true };
   }

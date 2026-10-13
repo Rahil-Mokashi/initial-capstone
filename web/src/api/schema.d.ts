@@ -390,6 +390,367 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/bank/accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Accounts */
+        get: operations["accounts_api_bank_accounts_get"];
+        put?: never;
+        /** Create Account */
+        post: operations["create_account_api_bank_accounts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/bank/accounts/{account_id}/headers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * File Headers
+         * @description The column names a statement file offers (from the header row the person points at), so the layout can be chosen.
+         */
+        post: operations["file_headers_api_bank_accounts__account_id__headers_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/bank/accounts/{account_id}/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Import Statement */
+        post: operations["import_statement_api_bank_accounts__account_id__import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/bank/accounts/{account_id}/imports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Imports */
+        get: operations["imports_api_bank_accounts__account_id__imports_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/bank/accounts/{account_id}/modes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Set Modes */
+        put: operations["set_modes_api_bank_accounts__account_id__modes_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/bank/accounts/{account_id}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preview */
+        post: operations["preview_api_bank_accounts__account_id__preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/bank/accounts/{account_id}/profiles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Profiles */
+        get: operations["profiles_api_bank_accounts__account_id__profiles_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/bank/accounts/{account_id}/profiles/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Save Profile */
+        put: operations["save_profile_api_bank_accounts__account_id__profiles__name__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/bank/days": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Days */
+        get: operations["days_api_bank_days_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/bank/exceptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Exceptions */
+        get: operations["exceptions_api_bank_exceptions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/bank/expected": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Expected */
+        get: operations["expected_api_bank_expected_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/bank/match/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run */
+        post: operations["run_api_bank_match_run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/bank/matches/manual": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Manual */
+        post: operations["manual_api_bank_matches_manual_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/bank/matches/{match_id}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm */
+        post: operations["confirm_api_bank_matches__match_id__confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/bank/matches/{match_id}/lock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Lock */
+        post: operations["lock_api_bank_matches__match_id__lock_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/bank/matches/{match_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject */
+        post: operations["reject_api_bank_matches__match_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/bank/matches/{match_id}/unmatch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Unmatch */
+        post: operations["unmatch_api_bank_matches__match_id__unmatch_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/bank/modes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Modes */
+        get: operations["modes_api_bank_modes_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/bank/rows": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Rows */
+        get: operations["rows_api_bank_rows_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/bank/rows/{row_id}/not-ours": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Not Ours */
+        post: operations["not_ours_api_bank_rows__row_id__not_ours_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/bank/suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Suggestions */
+        get: operations["suggestions_api_bank_suggestions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/bowser/bills": {
         parameters: {
             query?: never;
@@ -967,6 +1328,23 @@ export interface paths {
         get: operations["daily_report_api_daily_report_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/daily-report/finalise": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Finalise */
+        post: operations["finalise_api_daily_report_finalise_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1740,6 +2118,212 @@ export interface paths {
         put?: never;
         /** Refund Payment */
         post: operations["refund_payment_api_payments__payment_id__refund_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/payroll/advances": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Advances */
+        get: operations["advances_api_payroll_advances_get"];
+        put?: never;
+        /** Give Advance */
+        post: operations["give_advance_api_payroll_advances_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/payroll/advances/{advance_id}/void": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Void Advance */
+        post: operations["void_advance_api_payroll_advances__advance_id__void_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/payroll/lines/{line_id}/deductions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Deductions */
+        put: operations["deductions_api_payroll_lines__line_id__deductions_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/payroll/lines/{line_id}/pay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Pay */
+        post: operations["pay_api_payroll_lines__line_id__pay_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/payroll/lines/{line_id}/payslip": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Payslip */
+        get: operations["payslip_api_payroll_lines__line_id__payslip_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/payroll/lines/{line_id}/payslip.{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Payslip File */
+        get: operations["payslip_file_api_payroll_lines__line_id__payslip__kind__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/payroll/payments/{payment_id}/void": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Void Payment */
+        post: operations["void_payment_api_payroll_payments__payment_id__void_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/payroll/register/{month}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Register */
+        get: operations["register_api_payroll_register__month__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/payroll/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Runs */
+        get: operations["runs_api_payroll_runs_get"];
+        put?: never;
+        /** Prepare */
+        post: operations["prepare_api_payroll_runs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/payroll/runs/{run_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve */
+        post: operations["approve_api_payroll_runs__run_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/payroll/salaries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Salaries */
+        get: operations["salaries_api_payroll_salaries_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/payroll/salaries/{employee_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Set Salary */
+        put: operations["set_salary_api_payroll_salaries__employee_id__put"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -3074,6 +3658,363 @@ export interface components {
             /** Size Bytes */
             size_bytes: number;
         };
+        /** BankAccountIn */
+        BankAccountIn: {
+            /** Account Mask */
+            account_mask?: string | null;
+            /**
+             * Modes
+             * @default []
+             */
+            modes: string[];
+            /** Name */
+            name: string;
+        };
+        /** BankAccountOut */
+        BankAccountOut: {
+            /** Account Mask */
+            account_mask?: string | null;
+            /** Id */
+            id: string;
+            /** Modes */
+            modes: string[];
+            /** Name */
+            name: string;
+        };
+        /** BankAgedOut */
+        BankAgedOut: {
+            /** Age Days */
+            age_days: number;
+            expected: components["schemas"]["BankExpectedOut"];
+        };
+        /** BankDayModeOut */
+        BankDayModeOut: {
+            /** Charges */
+            charges: string;
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Expected */
+            expected: string;
+            /** Label */
+            label: string;
+            /** Mode */
+            mode: string;
+            /** Received */
+            received: string;
+            /** Status */
+            status: string;
+            /** Suggested */
+            suggested: string;
+            /** Unmatched */
+            unmatched: string;
+        };
+        /** BankExceptionsOut */
+        BankExceptionsOut: {
+            /** Aged Expected */
+            aged_expected: components["schemas"]["BankAgedOut"][];
+            /** Broken Imports */
+            broken_imports: components["schemas"]["BankImportOut"][];
+            /** Suggestions */
+            suggestions: number;
+            /** Total Charges */
+            total_charges: string;
+            /** Unmatched Credits */
+            unmatched_credits: components["schemas"]["BankStatementRowOut"][];
+        };
+        /** BankExpectedOut */
+        BankExpectedOut: {
+            /** Amount */
+            amount: string;
+            /**
+             * Business Date
+             * Format: date
+             */
+            business_date: string;
+            /** Description */
+            description: string;
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /**
+             * Locked
+             * @default false
+             */
+            locked: boolean;
+            /** Match Id */
+            match_id?: string | null;
+            /** Match Status */
+            match_status?: string | null;
+            /** Mode */
+            mode: string;
+            /** Reference */
+            reference?: string | null;
+            /**
+             * Win To
+             * Format: date
+             */
+            win_to: string;
+        };
+        /** BankFileIn */
+        BankFileIn: {
+            /** Content Base64 */
+            content_base64: string;
+            /** Filename */
+            filename: string;
+            mapping: components["schemas"]["BankMappingIn"];
+            /**
+             * Skip Unreadable
+             * @default false
+             */
+            skip_unreadable: boolean;
+        };
+        /** BankHeadersIn */
+        BankHeadersIn: {
+            /** Content Base64 */
+            content_base64: string;
+            /** Filename */
+            filename: string;
+            /**
+             * Header Row
+             * @default 0
+             */
+            header_row: number;
+            /** Sheet */
+            sheet?: string | null;
+        };
+        /** BankHeadersOut */
+        BankHeadersOut: {
+            /** First Rows */
+            first_rows: string[][];
+            /** Headers */
+            headers: string[];
+        };
+        /** BankImportOut */
+        BankImportOut: {
+            /** Break Count */
+            break_count: number;
+            /** Closing Balance */
+            closing_balance?: string | null;
+            /** Continuity Notes */
+            continuity_notes?: string | null;
+            /** Continuity Ok */
+            continuity_ok: boolean;
+            /** Date From */
+            date_from?: string | null;
+            /** Date To */
+            date_to?: string | null;
+            /** Duplicate Rows */
+            duplicate_rows: number;
+            /** Filename */
+            filename: string;
+            /** Id */
+            id: string;
+            /**
+             * Imported At
+             * Format: date-time
+             */
+            imported_at: string;
+            /** New Rows */
+            new_rows: number;
+            /** Opening Balance */
+            opening_balance?: string | null;
+            /** Row Count */
+            row_count: number;
+        };
+        /** BankLockIn */
+        BankLockIn: {
+            /**
+             * Locked
+             * @default true
+             */
+            locked: boolean;
+        };
+        /** BankManualIn */
+        BankManualIn: {
+            /** Expected Ids */
+            expected_ids: string[];
+            /**
+             * Reason
+             * @default No reason given
+             */
+            reason: string;
+            /** Row Ids */
+            row_ids: string[];
+        };
+        /** BankMappingIn */
+        BankMappingIn: {
+            /** Amount Col */
+            amount_col?: string | null;
+            /** Balance Col */
+            balance_col?: string | null;
+            /** Credit Col */
+            credit_col?: string | null;
+            /** Date Col */
+            date_col: string;
+            /** Date Format */
+            date_format?: string | null;
+            /** Debit Col */
+            debit_col?: string | null;
+            /** Delimiter */
+            delimiter?: string | null;
+            /** Description Col */
+            description_col: string;
+            /**
+             * Header Row
+             * @default 0
+             */
+            header_row: number;
+            /** Reference Col */
+            reference_col?: string | null;
+            /** Sheet */
+            sheet?: string | null;
+            /** Type Col */
+            type_col?: string | null;
+        };
+        /** BankMatchOut */
+        BankMatchOut: {
+            /** Id */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Locked */
+            locked: boolean;
+            /** Status */
+            status: string;
+        };
+        /** BankModeOut */
+        BankModeOut: {
+            /** Label */
+            label: string;
+            /** Mode */
+            mode: string;
+        };
+        /** BankModesIn */
+        BankModesIn: {
+            /** Modes */
+            modes: string[];
+        };
+        /** BankPreviewOut */
+        BankPreviewOut: {
+            /** Breaks */
+            breaks: {
+                [key: string]: unknown;
+            }[];
+            /** Closing Balance */
+            closing_balance?: string | null;
+            /** Date From */
+            date_from?: string | null;
+            /** Date To */
+            date_to?: string | null;
+            /** Duplicate Rows */
+            duplicate_rows: number;
+            /** Headers */
+            headers: string[];
+            /** New Rows */
+            new_rows: number;
+            /** Opening Balance */
+            opening_balance?: string | null;
+            /** Problems */
+            problems: {
+                [key: string]: unknown;
+            }[];
+            /** Row Count */
+            row_count: number;
+            /** Same File Before */
+            same_file_before: boolean;
+            /** Sample */
+            sample: components["schemas"]["BankStatementRowOut"][];
+        };
+        /** BankProfileOut */
+        BankProfileOut: {
+            /** Mapping */
+            mapping: {
+                [key: string]: unknown;
+            };
+            /** Name */
+            name: string;
+        };
+        /** BankReasonBody */
+        BankReasonBody: {
+            /**
+             * Reason
+             * @default No reason given
+             */
+            reason: string;
+        };
+        /** BankRunIn */
+        BankRunIn: {
+            /**
+             * Date From
+             * Format: date
+             */
+            date_from: string;
+            /**
+             * Date To
+             * Format: date
+             */
+            date_to: string;
+        };
+        /** BankRunOut */
+        BankRunOut: {
+            /** Auto */
+            auto: number;
+            /** Reversals */
+            reversals: number;
+            /** Suggested */
+            suggested: number;
+        };
+        /** BankStatementRowOut */
+        BankStatementRowOut: {
+            /** Balance */
+            balance?: string | null;
+            /** Bank Account Id */
+            bank_account_id: string;
+            /** Credit */
+            credit: string;
+            /** Debit */
+            debit: string;
+            /** Description */
+            description: string;
+            /** Id */
+            id: string;
+            /**
+             * Locked
+             * @default false
+             */
+            locked: boolean;
+            /** Match Id */
+            match_id?: string | null;
+            /** Match Kind */
+            match_kind?: string | null;
+            /** Match Status */
+            match_status?: string | null;
+            /** Reference */
+            reference?: string | null;
+            /**
+             * Txn Date
+             * Format: date
+             */
+            txn_date: string;
+        };
+        /** BankSuggestionOut */
+        BankSuggestionOut: {
+            /** Charges */
+            charges: string;
+            /** Expected */
+            expected: components["schemas"]["BankExpectedOut"][];
+            /** Match Id */
+            match_id: string;
+            /** Note */
+            note?: string | null;
+            /** Rows */
+            rows: components["schemas"]["BankStatementRowOut"][];
+            /** Rule */
+            rule: string;
+        };
         /** BillDetailsIn */
         BillDetailsIn: {
             /** Slip No */
@@ -3519,11 +4460,17 @@ export interface components {
         };
         /** DailyReportOut */
         DailyReportOut: {
+            /** Current Hash */
+            current_hash?: string | null;
             /**
              * Day
              * Format: date
              */
             day: string;
+            /** Finalised At */
+            finalised_at?: string | null;
+            /** Finalised Hash */
+            finalised_hash?: string | null;
             /** Html */
             html: string;
             /** Report */
@@ -3874,6 +4821,20 @@ export interface components {
             employees: components["schemas"]["Choice"][];
             /** Nozzles */
             nozzles: components["schemas"]["Choice"][];
+        };
+        /** FinaliseIn */
+        FinaliseIn: {
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /**
+             * Style
+             * @default classic
+             * @enum {string}
+             */
+            style: "classic" | "plus";
         };
         /** FollowUpIn */
         FollowUpIn: {
@@ -4661,6 +5622,231 @@ export interface components {
             id: string;
             /** Status */
             status: string;
+        };
+        /** PayrollAdvanceIn */
+        PayrollAdvanceIn: {
+            /**
+             * Amount
+             * @example 102.50
+             */
+            amount: string;
+            /** Employee Id */
+            employee_id: string;
+            /**
+             * Given On
+             * Format: date
+             */
+            given_on: string;
+            /**
+             * Method
+             * @default cash
+             * @enum {string}
+             */
+            method: "cash" | "bank";
+            /** Note */
+            note?: string | null;
+        };
+        /** PayrollAdvanceOut */
+        PayrollAdvanceOut: {
+            /** Amount */
+            amount: string;
+            /** Employee */
+            employee?: string | null;
+            /** Employee Id */
+            employee_id: string;
+            /**
+             * Given On
+             * Format: date
+             */
+            given_on: string;
+            /** Id */
+            id: string;
+            /** Method */
+            method: string;
+            /** Note */
+            note?: string | null;
+        };
+        /** PayrollDeductionsIn */
+        PayrollDeductionsIn: {
+            /**
+             * Advance
+             * @default 0
+             * @example 102.50
+             */
+            advance: string;
+            /**
+             * Other
+             * @default 0
+             * @example 102.50
+             */
+            other: string;
+            /** Other Note */
+            other_note?: string | null;
+            /**
+             * Shortage
+             * @default 0
+             * @example 102.50
+             */
+            shortage: string;
+        };
+        /** PayrollIdOut */
+        PayrollIdOut: {
+            /** Id */
+            id: string;
+        };
+        /** PayrollLineOut */
+        PayrollLineOut: {
+            /** Advance Deduction */
+            advance_deduction: string;
+            /** Advance Outstanding */
+            advance_outstanding: string;
+            /** Days In Month */
+            days_in_month: number;
+            /** Days Present */
+            days_present: string;
+            /** Employee Id */
+            employee_id: string;
+            /** Employee Name */
+            employee_name: string;
+            /** Gross */
+            gross: string;
+            /** Id */
+            id: string;
+            /** Monthly Salary */
+            monthly_salary: string;
+            /** Net */
+            net: string;
+            /** Other Deduction */
+            other_deduction: string;
+            /** Other Note */
+            other_note?: string | null;
+            /** Paid Days */
+            paid_days: string;
+            payment?: components["schemas"]["PayrollPaymentOut"] | null;
+            /** Shortage Deduction */
+            shortage_deduction: string;
+            /** Shortage Outstanding */
+            shortage_outstanding: string;
+        };
+        /** PayrollPayIn */
+        PayrollPayIn: {
+            /** Bank Account Id */
+            bank_account_id?: string | null;
+            /**
+             * Method
+             * @enum {string}
+             */
+            method: "cash" | "bank";
+            /**
+             * Paid On
+             * Format: date
+             */
+            paid_on: string;
+            /** Reference */
+            reference?: string | null;
+        };
+        /** PayrollPaymentOut */
+        PayrollPaymentOut: {
+            /** Amount */
+            amount: string;
+            /** Bank Account Id */
+            bank_account_id?: string | null;
+            /** Id */
+            id: string;
+            /** Method */
+            method: string;
+            /**
+             * Paid On
+             * Format: date
+             */
+            paid_on: string;
+            /** Reference */
+            reference?: string | null;
+        };
+        /** PayrollPrepareIn */
+        PayrollPrepareIn: {
+            /** Month */
+            month: string;
+        };
+        /** PayrollRegisterOut */
+        PayrollRegisterOut: {
+            /** Advance */
+            advance: string;
+            /** Approved At */
+            approved_at?: string | null;
+            /** Approved By */
+            approved_by?: string | null;
+            /** Days In Month */
+            days_in_month: number;
+            /** Gross */
+            gross: string;
+            /** Holiday Paid */
+            holiday_paid: string;
+            /** Leave Paid */
+            leave_paid: string;
+            /** Lines */
+            lines: components["schemas"]["PayrollLineOut"][];
+            /** Month */
+            month: string;
+            /** Net */
+            net: string;
+            /** Other */
+            other: string;
+            /** Paid */
+            paid: string;
+            /** Run Id */
+            run_id: string;
+            /** Shortage */
+            shortage: string;
+            /** Status */
+            status: string;
+        };
+        /** PayrollRunRowOut */
+        PayrollRunRowOut: {
+            /** Id */
+            id: string;
+            /** Month */
+            month: string;
+            /** Status */
+            status: string;
+        };
+        /** PayrollSalaryIn */
+        PayrollSalaryIn: {
+            /**
+             * Effective From
+             * Format: date
+             */
+            effective_from: string;
+            /**
+             * Monthly Salary
+             * @example 102.50
+             */
+            monthly_salary: string;
+            /** Note */
+            note?: string | null;
+        };
+        /** PayrollSalaryRowOut */
+        PayrollSalaryRowOut: {
+            /** Advance Outstanding */
+            advance_outstanding: string;
+            /** Effective From */
+            effective_from?: string | null;
+            /** Employee Code */
+            employee_code: string;
+            /** Employee Id */
+            employee_id: string;
+            /** Monthly Salary */
+            monthly_salary?: string | null;
+            /** Name */
+            name: string;
+        };
+        /** PayrollVoidBody */
+        PayrollVoidBody: {
+            /**
+             * Reason
+             * @default No reason given
+             */
+            reason: string;
         };
         /** PerformIn */
         PerformIn: {
@@ -6461,6 +7647,796 @@ export interface operations {
             };
         };
     };
+    accounts_api_bank_accounts_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankAccountOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_account_api_bank_accounts_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BankAccountIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankAccountOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    file_headers_api_bank_accounts__account_id__headers_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BankHeadersIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankHeadersOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    import_statement_api_bank_accounts__account_id__import_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BankFileIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankImportOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    imports_api_bank_accounts__account_id__imports_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankImportOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_modes_api_bank_accounts__account_id__modes_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BankModesIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankAccountOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_api_bank_accounts__account_id__preview_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BankFileIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankPreviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    profiles_api_bank_accounts__account_id__profiles_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankProfileOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_profile_api_bank_accounts__account_id__profiles__name__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                account_id: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BankMappingIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankProfileOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    days_api_bank_days_get: {
+        parameters: {
+            query: {
+                date_from: string;
+                date_to: string;
+            };
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankDayModeOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    exceptions_api_bank_exceptions_get: {
+        parameters: {
+            query: {
+                date_from: string;
+                date_to: string;
+            };
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankExceptionsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    expected_api_bank_expected_get: {
+        parameters: {
+            query: {
+                date_from: string;
+                date_to: string;
+            };
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankExpectedOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_api_bank_match_run_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BankRunIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankRunOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    manual_api_bank_matches_manual_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BankManualIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankMatchOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_api_bank_matches__match_id__confirm_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                match_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankMatchOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    lock_api_bank_matches__match_id__lock_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                match_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BankLockIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankMatchOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_api_bank_matches__match_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                match_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BankReasonBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankMatchOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unmatch_api_bank_matches__match_id__unmatch_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                match_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BankReasonBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankMatchOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    modes_api_bank_modes_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankModeOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rows_api_bank_rows_get: {
+        parameters: {
+            query: {
+                date_from: string;
+                date_to: string;
+                account_id?: string | null;
+            };
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankStatementRowOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    not_ours_api_bank_rows__row_id__not_ours_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                row_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BankReasonBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankMatchOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    suggestions_api_bank_suggestions_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankSuggestionOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     bill_api_bowser_bills_post: {
         parameters: {
             query?: never;
@@ -7720,6 +9696,42 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyReportOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    finalise_api_daily_report_finalise_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FinaliseIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -9702,6 +11714,503 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PaymentStatusOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    advances_api_payroll_advances_get: {
+        parameters: {
+            query?: {
+                employee_id?: string | null;
+            };
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayrollAdvanceOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    give_advance_api_payroll_advances_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PayrollAdvanceIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayrollIdOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    void_advance_api_payroll_advances__advance_id__void_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                advance_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PayrollVoidBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayrollIdOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deductions_api_payroll_lines__line_id__deductions_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                line_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PayrollDeductionsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayrollIdOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pay_api_payroll_lines__line_id__pay_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                line_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PayrollPayIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayrollPaymentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    payslip_api_payroll_lines__line_id__payslip_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                line_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    payslip_file_api_payroll_lines__line_id__payslip__kind__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                line_id: string;
+                kind: "pdf" | "xlsx";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    void_payment_api_payroll_payments__payment_id__void_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                payment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PayrollVoidBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayrollIdOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    register_api_payroll_register__month__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                month: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayrollRegisterOut"] | null;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    runs_api_payroll_runs_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayrollRunRowOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    prepare_api_payroll_runs_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PayrollPrepareIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayrollRegisterOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_api_payroll_runs__run_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayrollIdOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    salaries_api_payroll_salaries_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayrollSalaryRowOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_salary_api_payroll_salaries__employee_id__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                employee_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PayrollSalaryIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayrollIdOut"];
                 };
             };
             /** @description Validation Error */

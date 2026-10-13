@@ -7,7 +7,7 @@ from decimal import Decimal
 
 import pytest
 
-from api_helpers import audit_chain_ok
+from api_helpers import audit_chain_ok, audit_events
 from pump_day import EXPECTED, TODAY, build_day
 
 D = Decimal
@@ -239,8 +239,55 @@ def test_export_html_for_the_pdf_check(client, day, manager, tmp_path):
     import os
 
     out = os.environ.get("PPERP_REPORT_HTML_OUT")
-    html = _report(client, manager)["html"]
+    html = _report(client, manager, os.environ.get("PPERP_REPORT_STYLE", "classic"))["html"]
     if out:
         with open(out, "w", encoding="utf-8") as f:
             f.write(html)
     assert html.count('class="page"') == 2
+
+
+# ------------------------------------------------------------------------------------------------ Plus
+def test_plus_has_the_same_two_sides_plus_what_the_owners_asked_to_see(client, day, manager, owner):
+    client.post("/api/checks/run", headers=owner, json={"day": TODAY})
+    html = _report(client, manager, "plus")["html"]
+    assert html.count('class="page"') == 2
+    assert "DAILY REPORT (Plus)" in html and "checks passed" in html
+    assert "₹2,30,500.00" in html  # rupee sign with Indian grouping
+    assert "56,990.00" in html  # litres at a fixed two places
+    assert "Dip difference" in html and "OUTSIDE" not in html and "ok (tolerance 0.5%)" in html  # MS-22 is 40 L under: 0.07%
+    assert "bank: pending" in html  # nothing imported from the bank yet
+    assert "Bowser: meter Net Sale 400.00 L equals the litres on the bills" in html and "PASS" in html
+    assert "<h2>Credit</h2>" in html and "Total outstanding from customers" in html
+    assert "Prepared by:" in html and "Checked by:" in html and "report code" in html
+    order = ["Sale Details", "Shift 1 Transaction Details", "Shift 1 Cash Book", "Shift 1 Credit Sale", "Expenses Details", "Oil Sale", "Bowser Van"]
+    assert [html.index(s) for s in order] == sorted(html.index(s) for s in order)  # same order as Classic
+
+
+def test_classic_is_untouched_by_plus(client, day, manager):
+    classic = _report(client, manager, "classic")["html"]
+    assert "₹" not in classic and "Prepared by" not in classic and "2,30,500.00" in classic
+
+
+def test_the_style_comes_from_the_owners_choice_when_none_is_asked_for(client, day, manager, owner):
+    assert client.get(f"/api/daily-report?day={TODAY}", headers=manager).json()["style"] == "classic"
+    client.put("/api/pump-settings/daily_report_style", headers=owner, json={"value": "plus"})
+    r = client.get(f"/api/daily-report?day={TODAY}", headers=manager).json()
+    assert r["style"] == "plus" and "DAILY REPORT (Plus)" in r["html"]
+
+
+def test_finalising_a_day_stores_its_hash_in_the_audit_log_and_shows_later_changes(client, day, manager, accountant, session_factory):
+    assert client.post("/api/daily-report/finalise", headers=accountant, json={"day": TODAY, "style": "plus"}).status_code == 403
+    done = client.post("/api/daily-report/finalise", headers=manager, json={"day": TODAY, "style": "plus"})
+    assert done.status_code == 201
+    d = done.json()
+    assert d["finalised_hash"] and d["finalised_hash"] == d["current_hash"] and len(d["finalised_hash"]) == 12
+    events = audit_events(session_factory, "daily_report_finalised")
+    assert len(events) == 1 and d["finalised_hash"] in events[0].description
+    assert f"code {d['finalised_hash']}" in d["html"] and "figures have changed since" not in d["html"]
+    # a figure behind the report changes: the hash moves and the printout says so
+    s1 = day["shifts"][0]["id"]
+    modes = {r["name"]: r["tender_id"] for r in client.get(f"/api/shift-totals/{s1}", headers=manager).json()}
+    client.put(f"/api/shift-totals/{s1}/{modes['Paytm']}", headers=manager, json={"amount": "31000.00"})
+    after = client.get(f"/api/daily-report?day={TODAY}&style=plus", headers=manager).json()
+    assert after["current_hash"] != after["finalised_hash"] and "figures have changed since" in after["html"]
+    assert audit_chain_ok(session_factory)

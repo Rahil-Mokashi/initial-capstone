@@ -1,12 +1,17 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useGet } from '@/api/hooks';
+import { api } from '@/api/client';
+import { useGet, useWrite } from '@/api/hooks';
+import { useAuth } from '@/auth/AuthContext';
+import { useToast } from '@/components/ui/Toast';
+import { P } from '@/lib/permissions';
 import type { components } from '@/api/schema';
 import { DocumentActions } from '@/components/DocumentActions';
 import { PageHeader } from '@/components/PageHeader';
 import { ErrorState, LoadingBlock } from '@/components/ui/States';
 import { StatusBadge } from '@/components/ui/StatusBadge';
-import { TextField } from '@/components/ui/Field';
+import { SelectField, TextField } from '@/components/ui/Field';
+import { Button } from '@/components/ui/Button';
 import { formatCheckValue } from '@/features/checks/checkText';
 import { formatMoney, groupDigits, todayIso } from '@/lib/format';
 
@@ -166,8 +171,18 @@ function ShiftTotals({ r }: { r: Report }) {
 }
 
 export function DailyReportPage() {
+  const { can } = useAuth();
+  const toast = useToast();
   const [day, setDay] = useState(todayIso());
-  const report = useGet<S['DailyReportOut']>(['daily-report', day], `/daily-report?day=${day}`);
+  const [style, setStyle] = useState('');
+  const report = useGet<S['DailyReportOut']>(
+    ['daily-report', day, style],
+    `/daily-report?day=${day}${style ? `&style=${style}` : ''}`,
+  );
+  const finalise = useWrite(
+    () => api.post('/daily-report/finalise', { day, style: data?.style ?? 'classic' }),
+    ['daily-report', 'audit'],
+  );
   const checks = useGet<S['DayChecksOut']>(['checks', 'report', day], `/checks?day=${day}`);
   const data = report.data;
   const r = data?.report as unknown as Report | undefined;
@@ -189,9 +204,27 @@ export function DailyReportPage() {
       </PageHeader>
       <div className="flex flex-wrap items-end gap-3">
         <TextField label="Day" type="date" value={day} onChange={(e) => setDay(e.target.value)} />
-        {data && (
+        <SelectField label="Style" value={style} onChange={(e) => setStyle(e.target.value)}>
+          <option value="">As chosen in Owner Choices</option>
+          <option value="classic">Classic (the old report)</option>
+          <option value="plus">Plus (with checks and extras)</option>
+        </SelectField>
+        {data && can(P.DAILY_REPORT_FINALISE) && (
+          <Button
+            loading={finalise.isPending}
+            onClick={() =>
+              finalise
+                .mutateAsync()
+                .then(() => toast.success('Day finalised: the report code is in the audit log.'))
+            }
+          >
+            Finalise this day
+          </Button>
+        )}
+        {data?.finalised_hash && (
           <p className="pb-3 text-sm text-muted">
-            Style: <strong>{data.style === 'plus' ? 'Plus' : 'Classic'}</strong>
+            Finalised, code {data.finalised_hash}
+            {data.current_hash !== data.finalised_hash && ' — figures have changed since'}
           </p>
         )}
       </div>

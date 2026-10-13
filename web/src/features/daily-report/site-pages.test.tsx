@@ -109,6 +109,31 @@ describe('Daily Report screen', () => {
   });
 });
 
+describe('Daily Report finalise and style', () => {
+  it('lets a manager pick Plus and finalise the day, and shows when figures changed since', async () => {
+    const api = await openAs(
+      ['daily_report.view', 'daily_report.finalise'],
+      '/daily-report',
+      'Daily Report',
+      {
+        'GET /api/daily-report': () =>
+          json(200, { ...report(), finalised_hash: 'abc123def456', current_hash: 'zzz' }),
+        'POST /api/daily-report/finalise': () => json(201, report()),
+        'GET /api/checks': () => json(200, checks),
+      },
+    );
+    expect(await screen.findByText(/Finalised, code abc123def456/)).toHaveTextContent(
+      'figures have changed since',
+    );
+    await userEvent.selectOptions(screen.getByLabelText('Style'), 'plus');
+    await waitFor(() => expect(api.calls.some((c) => c.url.includes('style=plus'))).toBe(true));
+    await userEvent.click(screen.getByRole('button', { name: 'Finalise this day' }));
+    await waitFor(() =>
+      expect(api.calls.some((c) => c.key === 'POST /api/daily-report/finalise')).toBe(true),
+    );
+  });
+});
+
 describe('Oil / Lubricants screen', () => {
   const item = {
     id: 'i1',

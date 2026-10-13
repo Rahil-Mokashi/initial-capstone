@@ -43,6 +43,7 @@ export const P = {
   CHECK_EXPLAIN: 'check.explain',
   OWNER_CHOICE_MANAGE: 'owner_choice.manage',
   DAILY_REPORT_VIEW: 'daily_report.view',
+  DAILY_REPORT_FINALISE: 'daily_report.finalise',
   LUBRICANT_VIEW: 'lubricant.view',
   LUBRICANT_MANAGE: 'lubricant.manage',
   BOWSER_VIEW: 'bowser.view',
@@ -50,4 +51,10 @@ export const P = {
   CREDIT_APPROVE: 'credit.approve',
   CREDIT_OVERRIDE: 'credit.override',
   CREDIT_RECOVERY: 'credit.recovery',
+  BANK_RECON_VIEW: 'bank_recon.view',
+  BANK_RECON_MANAGE: 'bank_recon.manage',
+  BANK_RECON_LOCK: 'bank_recon.lock',
+  PAYROLL_VIEW: 'payroll.view',
+  PAYROLL_MANAGE: 'payroll.manage',
+  PAYROLL_APPROVE: 'payroll.approve',
 } as const;
