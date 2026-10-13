@@ -4,6 +4,7 @@ from .app_setting import AppSetting
 from .attendance import Attendance
 from .audit_log import AuditLog
 from .check_result import CheckExplanation, CheckResult
+from .digest_review import DigestReview
 from .lan_device import LanDevice
 from .record_version import RecordVersion
 from .shift_entry import ShiftEntry, ShiftEntryEvent
@@ -77,6 +78,7 @@ __all__ = [
     "BowserTransfer",
     "CheckExplanation",
     "CheckResult",
+    "DigestReview",
     "LanDevice",
     "RecordVersion",
     "ShiftEntry",

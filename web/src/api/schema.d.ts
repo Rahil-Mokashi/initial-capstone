@@ -1613,6 +1613,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/digest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Digest */
+        get: operations["digest_api_digest_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/digest/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Review */
+        post: operations["review_api_digest_review_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/dispensers": {
         parameters: {
             query?: never;
@@ -4899,6 +4933,82 @@ export interface components {
              * @default
              */
             reason: string;
+        };
+        /** DigestCheckOut */
+        DigestCheckOut: {
+            /** Sentence */
+            sentence: string;
+            /** Status */
+            status: string;
+        };
+        /** DigestOut */
+        DigestOut: {
+            /** Checks Passed */
+            checks_passed: number;
+            /** Checks To Look At */
+            checks_to_look_at: components["schemas"]["DigestCheckOut"][];
+            /** Checks Total */
+            checks_total: number;
+            /** Credit Outstanding */
+            credit_outstanding: string;
+            /** Credit Sales */
+            credit_sales: string;
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Litres Sold */
+            litres_sold: string;
+            /** Pending Expenses */
+            pending_expenses: number;
+            /** Reviewed */
+            reviewed: components["schemas"]["DigestReviewedOut"][];
+            /** Reviewed By Me */
+            reviewed_by_me: boolean;
+            /** Shifts */
+            shifts: components["schemas"]["DigestShiftOut"][];
+            /** Total Sale */
+            total_sale: string;
+            /** Waiting */
+            waiting: {
+                [key: string]: number;
+            };
+        };
+        /** DigestReviewIn */
+        DigestReviewIn: {
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+        };
+        /** DigestReviewedOut */
+        DigestReviewedOut: {
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /** By */
+            by: string;
+        };
+        /** DigestShiftOut */
+        DigestShiftOut: {
+            /** Collected */
+            collected: string;
+            /** Difference */
+            difference: string;
+            /** Entry Status */
+            entry_status?: string | null;
+            /** Label */
+            label: string;
+            /** Shift Id */
+            shift_id: string;
+            /** Status */
+            status: string;
+            /** Total Sale */
+            total_sale: string;
         };
         /** DipIn */
         DipIn: {
@@ -10727,6 +10837,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DeviceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    digest_api_digest_get: {
+        parameters: {
+            query?: {
+                day?: string | null;
+            };
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DigestOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    review_api_digest_review_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DigestReviewIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DigestOut"];
                 };
             };
             /** @description Validation Error */

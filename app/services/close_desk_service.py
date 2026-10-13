@@ -70,6 +70,14 @@ class Desk:
     notes: List[str] = field(default_factory=list)
 
 
+def tally_status(block) -> tuple:
+    """(difference, status) of one shift block of the daily report: Total Sale minus everything collected. The one formula, used by
+    the Close Shift desk and by the daily digest."""
+    difference = money(block.total_sale - block.lines_total)
+    status = "balanced" if abs(difference) <= TOLERANCE else ("short" if difference > 0 else "excess")
+    return difference, status
+
+
 class _PreviewDone(Exception):
     def __init__(self, desk: Desk):
         self.desk = desk
@@ -160,8 +168,7 @@ class CloseDeskService:
         block = next((b for b in report.shifts if b.shift_id == shift_id), None)
         if block is None:
             return Tally(_Z, _Z, _Z, [], _Z, _Z, "balanced")
-        difference = money(block.total_sale - block.lines_total)
-        status = "balanced" if abs(difference) <= TOLERANCE else ("short" if difference > 0 else "excess")
+        difference, status = tally_status(block)
         return Tally(
             fuel_rs=block.fuel_rs, oil_rs=block.oil_rs, total_sale=block.total_sale, lines=list(block.lines),
             collected=block.lines_total, difference=difference, status=status, credit_count=len(block.credit_sales),

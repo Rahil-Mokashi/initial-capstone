@@ -45,6 +45,8 @@ export const P = {
   ENTRY_APPROVE: 'entry.approve',
   ENTRY_LOCK: 'entry.lock',
   ENTRY_REOPEN: 'entry.reopen',
+  DIGEST_VIEW: 'digest.view',
+  STAFF_FACTS_VIEW: 'staff_facts.view',
   CHECK_EXPLAIN: 'check.explain',
   OWNER_CHOICE_MANAGE: 'owner_choice.manage',
   DAILY_REPORT_VIEW: 'daily_report.view',

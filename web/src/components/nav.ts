@@ -57,6 +57,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'My Shift', permission: 'my_assignment.view', to: '/my-shift' },
       { label: 'Attendance', permission: 'attendance.view', to: '/attendance' },
       { label: 'Leave', permission: 'leave.view', to: '/leave' },
+      { label: 'Daily Digest', permission: 'digest.view', to: '/digest' },
       { label: 'Checks', permission: 'check.view', to: '/checks' },
       { label: 'Review', permission: 'entry.view', to: '/review', hideFor: ['DATA_ENTRY'] },
       { label: 'Bank Matching', permission: 'bank_recon.view', to: '/bank' },

@@ -3890,6 +3890,193 @@
         "title": "DeviceRevokeIn",
         "type": "object"
       },
+      "DigestCheckOut": {
+        "properties": {
+          "sentence": {
+            "title": "Sentence",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sentence",
+          "status"
+        ],
+        "title": "DigestCheckOut",
+        "type": "object"
+      },
+      "DigestOut": {
+        "properties": {
+          "checks_passed": {
+            "title": "Checks Passed",
+            "type": "integer"
+          },
+          "checks_to_look_at": {
+            "items": {
+              "$ref": "#/components/schemas/DigestCheckOut"
+            },
+            "title": "Checks To Look At",
+            "type": "array"
+          },
+          "checks_total": {
+            "title": "Checks Total",
+            "type": "integer"
+          },
+          "credit_outstanding": {
+            "title": "Credit Outstanding",
+            "type": "string"
+          },
+          "credit_sales": {
+            "title": "Credit Sales",
+            "type": "string"
+          },
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "litres_sold": {
+            "title": "Litres Sold",
+            "type": "string"
+          },
+          "pending_expenses": {
+            "title": "Pending Expenses",
+            "type": "integer"
+          },
+          "reviewed": {
+            "items": {
+              "$ref": "#/components/schemas/DigestReviewedOut"
+            },
+            "title": "Reviewed",
+            "type": "array"
+          },
+          "reviewed_by_me": {
+            "title": "Reviewed By Me",
+            "type": "boolean"
+          },
+          "shifts": {
+            "items": {
+              "$ref": "#/components/schemas/DigestShiftOut"
+            },
+            "title": "Shifts",
+            "type": "array"
+          },
+          "total_sale": {
+            "title": "Total Sale",
+            "type": "string"
+          },
+          "waiting": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Waiting",
+            "type": "object"
+          }
+        },
+        "required": [
+          "day",
+          "shifts",
+          "total_sale",
+          "litres_sold",
+          "credit_sales",
+          "credit_outstanding",
+          "checks_total",
+          "checks_passed",
+          "checks_to_look_at",
+          "waiting",
+          "pending_expenses",
+          "reviewed",
+          "reviewed_by_me"
+        ],
+        "title": "DigestOut",
+        "type": "object"
+      },
+      "DigestReviewIn": {
+        "additionalProperties": false,
+        "properties": {
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          }
+        },
+        "required": [
+          "day"
+        ],
+        "title": "DigestReviewIn",
+        "type": "object"
+      },
+      "DigestReviewedOut": {
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "by": {
+            "title": "By",
+            "type": "string"
+          }
+        },
+        "required": [
+          "by",
+          "at"
+        ],
+        "title": "DigestReviewedOut",
+        "type": "object"
+      },
+      "DigestShiftOut": {
+        "properties": {
+          "collected": {
+            "title": "Collected",
+            "type": "string"
+          },
+          "difference": {
+            "title": "Difference",
+            "type": "string"
+          },
+          "entry_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entry Status"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "shift_id": {
+            "title": "Shift Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "total_sale": {
+            "title": "Total Sale",
+            "type": "string"
+          }
+        },
+        "required": [
+          "shift_id",
+          "label",
+          "total_sale",
+          "collected",
+          "difference",
+          "status"
+        ],
+        "title": "DigestShiftOut",
+        "type": "object"
+      },
       "DipIn": {
         "additionalProperties": false,
         "properties": {
@@ -18440,6 +18627,163 @@
         "summary": "Revoke",
         "tags": [
           "devices"
+        ]
+      }
+    },
+    "/api/digest": {
+      "get": {
+        "operationId": "digest_api_digest_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "day",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Day"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DigestOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Digest",
+        "tags": [
+          "digest"
+        ]
+      }
+    },
+    "/api/digest/review": {
+      "post": {
+        "operationId": "review_api_digest_review_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DigestReviewIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DigestOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Review",
+        "tags": [
+          "digest"
         ]
       }
     },

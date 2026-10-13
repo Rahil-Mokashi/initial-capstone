@@ -12,7 +12,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from api.check_hook import RunChecksAfterWrites
 from api.deps import device_name, require_launch_secret
 from api.errors import ApiError, install_error_handlers
-from api.routers import close_desk, entries, devices, analytics, attendance, audit, backups, bank_recon, bowser, checks, credit_control, daily_report, lubricants, payroll, pump_settings, shift_close, shift_totals, settings as settings_router, auth, credit, dashboard, employees, expenses, reconciliation, reports, fuel_prices, nozzles, procurement, sales, shifts, tanks, terminal, users
+from api.routers import close_desk, digest, entries, devices, analytics, attendance, audit, backups, bank_recon, bowser, checks, credit_control, daily_report, lubricants, payroll, pump_settings, shift_close, shift_totals, settings as settings_router, auth, credit, dashboard, employees, expenses, reconciliation, reports, fuel_prices, nozzles, procurement, sales, shifts, tanks, terminal, users
 
 ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 
@@ -128,6 +128,7 @@ def create_app(
     api.include_router(shift_close.router)
     api.include_router(close_desk.router)
     api.include_router(entries.router)
+    api.include_router(digest.router)
     api.include_router(bowser.router)
     api.include_router(shift_totals.router)
     api.include_router(pump_settings.router)

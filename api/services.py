@@ -72,7 +72,9 @@ from app.services.audit_service import AuditService
 from app.services.auth_service import AuthService
 from app.services.backup_service import BackupService
 from app.services.close_desk_service import CloseDeskService
+from app.services.digest_service import DigestService
 from app.services.entry_workflow_service import EntryWorkflowService
+from app.services.staff_facts_service import StaffFactsService
 from app.services.workflow_checks import WorkflowChecks
 from app.services.shift_close_service import ShiftCloseService
 from app.services.payroll_checks import PayrollChecks
@@ -524,6 +526,14 @@ class Services:
     @cached_property
     def entries(self) -> EntryWorkflowService:
         return EntryWorkflowService(self.db, self.audit_repo, self.auth, self.pump_settings)
+
+    @cached_property
+    def staff_facts(self) -> StaffFactsService:
+        return StaffFactsService(self.db, self.auth)
+
+    @cached_property
+    def digest(self) -> DigestService:
+        return DigestService(self.db, self.daily_report, self.checks, self.entries, self.credit_ledger, self.audit_repo, self.auth)
 
     @cached_property
     def workflow_checks(self) -> WorkflowChecks:

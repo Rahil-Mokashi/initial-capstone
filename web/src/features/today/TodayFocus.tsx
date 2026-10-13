@@ -7,6 +7,7 @@ import { formatCheckValue } from '@/features/checks/checkText';
 import { sumMoney } from '@/lib/decimalMath';
 import { formatMoney } from '@/lib/format';
 import { ChaseList } from '@/features/credit/ChaseList';
+import { DigestView } from '@/features/digest/DigestView';
 import { P } from '@/lib/permissions';
 import { SHIFT_ENTRY_STEPS, todayPlan, type FocusId } from './plan';
 
@@ -32,6 +33,18 @@ function OpenLink({ to, children }: { to: string; children: string }) {
     >
       {children} &rarr;
     </Link>
+  );
+}
+
+/** The owner's home: how the latest day went. */
+function DigestCard() {
+  const { can } = useAuth();
+  if (!can(P.DIGEST_VIEW)) return null;
+  return (
+    <Card title="Daily digest">
+      <DigestView />
+      <OpenLink to="/digest">Open the digest</OpenLink>
+    </Card>
   );
 }
 
@@ -221,6 +234,7 @@ function ManagerCard() {
 }
 
 const CARDS: Record<FocusId, () => React.ReactElement | null> = {
+  digest: DigestCard,
   review: ReviewCard,
   checks: ChecksCard,
   day_status: DayStatusCard,

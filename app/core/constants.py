@@ -147,6 +147,10 @@ class Permission(str, Enum):
     ENTRY_APPROVE = "entry.approve"
     ENTRY_LOCK = "entry.lock"
     ENTRY_REOPEN = "entry.reopen"
+    # Staff facts (attendance, shortages, advances per person: facts, never a score) - owners and the accountant. The daily digest
+    # and its per-owner "reviewed" mark - owners only (no role below OWNER/ADMIN is granted it).
+    STAFF_FACTS_VIEW = "staff_facts.view"
+    DIGEST_VIEW = "digest.view"
 
 
 class EmployeeStatus(str, Enum):
@@ -525,6 +529,7 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
         Permission.BOWSER_VIEW,
         Permission.ENTRY_VIEW,
         Permission.ENTRY_VERIFY,
+        Permission.STAFF_FACTS_VIEW,
     ),
     UserRole.SHIFT_SUPERVISOR: (
         Permission.INVENTORY_VIEW,

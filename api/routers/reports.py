@@ -51,6 +51,7 @@ CATALOG: list[Spec] = [
     ),
     Spec("fuel_movement_report", "Fuel Movement Report", Permission.INVENTORY_VIEW, lambda s: s.reports.get_fuel_movement_report, dates=True),
     Spec("cash_book", "Cash Book", Permission.EXPENSE_VIEW, lambda s: s.reports.get_cash_book_report, dates=True),
+    Spec("staff_facts", "Staff facts", Permission.STAFF_FACTS_VIEW, lambda s: s.staff_facts.report, dates=True),
     Spec(
         "attendance_report",
         "Attendance Report",
