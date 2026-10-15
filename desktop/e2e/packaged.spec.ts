@@ -41,6 +41,7 @@ test('the installed app starts, shows login, and the Tanks screen works end to e
     });
     expect(procs.toLowerCase()).toContain('resources\\api\\pperp-api.exe');
 
+    await page.evaluate(() => (location.hash = '#/tanks')); // the home screen is Today; go to Tanks after sign-in
     await page.getByLabel('Username').fill('manager1');
     await page.getByLabel('Password').fill('Passw0rd!x');
     await page.getByRole('button', { name: 'Sign in' }).click();
@@ -157,7 +158,7 @@ test('the installed (fused) app still enforces the offline rules: CSP, no outsid
     expect(probe.outside).toBe('blocked');
     expect(probe.http).toBe('blocked');
     expect(probe.csp).toMatch(/^default-src 'self'/);
-    expect(probe.bridge).toEqual(['apiBase', 'files', 'launchSecret', 'print']);
+    expect(probe.bridge).toEqual(['apiBase', 'files', 'launchSecret', 'mode', 'print', 'shell']);
     expect(probe.node).toEqual(['undefined', 'undefined']);
   } finally {
     await browser.close().catch(() => undefined);

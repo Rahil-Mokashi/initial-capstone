@@ -9,6 +9,8 @@ import { EmployeesPage } from '@/features/employees/EmployeesPage';
 import { AuditPage } from '@/features/audit/AuditPage';
 import { BackupsPage } from '@/features/backups/BackupsPage';
 import { CloseShiftPage } from '@/features/close-shift/CloseShiftPage';
+import { MailPage } from '@/features/mail/MailPage';
+import { SystemHealthPage } from '@/features/system-health/SystemHealthPage';
 import { DigestPage } from '@/features/digest/DigestPage';
 import { ReviewPage } from '@/features/review/ReviewPage';
 import { DevicesPage } from '@/features/devices/DevicesPage';
@@ -113,6 +115,8 @@ export function App() {
             <Route path="/devices" element={<DevicesPage />} />
             <Route path="/review" element={<ReviewPage />} />
             <Route path="/digest" element={<DigestPage />} />
+            <Route path="/mail" element={<MailPage />} />
+            <Route path="/system-health" element={<SystemHealthPage />} />
             <Route path="/audit" element={<AuditPage />} />
             <Route path="/employees" element={<EmployeesPage />} />
             <Route path="/employees/:id" element={<EmployeeDetailPage />} />

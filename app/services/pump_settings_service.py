@@ -23,6 +23,7 @@ class SettingDef:
     question_id: str
     label: str
     help: str
+    text: bool = False  # free text (a host name, an address) instead of a number or a fixed choice
 
 
 _DEFS = [
@@ -38,6 +39,22 @@ _DEFS = [
                "Classic is the exact copy of the old report; Plus adds checks and extra lines."),
     SettingDef("dip_tolerance_percent", "0.5", None, "T-02", "Dip difference tolerance (%)",
                "A tank whose dip differs from book stock by more than this share of the book is flagged."),
+    SettingDef("backup_interval_hours", "24", None, "L-01", "Take a backup every (hours)",
+               "The Main PC takes a backup by itself when the newest one is older than this."),
+    SettingDef("backup_max_age_hours", "36", None, "L-02", "Newest backup may be this old (hours)",
+               "Older than this the checks warn; older than twice this they fail."),
+    SettingDef("nightly_check_hour", "2", None, "L-03", "Nightly safety check, after this hour (0-23)",
+               "Once a day the Main PC checks the database file, verifies the audit log and copies the newest backup off this PC."),
+    SettingDef("mail_enabled", "off", ("on", "off"), "L-10", "Email the owners a daily summary",
+               "Off by default. Only figures are sent (no names), outbound only; nothing ever connects in from the internet."),
+    SettingDef("mail_host", "", None, "L-11", "Mail server", "For example smtp.example.com.", text=True),
+    SettingDef("mail_port", "587", None, "L-12", "Mail server port", "587 for STARTTLS, 465 for SSL."),
+    SettingDef("mail_security", "starttls", ("starttls", "ssl", "none"), "L-13", "Mail protection",
+               "none is only accepted for a mail server on this PC itself."),
+    SettingDef("mail_user", "", None, "L-14", "Mail account", "The user name for the mail server (blank: none).", text=True),
+    SettingDef("mail_from", "", None, "L-15", "Sent from", "The sender address.", text=True),
+    SettingDef("mail_to", "", None, "L-16", "Send to", "Owner addresses, separated by commas.", text=True),
+    SettingDef("mail_send_hour", "21", None, "L-17", "Send the summary after this hour (0-23)", "The day's figures are sent once, after this hour."),
     SettingDef("owner_lock_rule", "one_owner", ("one_owner", "two_owners"), "V-06", "Who may lock a shift",
                "one_owner: the same owner may approve and lock. two_owners: a different owner has to lock it than the one who approved it."),
     SettingDef("default_testing_litres", "5", None, "T-15", "Usual testing per nozzle (litres)",
@@ -89,6 +106,9 @@ class PumpSettingsService:
         if d.choices is not None:
             if value not in d.choices:
                 raise ValueError(f"{d.label}: choose one of {', '.join(d.choices)}")
+        elif d.text:
+            if len(value) > 200 or any(ord(c) < 32 for c in value):
+                raise ValueError(f"{d.label}: up to 200 characters, on one line")
         else:
             try:
                 if Decimal(value) < 0:

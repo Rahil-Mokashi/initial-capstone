@@ -254,3 +254,14 @@ def test_a_removed_device_certificate_is_also_on_the_revocation_list(main_pc, de
 
 def test_removing_without_a_reason_records_that_none_was_given(main_pc, device, owner_id):
     assert main_pc.lan.devices.revoke(device["device_id"], owner_id, "  ").revoke_reason == "No reason given"
+
+
+def test_asking_for_a_new_code_just_after_one_was_used_keeps_the_door_open(main_pc, owner_id):
+    import time
+
+    first, _ = main_pc.lan.start_pairing(owner_id)
+    assert main_pc.enrol("First PC", first)["status"] == 200
+    time.sleep(0.2)  # the listener is about to close because the code was used ...
+    second, _ = main_pc.lan.start_pairing(owner_id)  # ... and the owner asks for another at once
+    time.sleep(3)  # long enough for the old closing timer to have fired
+    assert main_pc.enrol("Second PC", second)["status"] == 200

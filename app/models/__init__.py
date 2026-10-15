@@ -5,7 +5,9 @@ from .attendance import Attendance
 from .audit_log import AuditLog
 from .check_result import CheckExplanation, CheckResult
 from .digest_review import DigestReview
+from .health_run import HealthRun
 from .lan_device import LanDevice
+from .mail_outbox import MailOutbox
 from .record_version import RecordVersion
 from .shift_entry import ShiftEntry, ShiftEntryEvent
 from .bank import (
@@ -79,7 +81,9 @@ __all__ = [
     "CheckExplanation",
     "CheckResult",
     "DigestReview",
+    "HealthRun",
     "LanDevice",
+    "MailOutbox",
     "RecordVersion",
     "ShiftEntry",
     "ShiftEntryEvent",

@@ -4,6 +4,7 @@
   pperp_api.exe lan status
   pperp_api.exe lan enrol-local --name "Main PC window" --out bundle.json
   pperp_api.exe lan run            (what the start-at-boot task runs)
+  pperp_api.exe lan promote --backup <file> [--db <path>]   (a replacement Main PC: restore the newest backup and check it)
 """
 
 import argparse
@@ -30,6 +31,10 @@ def _parser() -> argparse.ArgumentParser:
     local.add_argument("--name", required=True)
     local.add_argument("--out", required=True)
     sub.add_parser("run")
+    promote = sub.add_parser("promote")
+    promote.add_argument("--backup", required=True)
+    promote.add_argument("--passphrase", default="", help="for an encrypted (.enc) copy; asked for if left out")
+    promote.add_argument("--db", default=None, help="target database path (default: where the Main PC keeps its data)")
     return p
 
 
@@ -45,6 +50,24 @@ def run(argv: list[str]) -> int:
 def _dispatch(args) -> int:
     from api.lan.pki import DpapiProtector, Pki
 
+    if args.cmd == "promote":
+        from api.lan.promote import PromoteError, promote
+        from app.database import connection
+
+        try:
+            phrase = args.passphrase
+            if args.backup.endswith('.enc') and not phrase:
+                import getpass
+
+                phrase = getpass.getpass('Backup passphrase: ')
+            result = promote(args.backup, args.db or connection.DB_PATH, phrase)
+        except PromoteError as exc:
+            print(f"Promote stopped: {exc}", file=sys.stderr)
+            return 2
+        print(f"Restored {result.db_path}: {result.users} users, {result.shifts} shifts, {result.audit_entries} audit entries.")
+        print("Audit chain: " + ("unbroken." if result.audit_chain_ok else f"PROBLEMS: {result.problems}"))
+        print("Next: run `lan init` (a new private authority) and add every PC again from the Devices screen.")
+        return 0 if result.audit_chain_ok else 3
     if args.cmd == "init":
         config = LanConfig(mode="main", bind_address=args.address, port=args.port, pairing_port=args.pairing_port,
                            allowed_subnets=[s.strip() for s in args.subnets.split(",") if s.strip()], server_names=args.name)

@@ -108,6 +108,8 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Owner Choices', permission: 'owner_choice.manage', to: '/owner-choices' },
       { label: 'Backups', permission: 'backup.manage', to: '/backups' },
       { label: 'Devices', permission: 'device.manage', to: '/devices' },
+      { label: 'System Health', permission: 'system_health.view', to: '/system-health' },
+      { label: 'Email Summary', permission: 'mail.manage', to: '/mail' },
       { label: 'Audit Log', permission: 'audit.view', to: '/audit' },
     ],
   },

@@ -1,6 +1,6 @@
 import { mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { expect, launchApp, signIn, test } from './fixtures';
+import { apiAs, expect, launchApp, setupPump, signIn, test } from './fixtures';
 import { MainPcFixture } from './lanFixture';
 import { repoRoot } from './global-setup';
 
@@ -53,6 +53,27 @@ test('network setup, devices and the unreachable screen', async ({}, testInfo) =
     await page.getByRole('button', { name: 'Add a device' }).click();
     await expect(page.getByLabel('Pairing code')).toBeVisible();
     await shot(page, 'devices-add');
+    await page.getByRole('button', { name: 'Done' }).click();
+    // a closed shift on the Main PC's data, so the review, digest and health screens have something to show
+    const { shiftId } = await setupPump(page);
+    const entry = await apiAs(page, 'dataentry1');
+    const desk = (await entry('GET', `/close-shift/${shiftId}`)) as unknown as { modes: Array<{ label: string; tender_id: string }> };
+    await entry('POST', `/close-shift/${shiftId}`, {
+      readings: [{ nozzle_id: ((await entry('GET', `/close-shift/${shiftId}`)) as unknown as { nozzles: Array<{ nozzle_id: string }> }).nozzles[0]!.nozzle_id, closing: '505', testing: '5' }],
+      modes: [{ tender_id: desk.modes.find((m) => m.label === 'CARD')!.tender_id, amount: '10000' }],
+      advance: '20000',
+      final: '14000',
+    });
+    for (const [hash, heading, name] of [
+      ['#/review', 'Review', 'review'],
+      ['#/digest', 'Daily digest', 'digest'],
+      ['#/system-health', 'System health', 'system-health'],
+      ['#/mail', 'Email summary', 'email-summary'],
+    ] as const) {
+      await page.evaluate((h) => (location.hash = h), hash);
+      await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible();
+      await shot(page, name);
+    }
     await pc.stop();
     await page.reload();
     page = await find();

@@ -44,7 +44,7 @@ def get_db(request: Request) -> Iterator[Session]:
 
 
 def get_services(request: Request, db: Session = Depends(get_db)) -> Services:
-    return Services(db, request.app.state.session_timeout_hours)
+    return Services(db, request.app.state.session_timeout_hours, getattr(request.app.state, "secrets", None))
 
 
 def bearer_token(authorization: Optional[str] = Header(default=None)) -> str:

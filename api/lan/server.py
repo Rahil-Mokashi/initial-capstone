@@ -103,7 +103,7 @@ class PairingListener:
             pki = self.pki
             cfg = uvicorn.Config(app, host=self.config.bind_address, port=self.config.pairing_port, log_level="warning", access_log=False,
                                  ssl_context_factory=lambda c, default: pki.server_only_context(), server_header=False,
-                                 timeout_keep_alive=5, h11_max_incomplete_event_size=8192)
+                                 timeout_keep_alive=5, http="h11", h11_max_incomplete_event_size=8192)
             self._server = uvicorn.Server(cfg)
             self._thread = threading.Thread(target=self._server.run, name="pairing-listener", daemon=True)
             self._thread.start()
@@ -116,10 +116,14 @@ class PairingListener:
             threading.Thread(target=self._watch, name="pairing-watch", daemon=True).start()
 
     def _watch(self) -> None:
-        while self.running() and self.devices.pairing.active():
-            time.sleep(1)
-        time.sleep(1.5)  # let an answer in flight finish
-        self.stop()
+        while self.running():
+            if self.devices.pairing.active():
+                time.sleep(0.5)
+                continue
+            time.sleep(1.5)  # let an answer in flight finish
+            if not self.devices.pairing.active():  # a NEW code may have been asked for meanwhile: then the door stays open
+                self.stop()
+                return
 
     def stop(self) -> None:
         with self._lock:
@@ -141,6 +145,7 @@ class LanContext:
     session_factory: Optional[Callable] = None
     _blocked: dict = field(default_factory=dict)
     hub: EventHub = field(default_factory=EventHub)
+    secrets: Optional[object] = None
 
     def record_block(self, kind: str, ip: str, detail: str) -> None:
         """Audit a refusal, at most once per kind and address every five minutes (a flood must not flood the audit log)."""
@@ -172,9 +177,9 @@ def allowed_hosts_for(config: LanConfig) -> list[str]:
     return [config.bind_address, *config.server_names]
 
 
-def build_lan(config: LanConfig, pki: Pki, session_factory: Callable) -> LanContext:
+def build_lan(config: LanConfig, pki: Pki, session_factory: Callable, secrets=None) -> LanContext:
     devices = DeviceService(session_factory, pki, PairingManager())
-    return LanContext(config, devices, PairingListener(config, pki, devices), allowed_hosts_for(config), session_factory)
+    return LanContext(config, devices, PairingListener(config, pki, devices), allowed_hosts_for(config), session_factory, secrets=secrets)
 
 
 def build_main_asgi(config: LanConfig, lan: LanContext, session_factory: Callable, web_dir: Optional[Path] = None,
@@ -191,7 +196,7 @@ def main_uvicorn_config(app, config: LanConfig, pki: Pki) -> uvicorn.Config:
     return uvicorn.Config(
         app, host=config.bind_address, port=config.port, log_level="warning", access_log=False, server_header=False,
         ssl_context_factory=lambda c, default: pki.mutual_tls_context(),
-        timeout_keep_alive=5, h11_max_incomplete_event_size=16384, limit_concurrency=200, timeout_graceful_shutdown=10,
+        timeout_keep_alive=5, http="h11", h11_max_incomplete_event_size=16384, limit_concurrency=200, timeout_graceful_shutdown=10,
     )
 
 
@@ -235,7 +240,21 @@ def run_main(protector: Optional[Protector] = None) -> int:
     from api.lan.writelock import install as install_write_lock
 
     install_write_lock(connection.engine)
-    lan = build_lan(config, pki, connection.SessionLocal)
+    from api.lan.backup_scheduler import BackupScheduler
+    from api.lan.mail_scheduler import MailScheduler
+    from api.lan.secrets_store import SecretStore
+    from api.services import Services
+
+    secrets = SecretStore(lan_dir(), protector or DpapiProtector())
+    lan = build_lan(config, pki, connection.SessionLocal, secrets)
+
+    def make_services():
+        db = connection.SessionLocal()
+        return Services(db, 8, secrets), db.close
+
+    schedulers = [BackupScheduler(make_services), MailScheduler(make_services)]
+    for scheduler in schedulers:
+        scheduler.start()
     web_dir = os.environ.get("PPERP_WEB_DIR")
     app = build_main_asgi(config, lan, connection.SessionLocal, Path(web_dir) if web_dir else None)
     server = uvicorn.Server(main_uvicorn_config(app, config, pki))
@@ -243,6 +262,8 @@ def run_main(protector: Optional[Protector] = None) -> int:
     try:
         server.run()
     finally:
+        for scheduler in schedulers:
+            scheduler.stop()
         lan.listener.stop()
         with connection.engine.connect() as conn:
             conn.exec_driver_sql("PRAGMA wal_checkpoint(TRUNCATE)")

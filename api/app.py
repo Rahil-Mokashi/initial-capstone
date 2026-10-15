@@ -12,7 +12,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from api.check_hook import RunChecksAfterWrites
 from api.deps import device_name, require_launch_secret
 from api.errors import ApiError, install_error_handlers
-from api.routers import close_desk, digest, entries, devices, analytics, attendance, audit, backups, bank_recon, bowser, checks, credit_control, daily_report, lubricants, payroll, pump_settings, shift_close, shift_totals, settings as settings_router, auth, credit, dashboard, employees, expenses, reconciliation, reports, fuel_prices, nozzles, procurement, sales, shifts, tanks, terminal, users
+from api.routers import close_desk, digest, entries, mail, system_health, devices, analytics, attendance, audit, backups, bank_recon, bowser, checks, credit_control, daily_report, lubricants, payroll, pump_settings, shift_close, shift_totals, settings as settings_router, auth, credit, dashboard, employees, expenses, reconciliation, reports, fuel_prices, nozzles, procurement, sales, shifts, tanks, terminal, users
 
 ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 
@@ -70,6 +70,7 @@ def create_app(
     app.state.session_timeout_hours = session_timeout_hours
     app.state.shutdown_callback = shutdown_callback
     app.state.lan = lan
+    app.state.secrets = getattr(lan, "secrets", None)
 
     # Added last = outermost: host check runs before anything else.
     app.add_middleware(RunChecksAfterWrites)
@@ -129,6 +130,8 @@ def create_app(
     api.include_router(close_desk.router)
     api.include_router(entries.router)
     api.include_router(digest.router)
+    api.include_router(mail.router)
+    api.include_router(system_health.router)
     api.include_router(bowser.router)
     api.include_router(shift_totals.router)
     api.include_router(pump_settings.router)

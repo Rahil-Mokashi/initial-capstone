@@ -56,6 +56,9 @@ test('a PC is paired through Network setup and then works on the Main PC\'s data
   const api = await apiAs(page, 'owner1');
   const audit = (await api('GET', '/audit?event_type=login_success')) as unknown as Array<{ device: string | null }>;
   expect(audit.map((e) => e.device)).toContain('Counter PC (127.0.0.1)');
+  // offline guarantees survive Client mode: the window only ever asked its own loopback proxy, and nothing was blocked
+  expect(a.requested.filter((u) => !/^(http:\/\/127\.0\.0\.1[:/]|file:|devtools:|data:|about:)/.test(u))).toEqual([]);
+  expect(await a.app.evaluate(() => (globalThis as unknown as { __pperp: { blocked: string[] } }).__pperp.blocked)).toEqual([]);
 });
 
 test('two PCs share live data, and a removed PC is locked out', async ({}, testInfo) => {

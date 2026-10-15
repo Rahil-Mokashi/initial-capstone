@@ -17,6 +17,7 @@ TOKEN_HEADER = b"x-device-token"
 REQUEST_SECONDS = 120
 SENSITIVE_PATHS = ("/api/auth/login", "/api/auth/forgot-password", "/api/auth/reauthenticate")
 SENSITIVE_PER_MINUTE = 10
+MAX_HEADER_BYTES = 16 * 1024  # the HTTP parser alone does not stop one oversized header that arrives whole
 
 
 def _envelope(status: int, code: str, message: str) -> tuple[list, bytes]:
@@ -79,6 +80,8 @@ class LanGuard:
         if not self._ip_allowed(ip):
             self.on_block("network", ip, "outside the allowed networks")
             return await _send_error(send, 403, "network_not_allowed", "This network address may not use the Main PC.")
+        if sum(len(k) + len(v) for k, v in scope["headers"]) > MAX_HEADER_BYTES:
+            return await _send_error(send, 431, "headers_too_large", "The request headers are too large.")
         headers = {k.lower(): v for k, v in scope["headers"]}
         host = headers.get(b"host", b"").decode("latin1").lower()
         if host.rsplit(":", 1)[0].strip("[]") not in self.hosts:

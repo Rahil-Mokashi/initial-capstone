@@ -98,7 +98,8 @@ export function OwnerChoicesPage() {
         <ErrorState error={list.error} onRetry={() => void list.refetch()} />
       ) : (
         <ul className="flex flex-col gap-3" aria-label="Owner choices">
-          {(list.data ?? []).map((s) => (
+          {/* the email settings have their own screen (Email Summary) */}
+          {(list.data ?? []).filter((s) => !s.key.startsWith('mail_')).map((s) => (
             <Choice key={`${s.key}-${s.value}`} s={s} />
           ))}
         </ul>

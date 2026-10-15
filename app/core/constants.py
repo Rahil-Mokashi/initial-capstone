@@ -151,6 +151,9 @@ class Permission(str, Enum):
     # and its per-owner "reviewed" mark - owners only (no role below OWNER/ADMIN is granted it).
     STAFF_FACTS_VIEW = "staff_facts.view"
     DIGEST_VIEW = "digest.view"
+    # The optional emailed summary and its mail account; the System health screen. Owners and admins only.
+    MAIL_MANAGE = "mail.manage"
+    SYSTEM_HEALTH_VIEW = "system_health.view"
 
 
 class EmployeeStatus(str, Enum):

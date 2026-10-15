@@ -73,6 +73,10 @@ from app.services.auth_service import AuthService
 from app.services.backup_service import BackupService
 from app.services.close_desk_service import CloseDeskService
 from app.services.digest_service import DigestService
+from app.services.mail_service import MailService
+from app.services.system_checks import SystemChecks
+from app.services import system_health_service as system_health_module
+from app.services.system_health_service import SystemHealthService
 from app.services.entry_workflow_service import EntryWorkflowService
 from app.services.staff_facts_service import StaffFactsService
 from app.services.workflow_checks import WorkflowChecks
@@ -115,9 +119,10 @@ from app.services.user_service import UserService
 
 
 class Services:
-    def __init__(self, db: Session, session_timeout_hours: int):
+    def __init__(self, db: Session, session_timeout_hours: int, secrets=None):
         self.db = db
         self._timeout = session_timeout_hours
+        self.secrets = secrets  # the Main PC's protected secret store (mail password, backup passphrase); None on a Single PC
 
     # ---- repositories used by more than one service -----------------------------
     @cached_property
@@ -528,6 +533,33 @@ class Services:
         return EntryWorkflowService(self.db, self.audit_repo, self.auth, self.pump_settings)
 
     @cached_property
+    def mail(self) -> MailService:
+        return MailService(self.db, self.pump_settings, self.audit_repo, self.auth, lambda: self.secrets.get("mail") if self.secrets else None)
+
+    @cached_property
+    def system_health(self) -> SystemHealthService:
+        return SystemHealthService(
+            self.db, db_connection.DB_PATH, self.pump_settings, self.audit_repo, self.backups, self.auth,
+            mail_status=lambda: self.mail.status.__wrapped__(self.mail, None),
+            offsite_dir=lambda: (self.settings.get_company_profile().offsite_backup_dir or ""),
+            passphrase=lambda: self.secrets.get("backup") if self.secrets else None,
+            encryption_probe=(lambda path: system_health_module.probe_bitlocker(path)) if self.secrets else None,  # only a Main PC reports disk encryption
+        )
+
+    @cached_property
+    def system_checks(self) -> SystemChecks:
+        return SystemChecks(self.checks, self.system_health, self.pump_settings, enabled=self.secrets is not None)
+
+    def digest_owner_id(self):
+        """An owner to act as for the daily summary job (it reads the same figures an owner sees)."""
+        from app.core.constants import UserRole
+        from app.models.role import Role
+        from app.models.user import User
+
+        row = self.db.query(User).join(Role).filter(Role.name == UserRole.OWNER.value, User.is_active.is_(True)).order_by(User.created_at).first()
+        return row.id if row else None
+
+    @cached_property
     def staff_facts(self) -> StaffFactsService:
         return StaffFactsService(self.db, self.auth)
 
@@ -614,6 +646,7 @@ class Services:
         results += self.bank_checks.run_day(actor_id, day)
         results += self.payroll_checks.run_day(actor_id, day)
         results += self.workflow_checks.run_day(actor_id, day)
+        results += self.system_checks.run_day(actor_id, day)
         return results
 
     def days_to_check(self):
