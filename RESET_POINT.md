@@ -77,3 +77,16 @@ Rollback: `git switch feature/js-frontend`, or `git switch --detach reset/pre-12
 | Work branch | `feature/lan-multi-user` (never pushed) |
 
 Rollback: `git switch feature/site-visit-build`, or `git switch --detach reset/pre-lan-2026-10-13`.
+
+---
+
+# Reset Point - before pilot preparation (2026-10-16)
+
+| Item | Value |
+|---|---|
+| Annotated tag | `reset/pre-pilot-2026-10-16` |
+| Commit | `a382280eea83610f02249bdca55cd6776db2a8b7` on `feature/lan-multi-user` |
+| Bundle | `C:\Users\Asus\Projects\PetrolPumpERP-pre-pilot-2026-10-16.bundle` (14,400,535 bytes, `git bundle verify`: okay, complete history) |
+| Work branch | `feature/pilot-prep` (never pushed) |
+
+Rollback: `git switch feature/lan-multi-user`, or `git switch --detach reset/pre-pilot-2026-10-16`.

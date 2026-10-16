@@ -173,3 +173,5 @@ run_12h.ps1
 # Owner prompts for unattended runs
 PROMPT_LAN.md
 run_prompt.ps1
+
+PROMPT_PILOT.md
