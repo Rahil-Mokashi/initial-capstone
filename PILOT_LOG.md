@@ -27,3 +27,8 @@ Done so far (committed: reset point + log; benchmark scripts committed with this
 Baseline test counts: web Vitest passed (count line lost, audit says 388); desktop Vitest 46; Python baseline running in a worktree of the tag (`C:/Users/Asus/AppData/Local/Temp/claude/c--Users-Asus-Projects-PetrolPumpERP/debfa87f-7f7b-467e-88f6-8bfc46d00e7e/scratchpad/base_py.txt`); Playwright baseline not yet run.
 
 Still running in the background while paused (harmless, only read the repo copy): the Python baseline pytest, the 365-day generator. The demo Electron window (demo DB in the scratchpad) may still be open.
+
+## Phase 1, step 2 - checks off the save path (resumed 2026-10-16)
+
+- New `api/check_worker.py`: the hook now only queues a run; one daemon thread merges a burst of saves (0.5 s quiet period) and runs the checks once. `INLINE` flag lets tests keep reading verdicts straight after a save (set by an autouse fixture in `tests/conftest.py`). Tests: `tests/api/test_api_check_worker.py`.
+- Still to do: one transaction per day of results, credit checks without per-customer scans, indexes (steps b to d above), then re-measure.

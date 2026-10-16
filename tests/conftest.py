@@ -140,3 +140,9 @@ def _reduce_gc_pressure_from_qt_wrappers():
     # still exiting non-zero. The process is about to exit and the
     # operating system reclaims the memory regardless, so there is
     # nothing to gain by unfreezing and a crash to lose.
+
+
+@pytest.fixture(autouse=True)
+def _checks_run_inside_the_save(monkeypatch):
+    """Tests read the automatic verdicts straight after a save; the worker test turns this off."""
+    monkeypatch.setattr("api.check_worker.INLINE", True)

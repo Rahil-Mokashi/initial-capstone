@@ -1,15 +1,14 @@
 """Runs the checks after data is saved ("checks run automatically when the relevant data is saved").
 
 After any successful write (POST/PUT/PATCH/DELETE) the verdicts for the affected days are recomputed.
-It can never break or slow-fail the user's request: errors are logged and swallowed, and the
+The work is handed to api.check_worker (background, merged bursts), so the save returns at once; the
 verdicts themselves are append-only and audit-logged by CheckService.
 """
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
-from api.services import Services
-from app.core.logging import logger
+from api.check_worker import request_run
 
 _SKIP = ("/api/checks", "/api/auth", "/api/system")
 
@@ -31,18 +30,5 @@ class RunChecksAfterWrites(BaseHTTPMiddleware):
     @staticmethod
     def _run(request: Request) -> None:
         scheme, _, token = (request.headers.get("authorization") or "").partition(" ")
-        if scheme.lower() != "bearer" or not token.strip():
-            return
-        db = request.app.state.session_factory()
-        try:
-            services = Services(db, request.app.state.session_timeout_hours)
-            user = services.auth.validate_session(token.strip())
-            if user is None:
-                return
-            for day in services.days_to_check():
-                services.run_all_checks(user.id, day)
-        except Exception as exc:  # a verification problem must never break the save that triggered it
-            logger.error("Automatic checks failed: %s", exc, exc_info=exc)
-            db.rollback()
-        finally:
-            db.close()
+        if scheme.lower() == "bearer" and token.strip():
+            request_run(request.app, token.strip())
