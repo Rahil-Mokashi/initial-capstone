@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, ForeignKey, String, Text
+from sqlalchemy import Column, ForeignKey, Index, String, Text
 from sqlalchemy.orm import relationship
 from app.database.types import UtcDateTime
 
@@ -24,6 +24,8 @@ class AuditLog(Base):
     """
 
     __tablename__ = "audit_logs"
+
+    __table_args__ = (Index("ix_audit_logs_chain_order", "created_at", "id"),)  # the chain looks up the newest entry on every write
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     event_type = Column(String(64), nullable=False, index=True)

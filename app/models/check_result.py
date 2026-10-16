@@ -12,7 +12,7 @@ status.
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, Date, ForeignKey, Numeric, String, Text
+from sqlalchemy import Column, Date, ForeignKey, Index, Numeric, String, Text
 from sqlalchemy.orm import relationship
 
 from app.database.types import UtcDateTime
@@ -22,6 +22,7 @@ from .base import Base
 
 class CheckResult(Base):
     __tablename__ = "check_results"
+    __table_args__ = (Index("ix_check_results_latest", "check_key", "scope_type", "scope_id", "run_at"),)
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     # Stable name of the rule, e.g. "shift.tenders_add_up". With scope_type/scope_id it

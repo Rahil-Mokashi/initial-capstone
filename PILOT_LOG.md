@@ -32,3 +32,6 @@ Still running in the background while paused (harmless, only read the repo copy)
 
 - New `api/check_worker.py`: the hook now only queues a run; one daemon thread merges a burst of saves (0.5 s quiet period) and runs the checks once. `INLINE` flag lets tests keep reading verdicts straight after a save (set by an autouse fixture in `tests/conftest.py`). Tests: `tests/api/test_api_check_worker.py`.
 - Still to do: one transaction per day of results, credit checks without per-customer scans, indexes (steps b to d above), then re-measure.
+- Done (b) and (d): `CheckService.batch()` writes a run's verdicts in one transaction; new migration `60632a2a5129` adds `ix_audit_logs_chain_order` (created_at, id) and `ix_check_results_latest` (plain `create_index`, not batch mode, so the audit immutability triggers survive). First run of a day on y30: 15 s -> 6 s.
+- AFTER at 30 days (`after30.json`, same busy machine): **first save 0.22 s (was 59.8 s); save p50 0.025 s (was 3.4 s), p95 0.047 s (was 16.4 s)**; checks finish in the background about 1.6 s after a save (5 s after the very first). Explicit checks run 1.2 s, report 0.3 s, digest 0.5 s, bank match 1.6 s (was 3.6 s).
+- Not done: (c) credit checks as grouped SQL (they are now off the save path, so lower priority); the 365-day measurement (needs y365.meta.json).
