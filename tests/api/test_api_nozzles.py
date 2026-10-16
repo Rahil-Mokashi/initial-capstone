@@ -39,3 +39,16 @@ def test_nozzle_create_status_and_options(client, manager, accountant, fuel_id, 
 def test_unknown_ids_are_404(client, manager):
     assert client.post("/api/nozzles/nope/status", headers=manager, json={"status": "active"}).status_code == 404
     assert client.post("/api/dispensers/nope/status", headers=manager, json={"status": "active"}).status_code == 404
+
+
+def test_four_nozzles_on_a_dispenser_by_default_and_the_owner_can_change_the_limit(client, manager, owner, fuel_id, tank):
+    d = _setup(client, manager, fuel_id)
+
+    def add(n):
+        return client.post("/api/nozzles", headers=manager, json={"code": f"N{n}", "dispenser_id": d["id"], "fuel_id": fuel_id, "tank_id": tank["id"]})
+
+    assert [add(n).status_code for n in (1, 2, 3, 4)] == [201] * 4
+    assert add(5).status_code == 409  # the default limit is 4
+    assert client.put("/api/pump-settings/max_nozzles_per_dispenser", headers=owner, json={"value": "5"}).status_code == 200
+    assert add(5).status_code == 201
+    assert client.put("/api/pump-settings/max_nozzles_per_dispenser", headers=owner, json={"value": "2.5"}).status_code == 422

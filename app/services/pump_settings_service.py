@@ -27,6 +27,8 @@ class SettingDef:
 
 
 _DEFS = [
+    SettingDef("max_nozzles_per_dispenser", "4", ("2", "3", "4", "5", "6"), "S-01", "Most nozzles on one dispenser",
+               "The pump has dispensers with four nozzles. The old Qt app still stops at two. ASSUMED 4 until the owners confirm."),
     SettingDef("rounding_rule", "per_bill", ("per_bill", "per_total"), "T-03/T-04", "Rounding",
                "per_bill: round every bill to paise and add the rounded bills. per_total: add unrounded, round once."),
     SettingDef("add_testing_back", "off", ("on", "off"), "T-01", "Add testing back to stock",

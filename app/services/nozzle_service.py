@@ -19,7 +19,7 @@ from app.schemas.nozzle import DispenserCreate, NozzleCreate
 
 
 class NozzleService:
-    def __init__(self, dispenser_repo, nozzle_repo, fuel_repo, assignment_repo, audit_repo, auth_service, tank_repo):
+    def __init__(self, dispenser_repo, nozzle_repo, fuel_repo, assignment_repo, audit_repo, auth_service, tank_repo, max_nozzles_per_dispenser=None):
         self._dispenser_repo = dispenser_repo
         self._nozzle_repo = nozzle_repo
         self._fuel_repo = fuel_repo
@@ -27,6 +27,8 @@ class NozzleService:
         self._audit_repo = audit_repo
         self._auth_service = auth_service
         self._tank_repo = tank_repo
+        # A callable so the new app can read the owner's setting at each use; the Qt app keeps the original rule.
+        self._max_per_dispenser = max_nozzles_per_dispenser or (lambda: MAX_NOZZLES_PER_DISPENSER)
 
     @require_permission(Permission.NOZZLE_MANAGE.value)
     def create_dispenser(self, actor_user_id: str, data: DispenserCreate) -> Dispenser:
@@ -78,10 +80,11 @@ class NozzleService:
             raise ConflictError(f"Dispenser {dispenser.code} is not active ({dispenser.status})")
 
         existing_count = self._nozzle_repo.count_for_dispenser(data.dispenser_id)
-        if existing_count >= MAX_NOZZLES_PER_DISPENSER:
+        limit = self._max_per_dispenser()
+        if existing_count >= limit:
             raise ConflictError(
                 f"Dispenser {dispenser.code} already has {existing_count} nozzles "
-                f"(maximum {MAX_NOZZLES_PER_DISPENSER} per dispenser)"
+                f"(maximum {limit} per dispenser)"
             )
 
         if not self._fuel_repo.get_by_id(data.fuel_id):

@@ -276,6 +276,7 @@ class Services:
             self.audit_repo,
             self.auth,
             self.tank_repo,
+            max_nozzles_per_dispenser=lambda: int(self.pump_settings.get("max_nozzles_per_dispenser")),
         )
 
     @cached_property

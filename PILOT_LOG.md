@@ -35,3 +35,8 @@ Still running in the background while paused (harmless, only read the repo copy)
 - Done (b) and (d): `CheckService.batch()` writes a run's verdicts in one transaction; new migration `60632a2a5129` adds `ix_audit_logs_chain_order` (created_at, id) and `ix_check_results_latest` (plain `create_index`, not batch mode, so the audit immutability triggers survive). First run of a day on y30: 15 s -> 6 s.
 - AFTER at 30 days (`after30.json`, same busy machine): **first save 0.22 s (was 59.8 s); save p50 0.025 s (was 3.4 s), p95 0.047 s (was 16.4 s)**; checks finish in the background about 1.6 s after a save (5 s after the very first). Explicit checks run 1.2 s, report 0.3 s, digest 0.5 s, bank match 1.6 s (was 3.6 s).
 - Not done: (c) credit checks as grouped SQL (they are now off the save path, so lower priority); the 365-day measurement (needs y365.meta.json).
+
+## Phase 2 - nozzle cap (2026-10-16)
+
+- New Owner Choice `max_nozzles_per_dispenser` (id **S-01**, choices 2 to 6, default **4**, ASSUMED from the site notes, NEEDS HUMAN REVIEW: confirm with the owners). `NozzleService` takes an optional limit callable; only the API wiring (`api/services.py`) passes the setting, so the Qt app and its tests keep the old limit of 2. Test: `test_four_nozzles_on_a_dispenser_by_default...` in `tests/api/test_api_nozzles.py`.
+- Not touched: `tests/api/pump_day.py` still builds 2 dispensers of 2 nozzles (valid under either limit).
