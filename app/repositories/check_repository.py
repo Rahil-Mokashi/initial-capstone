@@ -14,6 +14,10 @@ class CheckResultRepository:
     def __init__(self, session: Session):
         self._session = session
 
+    @property
+    def session(self) -> Session:
+        return self._session
+
     def add(self, result: CheckResult) -> CheckResult:
         self._session.add(result)
         safe_commit(self._session)

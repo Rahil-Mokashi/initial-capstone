@@ -9,6 +9,7 @@ never change a status, so a failure cannot be turned into a pass by a person.
 """
 
 import json
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
@@ -18,6 +19,7 @@ from app.core.constants import Permission
 from app.core.exceptions import NotFoundError
 from app.core.permissions import require_permission
 from app.models.check_result import CheckExplanation, CheckResult
+from app.repositories.base import unit_of_work
 
 PASS, WARN, FAIL = "pass", "warn", "fail"
 SCOPES = ("day", "shift", "tank", "bill", "customer", "bank_account", "payroll_month")
@@ -74,6 +76,24 @@ class CheckService:
         self._auth_service = auth_service
 
     # -- writing (engine-internal: runners call this on behalf of whoever just saved data) -------------
+    @contextmanager
+    def batch(self):
+        """Collect the verdicts of one run and write them together in ONE transaction (one commit instead of two per check).
+
+        Inside the block `record` still compares against the stored verdict and returns it when nothing changed; a changed
+        verdict is returned as an unsaved row and saved, with its audit entry, when the block ends.
+        """
+        self._pending = []
+        try:
+            yield
+        finally:
+            pending, self._pending = self._pending, None
+            with unit_of_work(self._results.session):
+                for actor_user_id, spec in pending:
+                    self.record(actor_user_id, spec)
+
+    _pending = None
+
     def record(self, actor_user_id: Optional[str], spec: CheckSpec) -> CheckResult:
         if spec.scope_type not in SCOPES:
             raise ValueError(f"Unknown check scope: {spec.scope_type}")
@@ -92,6 +112,14 @@ class CheckService:
             and latest.links == links
         ):
             return latest
+        if self._pending is not None:
+            self._pending.append((actor_user_id, spec))
+            return CheckResult(
+                check_key=spec.key, scope_type=spec.scope_type, scope_id=spec.scope_id,
+                business_date=spec.business_date, area=spec.area, sentence=spec.sentence,
+                expected=spec.expected, actual=spec.actual, difference=difference, unit=spec.unit,
+                status=status, links=links, run_by_id=actor_user_id,
+            )
         result = self._results.add(CheckResult(
             check_key=spec.key, scope_type=spec.scope_type, scope_id=spec.scope_id,
             business_date=spec.business_date, area=spec.area, sentence=spec.sentence,

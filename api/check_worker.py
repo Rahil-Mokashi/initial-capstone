@@ -63,7 +63,8 @@ def run_checks(session_factory, timeout_hours, token: str) -> None:
         if user is None:
             return
         for day in services.days_to_check():
-            services.run_all_checks(user.id, day)
+            with services.checks.batch():
+                services.run_all_checks(user.id, day)
     except Exception as exc:  # a verification problem must never break the save that triggered it
         logger.error("Automatic checks failed: %s", exc, exc_info=exc)
         db.rollback()
