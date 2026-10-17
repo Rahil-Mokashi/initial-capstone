@@ -86,6 +86,8 @@ Also done because the work depended on it (Step 0): Close Shift now closes the s
 ## Noticed, not touched
 
 * **A bug that was fixed because the lock guard depends on it:** the check "payment totals declared equal what the sales say" multiplied a Decimal by a float and crashed, which **silently stopped every check on any day that had a reconciliation** (the error was only logged). Fixed in `check_runners.py` with a test (`8b5f1b8`). Worth knowing: the audit's check timings were taken with this bug present.
+* There is no setup checklist screen yet (the audit's backlog item 20), so the tank names in a "setup checklist" had nothing to change.
+* Commit messages name the step of the instructions (for example "Step 1.5"), not the walk-through item number; the table above maps each item to its commits.
 * The Terminal API still accepts Cash, UPI and Card from office users (the screen offers only Credit and DTP Card). A cash sale typed there would add to the meter-based cash sale and count twice. Restricting it on the server is the right fix, but many tests and demo scripts build their data with cash Terminal sales, so it was left. Say if you want it.
 * The Qt desktop app still caps a dispenser at 2 nozzles and still lists the older payment methods (it does not know DTP Card as a method).
 * Alert details and check sentences show raw numbers ("7100.00 of 100000.00 litres remaining", "₹-80,000.00") without Indian grouping and with an odd minus sign. The cards and tiles I changed are grouped correctly.
