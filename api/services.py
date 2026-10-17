@@ -451,6 +451,13 @@ class Services:
         )
 
     @cached_property
+    def tank_dip_charts(self):
+        from app.repositories.tank_dip_chart_repository import TankDipChartRepository
+        from app.services.tank_dip_chart_service import TankDipChartService
+
+        return TankDipChartService(TankDipChartRepository(self.db), self.tank_repo, self.audit_repo, self.auth)
+
+    @cached_property
     def alerts(self):
         from app.repositories.alert_repository import AlertAcknowledgementRepository
         from app.repositories.employee_cash_shortage_repository import EmployeeCashShortageRepository

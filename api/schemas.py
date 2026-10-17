@@ -159,6 +159,12 @@ class TankOut(Out):
     calibration_info: Optional[str] = None
     fill_percent: PercentOut
     is_low: bool
+    # For the picture of the tank: how high the fuel stands (0 to 1 of the tank's height) and how that was worked out.
+    fill_height: Optional[str] = None
+    fill_basis: Optional[str] = None  # dip_chart | round_tank | approximate
+    has_dip_chart: bool = False
+    last_dip_at: Optional[datetime] = None
+    last_dip_litres: Optional[VolumeOut] = None
 
 
 class TransactionOut(Out):

@@ -162,23 +162,25 @@ def _seed_employees_and_users(session, roles):
     return employees, attendant_ids
 
 
+# The owners' own tank names from their daily report: MS = petrol, HSD = diesel. The first of each fuel is the one nozzles draw from here.
+DEMO_TANKS = [("MS-22", "Petrol"), ("MS-16", "Petrol"), ("HSD-22", "Diesel"), ("HSD-16", "Diesel")]
+
+
 def _seed_tanks(session, fuels):
     tanks = {}
-    for fuel_type, fuel in fuels.items():
-        code = f"TANK-{fuel_type.upper()[:3]}"
-        existing = session.query(Tank).filter_by(code=code).first()
-        if existing:
-            tanks[fuel_type] = existing
-            continue
-        capacity = TANK_CAPACITY.get(fuel_type, Decimal("15000"))
-        tank = Tank(
-            code=code, fuel_id=fuel.id, capacity=capacity,
-            current_stock=capacity * Decimal("0.65"), opening_stock=capacity * Decimal("0.65"),
-            status="active",
-        )
-        session.add(tank)
-        session.commit()
-        tanks[fuel_type] = tank
+    for code, fuel_type in DEMO_TANKS:
+        fuel = fuels[fuel_type]
+        tank = session.query(Tank).filter_by(code=code).first()
+        if tank is None:
+            capacity = TANK_CAPACITY.get(fuel_type, Decimal("15000"))
+            tank = Tank(
+                code=code, fuel_id=fuel.id, capacity=capacity,
+                current_stock=capacity * Decimal("0.65"), opening_stock=capacity * Decimal("0.65"),
+                status="active",
+            )
+            session.add(tank)
+            session.commit()
+        tanks.setdefault(fuel_type, tank)
     return tanks
 
 
@@ -186,9 +188,9 @@ def _seed_dispensers_and_nozzles(session, fuels, tanks):
     layout = [
         ("D1", [("N1", "Petrol"), ("N2", "Diesel")]),
         ("D2", [("N3", "Petrol"), ("N4", "Diesel")]),
-        ("D3", [("N5", "Power"), ("N6", "Petrol")]),
+        ("D3", [("N5", "Petrol"), ("N6", "Diesel")]),
     ]
-    nozzles_by_fuel: dict = {"Petrol": [], "Diesel": [], "Power": []}
+    nozzles_by_fuel: dict = {"Petrol": [], "Diesel": []}
     for dispenser_code, nozzle_specs in layout:
         dispenser = session.query(Dispenser).filter_by(code=dispenser_code).first()
         if not dispenser:
@@ -294,7 +296,7 @@ def _seed_shifts_and_sales(session, admin, employees, attendant_ids, nozzles, fu
         progress = 1 - (day_offset / DAYS_OF_HISTORY)
         sale_count = random.randint(4, 9)
         for _ in range(sale_count):
-            fuel_type = random.choices(["Petrol", "Diesel", "Power"], weights=[0.55, 0.35, 0.10])[0]
+            fuel_type = random.choices(["Petrol", "Diesel"], weights=[0.6, 0.4])[0]
             fuel = fuels[fuel_type]
             nozzle = random.choice(nozzles[fuel_type])
             employee_id = random.choice(attendant_ids)

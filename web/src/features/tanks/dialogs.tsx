@@ -130,7 +130,7 @@ export function AddTankDialog({ open, onClose }: DialogBase) {
         <TextField
           label="Tank code"
           autoFocus
-          placeholder="e.g. T1"
+          placeholder="e.g. MS-22 (petrol) or HSD-16 (diesel)"
           error={errors.code?.message}
           {...register('code')}
         />

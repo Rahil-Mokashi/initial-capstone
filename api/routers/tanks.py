@@ -16,6 +16,8 @@ from api.deps import CurrentUser, current_user, get_services
 from api.schemas import (
     EmployeeOut,
     FuelOut,
+    In,
+    Out,
     ReadingIn,
     ReadingOut,
     ReconcileIn,
@@ -37,9 +39,18 @@ _LOW = Decimal(str(DASHBOARD_LOW_STOCK_THRESHOLD_PERCENT))
 
 
 # --- presenters: shape ORM rows for the wire (no business rules) -------------
-def tank_out(tank) -> TankOut:
+def tank_out(tank, services=None, user_id=None) -> TankOut:
     # Same clamp-to-0..100 display derivation as stock_percent() in app/ui/widgets.py.
     percent = Decimal(0) if tank.capacity <= 0 else max(Decimal(0), min(Decimal(100), tank.current_stock / tank.capacity * 100))
+    height = basis = last_at = last_litres = None
+    has_chart = False
+    if services is not None:
+        h, basis, has_chart = services.tank_dip_charts.drawing(tank)
+        height = f"{h:.4f}"
+        readings = services.tanks.list_readings(user_id, tank.id)
+        if readings:
+            last = max(readings, key=lambda r: r.reading_at)
+            last_at, last_litres = last.reading_at, last.physical_stock
     return TankOut(
         id=tank.id,
         code=tank.code,
@@ -52,6 +63,11 @@ def tank_out(tank) -> TankOut:
         calibration_info=tank.calibration_info,
         fill_percent=percent,
         is_low=percent <= _LOW,
+        fill_height=height,
+        fill_basis=basis,
+        has_dip_chart=has_chart,
+        last_dip_at=last_at,
+        last_dip_litres=last_litres,
     )
 
 
@@ -110,7 +126,7 @@ def list_employees(user: CurrentUser = Depends(current_user), services: Services
 # --- tanks --------------------------------------------------------------------
 @router.get("/tanks", response_model=list[TankOut])
 def list_tanks(user: CurrentUser = Depends(current_user), services: Services = Depends(get_services)):
-    return [tank_out(t) for t in services.tanks.list_tanks(user.id)]
+    return [tank_out(t, services, user.id) for t in services.tanks.list_tanks(user.id)]
 
 
 @router.get("/tanks/recent-transactions", response_model=list[TransactionOut])
@@ -130,7 +146,7 @@ def create_tank(body: TankCreateIn, user: CurrentUser = Depends(current_user), s
 
 @router.get("/tanks/{tank_id}", response_model=TankOut)
 def get_tank(tank_id: str, user: CurrentUser = Depends(current_user), services: Services = Depends(get_services)):
-    return tank_out(services.tanks.get_tank(user.id, tank_id))
+    return tank_out(services.tanks.get_tank(user.id, tank_id), services, user.id)
 
 
 @router.post("/tanks/{tank_id}/status", response_model=TankOut)
@@ -177,3 +193,29 @@ def perform_reconciliation(
 ):
     data = ReconciliationPerform(**body.model_dump())
     return ReconciliationOut.model_validate(services.tanks.perform_reconciliation(user.id, tank_id, data))
+
+
+class DipChartRowIn(In):
+    dip_cm: str
+    litres: str
+
+
+class DipChartIn(In):
+    rows: list[DipChartRowIn]
+
+
+class DipChartRowOut(Out):
+    dip_cm: str
+    litres: str
+
+
+@router.get("/tanks/{tank_id}/dip-chart", response_model=list[DipChartRowOut])
+def get_dip_chart(tank_id: str, user: CurrentUser = Depends(current_user), services: Services = Depends(get_services)):
+    return [DipChartRowOut(dip_cm=f"{p.dip_cm:.1f}", litres=f"{p.litres:.3f}") for p in services.tank_dip_charts.get(user.id, tank_id)]
+
+
+@router.put("/tanks/{tank_id}/dip-chart", response_model=list[DipChartRowOut])
+def set_dip_chart(tank_id: str, body: DipChartIn, user: CurrentUser = Depends(current_user), services: Services = Depends(get_services)):
+    """Replace the tank's dip chart (the old rows stay on record, voided). A CSV is read in the browser and arrives here as rows."""
+    made = services.tank_dip_charts.set_chart(user.id, tank_id, [(r.dip_cm, r.litres) for r in body.rows])
+    return [DipChartRowOut(dip_cm=f"{p.dip_cm:.1f}", litres=f"{p.litres:.3f}") for p in made]

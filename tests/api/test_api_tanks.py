@@ -310,3 +310,39 @@ def test_unexpected_error_is_500_with_generic_message(session_factory, users, se
     assert resp.status_code == 500
     assert resp.json()["error"] == {"code": "internal_error", "message": GENERIC_ERROR_MESSAGE, "details": {}}
     assert "internals" not in resp.text
+
+
+def test_a_tank_reports_how_high_its_fuel_stands_and_a_dip_chart_changes_it(client, manager, accountant, fuel_id):
+    tank = client.post("/api/tanks", headers=manager, json={"code": "MS-22", "fuel_id": fuel_id, "capacity": "20000", "opening_stock": "10000"}).json()
+    plain = client.get(f"/api/tanks/{tank['id']}", headers=accountant).json()
+    assert plain["fill_basis"] == "round_tank" and plain["has_dip_chart"] is False
+    assert abs(float(plain["fill_height"]) - 0.5) < 0.001  # half the fuel of a round tank stands at half height
+    # the oil company's chart: 100 cm tall, but with the middle holding less than a round tank would
+    chart = {"rows": [{"dip_cm": "0", "litres": "0"}, {"dip_cm": "50", "litres": "5000"}, {"dip_cm": "100", "litres": "20000"}]}
+    assert client.put(f"/api/tanks/{tank['id']}/dip-chart", headers=accountant, json=chart).status_code == 403
+    assert client.put(f"/api/tanks/{tank['id']}/dip-chart", headers=manager, json=chart).status_code == 200
+    after = client.get(f"/api/tanks/{tank['id']}", headers=accountant).json()
+    assert after["fill_basis"] == "dip_chart" and after["has_dip_chart"] is True
+    assert abs(float(after["fill_height"]) - (50 + 50 * 5000 / 15000) / 100) < 0.001  # 10,000 L is between 5,000 and 20,000 L
+    assert [r["dip_cm"] for r in client.get(f"/api/tanks/{tank['id']}/dip-chart", headers=accountant).json()] == ["0.0", "50.0", "100.0"]
+
+
+def test_a_dip_chart_must_make_sense_and_the_old_one_stays_on_record(client, manager, fuel_id, session_factory):
+    from api_helpers import audit_chain_ok, audit_events
+    from app.models.tank_dip_chart import TankDipChartPoint
+
+    tank = client.post("/api/tanks", headers=manager, json={"code": "HSD-16", "fuel_id": fuel_id, "capacity": "20000", "opening_stock": "1000"}).json()
+    url = f"/api/tanks/{tank['id']}/dip-chart"
+    put = lambda rows: client.put(url, headers=manager, json={"rows": [{"dip_cm": d, "litres": l} for d, l in rows]})  # noqa: E731
+    assert put([("0", "0")]).status_code == 422                                  # too short
+    assert put([("0", "0"), ("0", "10")]).status_code == 422                     # the same dip twice
+    assert put([("0", "100"), ("10", "50")]).status_code == 422                  # litres fall as the dip rises
+    assert put([("0", "0"), ("100", "90000")]).status_code == 422                # more than the tank holds
+    assert put([("0", "abc"), ("100", "100")]).status_code == 422
+    assert put([("0", "0"), ("100", "20000")]).status_code == 200
+    assert put([("0", "0"), ("50", "9000"), ("100", "20000")]).status_code == 200
+    db = session_factory()
+    rows = db.query(TankDipChartPoint).filter_by(tank_id=tank["id"]).all()
+    assert len(rows) == 5 and sum(1 for r in rows if r.voided_at is None) == 3   # the first chart is voided, not deleted
+    db.close()
+    assert len(audit_events(session_factory, "tank_dip_chart_set")) == 2 and audit_chain_ok(session_factory)

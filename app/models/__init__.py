@@ -8,6 +8,7 @@ from .digest_review import DigestReview
 from .health_run import HealthRun
 from .lan_device import LanDevice
 from .alert_acknowledgement import AlertAcknowledgement
+from .tank_dip_chart import TankDipChartPoint
 from .mail_outbox import MailOutbox
 from .record_version import RecordVersion
 from .shift_entry import ShiftEntry, ShiftEntryEvent
@@ -85,6 +86,7 @@ __all__ = [
     "HealthRun",
     "LanDevice",
     "AlertAcknowledgement",
+    "TankDipChartPoint",
     "MailOutbox",
     "RecordVersion",
     "ShiftEntry",
