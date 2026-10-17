@@ -17,7 +17,7 @@ from datetime import date
 from decimal import Decimal
 from typing import Dict, List, Optional
 
-from app.core.constants import Permission
+from app.core.constants import Permission, ShiftStatus
 from app.core.exceptions import ConflictError, NotFoundError
 from app.core.money import money
 from app.core.permissions import require_permission
@@ -84,7 +84,7 @@ class _PreviewDone(Exception):
 
 
 class CloseDeskService:
-    def __init__(self, shift_close, tender_entries, cash_book, daily_report, shift_repo, settings, auth_service, workflow=None):
+    def __init__(self, shift_close, tender_entries, cash_book, daily_report, shift_repo, settings, auth_service, workflow=None, shift_service=None):
         self._close = shift_close
         self._tenders = tender_entries
         self._cash = cash_book
@@ -93,6 +93,7 @@ class CloseDeskService:
         self._settings = settings
         self._auth_service = auth_service
         self._workflow = workflow
+        self._shift_service = shift_service
         self._session = session_for(shift_repo)
 
     @require_permission(Permission.SHIFT_VIEW.value)
@@ -123,6 +124,10 @@ class CloseDeskService:
                 self._session.flush()
                 if self._workflow is not None:
                     self._workflow.mark_entered(actor_user_id, shift_id)  # the figures were typed: the review chain starts
+                if not preview and self._shift_service is not None:
+                    # Pressing Close shift closes the shift (an already closed one being corrected stays as it is).
+                    if self._shifts.get_by_id(shift_id).status == ShiftStatus.OPEN.value:
+                        self._shift_service.close_shift(actor_user_id, shift_id)
                 desk = self._build(actor_user_id, shift_id)
                 if preview:
                     raise _PreviewDone(desk)

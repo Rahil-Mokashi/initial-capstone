@@ -110,3 +110,33 @@ def test_permissions(client, data_entry, manager, attendant, accountant):
     assert client.get(f"/api/close-shift/{shift['id']}", headers=attendant).status_code == 403
     assert client.post(f"/api/close-shift/{shift['id']}/tally", headers=accountant, json={}).status_code == 403
     assert client.post(f"/api/close-shift/{shift['id']}", headers=data_entry, json={}).status_code == 200
+
+
+def test_saving_the_desk_closes_the_shift_but_the_preview_does_not(client, data_entry, manager):
+    nozzle, shift, _ = _setup(client, manager)
+    modes = _modes(client, data_entry, shift["id"])
+    client.post(f"/api/close-shift/{shift['id']}/tally", headers=data_entry, json=_body(nozzle, modes))
+    assert client.get(f"/api/shifts/{shift['id']}", headers=manager).json()["status"] == "open"
+    r = client.post(f"/api/close-shift/{shift['id']}", headers=data_entry, json=_body(nozzle, modes))
+    assert r.status_code == 200, r.text
+    assert client.get(f"/api/shifts/{shift['id']}", headers=manager).json()["status"] == "closed"
+    # a closed shift is corrected by reopening it first, as before
+    assert client.post(f"/api/close-shift/{shift['id']}", headers=data_entry, json=_body(nozzle, modes)).status_code == 409
+
+
+
+def test_a_shift_open_for_more_than_24_hours_fails_a_check(client, manager, owner, session_factory):
+    from datetime import datetime, timedelta, timezone
+
+    from app.models.shift import Shift
+
+    nozzle, shift, _ = _setup(client, manager)
+    client.post("/api/checks/run", headers=owner, json={})
+    row = {r["key"]: r for r in client.get(f"/api/checks?day={TODAY}", headers=owner).json()["results"]}["shift.open_too_long"]
+    assert row["status"] == "pass"
+    db = session_factory()
+    db.get(Shift, shift["id"]).start_time = datetime.now(timezone.utc) - timedelta(hours=30)
+    db.commit(); db.close()
+    client.post("/api/checks/run", headers=owner, json={})
+    row = {r["key"]: r for r in client.get(f"/api/checks?day={TODAY}", headers=owner).json()["results"]}["shift.open_too_long"]
+    assert row["status"] == "fail" and "Morning" in row["sentence"]

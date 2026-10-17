@@ -570,11 +570,11 @@ class Services:
 
     @cached_property
     def workflow_checks(self) -> WorkflowChecks:
-        return WorkflowChecks(self.checks, self.entries)
+        return WorkflowChecks(self.checks, self.entries, self.db)
 
     @cached_property
     def close_desk(self) -> CloseDeskService:
-        return CloseDeskService(self.shift_close, self.tender_entries, self.cash_book, self.daily_report, self.shift_repo, self.pump_settings, self.auth, self.entries)
+        return CloseDeskService(self.shift_close, self.tender_entries, self.cash_book, self.daily_report, self.shift_repo, self.pump_settings, self.auth, self.entries, self.shifts)
 
     @cached_property
     def payroll(self) -> PayrollService:
