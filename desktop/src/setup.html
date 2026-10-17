@@ -41,7 +41,8 @@
 
       <section aria-labelledby="h-client">
         <h2 id="h-client">Client PC</h2>
-        <p>Use the pump's Main PC over the network. This PC keeps no data of its own. The owner presses "Add a device" on the Main PC and gives you a code.</p>
+        <p>Use this PC to work on the data kept on the pump's Main PC, over the network cable or Wi-Fi. This PC keeps <strong>no data of its own</strong>: everything you see is read from the Main PC, and everything you type is saved there.</p>
+        <p>To connect, you need a short code from the owner. On the Main PC they open <strong>Devices</strong> and press <strong>Add a device</strong>.</p>
         <div class="row">
           <div><label for="host">Main PC address</label><input id="host" autocomplete="off" placeholder="for example 192.168.1.10" /></div>
           <div><label for="port">Port</label><input id="port" value="8443" inputmode="numeric" /></div>
@@ -64,8 +65,9 @@
 
       <section aria-labelledby="h-main">
         <h2 id="h-main">Main PC</h2>
-        <p>The Main PC is set up once by whoever installs the system, in an Administrator PowerShell, with <code>scripts\lan\install-main-pc.ps1</code>. It keeps the database and runs all day, with or without a window.</p>
-        <p>The Main PC's own window is a Client too: after installing, run <code>pperp_api.exe lan enrol-local --name "Main PC window" --out device.json</code>, then use "Import a device file" above.</p>
+        <p>The Main PC is the one computer that keeps all of the pump's data. It stays switched on all day, and every other PC works through it. There is only one in the pump.</p>
+        <p>It is set up once, by the person who installs the system. The steps, with pictures, are in the <strong>Network Setup Guide</strong> (the folder <code>docs\guides</code>).</p>
+        <p>When that is done, this PC's own window connects to the Main PC like any other: press <strong>Import a device file</strong> above and choose the file the installer made.</p>
       </section>
     </main>
   </body>
