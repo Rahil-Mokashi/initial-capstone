@@ -15,14 +15,17 @@ from api.services import Services
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-def user_out(user, last_login: Optional[str] = None) -> UserOut:
+def user_out(user, last_login: Optional[str] = None, services: Optional[Services] = None) -> UserOut:
+    permissions = sorted(p.name for p in user.role.permissions) if user.role else []
+    if services is not None and user.role and user.role.name == "ATTENDANT" and not services.attendants_may_sell():
+        permissions = [p for p in permissions if p != "sale.manage"]  # W-33 off: the Terminal is not shown to attendants
     return UserOut(
         id=user.id,
         username=user.username,
         first_name=user.first_name,
         last_name=user.last_name,
         role=user.role.name if user.role else None,
-        permissions=sorted(p.name for p in user.role.permissions) if user.role else [],
+        permissions=permissions,
         must_change_password=bool(user.must_change_password),
         has_pin=user.pin_hash is not None,
         last_login=last_login,
@@ -39,12 +42,12 @@ def login(body: LoginIn, request: Request, services: Services = Depends(get_serv
         code = "account_locked" if "locked_until" in details else "invalid_credentials"
         raise ApiError(401, code, error or "Sign-in failed.", details)
     user = services.user_repo.get_by_id(data["id"])
-    return LoginOut(token=data["session_token"], expires_at=data["expires_at"], user=user_out(user, data.get("last_login")))
+    return LoginOut(token=data["session_token"], expires_at=data["expires_at"], user=user_out(user, data.get("last_login"), services))
 
 
 @router.get("/me", response_model=UserOut)
-def me(current: CurrentUser = Depends(current_user_allow_pending)):
-    return user_out(current.user)
+def me(current: CurrentUser = Depends(current_user_allow_pending), services: Services = Depends(get_services)):
+    return user_out(current.user, None, services)
 
 
 @router.post("/logout", status_code=204)
@@ -59,7 +62,7 @@ def change_password(
     services: Services = Depends(get_services),
 ):
     user = services.users.change_own_password(current.id, body.current_password, body.new_password)
-    return user_out(user)
+    return user_out(user, None, services)
 
 
 @router.post("/reauthenticate", status_code=204)
@@ -76,7 +79,7 @@ def reauthenticate(
 def set_pin(
     body: SetPinIn, current: CurrentUser = Depends(current_user_allow_pending), services: Services = Depends(get_services)
 ):
-    return user_out(services.users.set_own_pin(current.id, body.current_password, body.pin))
+    return user_out(services.users.set_own_pin(current.id, body.current_password, body.pin), None, services)
 
 
 @router.post("/forgot-password", status_code=204)

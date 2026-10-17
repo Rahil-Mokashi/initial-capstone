@@ -218,6 +218,7 @@ def create_sale(body: SaleIn, user: CurrentUser = Depends(current_user), service
 
 @router.post("/sales/mine", response_model=SaleOut, status_code=201)
 def create_my_sale(body: SelfSaleIn, user: CurrentUser = Depends(current_user), services: Services = Depends(get_services)):
+    services.require_attendant_sales(user.id)
     a = services.shifts.get_my_active_assignment(user.id)
     if a is None:
         raise ValueError("You have no active nozzle assignment.")

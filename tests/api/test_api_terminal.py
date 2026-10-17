@@ -42,7 +42,7 @@ def test_free_pick_needs_shift_nozzle_and_attendant(client, manager, pump):
     assert r.status_code == 422
 
 
-def test_attendant_uses_their_own_assignment(client, session_factory, manager, attendant, fuel_id, tank):
+def test_attendant_uses_their_own_assignment(client, session_factory, manager, attendant, fuel_id, tank, attendant_sales_on):
     import datetime
 
     from app.models.employee import Employee
@@ -68,7 +68,21 @@ def test_attendant_uses_their_own_assignment(client, session_factory, manager, a
     assert sale.status_code == 201 and sale.json()["quantity"] == "2.000"
 
 
-def test_unassigned_attendant_cannot_sell(client, attendant):
+def test_unassigned_attendant_cannot_sell(client, attendant, attendant_sales_on):
     ctx = client.get("/api/terminal/context", headers=attendant).json()
     assert ctx["my_assignment"] is None
     assert client.post("/api/terminal/sales", headers=attendant, json={"mode": "amount", "vehicle_number": "MH12AB1234", "value": "200", "payment_method": "cash"}).status_code == 422
+
+
+def test_attendants_cannot_sell_while_w33_is_off_so_the_same_money_is_not_counted_twice(client, attendant, owner, manager, pump, session_factory):
+    # W-33 is off by default: an attendant's takings arrive as shift totals; a sale he also typed would count that money again
+    me = client.get("/api/auth/me", headers=attendant).json()
+    assert "sale.manage" not in me["permissions"]
+    body = {"mode": "amount", "vehicle_number": "MH12AB1234", "value": "200", "payment_method": "cash"}
+    assert client.get("/api/terminal/context", headers=attendant).status_code == 403
+    assert client.post("/api/terminal/sales", headers=attendant, json=body).status_code == 403
+    assert client.post("/api/sales/mine", headers=attendant, json={"quantity": "1.000", "payment_method": "cash"}).status_code in (403, 404, 405)
+    assert client.get("/api/sales", headers=manager).json()["items"] == []
+    # the owners can switch it on
+    assert client.put("/api/pump-settings/attendants_use_terminal", headers=owner, json={"value": "on"}).status_code == 200
+    assert "sale.manage" in client.get("/api/auth/me", headers=attendant).json()["permissions"]

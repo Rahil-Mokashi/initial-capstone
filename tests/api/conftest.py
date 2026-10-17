@@ -143,3 +143,9 @@ def tank(client, manager, fuel_id):
     )
     assert resp.status_code == 201, resp.text
     return resp.json()
+
+
+@pytest.fixture()
+def attendant_sales_on(client, owner):
+    """Owner Choice W-33 switched on, for the tests of an attendant selling from their own nozzle."""
+    assert client.put("/api/pump-settings/attendants_use_terminal", headers=owner, json={"value": "on"}).status_code == 200

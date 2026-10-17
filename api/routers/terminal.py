@@ -73,6 +73,8 @@ def terminal_context(user: CurrentUser = Depends(current_user), services: Servic
         for c in services.sales.list_customers(user.id)
         if c.status == StatusEnum.ACTIVE.value
     ]
+    if not services.auth.check_permission(user.id, Permission.SHIFT_VIEW.value):
+        services.require_attendant_sales(user.id)
     if services.auth.check_permission(user.id, Permission.SHIFT_VIEW.value):
         return TerminalContext(
             can_pick_freely=True,
@@ -108,6 +110,7 @@ def terminal_sale(body: TerminalSaleIn, user: CurrentUser = Depends(current_user
             raise ValueError("Choose a shift, a nozzle and an attendant first.")
         shift_id, nozzle_id, employee_id = body.shift_id, body.nozzle_id, body.employee_id
     else:
+        services.require_attendant_sales(user.id)
         a = services.shifts.get_my_active_assignment(user.id)
         if a is None:
             raise ValueError("You have no active nozzle assignment.")

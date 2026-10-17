@@ -93,7 +93,7 @@ def test_customers(client, manager, accountant, session_factory):
     assert audit_chain_ok(session_factory)
 
 
-def test_attendant_sells_from_their_own_assignment(client, session_factory, manager, attendant, fuel_id, tank):
+def test_attendant_sells_from_their_own_assignment(client, session_factory, manager, attendant, fuel_id, tank, attendant_sales_on):
     # Link the attendant user to an employee with an active assignment.
     from app.models.employee import Employee
     from app.models.user import User
@@ -121,7 +121,7 @@ def test_attendant_sells_from_their_own_assignment(client, session_factory, mana
     assert sale.status_code == 201 and sale.json()["amount"] == "500.00"
 
 
-def test_attendant_without_assignment_cannot_sell(client, attendant):
+def test_attendant_without_assignment_cannot_sell(client, attendant, attendant_sales_on):
     o = client.get("/api/sales/options", headers=attendant).json()
     assert o["can_pick_freely"] is False and o["my_assignment"] is None
     assert client.post("/api/sales/mine", headers=attendant, json={"quantity": "5", "payment_method": "cash"}).status_code == 422

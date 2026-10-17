@@ -61,6 +61,8 @@ _DEFS = [
                "one_owner: the same owner may approve and lock. two_owners: a different owner has to lock it than the one who approved it."),
     SettingDef("failed_check_blocks_lock", "block", ("block", "allow"), "V-07", "A failing check stops a lock",
                "block: a day with a failing check cannot be locked unless an owner gives a reason (recorded). allow: lock anyway. ASSUMED block, needs owner confirmation."),
+    SettingDef("attendants_use_terminal", "off", ("on", "off"), "W-33", "Attendants can use the Terminal",
+               "off: attendants hand in cash, UPI and card as shift totals, so a sale they also typed would count the same money twice; the Terminal is hidden from them and refused. ASSUMED off, needs owner confirmation."),
     SettingDef("default_testing_litres", "5", None, "T-15", "Usual testing per nozzle (litres)",
                "At the end of a shift each nozzle pours this much for testing and it goes back into the tank. The meter counts it, "
                "so the Close Shift screen pre-fills it; the cashier can change it for a nozzle."),

@@ -646,6 +646,17 @@ class Services:
         extras = build_extras(self, report, actor_id) if style == "plus" else None
         return render_daily_report(report, company, extras)
 
+    def attendants_may_sell(self) -> bool:
+        """Owner Choice W-33. Off by default: the attendant's takings arrive as shift totals, so his own sales would double count."""
+        return self.pump_settings.get("attendants_use_terminal") == "on"
+
+    def require_attendant_sales(self, user_id) -> None:
+        """Raised for a user who sells from their own nozzle assignment (no shift.view) while W-33 is off."""
+        if not self.attendants_may_sell():
+            from app.core.exceptions import PermissionDeniedError
+
+            raise PermissionDeniedError("terminal.attendant_sales")
+
     def run_all_checks(self, actor_id, day):
         """Every check runner for one business date. Later tracks append their runners here."""
         results = list(self.existing_checks.run_day(actor_id, day))
