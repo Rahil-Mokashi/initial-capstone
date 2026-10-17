@@ -85,13 +85,26 @@ beforeEach(() => session.set(null));
 afterEach(() => vi.unstubAllGlobals());
 
 describe('login and the tank list', () => {
-  it('signs in, then shows stock exactly as the server sent it', async () => {
+  it('draws each tank as a picture; the exact figures are one tap away', async () => {
     setup(MANAGE);
     await signIn();
     const card = screen.getByRole('heading', { name: 'T1' }).closest('li')!;
-    expect(within(card).getByText('2,500.500')).toBeInTheDocument();
-    expect(within(card).getByText('of 10,000.000 L')).toBeInTheDocument();
-    expect(within(card).getByRole('meter')).toHaveAttribute('aria-valuetext', '25.0%');
+    expect(within(card).getByRole('img', { name: /T1 Petrol tank, .* 25\.0% full/ })).toBeInTheDocument();
+    expect(within(card).queryByText('2,500.500 L')).toBeNull(); // the picture is the main view
+    await userEvent.click(within(card).getByRole('button', { name: /Show the numbers/ }));
+    expect(within(card).getByText('2,500.500 L')).toBeInTheDocument(); // exactly as the server sent it
+    expect(within(card).getByText('In the tank (book stock)')).toBeInTheDocument();
+    expect(within(card).getByText('10,000.000 L')).toBeInTheDocument();
+    expect(within(card).getByText('none recorded')).toBeInTheDocument();
+  });
+
+  it('"Show numbers" shows them on every tank and is remembered for the person', async () => {
+    setup(MANAGE);
+    await signIn();
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Show numbers' }));
+    const card = screen.getByRole('heading', { name: 'T1' }).closest('li')!;
+    expect(within(card).getByText('2,500.500 L')).toBeInTheDocument();
+    expect(window.localStorage.getItem('pperp.tanks.showNumbers.manager1')).toBe('1');
   });
 
   it('a low tank says LOW in words and an icon, not only a colour', async () => {
@@ -412,5 +425,37 @@ describe('stock movements', () => {
     await userEvent.keyboard('{Escape}');
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(calls.some((c) => c.key.startsWith('POST /api/tanks'))).toBe(false);
+  });
+});
+
+describe('the dip chart', () => {
+  it('is typed in as a table, saved as rows, and the detail page says in one line what each action changes', async () => {
+    const api = setup(MANAGE, {
+      'GET /api/tanks/t1': () => json(200, tank()),
+      'GET /api/tanks/t1/transactions': () => json(200, []),
+      'GET /api/tanks/t1/readings': () => json(200, []),
+      'GET /api/tanks/t1/reconciliations': () => json(200, []),
+      'GET /api/tanks/t1/dip-chart': () => json(200, []),
+      'PUT /api/tanks/t1/dip-chart': () => json(200, []),
+    });
+    await signIn();
+    await userEvent.click(screen.getAllByRole('link', { name: 'T1' })[0]!);
+    await screen.findByRole('heading', { name: 'Tank T1' });
+    const what = screen.getByLabelText('What each action changes').textContent ?? '';
+    expect(what).toMatch(/Adds fuel that a tanker delivered to the book stock/);
+    expect(what).toMatch(/The book stock does not change/);
+    expect(what).toMatch(/sets the book stock to the measured figure/);
+    await userEvent.click(screen.getByRole('button', { name: 'Dip chart' }));
+    await userEvent.type(await screen.findByLabelText('Row 1 dip in cm'), '0');
+    await userEvent.type(screen.getByLabelText('Row 1 litres'), '0');
+    await userEvent.click(screen.getByRole('button', { name: /Add a row/ }));
+    await userEvent.type(screen.getByLabelText('Row 2 dip in cm'), '100');
+    await userEvent.type(screen.getByLabelText('Row 2 litres'), '10000');
+    await userEvent.click(screen.getByRole('button', { name: 'Save chart' }));
+    await waitFor(async () =>
+      expect((await api).calls.find((c) => c.key === 'PUT /api/tanks/t1/dip-chart')?.body).toEqual({
+        rows: [{ dip_cm: '0', litres: '0' }, { dip_cm: '100', litres: '10000' }],
+      }),
+    );
   });
 });

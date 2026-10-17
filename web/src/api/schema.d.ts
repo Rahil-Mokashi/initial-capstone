@@ -3563,6 +3563,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/tanks/{tank_id}/dip-chart": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Dip Chart */
+        get: operations["get_dip_chart_api_tanks__tank_id__dip_chart_get"];
+        /**
+         * Set Dip Chart
+         * @description Replace the tank's dip chart (the old rows stay on record, voided). A CSV is read in the browser and arrives here as rows.
+         */
+        put: operations["set_dip_chart_api_tanks__tank_id__dip_chart_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tanks/{tank_id}/readings": {
         parameters: {
             query?: never;
@@ -5292,6 +5313,25 @@ export interface components {
             status: string;
             /** Total Sale */
             total_sale: string;
+        };
+        /** DipChartIn */
+        DipChartIn: {
+            /** Rows */
+            rows: components["schemas"]["DipChartRowIn"][];
+        };
+        /** DipChartRowIn */
+        DipChartRowIn: {
+            /** Dip Cm */
+            dip_cm: string;
+            /** Litres */
+            litres: string;
+        };
+        /** DipChartRowOut */
+        DipChartRowOut: {
+            /** Dip Cm */
+            dip_cm: string;
+            /** Litres */
+            litres: string;
         };
         /** DipIn */
         DipIn: {
@@ -7480,16 +7520,31 @@ export interface components {
             code: string;
             /** Current Stock */
             current_stock: string;
+            /** Fill Basis */
+            fill_basis?: string | null;
+            /** Fill Height */
+            fill_height?: string | null;
             /** Fill Percent */
             fill_percent: string;
             /** Fuel Id */
             fuel_id: string;
             /** Fuel Type */
             fuel_type: string;
+            /**
+             * Has Dip Chart
+             * @default false
+             */
+            has_dip_chart: boolean;
             /** Id */
             id: string;
             /** Is Low */
             is_low: boolean;
+            /** Last Dip At */
+            last_dip_at?: string | null;
+            /** Last Dip Litres */
+            last_dip_litres?: string | null;
+            /** Low Height */
+            low_height?: string | null;
             /** Opening Stock */
             opening_stock: string;
             /** Status */
@@ -15994,6 +16049,78 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TankOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_dip_chart_api_tanks__tank_id__dip_chart_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                tank_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DipChartRowOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_dip_chart_api_tanks__tank_id__dip_chart_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                tank_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DipChartIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DipChartRowOut"][];
                 };
             };
             /** @description Validation Error */

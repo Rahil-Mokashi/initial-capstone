@@ -20,13 +20,16 @@ import { P } from '@/lib/permissions';
 import { ReadingDialog, ReconcileDialog, StatusDialog, TransactionDialog } from './dialogs';
 import { useReadings, useReconciliations, useTank, useTransactions } from './queries';
 import { VarianceBars } from './VarianceBars';
-import { GaugeBar, LevelBadge, StatusPill, StockFigures } from './TankGauge';
+import { TankDrawing, TankNumbers } from './TankDrawing';
+import { DipChartDialog } from './DipChartDialog';
+import { LevelBadge, StatusPill } from './TankGauge';
 
 type DialogState =
   | { kind: 'txn'; type: TransactionType }
   | { kind: 'reading' }
   | { kind: 'reconcile' }
   | { kind: 'status' }
+  | { kind: 'chart' }
   | null;
 
 const txnColumns: ColumnDef<TankTransaction>[] = [
@@ -164,6 +167,16 @@ function Body({ tank }: { tank: Tank }) {
     ['Record reading', () => setDialog({ kind: 'reading' }), 'secondary'],
     ['Reconcile', () => setDialog({ kind: 'reconcile' }), 'danger'],
     ['Change status', () => setDialog({ kind: 'status' }), 'secondary'],
+    ['Dip chart', () => setDialog({ kind: 'chart' }), 'secondary'],
+  ];
+  // What each button changes, in one line each, for someone new to a pump.
+  const whatItChanges: Array<[string, string]> = [
+    ['Receipt', 'Adds fuel that a tanker delivered to the book stock.'],
+    ['Issue', 'Takes fuel out of the book stock (sales do this by themselves).'],
+    ['Adjustment', 'Corrects the book stock up or down. Use a minus to reduce it.'],
+    ['Record reading', 'Notes what the dip stick showed. The book stock does not change.'],
+    ['Reconcile', 'Compares the book stock with what you measured, then sets the book stock to the measured figure.'],
+    ['Dip chart', "The oil company's table of dip (cm) against litres, so the picture shows the right level."],
   ];
 
   return (
@@ -186,9 +199,9 @@ function Body({ tank }: { tank: Tank }) {
         aria-label="Stock"
         className="grid items-center gap-5 rounded-lg border border-line bg-surface p-5 shadow-card sm:grid-cols-[auto_1fr]"
       >
-        <StockFigures tank={tank} />
-        <div className="flex flex-col gap-1.5">
-          <GaugeBar percent={tank.fill_percent} low={tank.is_low} />
+        <TankDrawing tank={tank} />
+        <div className="flex flex-col gap-3">
+          <TankNumbers tank={tank} />
           <div className="flex justify-end">
             <LevelBadge tank={tank} />
           </div>
@@ -202,6 +215,14 @@ function Body({ tank }: { tank: Tank }) {
           </Button>
         ))}
       </div>
+      <dl aria-label="What each action changes" className="grid gap-x-4 gap-y-1 text-sm sm:grid-cols-[auto_1fr]">
+        {whatItChanges.map(([name, text]) => (
+          <div key={name} className="contents">
+            <dt className="font-semibold">{name}</dt>
+            <dd className="text-muted">{text}</dd>
+          </div>
+        ))}
+      </dl>
       {!canManage && (
         <p className="text-sm text-muted">
           You can look at this tank but not change it. Ask a manager to record movements.
@@ -257,6 +278,7 @@ function Body({ tank }: { tank: Tank }) {
       {dialog?.kind === 'reading' && <ReadingDialog tank={tank} onClose={close} />}
       {dialog?.kind === 'reconcile' && <ReconcileDialog tank={tank} onClose={close} />}
       {dialog?.kind === 'status' && <StatusDialog tank={tank} onClose={close} />}
+      {dialog?.kind === 'chart' && <DipChartDialog tank={tank} onClose={close} />}
     </div>
   );
 }

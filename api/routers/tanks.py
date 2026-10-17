@@ -42,11 +42,11 @@ _LOW = Decimal(str(DASHBOARD_LOW_STOCK_THRESHOLD_PERCENT))
 def tank_out(tank, services=None, user_id=None) -> TankOut:
     # Same clamp-to-0..100 display derivation as stock_percent() in app/ui/widgets.py.
     percent = Decimal(0) if tank.capacity <= 0 else max(Decimal(0), min(Decimal(100), tank.current_stock / tank.capacity * 100))
-    height = basis = last_at = last_litres = None
+    height = basis = last_at = last_litres = low_height = None
     has_chart = False
     if services is not None:
-        h, basis, has_chart = services.tank_dip_charts.drawing(tank)
-        height = f"{h:.4f}"
+        h, basis, has_chart, low = services.tank_dip_charts.drawing(tank, float(_LOW))
+        height, low_height = f"{h:.4f}", f"{low:.4f}"
         readings = services.tanks.list_readings(user_id, tank.id)
         if readings:
             last = max(readings, key=lambda r: r.reading_at)
@@ -66,6 +66,7 @@ def tank_out(tank, services=None, user_id=None) -> TankOut:
         fill_height=height,
         fill_basis=basis,
         has_dip_chart=has_chart,
+        low_height=low_height,
         last_dip_at=last_at,
         last_dip_litres=last_litres,
     )

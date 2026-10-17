@@ -6,7 +6,8 @@ import { useAuth } from '@/auth/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { ErrorState, LoadingBlock } from '@/components/ui/States';
 import { AlertCard, useAlerts } from '@/features/alerts/alerts';
-import { GaugeBar, LevelBadge, StatusPill, StockFigures } from '@/features/tanks/TankGauge';
+import { TankDrawing } from '@/features/tanks/TankDrawing';
+import { LevelBadge, StatusPill } from '@/features/tanks/TankGauge';
 import { useTanks } from '@/features/tanks/queries';
 import { cn } from '@/lib/cn';
 import { formatMoney } from '@/lib/format';
@@ -222,8 +223,7 @@ function TankGauges() {
               </div>
               <StatusPill status={t.status} />
             </div>
-            <StockFigures tank={t} />
-            <GaugeBar percent={t.fill_percent} low={t.is_low} />
+            <TankDrawing tank={t} />
             <div className="flex justify-end">
               <LevelBadge tank={t} />
             </div>

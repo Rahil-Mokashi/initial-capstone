@@ -24,11 +24,12 @@ class TankDipChartService:
         """(dip_cm, litres) rows of the active chart, for drawing. No permission check: it only feeds the picture."""
         return [(float(p.dip_cm), float(p.litres)) for p in self._chart.active_points(tank_id)]
 
-    def drawing(self, tank) -> Tuple[float, str, bool]:
-        """(height fraction, how it was worked out, whether the tank has a chart)."""
+    def drawing(self, tank, low_percent: float = 0.0) -> Tuple[float, str, bool, float]:
+        """(height fraction, how it was worked out, whether the tank has a chart, height fraction of the low-stock line)."""
         chart = self.points(tank.id)
         height, basis = fill_height(float(tank.current_stock), float(tank.capacity), chart)
-        return height, basis, len(chart) >= 2
+        low, _ = fill_height(float(tank.capacity) * low_percent / 100.0, float(tank.capacity), chart)
+        return height, basis, len(chart) >= 2, low
 
     @require_permission(Permission.INVENTORY_VIEW.value)
     def get(self, actor_user_id: str, tank_id: str) -> List[TankDipChartPoint]:

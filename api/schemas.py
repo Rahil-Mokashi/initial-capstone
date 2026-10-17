@@ -163,6 +163,7 @@ class TankOut(Out):
     fill_height: Optional[str] = None
     fill_basis: Optional[str] = None  # dip_chart | round_tank | approximate
     has_dip_chart: bool = False
+    low_height: Optional[str] = None  # where the low-stock line sits on the picture
     last_dip_at: Optional[datetime] = None
     last_dip_litres: Optional[VolumeOut] = None
 

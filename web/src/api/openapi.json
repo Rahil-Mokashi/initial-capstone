@@ -4248,6 +4248,60 @@
         "title": "DigestShiftOut",
         "type": "object"
       },
+      "DipChartIn": {
+        "additionalProperties": false,
+        "properties": {
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/DipChartRowIn"
+            },
+            "title": "Rows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "rows"
+        ],
+        "title": "DipChartIn",
+        "type": "object"
+      },
+      "DipChartRowIn": {
+        "additionalProperties": false,
+        "properties": {
+          "dip_cm": {
+            "title": "Dip Cm",
+            "type": "string"
+          },
+          "litres": {
+            "title": "Litres",
+            "type": "string"
+          }
+        },
+        "required": [
+          "dip_cm",
+          "litres"
+        ],
+        "title": "DipChartRowIn",
+        "type": "object"
+      },
+      "DipChartRowOut": {
+        "properties": {
+          "dip_cm": {
+            "title": "Dip Cm",
+            "type": "string"
+          },
+          "litres": {
+            "title": "Litres",
+            "type": "string"
+          }
+        },
+        "required": [
+          "dip_cm",
+          "litres"
+        ],
+        "title": "DipChartRowOut",
+        "type": "object"
+      },
       "DipIn": {
         "additionalProperties": false,
         "properties": {
@@ -10520,6 +10574,28 @@
             "title": "Current Stock",
             "type": "string"
           },
+          "fill_basis": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fill Basis"
+          },
+          "fill_height": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fill Height"
+          },
           "fill_percent": {
             "title": "Fill Percent",
             "type": "string"
@@ -10532,6 +10608,11 @@
             "title": "Fuel Type",
             "type": "string"
           },
+          "has_dip_chart": {
+            "default": false,
+            "title": "Has Dip Chart",
+            "type": "boolean"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -10539,6 +10620,40 @@
           "is_low": {
             "title": "Is Low",
             "type": "boolean"
+          },
+          "last_dip_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Dip At"
+          },
+          "last_dip_litres": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Dip Litres"
+          },
+          "low_height": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Low Height"
           },
           "opening_stock": {
             "title": "Opening Stock",
@@ -29557,6 +29672,171 @@
           }
         },
         "summary": "Get Tank",
+        "tags": [
+          "tanks"
+        ]
+      }
+    },
+    "/api/tanks/{tank_id}/dip-chart": {
+      "get": {
+        "operationId": "get_dip_chart_api_tanks__tank_id__dip_chart_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tank_id",
+            "required": true,
+            "schema": {
+              "title": "Tank Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DipChartRowOut"
+                  },
+                  "title": "Response Get Dip Chart Api Tanks  Tank Id  Dip Chart Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Dip Chart",
+        "tags": [
+          "tanks"
+        ]
+      },
+      "put": {
+        "description": "Replace the tank's dip chart (the old rows stay on record, voided). A CSV is read in the browser and arrives here as rows.",
+        "operationId": "set_dip_chart_api_tanks__tank_id__dip_chart_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tank_id",
+            "required": true,
+            "schema": {
+              "title": "Tank Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DipChartIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DipChartRowOut"
+                  },
+                  "title": "Response Set Dip Chart Api Tanks  Tank Id  Dip Chart Put",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Dip Chart",
         "tags": [
           "tanks"
         ]

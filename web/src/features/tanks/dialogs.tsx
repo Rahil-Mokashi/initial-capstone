@@ -73,7 +73,7 @@ interface DialogBase {
 
 // ---- add tank ---------------------------------------------------------------------------
 const addSchema = z.object({
-  code: z.string().trim().min(1, 'Enter a tank code, for example T1.'),
+  code: z.string().trim().min(1, 'Enter a tank code, for example MS-22.'),
   fuel_id: z.string().min(1, 'Choose a fuel type.'),
   capacity: decimal({ nonZero: true }),
   opening_stock: decimal(),

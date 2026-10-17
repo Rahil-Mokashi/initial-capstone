@@ -32,7 +32,8 @@ export function StockFigures({ tank }: { tank: Tank }) {
         {formatLitres(tank.current_stock).replace(' L', '')}
         <span className="ml-1 text-base font-semibold text-muted">L</span>
       </p>
-      <p className="num mt-1 text-sm text-muted">of {formatLitres(tank.capacity)}</p>
+      <p className="mt-1 text-sm text-muted">in the tank (book stock)</p>
+      <p className="num text-sm text-muted">capacity {formatLitres(tank.capacity)}</p>
     </div>
   );
 }

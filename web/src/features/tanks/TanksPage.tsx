@@ -11,9 +11,11 @@ import { EmptyState, ErrorState, LoadingBlock } from '@/components/ui/States';
 import { cn } from '@/lib/cn';
 import { formatDateTime, formatQuantity, titleCase } from '@/lib/format';
 import { P } from '@/lib/permissions';
+import { useShowNumbers } from '@/lib/tankNumbers';
 import { AddTankDialog, ReadingDialog, TransactionDialog } from './dialogs';
 import { useRecentTransactions, useTanks } from './queries';
-import { GaugeBar, LevelBadge, StatusPill, StockFigures } from './TankGauge';
+import { TankDrawing } from './TankDrawing';
+import { LevelBadge, StatusPill } from './TankGauge';
 
 // ONE state value for "which dialog is open": two dialogs can never stack or duplicate.
 type DialogState =
@@ -41,12 +43,9 @@ function TankCard({
         </div>
         <StatusPill status={tank.status} />
       </div>
-      <StockFigures tank={tank} />
-      <div className="flex flex-col gap-1.5">
-        <GaugeBar percent={tank.fill_percent} low={tank.is_low} />
-        <div className="flex justify-end">
-          <LevelBadge tank={tank} />
-        </div>
+      <TankDrawing tank={tank} />
+      <div className="flex justify-end">
+        <LevelBadge tank={tank} />
       </div>
       <div className="mt-auto flex flex-wrap gap-2">
         <Link
@@ -144,6 +143,8 @@ export function TanksPage() {
   const { can } = useAuth();
   const canManage = can(P.INVENTORY_MANAGE);
   const tanks = useTanks();
+  const { user } = useAuth();
+  const [showNumbers, setShowNumbers] = useShowNumbers(user?.username ?? '');
   const [view, setView] = useState<'cards' | 'table'>('cards');
   const [dialog, setDialog] = useState<DialogState>(null);
   const close = () => setDialog(null);
@@ -157,7 +158,16 @@ export function TanksPage() {
             Stock level in every tank. Open one to record movements and reconcile.
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="inline-flex min-h-[44px] items-center gap-2 text-sm font-semibold">
+            <input
+              type="checkbox"
+              checked={showNumbers}
+              onChange={(e) => setShowNumbers(e.target.checked)}
+              className="size-4"
+            />
+            Show numbers
+          </label>
           <div
             role="group"
             aria-label="View"
