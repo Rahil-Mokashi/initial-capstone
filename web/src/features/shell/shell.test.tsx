@@ -81,7 +81,17 @@ describe('dashboard', () => {
     expect(within(tiles).getByText('12')).toBeInTheDocument();
     expect(within(tiles).getByText('₹1,23,456.50')).toBeInTheDocument(); // Indian grouping
     expect(within(tiles).getByText('Tanks running low')).toBeInTheDocument();
+    expect(within(tiles).queryByText('Purchase orders pending')).toBeNull(); // behind More
+  });
+
+  it('keeps purchase orders and the open-shift count behind More', async () => {
+    await openAs(ALL, '/more', 'More', {
+      'GET /api/dashboard/summary': () => json(200, { open_shifts_count: 1, open_shift_labels: ['Morning'], pending_purchase_orders_count: 3 }),
+      'GET /api/dashboard/sales-trend': () => json(200, []),
+    });
+    const tiles = await screen.findByRole('list', { name: 'More figures' });
     expect(within(tiles).getByText('Purchase orders pending')).toBeInTheDocument();
+    expect(within(tiles).getByText('Shifts open now')).toBeInTheDocument();
   });
 
   it('a role with no sales or shift rights sees none of those sections', async () => {
@@ -104,7 +114,7 @@ describe('dashboard', () => {
     await openAs(['inventory.view'], '/', /Good/, {
       'GET /api/alerts': () => json(200, alerts(many)),
     });
-    const section = (await screen.findByRole('heading', { name: 'Attention needed' })).closest(
+    const section = (await screen.findByRole('heading', { name: 'Needs action' })).closest(
       'section',
     )!;
     expect(within(section).getAllByRole('listitem')).toHaveLength(3);
@@ -114,8 +124,8 @@ describe('dashboard', () => {
     );
   });
 
-  it('the sales trend toggles between 7 and 30 days and prints exact amounts for each day', async () => {
-    const api = await openAs(ALL, '/', /Good/, {
+  it('the sales trend (under More) toggles between 7 and 30 days and prints exact amounts for each day', async () => {
+    const api = await openAs(ALL, '/more', 'More', {
       'GET /api/dashboard/summary': () => json(200, {}),
       'GET /api/dashboard/roster': () => json(200, []),
       'GET /api/dashboard/sales-trend': (_b, url) => {

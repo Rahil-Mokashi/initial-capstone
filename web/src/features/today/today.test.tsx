@@ -1,4 +1,5 @@
 import { screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { session } from '@/api/session';
 import { openAs } from '@/test/harness';
@@ -13,7 +14,7 @@ afterEach(() => {
 const greeting = /Good (morning|afternoon|evening)/;
 
 describe('Today, by role', () => {
-  it('shows the owner the checks summary, day status and credit outstanding', async () => {
+  it('puts what needs the owner first, and the rest one tap away under More', async () => {
     await openAs(
       ['check.view', 'shift.view', 'credit.view'],
       '/',
@@ -80,12 +81,17 @@ describe('Today, by role', () => {
       },
       { role: 'OWNER' },
     );
+    // Today: the failing check, who is on, the people to chase - and nothing crowded
+    expect(await screen.findByText(/Shift 1: payment modes add up/)).toBeInTheDocument();
+    expect(await screen.findByText('Morning open')).toBeInTheDocument();
+    expect(await screen.findByText(/Promised to pay today/)).toBeInTheDocument(); // the promised-date reminder
+    expect(screen.queryByText('17 of 18 checks passed')).toBeNull();
+    // More: the summaries
+    await userEvent.click(screen.getByRole('link', { name: /^More:/ }));
     expect(await screen.findByText('17 of 18 checks passed')).toBeInTheDocument();
-    expect(screen.getByText(/Shift 1: payment modes add up/)).toBeInTheDocument();
     expect(await screen.findByText('Morning shift open')).toBeInTheDocument();
     expect(await screen.findByText('₹0.30')).toBeInTheDocument(); // exact sum, no 0.30000000000000004
     expect(screen.getByText('2 credit customers, 1 overdue')).toBeInTheDocument();
-    expect(await screen.findByText(/Promised to pay today/)).toBeInTheDocument(); // the promised-date reminder
   });
 
   it('shows the cashier only the shift entry list, in order, in the staff words', async () => {

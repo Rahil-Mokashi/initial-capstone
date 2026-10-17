@@ -21,9 +21,9 @@ const ENTRY_WORD: Record<string, string> = { entered: 'Entered', verified: 'Veri
 
 function Figure({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md border border-line bg-surface-2 p-3">
+    <div className="min-w-0 rounded-md border border-line bg-surface-2 p-3">
       <div className="text-xs font-semibold tracking-wide text-muted uppercase">{label}</div>
-      <div className="num mt-1 text-xl font-bold">{value}</div>
+      <div className="num mt-1 text-lg font-bold [overflow-wrap:anywhere] sm:text-xl">{value}</div>
     </div>
   );
 }
@@ -50,7 +50,7 @@ export function DigestView({ day }: { day?: string }) {
         <Figure label="Credit outstanding" value={formatMoney(d.credit_outstanding)} />
       </div>
 
-      <section aria-label="Shifts" className="rounded-lg border border-line bg-surface p-4 shadow-card">
+      <section aria-label="Shifts" className="min-w-0 rounded-lg border border-line bg-surface p-4 shadow-card">
         <h3 className="mb-2 text-sm font-bold tracking-widest text-muted uppercase">Shifts</h3>
         {d.shifts.length === 0 ? (
           <p className="text-sm text-muted">No shift was closed on this day.</p>

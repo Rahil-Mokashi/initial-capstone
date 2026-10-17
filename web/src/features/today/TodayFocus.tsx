@@ -13,11 +13,11 @@ import { SHIFT_ENTRY_STEPS, todayPlan, type FocusId } from './plan';
 
 type S = components['schemas'];
 
-function Card({ title, children }: { title: string; children: React.ReactNode }) {
+export function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section
       aria-label={title}
-      className="flex flex-col gap-2 rounded-lg border border-line bg-surface p-5 shadow-card"
+      className="flex min-w-0 flex-col gap-2 rounded-lg border border-line bg-surface p-5 shadow-card"
     >
       <h2 className="text-xs font-bold tracking-widest text-muted uppercase">{title}</h2>
       {children}
@@ -25,7 +25,7 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
   );
 }
 
-function OpenLink({ to, children }: { to: string; children: string }) {
+export function OpenLink({ to, children }: { to: string; children: string }) {
   return (
     <Link
       to={to}
@@ -37,7 +37,7 @@ function OpenLink({ to, children }: { to: string; children: string }) {
 }
 
 /** The owner's home: how the latest day went. */
-function DigestCard() {
+export function DigestCard() {
   const { can } = useAuth();
   if (!can(P.DIGEST_VIEW)) return null;
   return (
@@ -48,39 +48,56 @@ function DigestCard() {
   );
 }
 
-/** How many shifts are waiting for THIS person: entries to verify (accountant), to approve or lock (owner). */
-function ReviewCard() {
+/** What is waiting for THIS person, in words: "3 entries need your check" (accountant), "approval" / "to lock" (owner). Nothing shown when nothing waits. */
+export function ReviewLine() {
   const { can } = useAuth();
   const allowed = can(P.ENTRY_VIEW);
   const entries = useGet<S['EntryOut'][]>(['entries', 'today'], '/entries', allowed, 60_000);
-  if (!allowed) return null;
-  const rows = entries.data ?? [];
+  if (!allowed || !entries.data) return null;
+  const rows = entries.data;
   const waiting = [
-    can(P.ENTRY_VERIFY) ? { n: rows.filter((e) => e.status === 'entered').length, what: 'to verify' } : null,
-    can(P.ENTRY_APPROVE) ? { n: rows.filter((e) => e.status === 'verified').length, what: 'to approve' } : null,
-    can(P.ENTRY_LOCK) ? { n: rows.filter((e) => e.status === 'approved').length, what: 'to lock' } : null,
+    can(P.ENTRY_VERIFY) ? { n: rows.filter((e) => e.status === 'entered').length, what: 'need your check' } : null,
+    can(P.ENTRY_APPROVE) ? { n: rows.filter((e) => e.status === 'verified').length, what: 'need your approval' } : null,
+    can(P.ENTRY_LOCK) ? { n: rows.filter((e) => e.status === 'approved').length, what: 'are ready for you to lock' } : null,
   ].filter((w): w is { n: number; what: string } => w !== null && w.n > 0);
+  if (waiting.length === 0) return null;
   return (
-    <Card title="Shifts waiting for you">
-      {!entries.data ? (
-        <p className="text-sm text-muted">Loading...</p>
-      ) : waiting.length === 0 ? (
-        <p className="text-lg font-bold">Nothing is waiting for you.</p>
-      ) : (
-        <ul className="flex flex-col gap-1">
-          {waiting.map((w) => (
-            <li key={w.what} className="num text-2xl font-bold">
-              {w.n} {w.n === 1 ? 'shift' : 'shifts'} {w.what}
-            </li>
-          ))}
-        </ul>
-      )}
-      <OpenLink to="/review">Open Review</OpenLink>
-    </Card>
+    <ul aria-label="Waiting for you" className="flex flex-col gap-2">
+      {waiting.map((w) => (
+        <li key={w.what} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line border-l-4 border-l-info bg-surface p-4 shadow-card">
+          <p className="min-w-0 font-semibold">
+            <span className="num">{w.n}</span> {w.n === 1 ? 'entry' : 'entries'} {w.what}
+          </p>
+          <OpenLink to="/review">Review</OpenLink>
+        </li>
+      ))}
+    </ul>
   );
 }
 
-function ChecksCard() {
+/** Only the checks that failed or need a look, with the figure; nothing at all when every check passed. */
+export function ChecksToLookAt() {
+  const { can } = useAuth();
+  const allowed = can(P.CHECK_VIEW);
+  const checks = useGet<S['DayChecksOut']>(['checks', 'today'], '/checks', allowed, 60_000);
+  const bad = (checks.data?.results ?? []).filter((r) => r.status !== 'pass').slice(0, 4);
+  if (!allowed || bad.length === 0) return null;
+  return (
+    <ul aria-label="Checks to look at" className="flex flex-col gap-2">
+      {bad.map((r) => (
+        <li key={r.id} className={`flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line border-l-4 bg-surface p-4 shadow-card ${r.status === 'fail' ? 'border-l-danger' : 'border-l-warn'}`}>
+          <p className="min-w-0 [overflow-wrap:anywhere]">
+            <StatusBadge tone={r.status === 'fail' ? 'danger' : 'warn'}>{r.status === 'fail' ? 'Failed' : 'Look'}</StatusBadge>{' '}
+            {r.sentence} <span className="num text-muted">({formatCheckValue(r.unit, r.difference)})</span>
+          </p>
+          <OpenLink to="/checks">Open Checks</OpenLink>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+export function ChecksCard() {
   const { can } = useAuth();
   const allowed = can(P.CHECK_VIEW);
   const checks = useGet<S['DayChecksOut']>(['checks', 'today'], '/checks', allowed, 60_000);
@@ -117,7 +134,7 @@ function ChecksCard() {
   );
 }
 
-function DayStatusCard() {
+export function DayStatusCard() {
   const { can } = useAuth();
   const allowed = can(P.SHIFT_VIEW);
   const summary = useGet<S['SummaryOut']>(
@@ -138,7 +155,7 @@ function DayStatusCard() {
   );
 }
 
-function CreditCard() {
+export function CreditCard() {
   const { can } = useAuth();
   const allowed = can(P.CREDIT_VIEW);
   const accounts = useGet<S['AccountOut'][]>(['credit', 'accounts'], '/credit/accounts', allowed);
@@ -147,7 +164,7 @@ function CreditCard() {
   const overdue = rows.filter((a) => a.overdue).length;
   return (
     <Card title="Credit outstanding">
-      <p className="num text-2xl font-bold">
+      <p className="num text-2xl font-bold [overflow-wrap:anywhere]">
         {accounts.data ? formatMoney(sumMoney(rows.map((a) => a.outstanding))) : '…'}
       </p>
       <p className="text-sm text-muted">
@@ -158,7 +175,7 @@ function CreditCard() {
   );
 }
 
-function ChaseCard() {
+export function ChaseCard() {
   const { can } = useAuth();
   if (!can(P.CREDIT_VIEW)) return null;
   return (
@@ -169,7 +186,7 @@ function ChaseCard() {
   );
 }
 
-function PayrollCard() {
+export function PayrollCard() {
   const { can } = useAuth();
   const runs = useGet<S['PayrollRunRowOut'][]>(
     ['payroll', 'runs'],
@@ -233,14 +250,8 @@ function ManagerCard() {
   );
 }
 
-const CARDS: Record<FocusId, () => React.ReactElement | null> = {
-  digest: DigestCard,
-  review: ReviewCard,
-  checks: ChecksCard,
-  day_status: DayStatusCard,
-  credit_outstanding: CreditCard,
-  credit_chase: ChaseCard,
-  payroll: PayrollCard,
+// Today shows only the lists of steps a role works through. The figures live in the sections of the Today page or behind "More".
+const CARDS: Partial<Record<FocusId, () => React.ReactElement | null>> = {
   shift_entry: ShiftEntryCard,
   manager_close: ManagerCard,
 };
@@ -249,11 +260,12 @@ const CARDS: Record<FocusId, () => React.ReactElement | null> = {
 export function TodayFocus() {
   const { user } = useAuth();
   const plan = todayPlan(user?.role);
-  if (plan.focus.length === 0) return null;
+  const lists = plan.focus.filter((id) => CARDS[id]);
+  if (lists.length === 0) return null;
   return (
     <div aria-label="Your list for today" className="grid gap-4 lg:grid-cols-2">
-      {plan.focus.map((id) => {
-        const Card = CARDS[id];
+      {lists.map((id) => {
+        const Card = CARDS[id]!;
         return <Card key={id} />;
       })}
     </div>
