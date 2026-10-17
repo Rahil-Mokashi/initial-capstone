@@ -450,6 +450,17 @@ class Services:
             extra_producers=[self._counter_customer_alerts],
         )
 
+    @cached_property
+    def alerts(self):
+        from app.repositories.alert_repository import AlertAcknowledgementRepository
+        from app.repositories.employee_cash_shortage_repository import EmployeeCashShortageRepository
+        from app.services.alert_service import AlertService
+
+        return AlertService(
+            self.notifications, AlertAcknowledgementRepository(self.db), EmployeeCashShortageRepository(self.db), self.shortages,
+            ShiftReconciliationLineRepository(self.db), self.assignment_repo, self.audit_repo, self.auth,
+        )
+
     def _counter_customer_alerts(self, actor_user_id, can):
         """Owners are told about a customer made at the counter who still needs approval and a limit (W-34)."""
         from app.core.constants import NotificationCategory, NotificationSeverity, Permission

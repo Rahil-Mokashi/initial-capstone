@@ -8,7 +8,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query
 
 from api.deps import CurrentUser, current_user, get_services
-from api.schemas import MoneyOut, Out
+from api.schemas import In, MoneyOut, Out
 from api.services import Services
 from app.core.constants import AssignmentStatus, ShiftStatus
 
@@ -36,7 +36,20 @@ class RosterRow(Out):
     detail: str
 
 
+class AlertEmployee(Out):
+    id: str
+    name: str
+
+
+class AlertShortage(Out):
+    line_id: str
+    shift: str
+    employees: list[AlertEmployee]
+    suggested_employee_id: Optional[str] = None
+
+
 class AlertOut(Out):
+    key: str
     category: str
     severity: str
     title: str
@@ -44,6 +57,8 @@ class AlertOut(Out):
     action: str
     entity_id: Optional[str] = None
     is_summary: bool
+    count: int = 1
+    shortage: Optional[AlertShortage] = None
 
 
 class AlertsOut(Out):
@@ -51,6 +66,16 @@ class AlertsOut(Out):
     critical_count: int
     warning_count: int
     notifications: list[AlertOut]
+
+
+class AcknowledgeIn(In):
+    key: str
+    reason: str = ""
+
+
+class MarkShortageIn(In):
+    line_id: str
+    employee_id: str
 
 
 @router.get("/dashboard/summary", response_model=SummaryOut)
@@ -82,23 +107,34 @@ def roster(user: CurrentUser = Depends(current_user), services: Services = Depen
     return sorted(rows, key=lambda r: r.name)
 
 
+def _alerts_out(items) -> AlertsOut:
+    out = []
+    for i in items:
+        n = i.notification
+        sh = i.shortage
+        out.append(AlertOut(
+            key=i.key, category=n.category.value, severity=n.severity.value, title=n.title, detail=n.detail, action=n.action,
+            entity_id=n.entity_id, is_summary=n.is_summary, count=i.count,
+            shortage=AlertShortage(line_id=sh.line_id, shift=sh.shift_label, employees=[AlertEmployee(id=e, name=nm) for e, nm in sh.employees],
+                                   suggested_employee_id=sh.suggested_employee_id) if sh else None,
+        ))
+    return AlertsOut(
+        total=len(out), critical_count=sum(1 for a in out if a.severity == "critical"),
+        warning_count=sum(1 for a in out if a.severity == "warning"), notifications=out,
+    )
+
+
 @router.get("/alerts", response_model=AlertsOut)
 def alerts(user: CurrentUser = Depends(current_user), services: Services = Depends(get_services)):
-    s = services.notifications.get_notifications(user.id)
-    return AlertsOut(
-        total=s.total,
-        critical_count=s.critical_count,
-        warning_count=s.warning_count,
-        notifications=[
-            AlertOut(
-                category=n.category.value,
-                severity=n.severity.value,
-                title=n.title,
-                detail=n.detail,
-                action=n.action,
-                entity_id=n.entity_id,
-                is_summary=n.is_summary,
-            )
-            for n in s.notifications
-        ],
-    )
+    return _alerts_out(services.alerts.list(user.id))
+
+
+@router.post("/alerts/acknowledge", status_code=204)
+def acknowledge(body: AcknowledgeIn, user: CurrentUser = Depends(current_user), services: Services = Depends(get_services)):
+    services.alerts.acknowledge(user.id, body.key, body.reason)
+
+
+@router.post("/alerts/shortage", status_code=204)
+def mark_shortage(body: MarkShortageIn, user: CurrentUser = Depends(current_user), services: Services = Depends(get_services)):
+    """"Mark against <name>": books the shortage on that person (the same service the Reconciliation screen uses) and the alert resolves."""
+    services.alerts.mark_shortage(user.id, body.line_id, body.employee_id)

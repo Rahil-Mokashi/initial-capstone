@@ -154,6 +154,8 @@ class Permission(str, Enum):
     # The optional emailed summary and its mail account; the System health screen. Owners and admins only.
     MAIL_MANAGE = "mail.manage"
     SYSTEM_HEALTH_VIEW = "system_health.view"
+    # Setting an alert aside with a reason (who and when are kept). Owners, admins, managers and the accountant.
+    ALERT_ACKNOWLEDGE = "alert.acknowledge"
 
 
 class EmployeeStatus(str, Enum):
@@ -461,6 +463,7 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
     UserRole.ADMIN: tuple(Permission),
     UserRole.OWNER: tuple(Permission),
     UserRole.MANAGER: (
+        Permission.ALERT_ACKNOWLEDGE,
         Permission.INVENTORY_VIEW,
         Permission.SETTINGS_VIEW,
         Permission.INVENTORY_MANAGE,
@@ -507,6 +510,7 @@ ROLE_PERMISSIONS: dict[UserRole, tuple[Permission, ...]] = {
         Permission.ENTRY_VIEW,
     ),
     UserRole.ACCOUNTANT: (
+        Permission.ALERT_ACKNOWLEDGE,
         Permission.INVENTORY_VIEW,
         Permission.SETTINGS_VIEW,
         Permission.FUEL_PRICE_VIEW,

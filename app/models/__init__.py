@@ -7,6 +7,7 @@ from .check_result import CheckExplanation, CheckResult
 from .digest_review import DigestReview
 from .health_run import HealthRun
 from .lan_device import LanDevice
+from .alert_acknowledgement import AlertAcknowledgement
 from .mail_outbox import MailOutbox
 from .record_version import RecordVersion
 from .shift_entry import ShiftEntry, ShiftEntryEvent
@@ -83,6 +84,7 @@ __all__ = [
     "DigestReview",
     "HealthRun",
     "LanDevice",
+    "AlertAcknowledgement",
     "MailOutbox",
     "RecordVersion",
     "ShiftEntry",

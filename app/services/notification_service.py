@@ -115,6 +115,8 @@ class Notification:
     # real producer below, but a category added later without one degrades
     # to a two-part sentence instead of raising.
     action: str = ""
+    # What an action button needs to find the record again (the reconciliation line of a cash shortage).
+    ref_id: Optional[str] = None
     # True for the "N more..." line that stands in for items trimmed by
     # the per-category cap. It exists so the final sort can keep that
     # line at the END of its group: sorting it by title instead would
@@ -424,6 +426,7 @@ class NotificationService:
                                     f"{line.expected:.2f} for {line.tender.name}."
                                 ),
                                 entity_id=reconciliation.id,
+                                ref_id=line.id,
                                 action="Open Reconciliation to investigate the shortfall with the attendant.",
                             )
                         )
