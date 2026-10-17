@@ -21,6 +21,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/alerts/acknowledge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Acknowledge */
+        post: operations["acknowledge_api_alerts_acknowledge_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/alerts/shortage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark Shortage
+         * @description "Mark against <name>": books the shortage on that person (the same service the Reconciliation screen uses) and the alert resolves.
+         */
+        post: operations["mark_shortage_api_alerts_shortage_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/analytics/forecast": {
         parameters: {
             query?: never;
@@ -3577,6 +3614,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/terminal/customers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Counter Customer
+         * @description Make (or find) a customer while billing at the counter (Owner Choice W-34).
+         */
+        post: operations["counter_customer_api_terminal_customers_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/terminal/sales": {
         parameters: {
             query?: never;
@@ -3754,6 +3811,16 @@ export interface components {
             /** Payment Due Days */
             payment_due_days: number;
         };
+        /** AcknowledgeIn */
+        AcknowledgeIn: {
+            /** Key */
+            key: string;
+            /**
+             * Reason
+             * @default
+             */
+            reason: string;
+        };
         /** ActiveIn */
         ActiveIn: {
             /** Is Active */
@@ -3814,22 +3881,48 @@ export interface components {
             /** Overdue */
             overdue: boolean;
         };
+        /** AlertEmployee */
+        AlertEmployee: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+        };
         /** AlertOut */
         AlertOut: {
             /** Action */
             action: string;
             /** Category */
             category: string;
+            /**
+             * Count
+             * @default 1
+             */
+            count: number;
             /** Detail */
             detail: string;
             /** Entity Id */
             entity_id?: string | null;
             /** Is Summary */
             is_summary: boolean;
+            /** Key */
+            key: string;
             /** Severity */
             severity: string;
+            shortage?: components["schemas"]["AlertShortage"] | null;
             /** Title */
             title: string;
+        };
+        /** AlertShortage */
+        AlertShortage: {
+            /** Employees */
+            employees: components["schemas"]["AlertEmployee"][];
+            /** Line Id */
+            line_id: string;
+            /** Shift */
+            shift: string;
+            /** Suggested Employee Id */
+            suggested_employee_id?: string | null;
         };
         /** AlertsOut */
         AlertsOut: {
@@ -4675,6 +4768,22 @@ export interface components {
             /** Shift Id */
             shift_id?: string | null;
             status?: components["schemas"]["AttendanceStatus"] | null;
+        };
+        /** CounterCustomerIn */
+        CounterCustomerIn: {
+            /** Name */
+            name: string;
+            /** Phone */
+            phone?: string | null;
+        };
+        /** CounterCustomerOut */
+        CounterCustomerOut: {
+            /** Id */
+            id: string;
+            /** Matched */
+            matched: boolean;
+            /** Name */
+            name: string;
         };
         /** CreditDoneOut */
         CreditDoneOut: {
@@ -5958,6 +6067,13 @@ export interface components {
             /** Shift Label */
             shift_label?: string | null;
             status: components["schemas"]["AttendanceStatus"];
+        };
+        /** MarkShortageIn */
+        MarkShortageIn: {
+            /** Employee Id */
+            employee_id: string;
+            /** Line Id */
+            line_id: string;
         };
         /** MeterIn */
         MeterIn: {
@@ -7597,6 +7713,74 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["AlertsOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    acknowledge_api_alerts_acknowledge_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AcknowledgeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mark_shortage_api_alerts_shortage_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MarkShortageIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -15949,6 +16133,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TerminalContext"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    counter_customer_api_terminal_customers_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CounterCustomerIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CounterCustomerOut"];
                 };
             };
             /** @description Validation Error */

@@ -1,0 +1,22 @@
+{
+ "label": "before30",
+ "days": 30,
+ "app_start_s": 5.11,
+ "first_save_s": 59.841,
+ "first_checks_finish_s": 0.0,
+ "save_p50_s": 3.366,
+ "save_p95_s": 16.383,
+ "checks_finish_after_save_s": 0.0,
+ "checks_run_s": 0.835,
+ "checks_run_status": 200,
+ "daily_report_classic_s": 0.311,
+ "daily_report_classic_status": 200,
+ "daily_report_plus_s": 0.424,
+ "daily_report_plus_status": 200,
+ "digest_s": 0.724,
+ "digest_status": 200,
+ "bank_match_30d_s": 3.623,
+ "bank_match_30d_status": 200,
+ "credit_ageing_s": 0.113,
+ "credit_ageing_status": 200
+}

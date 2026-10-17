@@ -6,7 +6,11 @@ import { greetingFor } from '@/features/dashboard/DashboardPage';
 import { openAs } from '@/test/harness';
 import { apiError, json } from '@/test/mockApi';
 
+let alertSeq = 0;
 const alert = (over: Record<string, unknown> = {}) => ({
+  key: `k${++alertSeq}@2026-10-17`,
+  count: 1,
+  shortage: null,
   category: 'low_fuel',
   severity: 'critical',
   title: 'T2 is low on fuel',
@@ -501,5 +505,54 @@ describe('checks updating chip', () => {
     expect(await screen.findByText(/Checks updating/)).toBeInTheDocument();
     updating = false;
     await waitFor(() => expect(screen.queryByText(/Checks updating/)).toBeNull(), { timeout: 5000 });
+  });
+});
+
+describe('alert actions', () => {
+  const short = alert({
+    category: 'cash_shortage',
+    title: 'Cash short by 114.49',
+    shortage: {
+      line_id: 'ln1',
+      shift: '2026-10-17 Morning',
+      employees: [
+        { id: 'e1', name: 'Asha Patil' },
+        { id: 'e2', name: 'Ravi Shinde' },
+      ],
+      suggested_employee_id: null,
+    },
+  });
+
+  it('marks a cash shortage against the chosen person of that shift', async () => {
+    const api = await openAs(['inventory.view', 'shortage.manage'], '/alerts', 'Alerts', {
+      'GET /api/alerts': () => json(200, alerts([short])),
+      'POST /api/alerts/shortage': () => new Response(null, { status: 204 }),
+    });
+    await userEvent.selectOptions(await screen.findByLabelText('Who handed in the cash'), 'e2');
+    await userEvent.click(screen.getByRole('button', { name: 'Mark against Ravi Shinde' }));
+    await waitFor(() =>
+      expect(api.calls.find((c) => c.key === 'POST /api/alerts/shortage')?.body).toEqual({ line_id: 'ln1', employee_id: 'e2' }),
+    );
+  });
+
+  it('acknowledges with a reason, and shows a count when the same alert repeats', async () => {
+    const api = await openAs(['inventory.view', 'alert.acknowledge'], '/alerts', 'Alerts', {
+      'GET /api/alerts': () => json(200, alerts([alert({ count: 3, key: 'abc@2026-10-17' })])),
+      'POST /api/alerts/acknowledge': () => new Response(null, { status: 204 }),
+    });
+    expect(await screen.findByText('× 3')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /^Acknowledge/ }));
+    await userEvent.type(await screen.findByLabelText(/Why can it be set aside/), 'known, being fixed');
+    await userEvent.click(screen.getByRole('button', { name: 'Acknowledge' }));
+    await waitFor(() =>
+      expect(api.calls.find((c) => c.key === 'POST /api/alerts/acknowledge')?.body).toEqual({ key: 'abc@2026-10-17', reason: 'known, being fixed' }),
+    );
+  });
+
+  it('shows no Mark or Acknowledge buttons to someone without the permission', async () => {
+    await openAs(['inventory.view'], '/alerts', 'Alerts', { 'GET /api/alerts': () => json(200, alerts([short])) });
+    await screen.findByText('Cash short by 114.49');
+    expect(screen.queryByRole('button', { name: /^Mark against/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Acknowledge/ })).toBeNull();
   });
 });

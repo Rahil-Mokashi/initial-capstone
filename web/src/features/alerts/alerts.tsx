@@ -1,11 +1,15 @@
 import { BellRing, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useGet } from '@/api/hooks';
+import { friendlyMessage } from '@/api/errors';
+import { api } from '@/api/client';
+import { useGet, useWrite } from '@/api/hooks';
+import { useAuth } from '@/auth/AuthContext';
 import type { components } from '@/api/schema';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Menu } from '@/components/ui/Menu';
+import { ReasonDialog } from '@/components/ui/ReasonDialog';
 import { ErrorState, LoadingBlock } from '@/components/ui/States';
 import { alertRoute } from '@/lib/alertRoutes';
 import { SEVERITY_LABEL, collapsedSummaryText, sentence } from '@/lib/alertText';
@@ -29,8 +33,30 @@ const TAG: Record<string, string> = {
   info: 'bg-info-bg text-info-fg',
 };
 
-/** One alert: a coloured left edge, a title, the severity in WORDS (never colour alone), the detail. */
-export function AlertCard({ alert }: { alert: Alert }) {
+/**
+ * One alert: a coloured left edge, a title, the severity in WORDS (never colour alone), the detail, and what can be done with it:
+ * Open (the screen it is about), Mark against <name> (a cash shortage), Acknowledge (set aside, with a reason). It clears itself when
+ * the problem is fixed.
+ */
+export function AlertCard({ alert, compact = false }: { alert: Alert; compact?: boolean }) {
+  const navigate = useNavigate();
+  const { can } = useAuth();
+  const [acknowledging, setAcknowledging] = useState(false);
+  const [employeeId, setEmployeeId] = useState(
+    alert.shortage?.suggested_employee_id ?? alert.shortage?.employees[0]?.id ?? '',
+  );
+  const [problem, setProblem] = useState<string | null>(null);
+  const to = alertRoute(alert.category, alert.title);
+  const ack = useWrite(
+    (reason: string) => api.post('/alerts/acknowledge', { key: alert.key, reason }),
+    ['alerts'],
+  );
+  const mark = useWrite(
+    (v: { line_id: string; employee_id: string }) => api.post('/alerts/shortage', v),
+    ['alerts', 'reconciliation', 'shortages', 'employees'],
+  );
+  const shortage = alert.shortage;
+  const chosen = shortage?.employees.find((e) => e.id === employeeId);
   return (
     <li
       className={cn(
@@ -39,7 +65,10 @@ export function AlertCard({ alert }: { alert: Alert }) {
       )}
     >
       <div className="flex items-start justify-between gap-3">
-        <p className="font-semibold">{alert.title}</p>
+        <p className="font-semibold">
+          {alert.title}
+          {alert.count > 1 && <span className="ml-2 text-sm font-normal text-muted">× {alert.count}</span>}
+        </p>
         <span
           className={cn(
             'shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-bold tracking-wide',
@@ -50,6 +79,74 @@ export function AlertCard({ alert }: { alert: Alert }) {
         </span>
       </div>
       {alert.detail && <p className="text-sm text-muted">{alert.detail}</p>}
+      {!compact && !alert.is_summary && (
+        <div className="mt-1 flex flex-wrap items-center gap-2">
+          {to && (
+            <Button onClick={() => navigate(to)}>
+              Open
+            </Button>
+          )}
+          {shortage && can('shortage.manage') && shortage.employees.length > 0 && (
+            <>
+              {shortage.employees.length > 1 && (
+                <select
+                  aria-label="Who handed in the cash"
+                  className="min-h-[40px] rounded-md border border-line-strong bg-surface px-2 text-sm"
+                  value={employeeId}
+                  onChange={(e) => setEmployeeId(e.target.value)}
+                >
+                  {shortage.employees.map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+              <Button
+                variant="primary"
+                loading={mark.isPending}
+                disabled={!chosen}
+                onClick={() => {
+                  setProblem(null);
+                  mark.mutate(
+                    { line_id: shortage.line_id, employee_id: employeeId },
+                    { onError: (e) => setProblem(friendlyMessage(e)) },
+                  );
+                }}
+              >
+                Mark against {chosen?.name ?? 'staff'}
+              </Button>
+            </>
+          )}
+          {can('alert.acknowledge') && (
+            <Button onClick={() => setAcknowledging(true)}>
+              Acknowledge
+            </Button>
+          )}
+          <span className="text-xs text-muted">Clears itself when the problem is fixed.</span>
+        </div>
+      )}
+      {shortage && !compact && (
+        <p className="text-xs text-muted">
+          Shift {shortage.shift}
+          {shortage.employees.length ? ` - worked by ${shortage.employees.map((e) => e.name).join(', ')}` : ''}.
+        </p>
+      )}
+      {problem && (
+        <p role="alert" className="text-sm text-danger-fg">
+          {problem}
+        </p>
+      )}
+      {acknowledging && (
+        <ReasonDialog
+          title="Set this alert aside?"
+          description={`${alert.title}. It stays hidden for the rest of today; who did this and when is recorded. It does not change any check.`}
+          label="Why can it be set aside?"
+          submitLabel="Acknowledge"
+          onConfirm={(reason) => ack.mutateAsync(reason)}
+          onClose={() => setAcknowledging(false)}
+        />
+      )}
     </li>
   );
 }
@@ -87,8 +184,8 @@ export function AlertsPage() {
             look. An alert clears itself once the situation behind it is resolved.
           </p>
           <ul className="flex flex-col gap-3">
-            {s.notifications.map((n, i) => (
-              <AlertCard key={`${n.category}-${i}`} alert={n} />
+            {s.notifications.map((n) => (
+              <AlertCard key={n.key} alert={n} />
             ))}
           </ul>
         </>
@@ -130,8 +227,8 @@ export function AlertsMenu() {
                 {s.notifications
                   .filter((n) => !n.is_summary)
                   .slice(0, 3)
-                  .map((n, i) => (
-                    <AlertCard key={`${n.category}-${i}`} alert={n} />
+                  .map((n) => (
+                    <AlertCard key={n.key} alert={n} />
                   ))}
               </ul>
               <Button

@@ -73,6 +73,25 @@
         "title": "AccountOut",
         "type": "object"
       },
+      "AcknowledgeIn": {
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "reason": {
+            "default": "",
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key"
+        ],
+        "title": "AcknowledgeIn",
+        "type": "object"
+      },
       "ActiveIn": {
         "additionalProperties": false,
         "properties": {
@@ -240,6 +259,24 @@
         "title": "AgeingRowOut",
         "type": "object"
       },
+      "AlertEmployee": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "AlertEmployee",
+        "type": "object"
+      },
       "AlertOut": {
         "properties": {
           "action": {
@@ -249,6 +286,11 @@
           "category": {
             "title": "Category",
             "type": "string"
+          },
+          "count": {
+            "default": 1,
+            "title": "Count",
+            "type": "integer"
           },
           "detail": {
             "title": "Detail",
@@ -269,9 +311,23 @@
             "title": "Is Summary",
             "type": "boolean"
           },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
           "severity": {
             "title": "Severity",
             "type": "string"
+          },
+          "shortage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AlertShortage"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "title": {
             "title": "Title",
@@ -279,6 +335,7 @@
           }
         },
         "required": [
+          "key",
           "category",
           "severity",
           "title",
@@ -287,6 +344,43 @@
           "is_summary"
         ],
         "title": "AlertOut",
+        "type": "object"
+      },
+      "AlertShortage": {
+        "properties": {
+          "employees": {
+            "items": {
+              "$ref": "#/components/schemas/AlertEmployee"
+            },
+            "title": "Employees",
+            "type": "array"
+          },
+          "line_id": {
+            "title": "Line Id",
+            "type": "string"
+          },
+          "shift": {
+            "title": "Shift",
+            "type": "string"
+          },
+          "suggested_employee_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggested Employee Id"
+          }
+        },
+        "required": [
+          "line_id",
+          "shift",
+          "employees"
+        ],
+        "title": "AlertShortage",
         "type": "object"
       },
       "AlertsOut": {
@@ -2750,6 +2844,54 @@
           }
         },
         "title": "CorrectIn",
+        "type": "object"
+      },
+      "CounterCustomerIn": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "CounterCustomerIn",
+        "type": "object"
+      },
+      "CounterCustomerOut": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "matched": {
+            "title": "Matched",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "matched"
+        ],
+        "title": "CounterCustomerOut",
         "type": "object"
       },
       "CreditDoneOut": {
@@ -6479,6 +6621,25 @@
           "status"
         ],
         "title": "MarkIn",
+        "type": "object"
+      },
+      "MarkShortageIn": {
+        "additionalProperties": false,
+        "properties": {
+          "employee_id": {
+            "title": "Employee Id",
+            "type": "string"
+          },
+          "line_id": {
+            "title": "Line Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "line_id",
+          "employee_id"
+        ],
+        "title": "MarkShortageIn",
         "type": "object"
       },
       "MeterIn": {
@@ -11172,6 +11333,143 @@
           }
         },
         "summary": "Alerts",
+        "tags": [
+          "dashboard"
+        ]
+      }
+    },
+    "/api/alerts/acknowledge": {
+      "post": {
+        "operationId": "acknowledge_api_alerts_acknowledge_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcknowledgeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Acknowledge",
+        "tags": [
+          "dashboard"
+        ]
+      }
+    },
+    "/api/alerts/shortage": {
+      "post": {
+        "description": "\"Mark against <name>\": books the shortage on that person (the same service the Reconciliation screen uses) and the alert resolves.",
+        "operationId": "mark_shortage_api_alerts_shortage_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarkShortageIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mark Shortage",
         "tags": [
           "dashboard"
         ]
@@ -29615,6 +29913,82 @@
           }
         },
         "summary": "Terminal Context",
+        "tags": [
+          "terminal"
+        ]
+      }
+    },
+    "/api/terminal/customers": {
+      "post": {
+        "description": "Make (or find) a customer while billing at the counter (Owner Choice W-34).",
+        "operationId": "counter_customer_api_terminal_customers_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CounterCustomerIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CounterCustomerOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Counter Customer",
         "tags": [
           "terminal"
         ]

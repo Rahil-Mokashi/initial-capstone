@@ -265,8 +265,8 @@ function Attention() {
       ) : (
         <>
           <ul className="flex flex-col gap-3">
-            {shown.map((n, i) => (
-              <AlertCard key={`${n.category}-${i}`} alert={n} />
+            {shown.map((n) => (
+              <AlertCard key={n.key} alert={n} />
             ))}
           </ul>
           <div>
