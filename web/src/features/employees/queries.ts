@@ -68,3 +68,10 @@ export const useRemoveDocument = () =>
   useEmployeeMutation((v: { documentId: string; reason: string }) =>
     api.post<EmployeeDocument>(`/employees/documents/${v.documentId}/remove`, { reason: v.reason }),
   );
+
+export const useEmployeeShortages = (id: string, enabled: boolean) =>
+  useQuery({
+    queryKey: [...all, id, 'shortages'],
+    queryFn: () => api.get<components['schemas']['EmployeeShortageOut'][]>(`/employees/${id}/shortages`),
+    enabled,
+  });

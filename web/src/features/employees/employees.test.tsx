@@ -43,6 +43,7 @@ async function setup(permissions: string[], extra: Routes = {}, path = '/employe
       ]),
     'GET /api/employees/e1': () => json(200, employee()),
     'GET /api/employees/e1/documents': () => json(200, []),
+    'GET /api/employees/e1/shortages': () => json(200, []),
     ...extra,
   });
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -261,5 +262,20 @@ describe('employee detail', () => {
     expect(screen.queryByRole('button', { name: 'Save profile' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Add document/ })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Record exit' })).toBeDisabled();
+  });
+
+  it('shows the cash shortages marked against a person, what they owe and what they paid back', async () => {
+    await setup(['employee.view'], {
+      'GET /api/employees/e1/shortages': () =>
+        json(200, [
+          {
+            id: 'sh1', shift: '2026-10-17 Morning', recorded_at: '2026-10-17T10:00:00Z', amount: '100.00', recovered: '40.00', owed: '60.00',
+            status: 'Owed', notes: null, recoveries: [{ at: '2026-10-18T09:00:00Z', amount: '40.00', notes: 'returned' }],
+          },
+        ]),
+    }, '/employees/e1');
+    expect(await screen.findByText(/Still owed: ₹60.00/)).toBeInTheDocument();
+    expect(screen.getByText(/short ₹100.00 - owes ₹60.00/)).toBeInTheDocument();
+    expect(screen.getByText(/Returned ₹40.00/)).toBeInTheDocument();
   });
 });

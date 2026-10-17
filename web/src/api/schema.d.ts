@@ -1827,6 +1827,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/employees/{employee_id}/shortages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Employee Shortages
+         * @description What this person owes after cash shortages were marked against them, and what they have paid back. Facts, not a score.
+         */
+        get: operations["employee_shortages_api_employees__employee_id__shortages_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/employees/{employee_id}/status": {
         parameters: {
             query?: never;
@@ -5404,6 +5424,27 @@ export interface components {
             /** Last Name */
             last_name: string;
         };
+        /** EmployeeShortageOut */
+        EmployeeShortageOut: {
+            /** Amount */
+            amount: string;
+            /** Id */
+            id: string;
+            /** Notes */
+            notes?: string | null;
+            /** Owed */
+            owed: string;
+            /** Recorded At */
+            recorded_at: string;
+            /** Recovered */
+            recovered: string;
+            /** Recoveries */
+            recoveries: components["schemas"]["ShortageRecoveryOut"][];
+            /** Shift */
+            shift?: string | null;
+            /** Status */
+            status: string;
+        };
         /**
          * EmployeeStatus
          * @description Values stored in Employee.status (EntityMixin's generic status column).
@@ -7259,6 +7300,15 @@ export interface components {
             status: string;
             /** Tender */
             tender?: string | null;
+        };
+        /** ShortageRecoveryOut */
+        ShortageRecoveryOut: {
+            /** Amount */
+            amount: string;
+            /** At */
+            at: string;
+            /** Notes */
+            notes?: string | null;
         };
         /** StatementEntry */
         StatementEntry: {
@@ -11726,6 +11776,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EmployeeFull"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    employee_shortages_api_employees__employee_id__shortages_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                employee_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeeShortageOut"][];
                 };
             };
             /** @description Validation Error */

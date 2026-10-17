@@ -6,7 +6,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends
 
 from api.deps import CurrentUser, current_user, get_services
-from api.schemas import In, OptionalReason, Out, Reason
+from api.schemas import In, MoneyOut, OptionalReason, Out, Reason
 from api.services import Services
 from app.core.constants import EmployeeStatus
 from app.schemas.employee import EmployeeCreate, EmployeeUpdate
@@ -137,3 +137,37 @@ def remove_document(
     document_id: str, body: RemoveDocumentIn, user: CurrentUser = Depends(current_user), services: Services = Depends(get_services)
 ):
     return services.employees.remove_document(user.id, document_id, body.reason)
+
+
+class ShortageRecoveryOut(Out):
+    at: str
+    amount: MoneyOut
+    notes: Optional[str] = None
+
+
+class EmployeeShortageOut(Out):
+    id: str
+    shift: Optional[str] = None
+    recorded_at: str
+    amount: MoneyOut
+    recovered: MoneyOut
+    owed: MoneyOut
+    status: str  # "Owed" | "Recovered"
+    notes: Optional[str] = None
+    recoveries: list[ShortageRecoveryOut]
+
+
+@router.get("/employees/{employee_id}/shortages", response_model=list[EmployeeShortageOut])
+def employee_shortages(employee_id: str, user: CurrentUser = Depends(current_user), services: Services = Depends(get_services)):
+    """What this person owes after cash shortages were marked against them, and what they have paid back. Facts, not a score."""
+    out = []
+    for s in services.shortages.list_for_employee(user.id, employee_id):
+        owed = services.shortages.get_outstanding_balance(user.id, s.id)
+        line = s.shift_reconciliation_line
+        shift = line.shift_reconciliation.shift if line and line.shift_reconciliation else None
+        out.append(EmployeeShortageOut(
+            id=s.id, shift=f"{shift.shift_date} {shift.shift_label}" if shift else None, recorded_at=s.recorded_at.isoformat(),
+            amount=s.amount, recovered=s.amount - owed, owed=owed, status="Recovered" if owed <= 0 else "Owed", notes=s.notes,
+            recoveries=[ShortageRecoveryOut(at=r.recorded_at.isoformat(), amount=r.amount, notes=r.notes) for r in s.recoveries],
+        ))
+    return out

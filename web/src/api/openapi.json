@@ -4721,6 +4721,74 @@
         "title": "EmployeeOut",
         "type": "object"
       },
+      "EmployeeShortageOut": {
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "owed": {
+            "title": "Owed",
+            "type": "string"
+          },
+          "recorded_at": {
+            "title": "Recorded At",
+            "type": "string"
+          },
+          "recovered": {
+            "title": "Recovered",
+            "type": "string"
+          },
+          "recoveries": {
+            "items": {
+              "$ref": "#/components/schemas/ShortageRecoveryOut"
+            },
+            "title": "Recoveries",
+            "type": "array"
+          },
+          "shift": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shift"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "recorded_at",
+          "amount",
+          "recovered",
+          "owed",
+          "status",
+          "recoveries"
+        ],
+        "title": "EmployeeShortageOut",
+        "type": "object"
+      },
       "EmployeeStatus": {
         "description": "Values stored in Employee.status (EntityMixin's generic status column).",
         "enum": [
@@ -9948,6 +10016,35 @@
           "status"
         ],
         "title": "ShortageOut",
+        "type": "object"
+      },
+      "ShortageRecoveryOut": {
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "at": {
+            "title": "At",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          }
+        },
+        "required": [
+          "at",
+          "amount"
+        ],
+        "title": "ShortageRecoveryOut",
         "type": "object"
       },
       "StatementEntry": {
@@ -20250,6 +20347,85 @@
           }
         },
         "summary": "Record Exit",
+        "tags": [
+          "employees"
+        ]
+      }
+    },
+    "/api/employees/{employee_id}/shortages": {
+      "get": {
+        "description": "What this person owes after cash shortages were marked against them, and what they have paid back. Facts, not a score.",
+        "operationId": "employee_shortages_api_employees__employee_id__shortages_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "employee_id",
+            "required": true,
+            "schema": {
+              "title": "Employee Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EmployeeShortageOut"
+                  },
+                  "title": "Response Employee Shortages Api Employees  Employee Id  Shortages Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Employee Shortages",
         "tags": [
           "employees"
         ]

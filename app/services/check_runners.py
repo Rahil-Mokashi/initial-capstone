@@ -75,7 +75,7 @@ class ExistingDataChecks:
         if recon is not None:
             expected = sum((ln.expected for ln in recon.lines), _Z)
             declared = sum((ln.declared for ln in recon.lines), _Z)
-            warn = money(abs(expected) * RECONCILIATION_VARIANCE_WARNING_THRESHOLD_PERCENT / Decimal("100"))
+            warn = money(abs(expected) * Decimal(str(RECONCILIATION_VARIANCE_WARNING_THRESHOLD_PERCENT)) / Decimal("100"))
             out.append(CheckSpec(
                 key="shift.declared_matches_expected", scope_type="shift", scope_id=shift.id, business_date=day,
                 area="Cash", sentence=f"{name}: payment totals declared equal what the sales say",

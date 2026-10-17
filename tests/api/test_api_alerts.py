@@ -64,3 +64,29 @@ def test_the_same_alert_about_the_same_record_shows_once_with_a_count(client, ow
     body = client.get("/api/alerts", headers=owner).json()
     assert body["total"] == 2
     assert sorted(a["count"] for a in body["notifications"]) == [1, 3]
+
+
+def test_the_employee_page_data_shows_what_is_owed_and_what_was_paid_back(client, manager, pump, employee_id):
+    _book_a_short_reconciliation(client, manager, pump)
+    alert = _short_alert(client, manager)
+    assert client.post("/api/alerts/shortage", headers=manager, json={"line_id": alert["shortage"]["line_id"], "employee_id": employee_id}).status_code == 204
+    rows = client.get(f"/api/employees/{employee_id}/shortages", headers=manager).json()
+    assert len(rows) == 1 and rows[0]["owed"] == "100.00" and rows[0]["status"] == "Owed" and rows[0]["recoveries"] == []
+    sid = pump["shift"]["id"]
+    assert client.post("/api/cash-book/movements", headers=manager, json={"shift_id": sid, "advance_amount": "0", "final_amount": "900"}).status_code == 201
+    paid = client.post("/api/shortages/recoveries", headers=manager, json={"employee_cash_shortage_id": rows[0]["id"], "shift_id": sid, "amount": "40.00", "notes": "returned"})
+    assert paid.status_code == 201, paid.text
+    row = client.get(f"/api/employees/{employee_id}/shortages", headers=manager).json()[0]
+    assert row["owed"] == "60.00" and row["recovered"] == "40.00" and row["recoveries"][0]["amount"] == "40.00"
+
+
+def test_a_day_with_a_reconciliation_still_gets_its_checks(client, manager, owner, pump):
+    """The 'declared equals expected' check multiplied a Decimal by a float and failed, which silently stopped every check on such a day."""
+    import logging
+    from datetime import date
+
+    _book_a_short_reconciliation(client, manager, pump)
+    ran = client.post("/api/checks/run", headers=owner, json={"day": date.today().isoformat()})
+    assert ran.status_code == 200, ran.text
+    keys = {r["key"] for r in client.get(f"/api/checks?day={date.today().isoformat()}", headers=owner).json()["results"]}
+    assert "shift.declared_matches_expected" in keys

@@ -14,13 +14,15 @@ import { ReasonDialog } from '@/components/ui/ReasonDialog';
 import { ErrorState, LoadingBlock } from '@/components/ui/States';
 import { useToast } from '@/components/ui/Toast';
 import { applyApiError } from '@/lib/formErrors';
-import { formatDate, titleCase } from '@/lib/format';
+import { sumMoney } from '@/lib/decimalMath';
+import { formatDate, formatMoney, titleCase } from '@/lib/format';
 import { P } from '@/lib/permissions';
 import {
   EMPLOYEE_STATUSES,
   useAddDocument,
   useChangeStatus,
   useDocuments,
+  useEmployeeShortages,
   useEmployee,
   useRecordExit,
   useRemoveDocument,
@@ -243,6 +245,42 @@ function AddDocumentDialog({
   );
 }
 
+/** Cash shortages marked against this person and what they have paid back (facts; nothing is deducted from pay here). */
+function ShortagesSection({ employeeId }: { employeeId: string }) {
+  const rows = useEmployeeShortages(employeeId, true);
+  if (rows.isError || !rows.data || rows.data.length === 0) return null;
+  const owed = sumMoney(rows.data.map((r) => r.owed));
+  return (
+    <section aria-labelledby="shortages-title" className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-5 shadow-card">
+      <h2 id="shortages-title" className="text-lg font-bold">
+        Cash shortages
+      </h2>
+      <p className="text-sm text-muted">
+        {owed !== '0.00' ? `Still owed: ${formatMoney(owed)}.` : 'Nothing is owed.'} Cash they pay back is recorded on the Reconciliation screen.
+      </p>
+      <ul className="flex flex-col gap-2">
+        {rows.data.map((r) => (
+          <li key={r.id} className="rounded-md border border-line p-3 text-sm">
+            <p className="font-semibold">
+              {r.shift ?? 'Shift'}: short {formatMoney(r.amount)} - {r.status === 'Owed' ? `owes ${formatMoney(r.owed)}` : 'paid back in full'}
+            </p>
+            {r.recoveries.length > 0 && (
+              <ul className="mt-1 text-muted">
+                {r.recoveries.map((c) => (
+                  <li key={c.at}>
+                    Returned {formatMoney(c.amount)} on {formatDate(c.at)}
+                    {c.notes ? ` (${c.notes})` : ''}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 function DocumentsSection({ employeeId, canManage }: { employeeId: string; canManage: boolean }) {
   const documents = useDocuments(employeeId);
   const remove = useRemoveDocument();
@@ -349,6 +387,7 @@ export function EmployeeDetailPage() {
           />
           <ProfileSection employee={employee.data} canManage={canManage} />
           <StatusSection employee={employee.data} canManage={canManage} />
+          <ShortagesSection employeeId={id} />
           <DocumentsSection employeeId={id} canManage={canManage} />
         </>
       )}
