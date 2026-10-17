@@ -2461,6 +2461,19 @@
         "title": "CheckOut",
         "type": "object"
       },
+      "ChecksStatusOut": {
+        "properties": {
+          "updating": {
+            "title": "Updating",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "updating"
+        ],
+        "title": "ChecksStatusOut",
+        "type": "object"
+      },
       "ChecksSummaryOut": {
         "properties": {
           "failed": {
@@ -15628,6 +15641,72 @@
           }
         },
         "summary": "Run Checks",
+        "tags": [
+          "checks"
+        ]
+      }
+    },
+    "/api/checks/status": {
+      "get": {
+        "description": "True while the background worker still has checks to run after a save (screens say \"checks updating\").",
+        "operationId": "checks_status_api_checks_status_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-launch-secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Launch-Secret"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChecksStatusOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Checks Status",
         "tags": [
           "checks"
         ]

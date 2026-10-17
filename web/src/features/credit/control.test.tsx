@@ -300,6 +300,7 @@ describe('terminal credit limit', () => {
     });
     await userEvent.click(await screen.findByRole('button', { name: 'Credit' }));
     await userEvent.selectOptions(screen.getByLabelText(/Customer/), 'c1');
+    await userEvent.type(screen.getByLabelText('Vehicle number'), 'MH12AB1234');
     await userEvent.click(screen.getByRole('button', { name: 'Complete sale' }));
     const dialog = await screen.findByRole('dialog', { name: 'An owner must allow this bill' });
     expect(within(dialog).getByText(/over the limit of 2000.00/)).toBeInTheDocument();
@@ -336,6 +337,7 @@ describe('terminal credit limit', () => {
     });
     await userEvent.click(await screen.findByRole('button', { name: 'Credit' }));
     await userEvent.selectOptions(screen.getByLabelText(/Customer/), 'c1');
+    await userEvent.type(screen.getByLabelText('Vehicle number'), 'MH12AB1234');
     await userEvent.click(screen.getByRole('button', { name: 'Complete sale' }));
     const dialog = await screen.findByRole('dialog', { name: 'An owner must allow this bill' });
     await userEvent.type(within(dialog).getByLabelText("Owner's password"), 'nope');

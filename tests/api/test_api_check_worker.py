@@ -25,3 +25,13 @@ def test_a_burst_of_saves_runs_the_checks_once(client, owner, monkeypatch):
         assert client.post("/api/customers", headers=owner, json={"name": f"Burst {n}"}).status_code in (200, 201)
     assert check_worker.wait_idle(client.app, timeout=10)
     assert len(runs) == 1
+
+
+def test_status_says_updating_until_the_background_run_is_done(client, owner, monkeypatch):
+    monkeypatch.setattr(check_worker, "INLINE", False)
+    monkeypatch.setattr(check_worker, "QUIET_SECONDS", 0.3)
+    assert client.get("/api/checks/status", headers=owner).json() == {"updating": False}
+    client.post("/api/customers", headers=owner, json={"name": "Status test"})
+    assert client.get("/api/checks/status", headers=owner).json() == {"updating": True}
+    assert check_worker.wait_idle(client.app, timeout=30)
+    assert client.get("/api/checks/status", headers=owner).json() == {"updating": False}

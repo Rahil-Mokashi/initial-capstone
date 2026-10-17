@@ -1,3 +1,4 @@
+import { ChecksUpdating } from '@/components/ChecksUpdating';
 import {
   CircleDot,
   Fuel,
@@ -277,6 +278,7 @@ function TopBar() {
       <header className="flex min-h-16 flex-wrap items-center gap-3 border-b border-line bg-surface px-6 py-2">
         <GlobalSearch />
         <div className="ml-auto flex flex-wrap items-center gap-3">
+          <ChecksUpdating />
           <ConnectionBadge />
           <ShiftIndicator />
           <Clock />

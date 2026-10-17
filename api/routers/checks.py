@@ -9,8 +9,9 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 
+from api.check_worker import is_updating
 from api.deps import CurrentUser, current_user, get_services
 from api.schemas import In, Out, Reason
 from api.services import Services
@@ -76,6 +77,16 @@ def _row(r) -> CheckOut:
             for e in r.explanations
         ],
     )
+
+
+class ChecksStatusOut(Out):
+    updating: bool
+
+
+@router.get("/checks/status", response_model=ChecksStatusOut)
+def checks_status(request: Request, user: CurrentUser = Depends(current_user)):
+    """True while the background worker still has checks to run after a save (screens say "checks updating")."""
+    return ChecksStatusOut(updating=is_updating(request.app))
 
 
 @router.get("/checks", response_model=DayChecksOut)

@@ -491,3 +491,15 @@ describe('support', () => {
     expect(screen.getByText('Lost or corrupted data')).toBeInTheDocument();
   });
 });
+
+describe('checks updating chip', () => {
+  it('shows while the Main PC is still running checks, then goes away', async () => {
+    let updating = true;
+    await openAs(['shift.view'], '/support', 'Support', {
+      'GET /api/checks/status': () => json(200, { updating }),
+    });
+    expect(await screen.findByText(/Checks updating/)).toBeInTheDocument();
+    updating = false;
+    await waitFor(() => expect(screen.queryByText(/Checks updating/)).toBeNull(), { timeout: 5000 });
+  });
+});

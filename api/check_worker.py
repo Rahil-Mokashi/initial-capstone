@@ -31,6 +31,10 @@ class CheckWorker:
             self._due = time.monotonic() + QUIET_SECONDS
             self._cond.notify_all()
 
+    def busy(self) -> bool:
+        with self._cond:
+            return self._token is not None or self._running
+
     def wait_idle(self, timeout: float = 60.0) -> bool:
         end = time.monotonic() + timeout
         with self._cond:
@@ -85,3 +89,8 @@ def request_run(app, token: str) -> None:
 def wait_idle(app, timeout: float = 60.0) -> bool:
     worker = getattr(app.state, "check_worker", None)
     return True if worker is None else worker.wait_idle(timeout)
+
+
+def is_updating(app) -> bool:
+    worker = getattr(app.state, "check_worker", None)
+    return worker is not None and worker.busy()

@@ -972,6 +972,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/checks/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Checks Status
+         * @description True while the background worker still has checks to run after a save (screens say "checks updating").
+         */
+        get: operations["checks_status_api_checks_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/checks/{result_id}/explanations": {
         parameters: {
             query?: never;
@@ -4551,6 +4571,11 @@ export interface components {
             status: string;
             /** Unit */
             unit: string;
+        };
+        /** ChecksStatusOut */
+        ChecksStatusOut: {
+            /** Updating */
+            updating: boolean;
         };
         /** ChecksSummaryOut */
         ChecksSummaryOut: {
@@ -9584,6 +9609,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DayChecksOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    checks_status_api_checks_status_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChecksStatusOut"];
                 };
             };
             /** @description Validation Error */
