@@ -86,8 +86,13 @@ def create_app(
 
     @api.get("/system/device")
     def device(request: Request):
-        """This computer's name, shown on the sign-in screen (the Qt login screen shows the same)."""
-        return {"device": device_name(request)}
+        """This computer's name, shown on the sign-in screen, and which kind of PC it is: single, main (the window on the Main PC itself) or client."""
+        if lan is None:
+            mode = "single"
+        else:
+            host = request.client.host if request.client else ""
+            mode = "main" if host in ("127.0.0.1", "::1", "localhost") else "client"
+        return {"device": device_name(request), "mode": mode}
 
     @api.post("/system/shutdown", status_code=202)
     def shutdown(request: Request):

@@ -73,6 +73,7 @@ function ResetPasswordDialog({ user, onClose }: { user: UserRecord; onClose: () 
     >
       <TextField
         label="New temporary password"
+        hint="At least 8 characters, with a capital letter, a small letter and a number."
         type="password"
         autoComplete="new-password"
         autoFocus

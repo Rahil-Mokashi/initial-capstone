@@ -93,9 +93,9 @@ function AddUserDialog({ onClose }: { onClose: () => void }) {
       <TextField label="Last name" optional {...register('last_name')} />
       <TextField
         label="Password"
+        hint="At least 8 characters, with a capital letter, a small letter and a number."
         type="password"
         autoComplete="new-password"
-        hint="At least 8 characters with upper case, lower case and a digit."
         error={errors.password?.message}
         {...register('password')}
       />

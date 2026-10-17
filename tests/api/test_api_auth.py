@@ -180,3 +180,4 @@ def test_forgot_password_with_an_admin_code(client, admin, session_factory):
 def test_device_name_for_the_sign_in_screen(client):
     d = client.get("/api/system/device").json()
     assert isinstance(d["device"], str) and d["device"]
+    assert d["mode"] == "single"  # no Main PC settings: this PC works on its own

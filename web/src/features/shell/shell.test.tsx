@@ -270,6 +270,15 @@ describe('account menu, lock screen, PIN and password', () => {
     expect(within(panel).getByText(/Last sign-in: /)).toBeInTheDocument();
   });
 
+  it('shows this PC, the kind of PC it is and the app version - and nothing more', async () => {
+    await open({}, { 'GET /api/system/device': () => json(200, { device: 'Counter PC (192.168.1.21)', mode: 'client' }) });
+    await userEvent.click(screen.getByRole('button', { name: /Account menu/ }));
+    const panel = screen.getByRole('region', { name: /Account menu/ });
+    expect(await within(panel).findByText('Counter PC (192.168.1.21)')).toBeInTheDocument();
+    expect(within(panel).getByText('Client PC')).toBeInTheDocument();
+    expect(within(panel).getByText('0.1.0')).toBeInTheDocument();
+  });
+
   it('locks the app behind a re-check of the password, and the same session resumes', async () => {
     let n = 0;
     const api = await open(

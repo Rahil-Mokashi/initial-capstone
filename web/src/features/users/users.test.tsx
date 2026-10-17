@@ -42,6 +42,7 @@ describe('users list and add', () => {
     expect(screen.getByText('Locked')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: /Add user/ }));
     const d = screen.getByRole('dialog');
+    expect(within(d).getByText('At least 8 characters, with a capital letter, a small letter and a number.')).toBeInTheDocument(); // the rules, before Save
     await userEvent.click(within(d).getByRole('button', { name: 'Save' }));
     expect(await within(d).findByText('Enter a username.')).toBeInTheDocument();
     await userEvent.type(within(d).getByLabelText('Username'), 'newbie');

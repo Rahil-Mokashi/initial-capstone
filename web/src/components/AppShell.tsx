@@ -162,8 +162,11 @@ function ShiftIndicator() {
   );
 }
 
+const MODE_WORDS: Record<string, string> = { single: 'Single PC', main: 'Main PC', client: 'Client PC' };
+
 function AccountMenu({ onDialog }: { onDialog: (d: 'password' | 'pin') => void }) {
   const { user, logout, lock } = useAuth();
+  const device = useGet<{ device: string; mode: string }>(['system', 'device'], '/system/device');
   const [dark, setDark] = useState(() => isDark());
   const name = user?.first_name || user?.username || '';
   const full = [user?.first_name, user?.last_name].filter(Boolean).join(' ') || user?.username;
@@ -186,6 +189,14 @@ function AccountMenu({ onDialog }: { onDialog: (d: 'password' | 'pin') => void }
                 ? `Last sign-in: ${formatDateTime(user.last_login)}`
                 : 'First sign-in on this account'}
             </p>
+            <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 text-xs text-muted">
+              <dt>This PC</dt>
+              <dd className="text-right font-semibold [overflow-wrap:anywhere]">{device.data?.device ?? '…'}</dd>
+              <dt>Mode</dt>
+              <dd className="text-right font-semibold">{MODE_WORDS[device.data?.mode ?? ''] ?? '…'}</dd>
+              <dt>App version</dt>
+              <dd className="text-right font-semibold">{__APP_VERSION__}</dd>
+            </dl>
           </div>
           <Button
             variant="ghost"
