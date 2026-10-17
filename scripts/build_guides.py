@@ -69,7 +69,7 @@ def draw_network_diagram(path: Path) -> None:
     d.text((1010, 190), "Wi-Fi", fill=amber, font=font(22, True))
     for i in range(0, 8, 2):
         d.line((1010 + i * 14, 224, 1010 + (i + 1) * 14, 224), fill=amber, width=5)
-    d.text((40, 400), "No line leaves this picture:\nnothing connects to the internet.", fill=(70, 80, 75), font=font(22))
+    d.text((900, 50), "No line leaves this picture:\nnothing connects to the internet.", fill=(70, 80, 75), font=font(22))
     IMG.mkdir(parents=True, exist_ok=True)
     img.save(path)
 
