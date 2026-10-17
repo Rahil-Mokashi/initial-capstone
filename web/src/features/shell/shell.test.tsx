@@ -411,12 +411,12 @@ describe('account menu, lock screen, PIN and password', () => {
 });
 
 describe('top bar', () => {
-  it('states that the app is offline, and shows whether a shift is open', async () => {
+  it('shows whether a shift is open (and no offline chip)', async () => {
     await openAs(['shift.view'], '/support', 'Support', {
       'GET /api/dashboard/summary': () =>
         json(200, { open_shifts_count: 1, open_shift_labels: ['Morning'] }),
     });
-    expect(screen.getByText(/Offline — Local Only/)).toBeInTheDocument();
+    expect(screen.queryByText(/Offline — Local Only/)).toBeNull();
     expect(await screen.findByText('Shift: Morning • Open')).toBeInTheDocument();
   });
 

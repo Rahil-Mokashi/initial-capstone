@@ -9,11 +9,8 @@ import { TextField } from '@/components/ui/Field';
 import { enterToAdvance } from '@/lib/enterToAdvance';
 import {
   STRINGS,
-  getLoginLocale,
   getRecentUsernames,
   recordRecentUsername,
-  setLoginLocale,
-  type LoginLocale,
 } from '@/lib/loginLocale';
 import { isDark, setTheme } from '@/lib/theme';
 import { ForgotPasswordDialog } from './ForgotPasswordDialog';
@@ -30,8 +27,7 @@ const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2,
 export function LoginPage() {
   const { user, login } = useAuth();
   const location = useLocation();
-  const [locale, setLocale] = useState<LoginLocale>(getLoginLocale);
-  const t = STRINGS[locale];
+  const t = STRINGS.en;
   const device = useGet<{ device: string }>(['system', 'device'], '/system/device');
   const [username, setUsername] = useState('');
   const [credential, setCredential] = useState('');
@@ -46,6 +42,13 @@ export function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [forgot, setForgot] = useState(false);
   const recent = getRecentUsernames();
+
+  // A revealed password hides again by itself.
+  useEffect(() => {
+    if (!reveal) return;
+    const id = window.setTimeout(() => setReveal(false), 3000);
+    return () => window.clearTimeout(id);
+  }, [reveal]);
 
   // The lockout countdown ticks down locally (no polling).
   useEffect(() => {
@@ -101,32 +104,12 @@ export function LoginPage() {
         </div>
         <div>
           <h1 className="max-w-md text-4xl leading-tight font-bold">Every litre accounted for.</h1>
-          <p className="mt-4 max-w-md text-ink-muted">
-            Tanks, shifts, sales and cash in one place - working entirely on this PC, with no
-            internet needed.
-          </p>
         </div>
-        <p className="text-xs text-ink-muted">
-          {window.pperp?.mode === 'client'
-            ? "Works offline. Your data stays on the pump's Main PC."
-            : 'Works offline. Your data stays on this computer.'}
-          {device.data?.device ? ` Device: ${device.data.device}.` : ''}
-        </p>
+        <p className="text-sm text-ink-muted">{device.data?.device ?? ''}</p>
       </section>
 
       <main className="relative flex items-center justify-center p-6">
         <div className="absolute top-4 right-4 flex gap-2">
-          <Button
-            variant="ghost"
-            aria-label={locale === 'hi' ? 'Switch to English' : 'Switch to Hindi'}
-            onClick={() => {
-              const next: LoginLocale = locale === 'hi' ? 'en' : 'hi';
-              setLocale(next);
-              setLoginLocale(next);
-            }}
-          >
-            {locale === 'hi' ? 'EN' : '\u0939\u093F\u0902'}
-          </Button>
           {window.pperp?.shell && (
             <Button variant="ghost" onClick={() => void window.pperp?.shell?.openNetworkSetup()}>
               Network setup

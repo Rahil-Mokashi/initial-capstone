@@ -22,16 +22,15 @@ describe('sign-in screen', () => {
   it('shows the device name and the welcome text, in English by default', async () => {
     renderApp('/login', {});
     expect(await screen.findByRole('heading', { name: 'Welcome back' })).toBeInTheDocument();
-    expect(await screen.findByText(/Device: TEST-PC/)).toBeInTheDocument();
+    expect(await screen.findByText('TEST-PC')).toBeInTheDocument();
   });
 
-  it('switches to Hindi, remembers it for the next visit, and switches back', async () => {
+  it('has no language button, and a revealed password hides again by itself', async () => {
     renderApp('/login', {});
-    await userEvent.click(await screen.findByRole('button', { name: 'Switch to Hindi' }));
-    expect(screen.getByRole('heading', { name: 'वापसी पर स्वागत है' })).toBeInTheDocument();
-    expect(window.localStorage.getItem('pperp.loginLocale')).toBe('hi');
-    await userEvent.click(screen.getByRole('button', { name: 'Switch to English' }));
-    expect(screen.getByRole('heading', { name: 'Welcome back' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Hindi/ })).toBeNull();
+    await userEvent.click(await screen.findByRole('button', { name: /show/i }));
+    expect(screen.getByLabelText('Password')).toHaveAttribute('type', 'text');
+    await waitFor(() => expect(screen.getByLabelText('Password')).toHaveAttribute('type', 'password'), { timeout: 4500 });
   });
 
   it('signs in with a PIN: the toggle swaps the field and sends use_pin', async () => {

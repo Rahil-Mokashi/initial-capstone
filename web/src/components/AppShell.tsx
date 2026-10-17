@@ -7,7 +7,6 @@ import {
   Moon,
   Sun,
   UserCircle2,
-  WifiOff,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
@@ -242,19 +241,10 @@ function AccountMenu({ onDialog }: { onDialog: (d: 'password' | 'pin') => void }
   );
 }
 
-/** Single PC: the old "works offline" badge. Client PC: whether the Main PC is reachable, and when the screen last heard from it. */
+/** Single PC: nothing (the old "offline" chip was removed). Client PC: whether the Main PC is reachable, and when the screen last heard from it. */
 function ConnectionBadge() {
   const { link, lastOk } = useConnection();
-  if (link === 'local') {
-    return (
-      <span
-        title="This app runs entirely on this computer. It never needs, and never uses, an internet connection."
-        className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface-2 px-3 py-1 text-xs font-semibold"
-      >
-        <WifiOff className="size-3.5" aria-hidden /> Offline — Local Only
-      </span>
-    );
-  }
+  if (link === 'local') return null;
   const look = {
     live: { tone: 'bg-ok-bg text-ok-fg border-ok', dot: 'bg-ok-fg', text: 'Main PC connected' },
     polling: { tone: 'bg-warn-bg text-warn-fg border-warn', dot: 'bg-warn-fg', text: 'Main PC connected (refreshing every 20 s)' },
