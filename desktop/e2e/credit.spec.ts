@@ -31,6 +31,7 @@ test('credit account: sell on credit, pay part, read the statement, export PDF a
   await page.getByLabel('Customer (required for credit)').selectOption({ label: 'ACME Transport' });
   await page.getByLabel('Amount (₹)').fill('');
   await page.getByLabel('Amount (₹)').pressSequentially('1500');
+  await page.getByLabel('Vehicle number').fill('MH12AB1234');
   await page.getByRole('button', { name: 'Complete sale' }).click();
   await expect(page.getByRole('heading', { name: 'Sale recorded' })).toBeVisible();
   await page.getByRole('link', { name: 'Credit', exact: true }).click();

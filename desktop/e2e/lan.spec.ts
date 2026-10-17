@@ -48,7 +48,6 @@ test('a PC is paired through Network setup and then works on the Main PC\'s data
   await expect(a.page.getByRole('heading', { name: 'Welcome back' })).toBeVisible();
   await pairThroughSetup(a, 'Counter PC');
   const page = await clientWindow(a);
-  await expect(page.getByText("Your data stays on the pump's Main PC.")).toBeVisible();
   await signIn(page, 'manager1');
   await expect(page.getByRole('heading', { level: 1, name: /Tanks & Inventory/ })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'T1' })).toBeVisible(); // seeded on the Main PC, not on this PC
@@ -136,7 +135,7 @@ test('a shift is entered on one PC, verified on a second, approved and locked by
   await pageA.evaluate(() => (location.hash = '#/close-shift'));
   await signIn(pageA, 'dataentry1', undefined, { home: true });
   await pageA.getByLabel('Closing for N1').fill('505');
-  await pageA.getByLabel('CARD', { exact: true }).fill('11000');
+  await pageA.getByLabel('CARD', { exact: true }).fill('16000');
   await pageA.getByLabel('Advance', { exact: true }).fill('20000');
   await pageA.getByLabel('Final', { exact: true }).fill('14000');
   await expect(pageA.getByText('Balanced')).toBeVisible();

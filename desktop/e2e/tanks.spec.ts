@@ -1,4 +1,4 @@
-import { expect, signIn, test } from './fixtures';
+import { showTankNumbers, expect, signIn, test } from './fixtures';
 
 test.describe('login', () => {
   test('wrong password shows the server message and stays on the sign-in screen', async ({
@@ -23,12 +23,13 @@ test.describe('viewing tanks', () => {
   test('shows each tank with its exact stock, fill level and status', async ({ launched }) => {
     const { page } = launched;
     await signIn(page, 'manager1');
+    await showTankNumbers(page);
     const t1 = page
       .getByRole('listitem')
       .filter({ has: page.getByRole('heading', { name: 'T1' }) });
-    await expect(t1.getByText('2,500.500')).toBeVisible();
-    await expect(t1.getByText('of 10,000.000 L')).toBeVisible();
-    await expect(t1.getByRole('meter')).toHaveAttribute('aria-valuetext', '25.0%');
+    await expect(t1.getByText('2,500.500 L')).toBeVisible();
+    await expect(t1.getByText('10,000.000 L')).toBeVisible(); // capacity
+    await expect(t1.getByRole('img', { name: /T1 Petrol tank, .* 25\.0% full/ })).toBeVisible(); // the picture
     const t2 = page
       .getByRole('listitem')
       .filter({ has: page.getByRole('heading', { name: 'T2' }) });
@@ -50,6 +51,7 @@ test.describe('recording', () => {
   test('a manager records a dip reading and sees it in the history', async ({ launched }) => {
     const { page } = launched;
     await signIn(page, 'manager1');
+    await showTankNumbers(page);
     const t1 = page
       .getByRole('listitem')
       .filter({ has: page.getByRole('heading', { name: 'T1' }) });
@@ -74,6 +76,7 @@ test.describe('recording', () => {
   }) => {
     const { page } = launched;
     await signIn(page, 'manager1');
+    await showTankNumbers(page);
     const t1 = page
       .getByRole('listitem')
       .filter({ has: page.getByRole('heading', { name: 'T1' }) });
@@ -96,6 +99,7 @@ test.describe('recording', () => {
   }) => {
     const { page } = launched;
     await signIn(page, 'manager1');
+    await showTankNumbers(page);
     const t1 = page
       .getByRole('listitem')
       .filter({ has: page.getByRole('heading', { name: 'T1' }) });

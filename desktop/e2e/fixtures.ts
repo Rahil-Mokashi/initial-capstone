@@ -137,3 +137,8 @@ export async function setupPump(page: Page, price = '100.00') {
   });
   return { api, petrolId: petrol.id, nozzleId: nozzle.id, shiftId: shift.id, employeeId: employees[0]!.id };
 }
+
+/** The tank pictures are the main view; the exact litres show when "Show numbers" is ticked (remembered per person). */
+export async function showTankNumbers(page: Page): Promise<void> {
+  await page.getByRole('checkbox', { name: 'Show numbers' }).check();
+}

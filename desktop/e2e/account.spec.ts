@@ -5,7 +5,7 @@ test('dashboard, set a PIN, lock and unlock, sign in with the PIN', async ({ lau
   await signIn(page, 'manager1', PASSWORD, { home: true });
   await expect(page.getByRole('heading', { level: 1, name: /Good (morning|afternoon|evening), Manager1/ })).toBeVisible();
   await expect(page.getByText('Live tank levels')).toBeVisible();
-  await expect(page.getByText(/Offline — Local Only/)).toBeVisible();
+  await expect(page.getByText(/Offline — Local Only/)).toHaveCount(0); // the chip was removed
 
   // Set a quick sign-in PIN
   await page.getByRole('button', { name: /Account menu/ }).click();

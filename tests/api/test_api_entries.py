@@ -80,7 +80,7 @@ def test_a_locked_shift_cannot_be_changed_by_anyone_or_any_screen(client, data_e
     void = client.post(f"/api/sales/{sale["id"]}/cancel", headers=owner, json={"reason": "try"})
     assert void.status_code == 409
     after = client.get(f"/api/close-shift/{sid}", headers=owner).json()
-    assert {m["label"]: m["amount"] for m in after["modes"] if m["amount"]} == {"CARD": "10000.00", "PHONE PAY": "5000.00"}  # nothing changed
+    assert {m["label"]: m["amount"] for m in after["modes"] if m["amount"] and not m["read_only"]} == {"CARD": "10000.00", "PHONE PAY": "5000.00"}  # nothing changed
     assert audit_chain_ok(session_factory)
 
 

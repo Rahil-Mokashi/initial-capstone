@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { expect, signIn, test, setupPump } from './fixtures';
+import { expect, showTankNumbers, signIn, test, setupPump } from './fixtures';
 
 test('record a sale, see the stock fall, open the receipt preview and save the receipt PDF', async ({
   launched,
@@ -48,6 +48,7 @@ test('record a sale, see the stock fall, open the receipt preview and save the r
   expect(readFileSync(saved).subarray(0, 4).toString()).toBe('%PDF');
 
   await page.getByRole('link', { name: 'Tanks' }).click();
+  await showTankNumbers(page);
   await expect(
     page.getByRole('listitem').filter({ has: page.getByRole('heading', { name: 'T1' }) }),
   ).toContainText('2,488.000');

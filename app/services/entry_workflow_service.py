@@ -111,7 +111,8 @@ class EntryWorkflowService:
         override = (override_reason or "").strip()
         if self._fresh_checks is not None and self._settings.get("failed_check_blocks_lock") == "block":
             day = self._session.get(Shift, shift_id).shift_date
-            failing = [r.sentence for r in self._fresh_checks(actor_user_id, day) if r.status == "fail"]
+            # the Main PC's own health (backup age) says nothing about this shift's figures, so it does not stop a lock
+            failing = [r.sentence for r in self._fresh_checks(actor_user_id, day) if r.status == "fail" and r.area != "System"]
             if failing and not override:
                 raise LockBlockedByChecks(failing)
             if failing:

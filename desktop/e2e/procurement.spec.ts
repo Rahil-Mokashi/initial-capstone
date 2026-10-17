@@ -1,4 +1,4 @@
-import { expect, signIn, test } from './fixtures';
+import { expect, showTankNumbers, signIn, test } from './fixtures';
 
 test('supplier, purchase order, tanker unloaded into the tank, invoice, payment', async ({
   launched,
@@ -50,6 +50,7 @@ test('supplier, purchase order, tanker unloaded into the tank, invoice, payment'
 
   // The tank now holds the received fuel
   await page.getByRole('link', { name: 'Tanks' }).click();
+  await showTankNumbers(page);
   await expect(
     page.getByRole('listitem').filter({ has: page.getByRole('heading', { name: 'T1' }) }),
   ).toContainText('3,500.500');
