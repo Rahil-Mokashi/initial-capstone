@@ -47,6 +47,18 @@ class SaleRepository:
     def list_by_customer(self, customer_id: str) -> List[Sale]:
         return self._session.query(Sale).filter_by(customer_id=customer_id).order_by(Sale.sale_at.desc()).all()
 
+    def distinct_vehicles(self):
+        """(vehicle number, customer id) of the most recent sale for each vehicle number."""
+        seen = {}
+        for vehicle, customer_id in (
+            self._session.query(Sale.vehicle_number, Sale.customer_id)
+            .filter(Sale.vehicle_number.isnot(None))
+            .order_by(Sale.sale_at.desc())
+            .all()
+        ):
+            seen.setdefault(vehicle, customer_id)
+        return list(seen.items())
+
     def next_receipt_number(self) -> str:
         """Sequential RCPT-000001, RCPT-000002, ...
 

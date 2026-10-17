@@ -431,57 +431,62 @@ describe('top bar', () => {
     expect(screen.queryByText(/No shift open|Shift:/)).not.toBeInTheDocument();
   });
 
-  it('searches employees, nozzles, tanks and users the role may see, and opens the right screen', async () => {
-    await openAs(ALL, '/support', 'Support', {
-      'GET /api/employees': () =>
-        json(200, [
-          {
-            id: 'e1',
-            employee_code: 'EMP-0001',
-            first_name: 'Ravi',
-            last_name: 'Kumar',
-            contact_number: '1',
-            email: null,
-            designation: null,
-            department: null,
-            assigned_outlet: null,
-            joining_date: '2026-01-01',
-            exit_date: null,
-            status: 'active',
-            emergency_contact_name: null,
-            emergency_contact_phone: null,
-          },
-        ]),
-      'GET /api/nozzles': () => json(200, [{ code: 'N7' }]),
-      'GET /api/tanks': () => json(200, [tank({ code: 'T9' })]),
-      'GET /api/users': () => json(200, [{ id: 'u9', username: 'night.manager' }]),
-      'GET /api/dispensers': () => json(200, []),
-    });
-    const box = screen.getByRole('combobox', { name: /Search employees/ });
-    await userEvent.type(box, 'ravi');
+  const RECORDS = [
+    { kind: 'Employee', label: 'Ravi Kumar', hint: 'EMP-0001', to: '/employees' },
+    { kind: 'Nozzle', label: 'Nozzle N7', hint: 'D1', to: '/nozzles' },
+    { kind: 'Tank', label: 'Tank T9', hint: 'Petrol', to: '/tanks/t9' },
+    { kind: 'User', label: 'night.manager', hint: 'Night Manager', to: '/users/u9' },
+    { kind: 'Vehicle', label: 'MH12AB1234', hint: 'Ravi Transport', to: '/credit/customers/c1' },
+  ];
+  const box = () => screen.getByRole('combobox', { name: /Search screens/ });
+
+  it('finds records and opens the screen they are on', async () => {
+    await openAs(ALL, '/support', 'Support', { 'GET /api/search/records': () => json(200, RECORDS) });
+    await userEvent.type(box(), 'ravi kumar');
     await userEvent.click(await screen.findByRole('option', { name: /Ravi Kumar/ }));
     expect(await screen.findByRole('heading', { level: 1, name: 'Employees' })).toBeInTheDocument();
-    await userEvent.type(screen.getByRole('combobox', { name: /Search employees/ }), 'night');
-    expect(
-      await screen.findByRole('option', { name: /night.manager.*user account/ }),
-    ).toBeInTheDocument();
-    await userEvent.clear(screen.getByRole('combobox', { name: /Search employees/ }));
-    await userEvent.type(screen.getByRole('combobox', { name: /Search employees/ }), 'zzzz');
-    expect(screen.queryByRole('listbox', { name: 'Search results' })).not.toBeInTheDocument();
   });
 
-  it('never suggests a record the role cannot see', async () => {
-    await openAs(['inventory.view'], '/support', 'Support', {
-      'GET /api/tanks': () => json(200, [tank({ code: 'T9' })]),
-    });
-    await userEvent.type(
-      screen.getByRole('combobox', { name: /Search employees/ }),
-      'user account',
-    );
+  it('forgives typos and knows pump words', async () => {
+    await openAs(ALL, '/support', 'Support', { 'GET /api/search/records': () => json(200, RECORDS) });
+    await userEvent.type(box(), 'nozel');
+    expect(await screen.findByRole('option', { name: /Nozzle N7/ })).toBeInTheDocument();
+    await userEvent.clear(box());
+    await userEvent.type(box(), 'petrol');
+    expect(await screen.findByRole('option', { name: /Tank T9/ })).toBeInTheDocument();
+    await userEvent.clear(box());
+    await userEvent.type(box(), 'mh12ab');
+    expect(await screen.findByRole('option', { name: /MH12AB1234/ })).toBeInTheDocument();
+    await userEvent.clear(box());
+    await userEvent.type(box(), 'zzzz');
     expect(screen.queryByRole('option')).not.toBeInTheDocument();
-    await userEvent.clear(screen.getByRole('combobox', { name: /Search employees/ }));
-    await userEvent.type(screen.getByRole('combobox', { name: /Search employees/ }), 'T9');
-    expect(await screen.findByRole('option', { name: 'Tank T9' })).toBeInTheDocument();
+    expect(screen.getByText(/Nothing found/)).toBeInTheDocument();
+  });
+
+  it('finds screens and actions, and only those this role can open', async () => {
+    await openAs(['inventory.view', 'inventory.manage'], '/support', 'Support', {
+      'GET /api/search/records': () => json(200, []),
+    });
+    await userEvent.type(box(), 'record dip');
+    expect(await screen.findByRole('option', { name: /Record a dip reading/ })).toBeInTheDocument();
+    await userEvent.clear(box());
+    await userEvent.type(box(), 'payroll');
+    expect(screen.queryByRole('option', { name: /Payroll/ })).not.toBeInTheDocument();
+    await userEvent.clear(box());
+    await userEvent.type(box(), 'add employee');
+    expect(screen.queryByRole('option', { name: /Add an employee/ })).not.toBeInTheDocument();
+  });
+
+  it('opens with Ctrl+K, moves with the arrow keys, goes with Enter, and offers the last searches', async () => {
+    await openAs(ALL, '/support', 'Support', { 'GET /api/search/records': () => json(200, RECORDS) });
+    await userEvent.keyboard('{Control>}k{/Control}');
+    expect(box()).toHaveFocus();
+    await userEvent.type(box(), 'employees');
+    await userEvent.keyboard('{Enter}');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Employees' })).toBeInTheDocument();
+    await userEvent.click(box());
+    const recent = await screen.findByRole('listbox', { name: 'Recent searches' });
+    expect(within(recent).getByText('employees')).toBeInTheDocument();
   });
 });
 

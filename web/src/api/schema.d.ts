@@ -3081,6 +3081,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/search/records": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Records */
+        get: operations["records_api_search_records_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/settings": {
         parameters: {
             query?: never;
@@ -6949,6 +6966,20 @@ export interface components {
             variance: string;
             /** Variance Percent */
             variance_percent: string;
+        };
+        /** RecordOut */
+        RecordOut: {
+            /**
+             * Hint
+             * @default
+             */
+            hint: string;
+            /** Kind */
+            kind: string;
+            /** Label */
+            label: string;
+            /** To */
+            to: string;
         };
         /** RecoveryIn */
         RecoveryIn: {
@@ -14787,6 +14818,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    records_api_search_records_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-launch-secret"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordOut"][];
                 };
             };
             /** @description Validation Error */

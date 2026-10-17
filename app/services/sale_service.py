@@ -439,6 +439,11 @@ class SaleService:
         return customer
 
     @require_permission(Permission.SALE_VIEW.value)
+    def list_vehicles(self, actor_user_id: str):
+        """(vehicle number, customer id) for every vehicle that has been billed, newest first."""
+        return self._sale_repo.distinct_vehicles()
+
+    @require_permission(Permission.SALE_VIEW.value)
     def list_customers(self, actor_user_id: str) -> List[Customer]:
         return self._customer_repo.list_all()
 
