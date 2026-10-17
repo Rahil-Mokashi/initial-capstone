@@ -305,6 +305,8 @@ class PaymentMethod(str, Enum):
     UPI = "upi"
     CARD = "card"
     CREDIT = "credit"
+    # The oil company's fleet card, typed one sale at a time at the office (Terminal). Added 2026-10-17; the enum was frozen before.
+    DTP_CARD = "dtp_card"
 
 
 class TenderSettlementType(str, Enum):
@@ -357,6 +359,7 @@ PAYMENT_METHOD_TO_TENDER_NAME = {
     PaymentMethod.CARD: "Card",
     PaymentMethod.CREDIT: "Credit",
     PaymentMethod.UPI: "Other",
+    PaymentMethod.DTP_CARD: "DTP Card",
 }
 
 # The one seeded ExpenseCategory this project creates (app/database/

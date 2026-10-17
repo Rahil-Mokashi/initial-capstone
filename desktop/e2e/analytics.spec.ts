@@ -7,6 +7,7 @@ test('business insights: revenue for the period and a forecast per fuel', async 
   const pump = await setupPump(page);
   await pump.api('POST', '/terminal/sales', {
     mode: 'amount',
+    vehicle_number: 'MH12AB1234',
     value: '1000.00',
     payment_method: 'cash',
     shift_id: pump.shiftId,

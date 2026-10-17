@@ -224,7 +224,13 @@ export function CloseShiftPage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <DecimalField label={data.cash.recorded ? 'Advance (recorded earlier)' : 'Advance'} maxFraction={2} unit="rupees" disabled={data.cash.recorded} value={data.cash.recorded ? trim(data.cash.advance) : typed.advance} onChange={(e) => setTyped({ ...typed, advance: e.target.value })} />
                 <DecimalField label={data.cash.recorded ? 'Final (recorded earlier)' : 'Final'} maxFraction={2} unit="rupees" disabled={data.cash.recorded} value={data.cash.recorded ? trim(data.cash.final) : typed.final} onChange={(e) => setTyped({ ...typed, final: e.target.value })} />
-                {data.modes.map((m) => (
+                {data.modes.map((m) => m.read_only ? (
+                  <div key={m.tender_id} className="flex flex-col gap-1">
+                    <span className="text-sm font-semibold">{m.label}</span>
+                    <span className="num rounded-md border border-line bg-surface-2 px-3 py-2">{rupees(m.amount ?? '0')}</span>
+                    <span className="text-xs text-muted">{m.count ?? 0} sale(s) entered on the Terminal. Added up for you, not typed.</span>
+                  </div>
+                ) : (
                   <DecimalField key={m.tender_id} label={m.label} maxFraction={2} unit="rupees" value={typed.modes[m.tender_id] ?? (m.amount != null ? trim(m.amount) : '')} onChange={(e) => setTyped({ ...typed, modes: { ...typed.modes, [m.tender_id]: e.target.value } })} />
                 ))}
               </div>

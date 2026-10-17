@@ -53,7 +53,7 @@ def test_the_tally_shows_a_shortage_while_typing_and_saves_nothing(client, data_
     # ... and nothing was kept
     after = client.get(f"/api/close-shift/{shift['id']}", headers=data_entry).json()
     assert after["nozzles"][0]["closed"] is False and after["cash"]["recorded"] is False
-    assert after["tally"]["total_sale"] == "0.00" and all(m["amount"] is None for m in after["modes"])
+    assert after["tally"]["total_sale"] == "0.00" and all(m["amount"] is None for m in after["modes"] if not m["read_only"])
     assert client.get("/api/sales", headers=manager).json()["items"] == []
     assert D(client.get(f"/api/tanks/{tank['id']}", headers=manager).json()["current_stock"]) == D("10000")
     assert audit_chain_ok(session_factory)
@@ -67,7 +67,7 @@ def test_saving_records_everything_and_the_tank_loses_only_what_was_sold(client,
     desk = saved.json()
     assert desk["tally"]["status"] == "short" and desk["tally"]["difference"] == "1000.00"
     assert desk["nozzles"][0]["closed"] and desk["cash"] == {"advance": "20000.00", "final": "14000.00", "recorded": True}
-    assert {m["label"]: m["amount"] for m in desk["modes"] if m["amount"]} == {"CARD": "10000.00", "PHONE PAY": "5000.00"}
+    assert {m["label"]: m["amount"] for m in desk["modes"] if m["amount"] and not m["read_only"]} == {"CARD": "10000.00", "PHONE PAY": "5000.00"}
     assert D(client.get(f"/api/tanks/{tank['id']}", headers=manager).json()["current_stock"]) == D("9500")  # 505 metered - 5 testing returned
 
 
@@ -100,7 +100,7 @@ def test_a_bad_figure_saves_nothing_at_all(client, data_entry, manager, session_
     r = client.post(f"/api/close-shift/{shift['id']}", headers=data_entry, json=body)
     assert r.status_code >= 400
     after = client.get(f"/api/close-shift/{shift['id']}", headers=data_entry).json()
-    assert after["nozzles"][0]["closed"] is False and after["cash"]["recorded"] is False and all(m["amount"] is None for m in after["modes"])
+    assert after["nozzles"][0]["closed"] is False and after["cash"]["recorded"] is False and all(m["amount"] is None for m in after["modes"] if not m["read_only"])
     assert client.get("/api/sales", headers=manager).json()["items"] == []
     assert audit_chain_ok(session_factory)
 

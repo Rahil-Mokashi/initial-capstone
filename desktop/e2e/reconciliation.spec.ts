@@ -9,6 +9,7 @@ test('declare a short cash drawer, approve it, book the shortage on an employee 
   const pump = await setupPump(page);
   await pump.api('POST', '/terminal/sales', {
     mode: 'amount',
+    vehicle_number: 'MH12AB1234',
     value: '1000.00',
     payment_method: 'cash',
     shift_id: pump.shiftId,

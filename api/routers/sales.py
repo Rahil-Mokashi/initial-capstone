@@ -36,6 +36,7 @@ class SaleOut(Out):
     status: str
     payment_id: Optional[str] = None
     payment_status: Optional[str] = None
+    vehicle_number: Optional[str] = None
 
 
 class SalePage(Out):
@@ -91,6 +92,7 @@ class SaleIn(In):
     customer_id: Optional[str] = None
     reference_number: Optional[str] = None
     remarks: Optional[str] = None
+    vehicle_number: Optional[str] = None
     # An owner allowing this credit sale past the customer's limit (V-14); only used when the limit is passed.
     credit_override: Optional[CreditOverrideIn] = None
 
@@ -148,6 +150,7 @@ def sale_out(services: Services, user_id: str, sale) -> SaleOut:
         status=sale.status,
         payment_id=payment.id if payment else None,
         payment_status=payment.status if payment else None,
+        vehicle_number=sale.vehicle_number,
     )
 
 

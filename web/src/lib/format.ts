@@ -74,7 +74,10 @@ export function todayIso(): string {
 }
 
 export function titleCase(value: string): string {
-  return value.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  return value
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+    .replace(/\bDtp\b/g, 'DTP');
 }
 
 export interface DecimalRules {

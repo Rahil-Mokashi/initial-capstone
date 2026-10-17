@@ -30,10 +30,10 @@ const useTerminalSale = () =>
 // What people actually hand over at the pump (same four as the Qt screen).
 const NEW_CUSTOMER = '__new__';
 const PRESETS = ['200', '500', '1000', '2000'];
-const METHODS = ['cash', 'upi', 'card', 'credit'] as const;
+const METHODS = ['cash', 'upi', 'card', 'credit', 'dtp_card'] as const;
 // The office desk only enters sales that are typed one by one. Cash, UPI and card arrive as shift-close totals.
-// ponytail: DTP and other special methods are not payment methods in the model yet (owner decision pending).
-const OFFICE_METHODS = ['credit'] as const;
+// DTP Card is the oil company's fleet card: one sale at a time, summed per shift on the Close Shift desk.
+const OFFICE_METHODS = ['credit', 'dtp_card'] as const;
 type Method = (typeof METHODS)[number];
 
 function Chip({
@@ -118,7 +118,7 @@ export function TerminalPage() {
     : c?.my_assignment?.nozzle;
   const rate = nozzle?.rate_per_liter ?? null;
   const methods: readonly Method[] = free ? OFFICE_METHODS : METHODS;
-  const effMethod: Method = free ? 'credit' : method;
+  const effMethod: Method = free && method !== 'dtp_card' ? 'credit' : method;
   const addingCustomer = customerId === NEW_CUSTOMER;
 
   // Live preview, exact decimals (the server does the real calculation on save).
@@ -146,7 +146,7 @@ export function TerminalPage() {
       );
     if (!/^\d{1,12}(\.\d{1,2})?$/.test(value) || Number(value) <= 0)
       return setError('Enter an amount above zero, such as 500.');
-    if (free && !vehicle.trim()) return setError('Enter the vehicle number.');
+    if (!vehicle.trim()) return setError('Enter the vehicle number.');
     if (effMethod === 'credit' && !customerId) return setError('Choose the customer, or add a new one.');
     if (addingCustomer && !newName.trim()) return setError("Enter the new customer's name.");
     let customerRef = customerId;
@@ -162,14 +162,14 @@ export function TerminalPage() {
         return setError(friendlyMessage(e));
       }
     }
-    const remark = [vehicle.trim() ? `Vehicle: ${vehicle.trim()}` : '', note.trim()].filter(Boolean).join(' - ');
     const body: S['TerminalSaleIn'] = {
       mode,
       value,
       payment_method: effMethod,
       customer_id: customerRef || undefined,
       reference_number: reference.trim() || undefined,
-      remarks: remark || undefined,
+      vehicle_number: vehicle.trim(),
+      remarks: note.trim() || undefined,
       ...(free
         ? {
             shift_id: shiftId || c!.shifts[0]!.id,
@@ -229,6 +229,7 @@ export function TerminalPage() {
               `Amount: ${formatMoney(done.amount)}`,
               `Payment: ${titleCase(done.payment_method)}`,
               done.customer ? `Customer: ${done.customer}` : null,
+              done.vehicle_number ? `Vehicle: ${done.vehicle_number}` : null,
             ]
               .filter(Boolean)
               .join('\n')}
@@ -389,14 +390,12 @@ export function TerminalPage() {
               onChange={(e) => setReference(e.target.value)}
             />
           )}
-          {free && (
-            <TextField
-              label="Vehicle number"
-              placeholder="For example MH 12 AB 1234"
-              value={vehicle}
-              onChange={(e) => setVehicle(e.target.value)}
-            />
-          )}
+          <TextField
+            label="Vehicle number"
+            placeholder="For example MH 12 AB 1234"
+            value={vehicle}
+            onChange={(e) => setVehicle(e.target.value)}
+          />
           <TextField
             label="Note"
             optional

@@ -32,6 +32,7 @@ from app.core.constants import (
     ShiftStatus,
     TankTransactionType,
 )
+from app.core.vehicle import normalise_vehicle
 from app.core.exceptions import ConflictError, NotFoundError
 from app.core.money import money
 from app.core.permissions import require_permission
@@ -245,6 +246,7 @@ class SaleService:
             status=SaleStatus.COMPLETED.value,
             recorded_by_id=actor_user_id,
             remarks=data.remarks,
+            vehicle_number=normalise_vehicle(data.vehicle_number),
         )
         sale = self._sale_repo.add(sale)
 

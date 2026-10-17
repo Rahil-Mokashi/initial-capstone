@@ -8,8 +8,8 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from typing import List, Optional
 
-from app.core.constants import Permission, TenderSettlementType
-from app.core.exceptions import NotFoundError
+from app.core.constants import PaymentMethod, Permission, SaleStatus, TenderSettlementType
+from app.core.exceptions import ConflictError, NotFoundError
 from app.core.money import money
 from app.core.permissions import require_permission
 from app.models.shift_tender_entry import ShiftTenderEntry
@@ -22,12 +22,16 @@ REPORT_LABELS = {"Card": "CARD", "DTP Card": "DTP Card", "PhonePe": "PHONE PAY",
 REPORT_ORDER = ["Card", "DTP Card", "Other", "PhonePe", "Paytm"]
 
 
+DTP_TENDER = "DTP Card"
+
+
 def report_label(tender_name: str) -> str:
     return REPORT_LABELS.get(tender_name, tender_name)
 
 
 class TenderEntryService:
-    def __init__(self, entry_repo, tender_repo, shift_repo, audit_repo, auth_service):
+    def __init__(self, entry_repo, tender_repo, shift_repo, audit_repo, auth_service, sale_repo=None):
+        self._sales = sale_repo
         self._entries = entry_repo
         self._tenders = tender_repo
         self._shifts = shift_repo
@@ -59,6 +63,8 @@ class TenderEntryService:
             tender = self._tenders.get_by_id(tender_id)
             if tender is None:
                 raise NotFoundError(f"Payment mode not found: {tender_id}")
+            if tender.name == DTP_TENDER and self.dtp_from_sales(shift_id)[1] > 0:
+                raise ConflictError("DTP Card is the total of this shift's DTP sales on the Terminal; it is not typed a second time.")
             if tender.settlement_type != TenderSettlementType.BANK_SETTLED.value:
                 raise ValueError(f"{tender.name} is not typed per shift: cash comes from the cash book and credit from the bills")
             amount = money(amount)
@@ -96,4 +102,17 @@ class TenderEntryService:
         out = {}
         for e in self._entries.active_for_shift(shift_id):
             out[e.tender.name] = out.get(e.tender.name, Decimal("0")) + e.amount
+        total, count = self.dtp_from_sales(shift_id)
+        if count:
+            out[DTP_TENDER] = total  # the Terminal's DTP sales ARE the figure; an older typed total is not added on top
         return out
+
+    def dtp_from_sales(self, shift_id: str):
+        """(sum, count) of the shift's completed DTP Card sales entered on the Terminal."""
+        if self._sales is None:
+            return Decimal("0"), 0
+        rows = [
+            s for s in self._sales.list_by_shift(shift_id)
+            if s.payment_method == PaymentMethod.DTP_CARD.value and s.status == SaleStatus.COMPLETED.value
+        ]
+        return money(sum((s.amount for s in rows), Decimal("0"))), len(rows)

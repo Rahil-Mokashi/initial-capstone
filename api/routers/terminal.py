@@ -49,6 +49,7 @@ class TerminalSaleIn(In):
     customer_id: Optional[str] = None
     reference_number: Optional[str] = None
     remarks: Optional[str] = None
+    vehicle_number: str  # required on every Terminal sale
     # Free-pick users (shift.view) choose these; an attendant's come from their own assignment.
     shift_id: Optional[str] = None
     nozzle_id: Optional[str] = None
@@ -128,5 +129,6 @@ def terminal_sale(body: TerminalSaleIn, user: CurrentUser = Depends(current_user
         customer_id=body.customer_id,
         reference_number=body.reference_number,
         remarks=body.remarks,
+        vehicle_number=body.vehicle_number,
     )
     return sale_out(services, user.id, services.create_credit_aware_sale(user.id, data, body.credit_override))

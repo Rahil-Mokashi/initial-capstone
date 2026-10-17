@@ -3686,6 +3686,17 @@
             ],
             "title": "Amount"
           },
+          "count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Count"
+          },
           "label": {
             "title": "Label",
             "type": "string"
@@ -3693,6 +3704,11 @@
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "read_only": {
+            "default": false,
+            "title": "Read Only",
+            "type": "boolean"
           },
           "tender_id": {
             "title": "Tender Id",
@@ -7374,7 +7390,8 @@
           "cash",
           "upi",
           "card",
-          "credit"
+          "credit",
+          "dtp_card"
         ],
         "title": "PaymentMethod",
         "type": "string"
@@ -9012,6 +9029,17 @@
           "shift_id": {
             "title": "Shift Id",
             "type": "string"
+          },
+          "vehicle_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vehicle Number"
           }
         },
         "required": [
@@ -9180,6 +9208,17 @@
           "status": {
             "title": "Status",
             "type": "string"
+          },
+          "vehicle_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vehicle Number"
           }
         },
         "required": [
@@ -10528,12 +10567,17 @@
             "pattern": "^-?\\d{1,12}(\\.\\d{1,2})?$",
             "title": "Value",
             "type": "string"
+          },
+          "vehicle_number": {
+            "title": "Vehicle Number",
+            "type": "string"
           }
         },
         "required": [
           "mode",
           "value",
-          "payment_method"
+          "payment_method",
+          "vehicle_number"
         ],
         "title": "TerminalSaleIn",
         "type": "object"

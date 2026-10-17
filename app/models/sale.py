@@ -69,6 +69,8 @@ class Sale(Base):
 
     recorded_by_id = Column(String(36), ForeignKey("users.id"), nullable=False)
     remarks = Column(Text, nullable=True)
+    # Upper case, no spaces (app/core/vehicle.py). Required on every Terminal sale; older rows may be empty.
+    vehicle_number = Column(String(32), nullable=True, index=True)
 
     shift = relationship("Shift")
     nozzle = relationship("Nozzle")

@@ -100,7 +100,7 @@ class CustomerLedgerService:
             d = details.get(s.id)
             raw.append((local_date_of(s.sale_at), s.sale_at.timestamp(), LedgerBill(
                 kind="sale", ref=s.receipt_number, bill_date=local_date_of(s.sale_at), amount=s.amount,
-                vehicle_no=d.vehicle_no if d else None, slip_no=d.slip_no if d else None, sale_id=s.id, shift_id=s.shift_id,
+                vehicle_no=s.vehicle_number or (d.vehicle_no if d else None), slip_no=d.slip_no if d else None, sale_id=s.id, shift_id=s.shift_id,
             )))
         for b in self._bowser.bills_for_customer(customer_id):
             raw.append((b.bill_date, b.created_at.timestamp(), LedgerBill(

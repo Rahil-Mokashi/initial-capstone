@@ -231,7 +231,7 @@ class DailyReportService:
                 block.unassigned_litres += s.quantity
             block.fuel_rs += s.amount
             if s.payment_method == PaymentMethod.CREDIT.value:
-                credit_rows.append((s.receipt_number, s.customer.name if s.customer else "", s.amount))
+                credit_rows.append((s.receipt_number, (s.customer.name if s.customer else "") + (f" ({s.vehicle_number})" if s.vehicle_number else ""), s.amount))
                 block.credit_total += s.amount
             if s.tender is not None and s.tender.settlement_type == "invoiced_credit":
                 block.credit_by_tender_rs += s.amount

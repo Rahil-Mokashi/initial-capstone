@@ -21,6 +21,8 @@ class DeskModeOut(Out):
     name: str
     label: str
     amount: Optional[MoneyOut] = None
+    read_only: bool = False
+    count: Optional[int] = None
 
 
 class DeskCashOut(Out):

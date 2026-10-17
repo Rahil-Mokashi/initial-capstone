@@ -20,6 +20,7 @@ class SaleCreate(BaseModel):
     customer_id: Optional[str] = None
     reference_number: Optional[str] = None
     remarks: Optional[str] = None
+    vehicle_number: Optional[str] = None
 
     @field_validator("quantity")
     @classmethod

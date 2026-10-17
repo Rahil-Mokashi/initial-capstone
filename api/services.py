@@ -482,7 +482,8 @@ class Services:
     @cached_property
     def tender_entries(self) -> TenderEntryService:
         return TenderEntryService(
-            ShiftTenderEntryRepository(self.db), self.tender_repo, self.shift_repo, self.audit_repo, self.auth
+            ShiftTenderEntryRepository(self.db), self.tender_repo, self.shift_repo, self.audit_repo, self.auth,
+            self.sale_repo,
         )
 
     @cached_property

@@ -24,7 +24,7 @@ from app.core.permissions import require_permission
 from app.repositories.base import session_for, unit_of_work
 from app.schemas.shift_cash_book import ShiftCashBookRecord
 from app.services.shift_close_service import NozzleLine, Reading
-from app.services.tender_entry_service import report_label
+from app.services.tender_entry_service import DTP_TENDER, report_label
 
 TOLERANCE = Decimal("0.01")  # one paisa: the same tolerance the report's own check uses
 _Z = Decimal("0")
@@ -36,6 +36,8 @@ class ModeRow:
     name: str
     label: str
     amount: Optional[Decimal]
+    read_only: bool = False  # DTP Card: the sum of the shift's Terminal DTP sales, never typed
+    count: Optional[int] = None
 
 
 @dataclass
@@ -118,7 +120,10 @@ class CloseDeskService:
             with unit_of_work(self._session):
                 if readings:
                     self._close.submit(actor_user_id, shift_id, readings)
+                dtp_ids = {t.id for t in self._tenders.entry_tenders(actor_user_id) if t.name == DTP_TENDER}
                 for tender_id, amount in modes.items():
+                    if tender_id in dtp_ids:
+                        raise ConflictError("DTP Card is worked out from the DTP sales entered on the Terminal; it is not typed here.")
                     self._tenders.set_total(actor_user_id, shift_id, tender_id, amount)
                 self._record_cash(actor_user_id, shift_id, advance, final)
                 self._session.flush()
@@ -155,8 +160,11 @@ class CloseDeskService:
             raise NotFoundError(f"Shift not found: {shift_id}")
         nozzles = self._close.sheet(actor_user_id, shift_id)
         typed = {e.tender_id: e.amount for e in self._tenders.list_for_shift(actor_user_id, shift_id)}
+        dtp_total, dtp_count = self._tenders.dtp_from_sales(shift_id)
         modes = [
-            ModeRow(t.id, t.name, report_label(t.name), typed.get(t.id))
+            ModeRow(t.id, t.name, report_label(t.name), dtp_total, True, dtp_count)
+            if t.name == DTP_TENDER
+            else ModeRow(t.id, t.name, report_label(t.name), typed.get(t.id))
             for t in self._tenders.entry_tenders(actor_user_id)
         ]
         book = self._cash.get_for_shift(actor_user_id, shift_id)

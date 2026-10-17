@@ -2,7 +2,7 @@ from test_api_sales import pump  # noqa: F401  (fixture)
 
 
 def _sale(client, h, pump, value="1000.00"):
-    body = {"mode": "amount", "value": value, "payment_method": "cash", "shift_id": pump["shift"]["id"], "nozzle_id": pump["nozzle"]["id"], "employee_id": pump["employee_id"]}
+    body = {"mode": "amount", "vehicle_number": "MH12AB1234", "value": value, "payment_method": "cash", "shift_id": pump["shift"]["id"], "nozzle_id": pump["nozzle"]["id"], "employee_id": pump["employee_id"]}
     assert client.post("/api/terminal/sales", headers=h, json=body).status_code == 201
 
 

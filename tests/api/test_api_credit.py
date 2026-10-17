@@ -28,7 +28,7 @@ def test_open_list_and_validation(client, manager, accountant, attendant, sessio
 def test_credit_sale_payment_statement_and_limit(client, manager, accountant, pump, session_factory):
     c = _customer(client, manager)
     _account(client, manager, c, limit="2000.00")
-    body = {"mode": "amount", "value": "1500.00", "payment_method": "credit", "customer_id": c["id"], "shift_id": pump["shift"]["id"], "nozzle_id": pump["nozzle"]["id"], "employee_id": pump["employee_id"]}
+    body = {"mode": "amount", "vehicle_number": "MH12AB1234", "value": "1500.00", "payment_method": "credit", "customer_id": c["id"], "shift_id": pump["shift"]["id"], "nozzle_id": pump["nozzle"]["id"], "employee_id": pump["employee_id"]}
     assert client.post("/api/terminal/sales", headers=manager, json=body).status_code == 201
     acc = client.get("/api/credit/accounts", headers=accountant).json()[0]
     assert acc["outstanding"] == "1500.00"

@@ -4991,10 +4991,17 @@ export interface components {
         DeskModeOut: {
             /** Amount */
             amount?: string | null;
+            /** Count */
+            count?: number | null;
             /** Label */
             label: string;
             /** Name */
             name: string;
+            /**
+             * Read Only
+             * @default false
+             */
+            read_only: boolean;
             /** Tender Id */
             tender_id: string;
         };
@@ -6301,7 +6308,7 @@ export interface components {
          *     see PAYMENT_METHOD_TO_TENDER_NAME below for how the two relate.
          * @enum {string}
          */
-        PaymentMethod: "cash" | "upi" | "card" | "credit";
+        PaymentMethod: "cash" | "upi" | "card" | "credit" | "dtp_card";
         /** PaymentOut */
         PaymentOut: {
             /** Amount */
@@ -6922,6 +6929,8 @@ export interface components {
             remarks?: string | null;
             /** Shift Id */
             shift_id: string;
+            /** Vehicle Number */
+            vehicle_number?: string | null;
         };
         /**
          * SaleOptions
@@ -6974,6 +6983,8 @@ export interface components {
             sale_at: string;
             /** Status */
             status: string;
+            /** Vehicle Number */
+            vehicle_number?: string | null;
         };
         /** SalePage */
         SalePage: {
@@ -7377,6 +7388,8 @@ export interface components {
              * @example 102.50
              */
             value: string;
+            /** Vehicle Number */
+            vehicle_number: string;
         };
         /** TotalIn */
         TotalIn: {

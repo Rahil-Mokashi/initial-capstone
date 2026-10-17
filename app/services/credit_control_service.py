@@ -16,6 +16,7 @@ from decimal import Decimal
 from typing import List, Optional
 
 from app.core.constants import Permission
+from app.core.vehicle import normalise_vehicle
 from app.core.exceptions import AuthenticationError, ConflictError, NotFoundError, PermissionDeniedError
 from app.core.money import money
 from app.core.permissions import require_permission
@@ -224,7 +225,10 @@ class CreditControlService:
             raise NotFoundError(f"Sale not found: {sale_id}")
         with unit_of_work(self._session):
             row = self._details.get_for_sale(sale_id)
-            vehicle, slip = (vehicle_no or "").strip() or None, (slip_no or "").strip() or None
+            vehicle, slip = normalise_vehicle(vehicle_no), (slip_no or "").strip() or None
+            if sale.vehicle_number != vehicle:
+                sale.vehicle_number = vehicle  # the sale's own column is the one the receipt and the daily report read
+                self._sales.update(sale)
             if row is None:
                 row = self._details.add(CreditBillDetail(sale_id=sale_id, vehicle_no=vehicle, slip_no=slip, updated_by_id=actor_user_id))
             else:

@@ -11,6 +11,7 @@ test('open the sales report, filter by date, preview it and save PDF, Excel and 
   const pump = await setupPump(page);
   await pump.api('POST', '/terminal/sales', {
     mode: 'amount',
+    vehicle_number: 'MH12AB1234',
     value: '1000.00',
     payment_method: 'cash',
     shift_id: pump.shiftId,

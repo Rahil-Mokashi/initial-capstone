@@ -84,6 +84,7 @@ describe('terminal', () => {
       'POST /api/terminal/sales': () => json(201, { ...sale, payment_method: 'credit' }),
     });
     expect(await screen.findByRole('button', { name: 'Credit' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'DTP Card' })).toBeInTheDocument();
     for (const m of ['Cash', 'Upi', 'Card']) expect(screen.queryByRole('button', { name: m })).toBeNull();
     await userEvent.selectOptions(screen.getByLabelText('Customer (required for credit)'), '+ New customer');
     await userEvent.type(screen.getByLabelText('New customer name'), 'Ravi Transport');
@@ -98,7 +99,7 @@ describe('terminal', () => {
       value: '500',
       payment_method: 'credit',
       customer_id: 'c9',
-      remarks: 'Vehicle: MH 12 AB 1234',
+      vehicle_number: 'MH 12 AB 1234',
       shift_id: 's1',
       employee_id: 'e1',
       nozzle_id: 'n1',
@@ -134,12 +135,14 @@ describe('terminal', () => {
     expect(
       await screen.findByText(/Selling from your current assignment: N1 - Petrol/),
     ).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText('Vehicle number'), 'MH12AB1234');
     await userEvent.click(screen.getByRole('button', { name: 'Complete sale' }));
     await waitFor(() =>
       expect(api.calls.find((c) => c.key === 'POST /api/terminal/sales')?.body).toEqual({
         mode: 'amount',
         value: '500',
         payment_method: 'cash',
+        vehicle_number: 'MH12AB1234',
       }),
     );
   });

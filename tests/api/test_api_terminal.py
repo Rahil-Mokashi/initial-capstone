@@ -12,7 +12,7 @@ def test_context_for_a_manager_lists_rates(client, manager, pump):
 
 
 def _sale(client, h, pump, **over):
-    body = {"mode": "amount", "value": "500.00", "payment_method": "cash", "shift_id": pump["shift"]["id"], "nozzle_id": pump["nozzle"]["id"], "employee_id": pump["employee_id"]}
+    body = {"mode": "amount", "vehicle_number": "MH12AB1234", "value": "500.00", "payment_method": "cash", "shift_id": pump["shift"]["id"], "nozzle_id": pump["nozzle"]["id"], "employee_id": pump["employee_id"]}
     return client.post("/api/terminal/sales", headers=h, json={**body, **over})
 
 
@@ -38,7 +38,7 @@ def test_litres_mode_and_credit_rule(client, manager, pump):
 
 
 def test_free_pick_needs_shift_nozzle_and_attendant(client, manager, pump):
-    r = client.post("/api/terminal/sales", headers=manager, json={"mode": "amount", "value": "100", "payment_method": "cash"})
+    r = client.post("/api/terminal/sales", headers=manager, json={"mode": "amount", "vehicle_number": "MH12AB1234", "value": "100", "payment_method": "cash"})
     assert r.status_code == 422
 
 
@@ -64,11 +64,11 @@ def test_attendant_uses_their_own_assignment(client, session_factory, manager, a
     client.post(f"/api/shifts/{s['id']}/assignments", headers=manager, json={"employee_id": emp_id, "nozzle_id": n["id"], "opening_meter": "0"})
     ctx = client.get("/api/terminal/context", headers=attendant).json()
     assert ctx["can_pick_freely"] is False and ctx["my_assignment"]["nozzle"]["code"] == "N1"
-    sale = client.post("/api/terminal/sales", headers=attendant, json={"mode": "amount", "value": "200", "payment_method": "cash"})
+    sale = client.post("/api/terminal/sales", headers=attendant, json={"mode": "amount", "vehicle_number": "MH12AB1234", "value": "200", "payment_method": "cash"})
     assert sale.status_code == 201 and sale.json()["quantity"] == "2.000"
 
 
 def test_unassigned_attendant_cannot_sell(client, attendant):
     ctx = client.get("/api/terminal/context", headers=attendant).json()
     assert ctx["my_assignment"] is None
-    assert client.post("/api/terminal/sales", headers=attendant, json={"mode": "amount", "value": "200", "payment_method": "cash"}).status_code == 422
+    assert client.post("/api/terminal/sales", headers=attendant, json={"mode": "amount", "vehicle_number": "MH12AB1234", "value": "200", "payment_method": "cash"}).status_code == 422

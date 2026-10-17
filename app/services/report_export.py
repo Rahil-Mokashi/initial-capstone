@@ -173,6 +173,8 @@ def build_sale_receipt_html(sale, payment, company=None) -> str:
     ]
     if sale.customer:
         rows.append(("Customer", sale.customer.name))
+    if getattr(sale, "vehicle_number", None):
+        rows.append(("Vehicle", sale.vehicle_number))
     if payment and payment.reference_number:
         rows.append(("Reference", payment.reference_number))
 
