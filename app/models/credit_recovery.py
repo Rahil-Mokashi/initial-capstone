@@ -9,7 +9,7 @@ these are records beside them. All append-only except a follow-up's outcome, whi
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import CheckConstraint, Column, Date, ForeignKey, Numeric, String, Text
+from sqlalchemy import Boolean, CheckConstraint, Column, Date, ForeignKey, Numeric, String, Text
 from sqlalchemy.orm import relationship
 
 from app.database.types import UtcDateTime
@@ -31,6 +31,8 @@ class CustomerApproval(Base):
     decided_by_id = Column(String(36), ForeignKey("users.id"), nullable=True)
     decided_at = Column(UtcDateTime, nullable=True)
     note = Column(Text, nullable=True)
+    # W-34: made at the Terminal counter with a limit of 0; the first sale is allowed, the next waits for an owner.
+    counter_created = Column(Boolean, nullable=False, default=False, server_default="0")
 
     customer = relationship("Customer")
     decided_by = relationship("User", foreign_keys=[decided_by_id])

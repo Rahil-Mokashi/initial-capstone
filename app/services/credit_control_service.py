@@ -137,6 +137,30 @@ class CreditControlService:
     def pending_approvals(self, actor_user_id: str) -> List[CustomerApproval]:
         return [r for r in self._approvals.list_all() if r.status == "pending"]
 
+    # -- a customer made at the Terminal counter (W-34) ---------------------------------------------------------------
+    FIRST_SALE = object()  # authorize_sale's answer for the one sale a counter-made customer may have before an owner approves them
+
+    def counter_state(self, customer_id: str) -> Optional[str]:
+        """None (not a waiting counter customer), "first" (nothing billed yet: the first sale goes through) or "blocked"."""
+        row = self._approvals.get_for_customer(customer_id)
+        if row is None or not row.counter_created or row.status != "pending":
+            return None
+        bills, _ = self._ledger.bills_and_payments(customer_id)
+        return "first" if not bills else "blocked"
+
+    @require_permission(Permission.CREDIT_VIEW.value)
+    def counter_customers_waiting(self, actor_user_id: str):
+        return [r for r in self._approvals.list_all() if r.counter_created and r.status == "pending"]
+
+    def _verify_owner(self, override: Override) -> Override:
+        ok, error = self._auth_service.reauthenticate(override.approver_id, override.credential, use_pin=override.use_pin)
+        if not ok:
+            raise AuthenticationError(error or "The owner's password or PIN is not correct.")
+        if not self._auth_service.check_permission(override.approver_id, Permission.CREDIT_OVERRIDE.value):
+            self._auth_service.record_permission_denied(override.approver_id, Permission.CREDIT_OVERRIDE.value)
+            raise PermissionDeniedError(Permission.CREDIT_OVERRIDE.value)
+        return override
+
     # -- the limit at the moment of sale (V-14) ----------------------------------------------------------------------
     def check_sale(self, customer_id: str, amount: Decimal) -> LimitCheck:
         """Everything the person entering a credit bill should see: balance, limit, what it would become."""
@@ -145,10 +169,11 @@ class CreditControlService:
         account = self._accounts.get_by_customer_id(customer_id)
         mode = self._settings.get("credit_over_limit")
         approval = self.approval_status(customer_id)
+        counter = self.counter_state(customer_id)
         outstanding = v.summary.balance
         projected = outstanding + amount
         limit = account.credit_limit if account else None
-        over = limit is not None and projected > limit
+        over = limit is not None and projected > limit and counter != "first"
         problem = None
         if account is None:
             problem = f"{v.name} has no credit account. Open one in Credit first."
@@ -164,6 +189,16 @@ class CreditControlService:
     def authorize_sale(self, actor_user_id: str, customer_id: str, amount: Decimal, override: Optional[Override]):
         """Returns None when the sale is fine as it stands, or the approved Override to use. Raises when it must stop."""
         chk = self.check_sale(customer_id, amount)
+        counter = self.counter_state(customer_id)
+        if counter == "first":
+            return self.FIRST_SALE
+        if counter == "blocked":
+            message = f"{chk.customer_name} is a new customer made at the counter: an owner has to approve them and set a credit limit before another credit bill."
+            if override is None:
+                raise CreditLimitExceeded(message + " An owner can allow this bill with a reason.", {
+                    "customer": chk.customer_name, "outstanding": str(money(chk.outstanding)), "credit_limit": str(money(chk.credit_limit or _Z)),
+                    "this_bill": str(chk.amount), "would_become": str(money(chk.projected)), "mode": chk.mode, "can_override": True})
+            return self._verify_owner(override)
         details = {
             "customer": chk.customer_name, "outstanding": str(money(chk.outstanding)), "credit_limit": str(money(chk.credit_limit or _Z)),
             "this_bill": str(chk.amount), "would_become": str(money(chk.projected)), "mode": chk.mode,
@@ -182,13 +217,7 @@ class CreditControlService:
             raise ConflictError(message + " Credit over the limit is switched to 'block' in settings.")
         if override is None:
             raise CreditLimitExceeded(message + " An owner can allow it.", {**details, "can_override": True})
-        ok, error = self._auth_service.reauthenticate(override.approver_id, override.credential, use_pin=override.use_pin)
-        if not ok:
-            raise AuthenticationError(error or "The owner's password or PIN is not correct.")
-        if not self._auth_service.check_permission(override.approver_id, Permission.CREDIT_OVERRIDE.value):
-            self._auth_service.record_permission_denied(override.approver_id, Permission.CREDIT_OVERRIDE.value)
-            raise PermissionDeniedError(Permission.CREDIT_OVERRIDE.value)
-        return override
+        return self._verify_owner(override)
 
     def record_override(self, actor_user_id: str, sale, check_before: LimitCheck, override: Override) -> CreditLimitOverride:
         row = self._overrides.add(CreditLimitOverride(

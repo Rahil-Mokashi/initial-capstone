@@ -11,7 +11,7 @@ import { SelectField, TextField } from '@/components/ui/Field';
 import { FormError } from '@/components/ui/FormDialog';
 import { ErrorState, LoadingBlock } from '@/components/ui/States';
 import { CreditLimitPanel, OverrideDialog, isLimitError } from '@/features/credit/CreditLimit';
-import { getReceiptHtml, useCreateCustomer, useSalesPage, type Sale } from '@/features/sales/queries';
+import { getReceiptHtml, useSalesPage, type Sale } from '@/features/sales/queries';
 import { cn } from '@/lib/cn';
 import { divide2, multiply2 } from '@/lib/decimalMath';
 import { formatDateTime, formatMoney, formatQuantity, titleCase } from '@/lib/format';
@@ -102,7 +102,12 @@ export function TerminalPage() {
   const [vehicle, setVehicle] = useState('');
   const [newName, setNewName] = useState('');
   const [newPhone, setNewPhone] = useState('');
-  const createCustomer = useCreateCustomer();
+  const createCustomer = useWrite(
+    (b: { name: string; phone?: string }) =>
+      api.post<{ id: string; name: string; matched: boolean }>('/terminal/customers', b),
+    ['terminal', 'credit'],
+  );
+  const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<Sale | null>(null);
   // A credit bill that passed the customer's limit, waiting for an owner to allow it (V-14).
@@ -158,6 +163,11 @@ export function TerminalPage() {
         });
         customerRef = made.id;
         setCustomerId(made.id);
+        setNotice(
+          made.matched
+            ? `${made.name} already exists, so that customer was used.`
+            : `${made.name} was added with a credit limit of 0. The first bill goes through; an owner must approve them and set a limit before the next.`,
+        );
       } catch (e) {
         return setError(friendlyMessage(e));
       }
@@ -189,6 +199,7 @@ export function TerminalPage() {
   function newSale() {
     setDone(null);
     setError(null);
+    setNotice(null);
     setMode('amount');
     setValue('500');
     setMethod('cash');
@@ -403,6 +414,7 @@ export function TerminalPage() {
             value={note}
             onChange={(e) => setNote(e.target.value)}
           />
+          {notice && <p role="status" className="text-sm text-muted">{notice}</p>}
           <FormError message={error} />
           <Button
             type="submit"

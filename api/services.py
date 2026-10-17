@@ -447,7 +447,25 @@ class Services:
             credit_service=self.credit,
             auth_service=self.auth,
             db_path=db_connection.DB_PATH,
+            extra_producers=[self._counter_customer_alerts],
         )
+
+    def _counter_customer_alerts(self, actor_user_id, can):
+        """Owners are told about a customer made at the counter who still needs approval and a limit (W-34)."""
+        from app.core.constants import NotificationCategory, NotificationSeverity, Permission
+        from app.services.notification_service import Notification
+
+        if not can(Permission.CREDIT_APPROVE):
+            return []
+        out = []
+        for row in self.credit_control.counter_customers_waiting(actor_user_id):
+            out.append(Notification(
+                category=NotificationCategory.PENDING_APPROVAL, severity=NotificationSeverity.WARNING,
+                title=f"New credit customer {row.customer.name} needs approval",
+                detail="Made at the counter with a credit limit of 0. Their first bill went through; the next one is blocked until an owner approves them and sets a limit.",
+                entity_id=row.customer_id, action="Open Credit, approve the customer and set a limit.",
+            ))
+        return out
 
     # ---- site-visit build (2026-10-12) --------------------------------------------
     @cached_property
@@ -515,6 +533,12 @@ class Services:
             FollowUpRepository(self.db), BillDetailRepository(self.db), self.sale_repo, self.pump_settings, self.user_repo,
             self.auth, self.audit_repo, self.credit,
         )
+
+    @cached_property
+    def counter_customers(self):
+        from app.services.counter_customer_service import CounterCustomerService
+
+        return CounterCustomerService(self.customer_repo, self.credit_account_repo, CustomerApprovalRepository(self.db), self.audit_repo, self.auth, self.pump_settings)
 
     @cached_property
     def bank(self) -> BankReconService:
@@ -624,6 +648,16 @@ class Services:
         approved = self.credit_control.authorize_sale(user_id, data.customer_id, amount, ov)
         if approved is None:
             return self.sales.create_sale(user_id, data)
+        if approved is self.credit_control.FIRST_SALE:
+            # W-34: a customer made at the counter is allowed one sale before an owner approves them.
+            with unit_of_work(self.db):
+                with self.credit.limit_override(data.customer_id):
+                    sale = self.sales.create_sale(user_id, data)
+                self.audit_repo.record(
+                    event_type="credit_first_sale_allowed", actor_id=user_id, entity_type="Sale", entity_id=sale.id,
+                    description=f"First credit bill {sale.receipt_number} for a customer made at the counter; waiting for an owner to approve them and set a limit",
+                )
+            return sale
         before = self.credit_control.check_sale(data.customer_id, amount)
         with unit_of_work(self.db):
             with self.credit.limit_override(data.customer_id):

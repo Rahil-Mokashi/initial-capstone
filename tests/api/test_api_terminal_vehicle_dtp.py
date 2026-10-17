@@ -85,3 +85,39 @@ def test_a_credit_sale_is_counted_once_whichever_screen_typed_it(client, manager
     lines = {l[0] if isinstance(l, list) else l["label"]: (l[1] if isinstance(l, list) else l["amount"]) for l in block["lines"]}
     assert D(str(lines["CreditSale"])) == total
     assert len(block["credit_sales"]) == 2
+
+
+# ---------------------------------------------------------------------------- W-34: a customer made at the counter
+def _owner_id(client, h):
+    return next(a["id"] for a in client.get("/api/credit/approvers", headers=h).json() if a["name"].startswith("Owner1"))
+
+
+def test_a_counter_customer_gets_one_bill_then_waits_for_an_owner(client, data_entry, manager, owner, pump):
+    made = client.post("/api/terminal/customers", headers=data_entry, json={"name": "Ravi  Transport", "phone": "98765 43210"})
+    assert made.status_code == 200 and made.json()["matched"] is False
+    cid = made.json()["id"]
+    # the same person is not made twice: by phone first, then by name
+    assert client.post("/api/terminal/customers", headers=data_entry, json={"name": "Someone else", "phone": "+91 98765-43210"}).json() == {"id": cid, "name": "Ravi Transport", "matched": True}
+    assert client.post("/api/terminal/customers", headers=data_entry, json={"name": "ravi transport"}).json()["id"] == cid
+    acc = next(a for a in client.get("/api/credit/accounts", headers=manager).json() if a["customer_id"] == cid)
+    assert D(acc["credit_limit"]) == 0
+    # the owner is told
+    titles = [a["title"] for a in client.get("/api/alerts", headers=owner).json()["notifications"]]
+    assert any("Ravi Transport needs approval" in t for t in titles)
+    # the first credit bill goes through even though the limit is 0
+    first = _terminal(client, manager, pump, customer_id=cid, value="800.00")
+    assert first.status_code == 201, first.text
+    # the next is blocked ...
+    second = _terminal(client, manager, pump, customer_id=cid, value="500.00")
+    assert second.status_code == 409 and second.json()["error"]["code"] == "credit_limit_exceeded"
+    assert "approve" in second.json()["error"]["message"]
+    # ... unless an owner allows it, with a reason
+    allowed = _terminal(client, manager, pump, customer_id=cid, value="500.00",
+                        credit_override={"approver_id": _owner_id(client, manager), "credential": "Passw0rd!x", "reason": "known driver, owner agreed"})
+    assert allowed.status_code == 201, allowed.text
+    # approving the customer and giving a limit makes it normal
+    assert client.post(f"/api/credit/approvals/{cid}", headers=owner, json={"approve": True, "note": "ok"}).status_code == 200
+    assert client.post(f"/api/credit/accounts/{cid}/limit", headers=owner, json={"new_limit": "5000.00", "reason": "agreed with owner"}).status_code == 200
+    assert _terminal(client, manager, pump, customer_id=cid, value="300.00").status_code == 201
+    titles = [a["title"] for a in client.get("/api/alerts", headers=owner).json()["notifications"]]
+    assert not any("Ravi Transport needs approval" in t for t in titles)

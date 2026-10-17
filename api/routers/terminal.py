@@ -103,6 +103,24 @@ def terminal_context(user: CurrentUser = Depends(current_user), services: Servic
     )
 
 
+class CounterCustomerIn(In):
+    name: str
+    phone: Optional[str] = None
+
+
+class CounterCustomerOut(Out):
+    id: str
+    name: str
+    matched: bool  # true: an existing customer was found (phone first, then name); nothing new was made
+
+
+@router.post("/terminal/customers", response_model=CounterCustomerOut)
+def counter_customer(body: CounterCustomerIn, user: CurrentUser = Depends(current_user), services: Services = Depends(get_services)):
+    """Make (or find) a customer while billing at the counter (Owner Choice W-34)."""
+    customer, matched = services.counter_customers.find_or_create(user.id, body.name, body.phone)
+    return CounterCustomerOut(id=customer.id, name=customer.name, matched=matched)
+
+
 @router.post("/terminal/sales", response_model=SaleOut, status_code=201)
 def terminal_sale(body: TerminalSaleIn, user: CurrentUser = Depends(current_user), services: Services = Depends(get_services)):
     if services.auth.check_permission(user.id, Permission.SHIFT_VIEW.value):

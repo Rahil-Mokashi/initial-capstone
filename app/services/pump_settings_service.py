@@ -63,6 +63,8 @@ _DEFS = [
                "block: a day with a failing check cannot be locked unless an owner gives a reason (recorded). allow: lock anyway. ASSUMED block, needs owner confirmation."),
     SettingDef("attendants_use_terminal", "off", ("on", "off"), "W-33", "Attendants can use the Terminal",
                "off: attendants hand in cash, UPI and card as shift totals, so a sale they also typed would count the same money twice; the Terminal is hidden from them and refused. ASSUMED off, needs owner confirmation."),
+    SettingDef("counter_customer_approval", "on", ("on", "off"), "W-34", "New customer made at the counter",
+               "on: they get a credit limit of 0 and 'owner to approve'; their first bill goes through, the next waits for an owner, who sets the limit. off: only the customer is made. ASSUMED on, needs owner confirmation."),
     SettingDef("default_testing_litres", "5", None, "T-15", "Usual testing per nozzle (litres)",
                "At the end of a shift each nozzle pours this much for testing and it goes back into the tank. The meter counts it, "
                "so the Close Shift screen pre-fills it; the cashier can change it for a nozzle."),

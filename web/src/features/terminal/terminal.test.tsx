@@ -80,7 +80,7 @@ describe('terminal', () => {
   it('the office desk offers credit only, needs a vehicle number, and creates a new customer on the spot', async () => {
     const api = await openAs(PERMS, '/terminal', 'Terminal', {
       ...base(),
-      'POST /api/customers': () => json(201, { id: 'c9', name: 'Ravi Transport' }),
+      'POST /api/terminal/customers': () => json(200, { id: 'c9', name: 'Ravi Transport', matched: false }),
       'POST /api/terminal/sales': () => json(201, { ...sale, payment_method: 'credit' }),
     });
     expect(await screen.findByRole('button', { name: 'Credit' })).toBeInTheDocument();
@@ -93,7 +93,7 @@ describe('terminal', () => {
     await userEvent.type(screen.getByLabelText('Vehicle number'), 'MH 12 AB 1234');
     await userEvent.click(screen.getByRole('button', { name: 'Complete sale' }));
     expect(await screen.findByRole('heading', { name: 'Sale recorded' })).toBeInTheDocument();
-    expect(api.calls.find((c) => c.key === 'POST /api/customers')?.body).toEqual({ name: 'Ravi Transport' });
+    expect(api.calls.find((c) => c.key === 'POST /api/terminal/customers')?.body).toEqual({ name: 'Ravi Transport' });
     expect(api.calls.find((c) => c.key === 'POST /api/terminal/sales')?.body).toEqual({
       mode: 'amount',
       value: '500',

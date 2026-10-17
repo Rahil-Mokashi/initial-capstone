@@ -169,7 +169,10 @@ class NotificationService:
         credit_service,
         auth_service,
         db_path: Optional[str] = None,
+        extra_producers=None,
     ):
+        # More alert sources registered by the new app (each is called like the producers below: (actor_user_id, can) -> list).
+        self._extra_producers = list(extra_producers or [])
         self._tank_repo = tank_repo
         self._fuel_reconciliation_repo = fuel_reconciliation_repo
         self._shift_reconciliation_repo = shift_reconciliation_repo
@@ -234,6 +237,7 @@ class NotificationService:
             self._unauthorized_actions,
             self._backup_failure,
             self._database_errors,
+            *self._extra_producers,
         ):
             # One failing producer must not blank the whole alert screen.
             # A notification list is a diagnostic surface: it is consulted
