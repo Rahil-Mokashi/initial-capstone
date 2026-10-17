@@ -88,7 +88,7 @@ function SettingsForm({ current }: { current: Settings }) {
     <form onSubmit={submit} noValidate className="mx-auto flex max-w-3xl flex-col gap-6">
       <PageHeader
         title="Company Profile"
-        subtitle="The name and details printed at the top of every receipt, statement and report."
+        subtitle="This name and address print on every receipt and report."
       />
       {!current.has_company_profile && (
         <p

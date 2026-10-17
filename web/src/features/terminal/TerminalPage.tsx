@@ -11,7 +11,7 @@ import { SelectField, TextField } from '@/components/ui/Field';
 import { FormError } from '@/components/ui/FormDialog';
 import { ErrorState, LoadingBlock } from '@/components/ui/States';
 import { CreditLimitPanel, OverrideDialog, isLimitError } from '@/features/credit/CreditLimit';
-import { getReceiptHtml, useSalesPage, type Sale } from '@/features/sales/queries';
+import { getReceiptHtml, useCreateCustomer, useSalesPage, type Sale } from '@/features/sales/queries';
 import { cn } from '@/lib/cn';
 import { divide2, multiply2 } from '@/lib/decimalMath';
 import { formatDateTime, formatMoney, formatQuantity, titleCase } from '@/lib/format';
@@ -28,8 +28,12 @@ const useTerminalSale = () =>
   );
 
 // What people actually hand over at the pump (same four as the Qt screen).
+const NEW_CUSTOMER = '__new__';
 const PRESETS = ['200', '500', '1000', '2000'];
 const METHODS = ['cash', 'upi', 'card', 'credit'] as const;
+// The office desk only enters sales that are typed one by one. Cash, UPI and card arrive as shift-close totals.
+// ponytail: DTP and other special methods are not payment methods in the model yet (owner decision pending).
+const OFFICE_METHODS = ['credit'] as const;
 type Method = (typeof METHODS)[number];
 
 function Chip({
@@ -95,6 +99,10 @@ export function TerminalPage() {
   const [customerId, setCustomerId] = useState('');
   const [reference, setReference] = useState('');
   const [note, setNote] = useState('');
+  const [vehicle, setVehicle] = useState('');
+  const [newName, setNewName] = useState('');
+  const [newPhone, setNewPhone] = useState('');
+  const createCustomer = useCreateCustomer();
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<Sale | null>(null);
   // A credit bill that passed the customer's limit, waiting for an owner to allow it (V-14).
@@ -109,6 +117,9 @@ export function TerminalPage() {
     ? (c?.nozzles.find((n) => n.id === nozzleId) ?? c?.nozzles[0])
     : c?.my_assignment?.nozzle;
   const rate = nozzle?.rate_per_liter ?? null;
+  const methods: readonly Method[] = free ? OFFICE_METHODS : METHODS;
+  const effMethod: Method = free ? 'credit' : method;
+  const addingCustomer = customerId === NEW_CUSTOMER;
 
   // Live preview, exact decimals (the server does the real calculation on save).
   const preview = useMemo(() => {
@@ -135,13 +146,30 @@ export function TerminalPage() {
       );
     if (!/^\d{1,12}(\.\d{1,2})?$/.test(value) || Number(value) <= 0)
       return setError('Enter an amount above zero, such as 500.');
+    if (free && !vehicle.trim()) return setError('Enter the vehicle number.');
+    if (effMethod === 'credit' && !customerId) return setError('Choose the customer, or add a new one.');
+    if (addingCustomer && !newName.trim()) return setError("Enter the new customer's name.");
+    let customerRef = customerId;
+    if (addingCustomer) {
+      try {
+        const made = await createCustomer.mutateAsync({
+          name: newName.trim(),
+          phone: newPhone.trim() || undefined,
+        });
+        customerRef = made.id;
+        setCustomerId(made.id);
+      } catch (e) {
+        return setError(friendlyMessage(e));
+      }
+    }
+    const remark = [vehicle.trim() ? `Vehicle: ${vehicle.trim()}` : '', note.trim()].filter(Boolean).join(' - ');
     const body: S['TerminalSaleIn'] = {
       mode,
       value,
-      payment_method: method,
-      customer_id: customerId || undefined,
+      payment_method: effMethod,
+      customer_id: customerRef || undefined,
       reference_number: reference.trim() || undefined,
-      remarks: note.trim() || undefined,
+      remarks: remark || undefined,
       ...(free
         ? {
             shift_id: shiftId || c!.shifts[0]!.id,
@@ -166,6 +194,10 @@ export function TerminalPage() {
     setMethod('cash');
     setReference('');
     setNote('');
+    setVehicle('');
+    setNewName('');
+    setNewPhone('');
+    if (addingCustomer) setCustomerId('');
     void ctx.refetch();
   }
 
@@ -322,38 +354,53 @@ export function TerminalPage() {
 
           <h2 className="text-base font-bold">Payment method</h2>
           <div role="group" aria-label="Payment method" className="flex flex-wrap gap-2">
-            {METHODS.map((m) => (
-              <Chip key={m} pressed={method === m} onClick={() => setMethod(m)}>
+            {methods.map((m) => (
+              <Chip key={m} pressed={effMethod === m} onClick={() => setMethod(m)}>
                 {titleCase(m)}
               </Chip>
             ))}
           </div>
           <SelectField
-            label={method === 'credit' ? 'Customer (required for credit)' : 'Customer'}
+            label={effMethod === 'credit' ? 'Customer (required for credit)' : 'Customer'}
             value={customerId}
             onChange={(e) => setCustomerId(e.target.value)}
           >
-            <option value="">(none)</option>
+            <option value="">{effMethod === 'credit' ? '(choose)' : '(none)'}</option>
+            {effMethod === 'credit' && <option value={NEW_CUSTOMER}>+ New customer</option>}
             {c.customers.map((cu) => (
               <option key={cu.id} value={cu.id}>
                 {cu.label}
               </option>
             ))}
           </SelectField>
-          {method === 'credit' && customerId && (
+          {addingCustomer && (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <TextField label="New customer name" value={newName} onChange={(e) => setNewName(e.target.value)} />
+              <TextField label="Phone" optional value={newPhone} onChange={(e) => setNewPhone(e.target.value)} />
+            </div>
+          )}
+          {effMethod === 'credit' && customerId && !addingCustomer && (
             <CreditLimitPanel customerId={customerId} amount={preview?.amount ?? null} />
           )}
-          {(method === 'upi' || method === 'card') && (
+          {(effMethod === 'upi' || effMethod === 'card') && (
             <TextField
               label="UPI/Card reference"
               value={reference}
               onChange={(e) => setReference(e.target.value)}
             />
           )}
+          {free && (
+            <TextField
+              label="Vehicle number"
+              placeholder="For example MH 12 AB 1234"
+              value={vehicle}
+              onChange={(e) => setVehicle(e.target.value)}
+            />
+          )}
           <TextField
             label="Note"
             optional
-            placeholder="Optional - vehicle number, remark, etc."
+            placeholder="Optional remark"
             value={note}
             onChange={(e) => setNote(e.target.value)}
           />

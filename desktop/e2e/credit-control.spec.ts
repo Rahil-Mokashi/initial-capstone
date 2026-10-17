@@ -22,6 +22,7 @@ test('a credit bill past the limit asks for an owner, who allows it with their o
   await page.getByRole('button', { name: 'Credit', exact: true }).click();
   await page.getByLabel(/Customer/).selectOption({ label: 'Limit Test Traders' });
   await page.getByLabel('Amount (₹)').fill('600');
+  await page.getByLabel('Vehicle number').fill('MH 12 AB 1234');
 
   // the limit is shown while the bill is typed
   const panel = page.getByRole('region', { name: 'Credit limit' });

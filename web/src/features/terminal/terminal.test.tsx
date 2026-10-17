@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { session } from '@/api/session';
 import { openAs } from '@/test/harness';
-import { apiError, json } from '@/test/mockApi';
+import { json } from '@/test/mockApi';
 
 const PERMS = ['sale.view', 'sale.manage'];
 const nozzle = (over: Record<string, unknown> = {}) => ({
@@ -77,41 +77,44 @@ describe('terminal', () => {
     expect(api.calls.some((c) => c.key === 'POST /api/terminal/sales')).toBe(false);
   });
 
-  it('completes a sale, shows the receipt card with print/PDF, and New sale returns to the form', async () => {
+  it('the office desk offers credit only, needs a vehicle number, and creates a new customer on the spot', async () => {
     const api = await openAs(PERMS, '/terminal', 'Terminal', {
       ...base(),
-      'POST /api/terminal/sales': () => json(201, sale),
+      'POST /api/customers': () => json(201, { id: 'c9', name: 'Ravi Transport' }),
+      'POST /api/terminal/sales': () => json(201, { ...sale, payment_method: 'credit' }),
     });
-    await userEvent.click(await screen.findByRole('button', { name: 'Upi' }));
-    await userEvent.type(screen.getByLabelText('UPI/Card reference'), 'U9');
+    expect(await screen.findByRole('button', { name: 'Credit' })).toBeInTheDocument();
+    for (const m of ['Cash', 'Upi', 'Card']) expect(screen.queryByRole('button', { name: m })).toBeNull();
+    await userEvent.selectOptions(screen.getByLabelText('Customer (required for credit)'), '+ New customer');
+    await userEvent.type(screen.getByLabelText('New customer name'), 'Ravi Transport');
+    await userEvent.click(screen.getByRole('button', { name: 'Complete sale' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Enter the vehicle number');
+    await userEvent.type(screen.getByLabelText('Vehicle number'), 'MH 12 AB 1234');
     await userEvent.click(screen.getByRole('button', { name: 'Complete sale' }));
     expect(await screen.findByRole('heading', { name: 'Sale recorded' })).toBeInTheDocument();
-    expect(screen.getByText(/Receipt R-0001/)).toBeInTheDocument();
-    expect(screen.getByText(/Quantity: 4.831 L/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Print receipt' })).toBeInTheDocument();
+    expect(api.calls.find((c) => c.key === 'POST /api/customers')?.body).toEqual({ name: 'Ravi Transport' });
     expect(api.calls.find((c) => c.key === 'POST /api/terminal/sales')?.body).toEqual({
       mode: 'amount',
       value: '500',
-      payment_method: 'upi',
-      reference_number: 'U9',
+      payment_method: 'credit',
+      customer_id: 'c9',
+      remarks: 'Vehicle: MH 12 AB 1234',
       shift_id: 's1',
       employee_id: 'e1',
       nozzle_id: 'n1',
     });
+    expect(screen.getByText(/Receipt R-0001/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Print receipt' })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'New sale' }));
     expect(await screen.findByRole('button', { name: 'Complete sale' })).toBeInTheDocument();
   });
 
-  it('shows a server refusal (credit without a customer) and keeps the form', async () => {
-    await openAs(PERMS, '/terminal', 'Terminal', {
-      ...base(),
-      'POST /api/terminal/sales': () =>
-        apiError(422, 'rule_violation', 'A customer is required for a credit sale'),
-    });
-    await userEvent.click(await screen.findByRole('button', { name: 'Credit' }));
-    expect(screen.getByLabelText('Customer (required for credit)')).toBeInTheDocument();
+  it('a credit sale without a customer is stopped before it is sent', async () => {
+    const api = await openAs(PERMS, '/terminal', 'Terminal', base());
+    await userEvent.type(await screen.findByLabelText('Vehicle number'), 'MH 12 AB 1234');
     await userEvent.click(screen.getByRole('button', { name: 'Complete sale' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('customer is required');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Choose the customer');
+    expect(api.calls.some((c) => c.key === 'POST /api/terminal/sales')).toBe(false);
     expect(screen.getByLabelText('Amount (₹)')).toHaveValue('500');
   });
 
