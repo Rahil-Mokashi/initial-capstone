@@ -77,9 +77,13 @@ def approve(shift_id: str, user: CurrentUser = Depends(current_user), services: 
     return _one(services, user, shift_id)
 
 
+class EntryLockIn(In):
+    override_reason: str = ""
+
+
 @router.post("/entries/{shift_id}/lock", response_model=EntryOut)
-def lock(shift_id: str, user: CurrentUser = Depends(current_user), services: Services = Depends(get_services)):
-    services.entries.lock(user.id, shift_id)
+def lock(shift_id: str, body: EntryLockIn = EntryLockIn(), user: CurrentUser = Depends(current_user), services: Services = Depends(get_services)):
+    services.entries.lock(user.id, shift_id, body.override_reason)
     return _one(services, user, shift_id)
 
 

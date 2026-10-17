@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { api } from '@/api/client';
-import { friendlyMessage } from '@/api/errors';
+import { ApiError, friendlyMessage } from '@/api/errors';
 import { useGet, useWrite } from '@/api/hooks';
 import type { components } from '@/api/schema';
 import { useAuth } from '@/auth/AuthContext';
@@ -42,7 +42,9 @@ export function ReviewPage() {
   const list = useGet<Entry[]>(['entries'], '/entries');
   const [reopening, setReopening] = useState<Entry | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
+  const [blocked, setBlocked] = useState<{ id: string; failing: string[] } | null>(null);
   const move = useWrite(({ id, step }: { id: string; step: 'verify' | 'approve' | 'lock' }) => api.post<Entry>(`/entries/${id}/${step}`), ['entries', 'checks', 'daily-report']);
+  const lockAnyway = useWrite(({ id, reason }: { id: string; reason: string }) => api.post<Entry>(`/entries/${id}/lock`, { override_reason: reason }), ['entries', 'checks', 'daily-report']);
   const reopen = useWrite(({ id, reason }: { id: string; reason: string }) => api.post<Entry>(`/entries/${id}/reopen`, { reason }), ['entries', 'checks', 'daily-report']);
 
   if (list.isLoading) return <LoadingBlock label="Loading shifts" rows={4} />;
@@ -54,7 +56,9 @@ export function ReviewPage() {
     try {
       await move.mutateAsync({ id, step });
     } catch (error) {
-      setProblem(friendlyMessage(error));
+      if (error instanceof ApiError && error.code === 'lock_blocked_by_checks') {
+        setBlocked({ id, failing: (error.details as { failing?: string[] }).failing ?? [] });
+      } else setProblem(friendlyMessage(error));
     }
   };
 
@@ -121,6 +125,17 @@ export function ReviewPage() {
             );
           })}
         </ul>
+      )}
+      {blocked && (
+        <ReasonDialog
+          title="Some checks are failing for this day"
+          description={`Locking closes this shift for good. Failing: ${blocked.failing.join('; ')}`}
+          label="Why is it right to lock anyway?"
+          submitLabel="Lock anyway"
+          tone="danger"
+          onConfirm={(reason) => lockAnyway.mutateAsync({ id: blocked.id, reason })}
+          onClose={() => setBlocked(null)}
+        />
       )}
       {reopening && (
         <ReasonDialog

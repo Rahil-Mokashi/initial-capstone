@@ -7,6 +7,7 @@ export type ErrorCode =
   | 'not_found'
   | 'conflict'
   | 'credit_limit_exceeded'
+  | 'lock_blocked_by_checks'
   | 'invalid_credentials'
   | 'account_locked'
   | 'authentication_failed'
@@ -55,6 +56,7 @@ const KNOWN: ReadonlySet<string> = new Set<ErrorCode>([
   'not_found',
   'conflict',
   'credit_limit_exceeded',
+  'lock_blocked_by_checks',
   'invalid_credentials',
   'account_locked',
   'authentication_failed',

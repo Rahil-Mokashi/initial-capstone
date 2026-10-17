@@ -59,6 +59,8 @@ _DEFS = [
     SettingDef("mail_send_hour", "21", None, "L-17", "Send the summary after this hour (0-23)", "The day's figures are sent once, after this hour."),
     SettingDef("owner_lock_rule", "one_owner", ("one_owner", "two_owners"), "V-06", "Who may lock a shift",
                "one_owner: the same owner may approve and lock. two_owners: a different owner has to lock it than the one who approved it."),
+    SettingDef("failed_check_blocks_lock", "block", ("block", "allow"), "V-07", "A failing check stops a lock",
+               "block: a day with a failing check cannot be locked unless an owner gives a reason (recorded). allow: lock anyway. ASSUMED block, needs owner confirmation."),
     SettingDef("default_testing_litres", "5", None, "T-15", "Usual testing per nozzle (litres)",
                "At the end of a shift each nozzle pours this much for testing and it goes back into the tank. The meter counts it, "
                "so the Close Shift screen pre-fills it; the cashier can change it for a nozzle."),

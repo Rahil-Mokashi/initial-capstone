@@ -53,4 +53,20 @@ describe('Review', () => {
     expect(await screen.findByText(/Last: data changed at/)).toBeInTheDocument();
     expect(screen.getByText(/Figures were changed after this was checked/)).toBeInTheDocument();
   });
+
+  it('a lock stopped by a failing check asks an owner for a reason, then locks anyway', async () => {
+    let tries = 0;
+    const api = await openAs(['entry.view', 'entry.lock'], '/review', 'Review', {
+      'GET /api/entries': () => json(200, [entry('approved')]),
+      'POST /api/entries/s1/lock': () =>
+        ++tries === 1
+          ? json(409, { error: { code: 'lock_blocked_by_checks', message: '1 check(s) are failing', details: { failing: ['Shift 1: cash does not add up'] } } })
+          : json(200, entry('locked')),
+    });
+    await userEvent.click(await screen.findByRole('button', { name: /^Lock/ }));
+    expect(await screen.findByText(/Shift 1: cash does not add up/)).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText(/Why is it right to lock anyway/), 'explained to the owners');
+    await userEvent.click(screen.getByRole('button', { name: 'Lock anyway' }));
+    await waitFor(() => expect(api.calls.filter((c) => c.key === 'POST /api/entries/s1/lock').pop()?.body).toEqual({ override_reason: 'explained to the owners' }));
+  });
 });

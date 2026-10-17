@@ -5333,6 +5333,14 @@ export interface components {
             /** To Status */
             to_status: string;
         };
+        /** EntryLockIn */
+        EntryLockIn: {
+            /**
+             * Override Reason
+             * @default
+             */
+            override_reason: string;
+        };
         /** EntryOut */
         EntryOut: {
             /** Events */
@@ -11653,7 +11661,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["EntryLockIn"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

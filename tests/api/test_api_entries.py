@@ -5,6 +5,13 @@ from datetime import date
 from api_helpers import audit_chain_ok, audit_events
 from pump_day import TODAY
 from test_api_close_desk import _body, _modes, _setup
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def _lock_even_with_failing_checks(client, owner):
+    """These tests are about the chain itself; the sample shift is deliberately short of cash. The guard has its own tests below."""
+    client.put("/api/pump-settings/failed_check_blocks_lock", headers=owner, json={"value": "allow"})
 
 
 def _entered(client, data_entry, manager):
@@ -113,3 +120,39 @@ def test_the_checks_say_how_many_entries_wait_for_verification(client, data_entr
     client.post("/api/checks/run", headers=owner, json={"day": TODAY})
     rows = [c for c in client.get(f"/api/checks?day={TODAY}", headers=owner).json()["results"] if c["key"] == "workflow.entries_verified"]
     assert rows[0]["status"] == "pass"
+
+
+def _approved(client, data_entry, manager, accountant, owner):
+    _, shift, _ = _entered(client, data_entry, manager)
+    client.post(f"/api/entries/{shift['id']}/verify", headers=accountant)
+    client.post(f"/api/entries/{shift['id']}/approve", headers=owner)
+    return shift["id"]
+
+
+def test_a_failing_check_stops_the_lock_until_an_owner_gives_a_reason(client, data_entry, manager, accountant, owner, session_factory):
+    sid = _approved(client, data_entry, manager, accountant, owner)
+    client.put("/api/pump-settings/failed_check_blocks_lock", headers=owner, json={"value": "block"})
+    r = client.post(f"/api/entries/{sid}/lock", headers=owner)
+    assert r.status_code == 409 and r.json()["error"]["code"] == "lock_blocked_by_checks"
+    assert r.json()["error"]["details"]["failing"]
+    assert _status(client, owner, sid) == "approved"
+    ok = client.post(f"/api/entries/{sid}/lock", headers=owner, json={"override_reason": "cash shortage already explained to the owners"})
+    assert ok.status_code == 200 and ok.json()["status"] == "locked"
+    assert audit_events(session_factory, "shift_lock_check_override") and audit_chain_ok(session_factory)
+
+
+def test_the_lock_guard_runs_the_checks_fresh_instead_of_trusting_stale_ones(client, data_entry, manager, accountant, owner, session_factory):
+    from datetime import datetime, timedelta, timezone
+
+    from app.models.shift import Shift
+
+    sid = _approved(client, data_entry, manager, accountant, owner)
+    client.put("/api/pump-settings/failed_check_blocks_lock", headers=owner, json={"value": "block"})
+    client.put("/api/pump-settings/owner_lock_rule", headers=owner, json={"value": "one_owner"})
+    # make the only failing thing something that appears AFTER the last stored run
+    db = session_factory()
+    other = Shift(shift_date=date.today(), shift_label="Night", status="open", opened_by_id=db.get(Shift, sid).opened_by_id, start_time=datetime.now(timezone.utc) - timedelta(hours=40))
+    db.add(other); db.commit(); db.close()
+    r = client.post(f"/api/entries/{sid}/lock", headers=owner)
+
+    assert r.status_code == 409 and any("open for more than 24 hours" in x for x in r.json()["error"]["details"]["failing"])

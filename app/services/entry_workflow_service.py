@@ -22,6 +22,14 @@ from app.models.shift import Shift
 from app.models.shift_entry import APPROVED, ENTERED, LOCKED, VERIFIED, ShiftEntry, ShiftEntryEvent
 
 
+class LockBlockedByChecks(ConflictError):
+    """A day with a failing check cannot be locked unless an owner says why it should be (Owner Choice V-07)."""
+
+    def __init__(self, failing: List[str]):
+        self.details = {"failing": failing}
+        super().__init__(f"{len(failing)} check(s) are failing for this day: " + "; ".join(failing))
+
+
 @dataclass
 class EntryView:
     shift_id: str
@@ -32,7 +40,9 @@ class EntryView:
 
 
 class EntryWorkflowService:
-    def __init__(self, session, audit_repo, auth_service, settings):
+    def __init__(self, session, audit_repo, auth_service, settings, fresh_checks=None):
+        # fresh_checks(actor_id, day) -> the day's current check results after re-running them now (None = no guard, e.g. Qt)
+        self._fresh_checks = fresh_checks
         self._session = session
         self._audit_repo = audit_repo
         self._auth_service = auth_service
@@ -96,8 +106,19 @@ class EntryWorkflowService:
         return entry
 
     @require_permission(Permission.ENTRY_LOCK.value)
-    def lock(self, actor_user_id: str, shift_id: str) -> ShiftEntry:
+    def lock(self, actor_user_id: str, shift_id: str, override_reason: Optional[str] = None) -> ShiftEntry:
         entry = self._require(shift_id, APPROVED, "locked")
+        override = (override_reason or "").strip()
+        if self._fresh_checks is not None and self._settings.get("failed_check_blocks_lock") == "block":
+            day = self._session.get(Shift, shift_id).shift_date
+            failing = [r.sentence for r in self._fresh_checks(actor_user_id, day) if r.status == "fail"]
+            if failing and not override:
+                raise LockBlockedByChecks(failing)
+            if failing:
+                self._audit_repo.record(
+                    event_type="shift_lock_check_override", actor_id=actor_user_id, entity_type="Shift", entity_id=shift_id,
+                    description=f"Locked with {len(failing)} failing check(s): {'; '.join(failing)}. Reason: {override}",
+                )
         if self._settings.get("owner_lock_rule") == "two_owners":
             approver = next((e.by_user_id for e in reversed(entry.events) if e.action == "approved"), None)
             if approver == actor_user_id:

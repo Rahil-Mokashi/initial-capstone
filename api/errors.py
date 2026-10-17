@@ -23,6 +23,7 @@ from app.core.exceptions import (
 )
 from app.core.logging import logger
 from app.services.credit_control_service import CreditLimitExceeded
+from app.services.entry_workflow_service import LockBlockedByChecks
 
 # Same text as app/ui/qt_utils.GENERIC_ERROR_MESSAGE. Duplicated on purpose:
 # that module imports PySide6, which must not be dragged into the sidecar.
@@ -85,6 +86,10 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(CreditLimitExceeded)
     async def _credit_limit(_: Request, exc: CreditLimitExceeded):
         return envelope(409, "credit_limit_exceeded", str(exc), exc.details)
+
+    @app.exception_handler(LockBlockedByChecks)
+    async def _lock_blocked(_: Request, exc: LockBlockedByChecks):
+        return envelope(409, "lock_blocked_by_checks", str(exc), exc.details)
 
     @app.exception_handler(ConflictError)
     async def _conflict(_: Request, exc: ConflictError):

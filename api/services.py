@@ -531,7 +531,13 @@ class Services:
 
     @cached_property
     def entries(self) -> EntryWorkflowService:
-        return EntryWorkflowService(self.db, self.audit_repo, self.auth, self.pump_settings)
+        return EntryWorkflowService(self.db, self.audit_repo, self.auth, self.pump_settings, self._fresh_checks)
+
+    def _fresh_checks(self, actor_id, day):
+        """Re-run the day's checks now (not in the background) and return what they say."""
+        with self.checks.batch():
+            self.run_all_checks(actor_id, day)
+        return self.checks.results_for_day(actor_id, day)
 
     @cached_property
     def mail(self) -> MailService:

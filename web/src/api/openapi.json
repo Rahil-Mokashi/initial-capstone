@@ -4737,6 +4737,18 @@
         "title": "EntryEventOut",
         "type": "object"
       },
+      "EntryLockIn": {
+        "additionalProperties": false,
+        "properties": {
+          "override_reason": {
+            "default": "",
+            "title": "Override Reason",
+            "type": "string"
+          }
+        },
+        "title": "EntryLockIn",
+        "type": "object"
+      },
       "EntryOut": {
         "properties": {
           "events": {
@@ -20208,6 +20220,18 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EntryLockIn",
+                "default": {
+                  "override_reason": ""
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "content": {
