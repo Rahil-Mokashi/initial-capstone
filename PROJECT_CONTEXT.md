@@ -1155,3 +1155,12 @@ One Main PC runs the Python API and holds the one SQLite database; other PCs are
 
 ## Pilot preparation (2026-10-16, branch `feature/pilot-prep`)
 Log: `PILOT_LOG.md`; audit that drove it: `PILOT_READINESS_REPORT.md`. Automatic checks now run in a background worker (`api/check_worker.py`, merged bursts, one transaction per run via `CheckService.batch()`), so a save returns in about 0.03 s instead of seconds; migration `60632a2a5129` adds two indexes. Nozzles per dispenser is now the Owner Choice S-01 (default 4, API only; Qt keeps 2). Tests that read verdicts straight after a save rely on `api.check_worker.INLINE` (autouse fixture in `tests/conftest.py`).
+
+## Walk-through round (2026-10-17, branch `feature/pilot-prep`)
+Status of every note, commit hashes, Owner Choices added (S-01, V-07, W-33, W-34), test counts and open questions: `WALKTHROUGH_2026-10-17.md`. New in the architecture:
+- `api/check_worker.py` (background checks), `GET /api/checks/status` and the "Checks updating" chip; `CheckService.batch()`; the lock guard (`EntryWorkflowService.lock` re-runs the day's checks, V-07).
+- `sales.vehicle_number` (real column), `PaymentMethod.DTP_CARD`, `TenderEntryService.dtp_from_sales` (the shift's DTP figure is the sum of Terminal DTP sales, never typed), `CounterCustomerService` and `CreditControlService.counter_state` (W-34).
+- `AlertService` (stable key per alert and day, merged duplicates with a count, acknowledgements in `alert_acknowledgements`, cash shortage marked against the shift's staff), `GET /api/search/records` plus the web search in `web/src/lib/search.ts`.
+- `tank_dip_chart_points` (versioned by voiding), `app/core/tank_geometry.py`, the tank picture `web/src/features/tanks/TankDrawing.tsx`.
+- Guides: `docs/guides/USER_GUIDE` and `NETWORK_SETUP_GUIDE` (`.md` and `.docx`, built by `scripts/build_guides.py`; pictures by `SCREENSHOTS=1 npx playwright test e2e/screenshots-guides.spec.ts`).
+- Fixed on the way: a Decimal times float crash that silently stopped every check on a day with a reconciliation.

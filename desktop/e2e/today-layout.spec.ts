@@ -42,7 +42,7 @@ async function overflowing(page: Page): Promise<string[]> {
     const found: string[] = [];
     const root = document.documentElement;
     if (root.scrollWidth > window.innerWidth + 1) found.push(`page is ${root.scrollWidth}px wide in a ${window.innerWidth}px window`);
-    for (const el of document.querySelectorAll<HTMLElement>('main section, main li, main article, main [class*="rounded-lg"], main [class*="rounded-md"]')) {
+    for (const el of Array.from(document.querySelectorAll<HTMLElement>('main section, main li, main article, main [class*="rounded-lg"], main [class*="rounded-md"]'))) {
       if (el.scrollWidth > el.clientWidth + 1) found.push(`${el.tagName.toLowerCase()} "${(el.textContent ?? '').trim().slice(0, 40)}" ${el.scrollWidth} > ${el.clientWidth}`);
     }
     return found;
