@@ -72,11 +72,11 @@ Also done because the work depended on it (Step 0): Close Shift now closes the s
 
 | Suite | Before (audit, 15 to 16 Oct) | After |
 |---|---|---|
-| Python, `tests/api` and `tests/site` | 976 passed | RESULT_PY_API |
-| Python, everything else | 999 passed, 1 skipped | RESULT_PY_REST |
+| Python, `tests/api` and `tests/site` | 976 passed | 1,017 passed |
+| Python, everything else | 999 passed, 1 skipped | 1,003 passed, 1 skipped |
 | Web (Vitest) | 388 | 409 |
 | Desktop (Vitest) | 46 | 48 |
-| Playwright | 58 passed, 10 opt-in skipped | RESULT_PW |
+| Playwright | 58 passed, 10 opt-in skipped | 64 passed, 12 opt-in skipped |
 
 ## Before and after pictures
 
