@@ -9,7 +9,7 @@ The point: the new app must work with **no internet at all**, from install to lo
 
 ## Before you start
 - A Windows PC that has never run the new app (a clean one is best), with the installer
-  `Petrol Pump ERP Setup 2.0.0.exe` copied onto it (USB stick is fine; this is built by `npm run dist` in the `desktop` folder).
+  `Petrol Pump ERP Setup 2.0.1.exe` copied onto it (USB stick is fine; this is built by `npm run dist` in the `desktop` folder).
 - A test database is NOT needed: the app creates its own on first start. Do not use real business data for this test.
 - A sign-in. On a brand-new database the only user is `admin` with password `Admin@123`, and the app will force
   you to choose a new password at the first sign-in (that is expected and part of the test).

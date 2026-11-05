@@ -276,7 +276,7 @@ describe('account menu, lock screen, PIN and password', () => {
     const panel = screen.getByRole('region', { name: /Account menu/ });
     expect(await within(panel).findByText('Counter PC (192.168.1.21)')).toBeInTheDocument();
     expect(within(panel).getByText('Client PC')).toBeInTheDocument();
-    expect(within(panel).getByText('2.0.0')).toBeInTheDocument();
+    expect(within(panel).getByText('2.0.1')).toBeInTheDocument();
   });
 
   it('locks the app behind a re-check of the password, and the same session resumes', async () => {

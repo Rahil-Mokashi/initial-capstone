@@ -16,7 +16,7 @@ script here removes it; if you run `electron` by hand, clear it first
 | `npm start`     | build and open the app against your dev database                                    |
 | `npm test`      | unit tests (request policy, sidecar lifecycle, install-path preflight)              |
 | `npm run e2e`   | Playwright against the real Electron app and real Python API (seeds a throwaway DB) |
-| `npm run dist`  | build the installer: `release/Petrol Pump ERP Setup 2.0.0.exe` (see below)          |
+| `npm run dist`  | build the installer: `release/Petrol Pump ERP Setup 2.0.1.exe` (see below)          |
 
 ## Building the installer
 

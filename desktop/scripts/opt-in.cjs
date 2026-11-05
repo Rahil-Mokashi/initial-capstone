@@ -12,7 +12,7 @@ const { existsSync, rmSync } = require('node:fs');
 const { join, resolve } = require('node:path');
 
 const desktop = resolve(__dirname, '..');
-const installer = join(desktop, 'release', 'Petrol Pump ERP Setup 2.0.0.exe');
+const installer = join(desktop, 'release', 'Petrol Pump ERP Setup 2.0.1.exe');
 const defaultExe = join(process.env.LOCALAPPDATA ?? '', 'PPERP', 'Petrol Pump ERP.exe');
 const [, , which, ...flags] = process.argv;
 
