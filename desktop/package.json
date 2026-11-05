@@ -1,7 +1,7 @@
 {
   "name": "pperp-desktop",
   "private": true,
-  "version": "2.0.2",
+  "version": "2.0.3",
   "description": "Petrol Pump ERP desktop shell (Electron)",
   "author": "Petrol Pump ERP",
   "main": "dist/main.js",
