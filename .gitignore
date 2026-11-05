@@ -175,3 +175,6 @@ PROMPT_LAN.md
 run_prompt.ps1
 
 PROMPT_PILOT.md
+
+# Installer script for the Electron app (electron-builder needs it)
+!desktop/build/
