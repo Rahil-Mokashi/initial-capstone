@@ -15,8 +15,23 @@ The project is in the middle of a planned move from a **PySide6 (Qt) desktop app
 
 ---
 
+## Download
+
+Windows installers are on the **[Releases page](https://github.com/Rahil-Mokashi/initial-capstone/releases/latest)** (no Python or Node needed, fully offline):
+
+| File | What it is |
+|---|---|
+| `Petrol.Pump.ERP.Setup.<version>.exe` | **Version 2: the Electron app** (recommended) |
+| `PetrolPumpERP-Setup-<version>.exe` | The original Qt app, installer |
+| `PetrolPumpERP.exe` | The original Qt app, single portable file |
+
+Sign in with `admin` / `Admin@123` and choose a new password when asked. Your data lives in `%LOCALAPPDATA%\PetrolPumpERP\` and uninstalling never deletes it.
+
+---
+
 ## Table of contents
 
+- [Download](#download)
 - [From PySide6 to Electron](#from-pyside6-to-electron)
 - [Screenshots](#screenshots)
 - [What the software does](#what-the-software-does)
