@@ -13,7 +13,7 @@
 ; Output: installer\output\PetrolPumpERP-Setup-<version>.exe
 
 #define MyAppName "Petrol Pump ERP"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "2.0.0"
 #define MyAppPublisher "Petrol Pump ERP"
 #define MyAppExeName "PetrolPumpERP.exe"
 
