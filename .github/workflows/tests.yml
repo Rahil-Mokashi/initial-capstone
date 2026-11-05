@@ -62,7 +62,123 @@ jobs:
       # if this ever has to be split again, the leak has come back and the
       # fixture is the place to look, not this file.
       - name: Run tests
-        run: python -m pytest tests/ -q
+        run: python -m pytest tests/ -q --ignore=tests/api --ignore=tests/site
+
+  # The API and site suites are slower on GitHub's runners than the Qt suite, so they get
+  # their own jobs (run in parallel) and a longer limit.
+  test-api:
+    # windows-latest, not ubuntu: this app targets Windows (PyInstaller
+    # build, PySide6 desktop app) and its GitHub-hosted runner has a
+    # real display session, unlike Linux runners which need a virtual
+    # one (Xvfb) - some of this suite's tests assert on real Qt focus
+    # state (e.g. tests/test_login_ui.py's Enter-key navigation test),
+    # which only behaves correctly with a genuine window session.
+    runs-on: windows-latest
+    # The suite finishes in about 5-6 minutes. This cap exists because of
+    # a known intermittent hang (see PROJECT_CONTEXT.md) where the process
+    # sits with flat CPU indefinitely rather than crashing. Without a cap
+    # such a run would occupy a runner until GitHub's own six-hour limit,
+    # for no extra information - pytest's faulthandler_timeout has already
+    # printed the stack by then.
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      # Installs from the LOCK file, not requirements.txt. requirements.txt
+      # carries loose ranges, so two runs of the same commit could install
+      # different versions and a green CI run would not mean the code is
+      # sound - only that it was sound against whatever resolved that day.
+      # The lock pins the exact versions the suite is known to pass on.
+      - name: Install dependencies
+        run: pip install -r requirements.lock
+
+      # Test-only: starlette's TestClient (tests/api) needs an HTTP client
+      # that the application itself does not use, so it is not in the lock.
+      - name: Install test-only dependencies
+        run: pip install httpx==0.28.1 httpcore==1.0.9
+
+      # One invocation for the whole suite.
+      #
+      # This used to be four alphabetical batches, because running every
+      # test in one process reliably aborted the interpreter with a
+      # Windows access violation partway through. That was never a
+      # scheduling problem: 17 of the 20 UI test modules built their own
+      # QApplication and constructed real windows without registering
+      # them for cleanup, and Qt owns widget lifetime through the parent
+      # tree independently of Python reference counting - so dropping the
+      # last Python reference to a window did not free it. Windows,
+      # timers and per-card graphics effects accumulated for the whole
+      # session until an allocation tipped the process over, which is why
+      # the crash looked random and appeared to be caused by whichever
+      # change came last.
+      #
+      # tests/conftest.py now destroys leftover top-level widgets after
+      # every test, so the batching is no longer needed. Keep it that way:
+      # if this ever has to be split again, the leak has come back and the
+      # fixture is the place to look, not this file.
+      - name: Run tests
+        run: python -m pytest tests/api -q
+
+  test-site:
+    # windows-latest, not ubuntu: this app targets Windows (PyInstaller
+    # build, PySide6 desktop app) and its GitHub-hosted runner has a
+    # real display session, unlike Linux runners which need a virtual
+    # one (Xvfb) - some of this suite's tests assert on real Qt focus
+    # state (e.g. tests/test_login_ui.py's Enter-key navigation test),
+    # which only behaves correctly with a genuine window session.
+    runs-on: windows-latest
+    # The suite finishes in about 5-6 minutes. This cap exists because of
+    # a known intermittent hang (see PROJECT_CONTEXT.md) where the process
+    # sits with flat CPU indefinitely rather than crashing. Without a cap
+    # such a run would occupy a runner until GitHub's own six-hour limit,
+    # for no extra information - pytest's faulthandler_timeout has already
+    # printed the stack by then.
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      # Installs from the LOCK file, not requirements.txt. requirements.txt
+      # carries loose ranges, so two runs of the same commit could install
+      # different versions and a green CI run would not mean the code is
+      # sound - only that it was sound against whatever resolved that day.
+      # The lock pins the exact versions the suite is known to pass on.
+      - name: Install dependencies
+        run: pip install -r requirements.lock
+
+      # Test-only: starlette's TestClient (tests/api) needs an HTTP client
+      # that the application itself does not use, so it is not in the lock.
+      - name: Install test-only dependencies
+        run: pip install httpx==0.28.1 httpcore==1.0.9
+
+      # One invocation for the whole suite.
+      #
+      # This used to be four alphabetical batches, because running every
+      # test in one process reliably aborted the interpreter with a
+      # Windows access violation partway through. That was never a
+      # scheduling problem: 17 of the 20 UI test modules built their own
+      # QApplication and constructed real windows without registering
+      # them for cleanup, and Qt owns widget lifetime through the parent
+      # tree independently of Python reference counting - so dropping the
+      # last Python reference to a window did not free it. Windows,
+      # timers and per-card graphics effects accumulated for the whole
+      # session until an allocation tipped the process over, which is why
+      # the crash looked random and appeared to be caused by whichever
+      # change came last.
+      #
+      # tests/conftest.py now destroys leftover top-level widgets after
+      # every test, so the batching is no longer needed. Keep it that way:
+      # if this ever has to be split again, the leak has come back and the
+      # fixture is the place to look, not this file.
+      - name: Run tests
+        run: python -m pytest tests/site -q
 
   # The new Electron UI: type check, unit tests and the production build,
   # which also fails if any external URL is in the bundle (offline rule).
