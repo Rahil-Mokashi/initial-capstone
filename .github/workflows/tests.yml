@@ -58,3 +58,32 @@ jobs:
       # fixture is the place to look, not this file.
       - name: Run tests
         run: python -m pytest tests/ -q
+
+  # The new Electron UI: type check, unit tests and the production build,
+  # which also fails if any external URL is in the bundle (offline rule).
+  # The Playwright end-to-end suite needs a display and the Python API, so
+  # it is run locally with `npm run e2e` in desktop/.
+  web:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Web UI (typecheck, unit tests, offline-checked build)
+        working-directory: web
+        run: |
+          npm ci
+          npm run typecheck
+          npm test
+          npm run build
+
+      - name: Desktop shell (typecheck, unit tests)
+        working-directory: desktop
+        run: |
+          npm ci
+          npm run typecheck
+          npm test

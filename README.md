@@ -145,7 +145,7 @@ Full detail: [ARCHITECTURE.md](ARCHITECTURE.md) and [docs/SOFTWARE_MAP.md](docs/
 | Original UI | PySide6, PyInstaller, Inno Setup |
 | Reports | ReportLab (PDF), openpyxl (Excel), CSV |
 | Tests | pytest, Vitest, Playwright |
-| CI | GitHub Actions: `tests.yml` on every push, `release.yml` builds the Qt exe and installer on a version tag |
+| CI | GitHub Actions: `tests.yml` (Python suite plus web and desktop checks) on every push, `release.yml` builds the Qt exe, its installer and the Electron installer on a version tag |
 
 ---
 
@@ -213,7 +213,7 @@ cd desktop && npm run dist          # release/Petrol Pump ERP Setup <version>.ex
 
 The build measures the longest path inside the app and fails above 130 characters (Windows path limits). Code signing is not done yet.
 
-**Qt app**: `pyinstaller petrol_pump_erp.spec` for the single exe, then Inno Setup for the installer ([installer/README.md](installer/README.md)). Pushing a `v*.*.*` tag builds both on GitHub Actions and attaches them to a release.
+**Qt app**: `pyinstaller petrol_pump_erp.spec` for the single exe, then Inno Setup for the installer ([installer/README.md](installer/README.md)). Pushing a `v*.*.*` tag builds both, plus the Electron installer, on GitHub Actions and attaches them to a release.
 
 ---
 

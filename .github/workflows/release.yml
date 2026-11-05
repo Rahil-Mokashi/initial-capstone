@@ -41,10 +41,22 @@ jobs:
         run: |
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\petrol_pump_erp.iss
 
+      # The new Electron app: UI bundle, Python API sidecar, NSIS installer.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Build Electron installer
+        run: |
+          cd web; npm ci; npm run build; cd ..
+          pyinstaller api/pperp_api.spec --noconfirm --distpath desktop/sidecar-dist --workpath desktop/sidecar-build
+          cd desktop; npm ci; npm run dist
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             dist/PetrolPumpERP.exe
             installer/output/PetrolPumpERP-Setup-*.exe
+            desktop/release/*Setup*.exe
           generate_release_notes: true
