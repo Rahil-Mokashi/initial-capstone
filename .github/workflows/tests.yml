@@ -37,6 +37,11 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.lock
 
+      # Test-only: starlette's TestClient (tests/api) needs an HTTP client
+      # that the application itself does not use, so it is not in the lock.
+      - name: Install test-only dependencies
+        run: pip install httpx==0.28.1 httpcore==1.0.9
+
       # One invocation for the whole suite.
       #
       # This used to be four alphabetical batches, because running every
@@ -72,6 +77,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
+
+      # Some desktop unit tests seed a real database through the Python code.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.lock
 
       - name: Web UI (typecheck, unit tests, offline-checked build)
         working-directory: web
