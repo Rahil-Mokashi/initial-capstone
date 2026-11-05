@@ -340,4 +340,4 @@ While building for offline-only operation, the architecture should not prevent f
 - [x] Payroll v1 (accountant prepares, owner approves, cash/bank, payslips)
 - [ ] Shift close entry screen (closing meter readings + amounts by source, concise, for the data-entry person)
 - [ ] Payroll Excel import (needs the real files, U-02), PDF bank statements (H-07)
-- [ ] Owner answers to the questionnaire IDs listed in TWELVE_HOUR_REPORT.md
+- [ ] Owner answers to the questionnaire IDs listed in docs/history/TWELVE_HOUR_REPORT.md

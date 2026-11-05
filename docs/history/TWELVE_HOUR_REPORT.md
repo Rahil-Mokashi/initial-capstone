@@ -1,7 +1,7 @@
 # Twelve-hour build report
 
 Branch `feature/site-visit-build` (never pushed; only new commits on top of `reset/pre-12h-2026-10-12`). Full running detail and every
-judgment call: `TWELVE_HOUR_LOG.md`. Written for: the developer and the pump owners' representative reading what was built.
+judgment call: `docs/history/TWELVE_HOUR_LOG.md`. Written for: the developer and the pump owners' representative reading what was built.
 
 **Start 23:42 on 12 Oct, report written at the end of the work. About 9 hours of wall clock were used; the session sat idle for
 roughly five hours in the middle, so the build stopped well inside the 12 hours. I stopped when the report was written.**
@@ -93,6 +93,6 @@ for `owner1`, `manager1`, `accountant1`, `dataentry1`, `admin1`.
 ## Not verified here
 - **The PRIVATE regression** against the owner's real figures: `private_samples/` does not exist on this machine. The checker logic is proven on synthetic sheets (`tests/private/`); a photo of the real report was shared in the chat but deliberately not copied into the repo.
 - Real bank statement layouts and real UPI/UTR narrations (parser tested on synthetic CSV/XLSX).
-- Printing on a real printer; the installed app running offline (`OFFLINE_ACCEPTANCE.md` steps still apply); the installer/sidecar were not rebuilt (the Qt exe is unchanged; **`dist/PetrolPumpERP.exe` is Qt and does not include any of this**).
+- Printing on a real printer; the installed app running offline (`docs/OFFLINE_ACCEPTANCE.md` steps still apply); the installer/sidecar were not rebuilt (the Qt exe is unchanged; **`dist/PetrolPumpERP.exe` is Qt and does not include any of this**).
 - Behaviour with more than two shifts in a day (data is kept; the printout shows the first two).
 - Real attendance data feeding payroll (tested on synthetic attendance).

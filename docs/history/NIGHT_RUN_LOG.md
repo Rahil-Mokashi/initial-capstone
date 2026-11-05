@@ -460,7 +460,7 @@ remains embedded, checked two ways (stack count and a real `findChildren` object
 query after letting queued `deleteLater()` calls run). It is already in the suite and
 has been passing in every one of this session's test runs (it's part of the 993).
 
-**Conclusion: nothing to fix.** The bug PROJECT_STATUS_REPORT.md's audit flagged as
+**Conclusion: nothing to fix.** The bug docs/history/PROJECT_STATUS_REPORT.md's audit flagged as
 "untriaged" was fixed by a commit that predates this session, and per DEVELOPMENT_GUIDELINES.md's
 "never rewrite working code unnecessarily," no change was made. No commit for this item.
 
@@ -519,6 +519,6 @@ base_window.py's own documented scope.
 
 A read-only investigation into an AMBIGUOUS relationship graphify's knowledge-graph
 audit flagged (Bouser Van billing ₹5,66,430 vs. a 5,750 "Net Sale" meter figure) was
-completed before this run started - see `BOUSER_VAN_RECONCILIATION_FINDINGS.md`.
+completed before this run started - see `docs/history/BOUSER_VAN_RECONCILIATION_FINDINGS.md`.
 No code touched; noted here only for a complete session record.
 

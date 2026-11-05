@@ -3,7 +3,7 @@
 Start: 2026-10-13 09:25 IST. Branch `feature/lan-multi-user` (never pushed).
 
 ## Phase 0 - preflight (elapsed 0:00)
-- TWELVE_HOUR_REPORT.md exists and is committed (`d17a399`). Tree clean; PROMPT_LAN.md / run_prompt.ps1 / private_samples/ not present on this machine, ignore entries added anyway.
+- docs/history/TWELVE_HOUR_REPORT.md exists and is committed (`d17a399`). Tree clean; PROMPT_LAN.md / run_prompt.ps1 / private_samples/ not present on this machine, ignore entries added anyway.
 - Baseline on HEAD `d17a399`: Python 1804 passed, 1 skipped; web Vitest 360; desktop Vitest 33; Playwright 53 passed, 9 opt-in skipped.
 
 ## Phase 1 and 2 - modes, Main PC server, enrolment, Client PC (09:30 - 10:35, about 1h05)
@@ -55,6 +55,6 @@ The owner asked for one place to type the closing master readings and how the mo
 - **System health** (`system_health_service.py`, `system_checks.py`, `api/routers/system_health.py`, `health_runs`): Good / Look / Problem lines with one sentence and a time. Adds no backup logic; it records each run of the existing backup and integrity code (append-only). Check `system.backup_is_recent` uses Owner Choice `backup_max_age_hours` (up to twice the limit is a warning, beyond it a failure).
 - **Backups** (`api/lan/backup_scheduler.py`, `backup_crypto.py`): the Main PC takes backups on the existing rule, checks the database file and the audit chain nightly, and copies the newest backup off the device. Off-device copies are encrypted (scrypt + AES-256-GCM, whole-file authentication; a wrong passphrase or a changed file fails and writes nothing).
 - **Replacing a dead Main PC** (`api/lan/promote.py`, `lan promote`): refuses an unsound backup, restores through the existing restore routine, migrates to the current schema, verifies the audit chain, prints what it restored. The new Main PC gets a NEW private authority and every PC is paired again (old keys are deliberately not carried over).
-- **Docs**: `LAN_SETUP.md`, `docs/MAIN_PC_RUNBOOK.md`, `docs/LAN_MANUAL_CHECKLIST.md`.
+- **Docs**: `docs/LAN_SETUP.md`, `docs/MAIN_PC_RUNBOOK.md`, `docs/LAN_MANUAL_CHECKLIST.md`.
 - **Tests**: `test_lan_attacker.py` (12), `test_api_mail.py` (10), `test_api_system_health.py` (15), plus changed LAN/e2e specs.
 - Migration: `09473165e0f1` (mail_outbox, health_runs).

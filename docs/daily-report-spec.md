@@ -391,4 +391,4 @@ questionnaire ID. Built: `docs/daily-report-gap-analysis.md`; the Classic report
 
 A site-visit note conflicts with an existing rule: **4 nozzles per dispenser (12 in all)** versus the app's confirmed
 "exactly two nozzles per dispenser" (`MAX_NOZZLES_PER_DISPENSER`, 2026-08-15). The rule was not changed; model each
-physical dispenser face as one dispenser until the owner decides. See `TWELVE_HOUR_LOG.md` (NEEDS HUMAN REVIEW).
+physical dispenser face as one dispenser until the owner decides. See `docs/history/TWELVE_HOUR_LOG.md` (NEEDS HUMAN REVIEW).

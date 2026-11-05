@@ -42,6 +42,6 @@ Rules that keep it understandable: **a screen never contains a rule; a router ne
 
 ## 4. How to find your way
 
-* `PROJECT_CONTEXT.md`: current state and decisions. `TWELVE_HOUR_REPORT.md`: what was built after the site visit and what the owners still have to answer.
+* `PROJECT_CONTEXT.md`: current state and decisions. `docs/history/TWELVE_HOUR_REPORT.md`: what was built after the site visit and what the owners still have to answer.
 * `docs/screenshots/`: pictures of the screens on made-up data.
 * To see a screen working on made-up data: `python desktop/e2e/seed_demo_day.py` (with `PETROL_PUMP_DB_PATH` pointing at a new file), then start the app against that file.

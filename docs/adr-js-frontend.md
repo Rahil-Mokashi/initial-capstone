@@ -1,7 +1,7 @@
 # ADR: Migrate the UI to a JavaScript front end in an Electron shell
 
 Status: accepted for the proof phase (Tanks screen only) - 2026-10-09
-Reset point: tag `reset/pre-js-frontend-2026-10-09` (see `RESET_POINT.md`)
+Reset point: tag `reset/pre-js-frontend-2026-10-09` (see `docs/migration/RESET_POINT.md`)
 
 ## Context
 
@@ -107,7 +107,7 @@ message and the traceback logged.
 PIN sign-in, Windows Hello, screen lock, self-service reset, locale toggle,
 Caps Lock warning, lockout countdown, code signing, auto-update.
 
-## Judgment calls (also in JS_MIGRATION_LOG.md)
+## Judgment calls (also in docs/migration/JS_MIGRATION_LOG.md)
 
 1. **DB session lifecycle.** Qt shares one long-lived session across the whole
    UI thread. A threaded HTTP server must not share one SQLAlchemy session, so

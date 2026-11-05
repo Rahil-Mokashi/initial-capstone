@@ -1,7 +1,7 @@
 # JS front-end migration - proof phase report
 
-Branch `feature/js-frontend` (never pushed). Reset point: tag `reset/pre-js-frontend-2026-10-09`, see `RESET_POINT.md`.
-Details and every judgment call: `JS_MIGRATION_LOG.md`. Decision record: `docs/adr-js-frontend.md`.
+Branch `feature/js-frontend` (never pushed). Reset point: tag `reset/pre-js-frontend-2026-10-09`, see `docs/migration/RESET_POINT.md`.
+Details and every judgment call: `docs/migration/JS_MIGRATION_LOG.md`. Decision record: `docs/adr-js-frontend.md`.
 
 ## What was built
 - `api/`: FastAPI sidecar over the unchanged services (auth, tanks, two lookups, health, graceful shutdown).
@@ -65,7 +65,7 @@ b945d1d docs: record reset point and rollback steps before the JS front-end migr
 | Audit rows for every change | Done (API tests, chain verified) |
 
 ## Parity of the screens built after Employees
-Each screen was built from its Qt window's code (fields, defaults, permissions, messages) and calls the same service methods. Per-screen detail, judgment calls and tests are in `JS_MIGRATION_LOG.md`; the table below is the one-line status per Qt window.
+Each screen was built from its Qt window's code (fields, defaults, permissions, messages) and calls the same service methods. Per-screen detail, judgment calls and tests are in `docs/migration/JS_MIGRATION_LOG.md`; the table below is the one-line status per Qt window.
 | Qt window | New UI |
 |---|---|
 | Fuel Prices, Users, Nozzles & Dispensers, Suppliers / Procurement (orders, deliveries, invoices, payments) | Done |
@@ -120,7 +120,7 @@ Risks, and does the Electron decision hold? Yes for printing control, rendering 
 PIN sign-in, Windows Hello, screen lock, self-service reset, locale toggle, Caps Lock warning, lockout countdown, code signing (installer is unsigned and uses the default icon), auto-update, variance bar graphic, silent print to a physical printer, CI for web/desktop, Qt-style print preview, trimming Electron locales to cut size.
 
 ## Screenshots
-`docs/js-login.png`, `docs/js-tanks.png`, `docs/js-tank-detail.png`, `docs/js-tanks-dark.png`.
+`docs/migration/img/js-login.png`, `docs/migration/img/js-tanks.png`, `docs/migration/img/js-tank-detail.png`, `docs/migration/img/js-tanks-dark.png`.
 
 ## Run it
 `web`: `npm install && npm run build`. `desktop`: `npm install`, then `npm start` (unset `ELECTRON_RUN_AS_NODE` first). Tests: `npx vitest run` in each; `npm run e2e` in `desktop`.

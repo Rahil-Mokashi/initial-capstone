@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports -- plain Electron script */
 // Manual printing test. It prints two sample documents, the A4 report and the 80 mm receipt (the same
 // HTML the Qt app builds), to a printer you choose BY NAME, and records exactly what Electron answered.
-// It proves nothing by itself: a person has to look at the paper. See PRINTING_TEST.md.
+// It proves nothing by itself: a person has to look at the paper. See docs/PRINTING_TEST.md.
 //
 // Options:
 //   --list                    list the installed printers and exit

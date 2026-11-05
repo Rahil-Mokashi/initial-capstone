@@ -6,7 +6,7 @@ Branch `feature/js-frontend`. Never pushed.
 ## Phase 0 - reset point (2026-10-09)
 - Tree clean on `feature/login-screen-enhancements` @ `652c589`.
 - Baseline full suite: **996 passed** (brief said 993; the suite grew). Took 5m20s, not ~23 min; no hang this run.
-- Tag, bundle (verified okay), DB and exe copies, branch, `RESET_POINT.md`: done. See that file.
+- Tag, bundle (verified okay), DB and exe copies, branch, `docs/migration/RESET_POINT.md`: done. See that file.
 - Not touched: `%LOCALAPPDATA%\PetrolPumpERP\` (installed app's DB, may be real data).
 - Commit style follows git log (`docs:`, `feat:`...). No attribution trailers on commits (owner's preference for this repo).
 
@@ -80,7 +80,7 @@ Branch `feature/js-frontend`. Never pushed.
   The sidecar launcher, the e2e fixtures and docs all unset it. Anyone running `npx electron` by hand must too.
 
 ## Phase 4 - Tanks proof screen
-- Feature parity with `app/ui/tank_window.py` (see the checklist in JS_MIGRATION_REPORT.md): gauges + table + recent
+- Feature parity with `app/ui/tank_window.py` (see the checklist in docs/migration/JS_MIGRATION_REPORT.md): gauges + table + recent
   transactions, add tank, tank detail (transactions / readings / reconciliations + variance card), receipt / issue /
   adjustment, dip reading, reconcile (with result), change status (reason), all gated by the same permissions.
 - UX improvements (each with its reason):
@@ -116,14 +116,14 @@ lockout countdown, code signing, auto-update.
 (none yet)
 
 ## Phase 5 - printing + packaging
-- Printing spike, sidecar spec (api/pperp_api.spec, onedir, no Qt, 50 MB), NSIS installer (131.7 MB), installed-app smoke test and measurements: see JS_MIGRATION_REPORT.md.
+- Printing spike, sidecar spec (api/pperp_api.spec, onedir, no Qt, 50 MB), NSIS installer (131.7 MB), installed-app smoke test and measurements: see docs/migration/JS_MIGRATION_REPORT.md.
 - Late parity fix: Enter moves to the next field (as in the Qt screens); remarks are single-line like Qt.
 - Final: Python 1103 passed; web 104; desktop 29; Playwright 28 (+3 opt-in).
 
 ## FIX BATCH (2026-10-09, after the proof phase)
 
 ### Step 0 - reset point re-verified (read-only)
-Tag reset/pre-js-frontend-2026-10-09 resolves to 652c589 (matches RESET_POINT.md); feature/login-screen-enhancements is still 652c589; git bundle verify: okay; tree clean. The local history rewrite (removing a stray tool-name mention from my own new commits) touched only commits after b945d1d; the tag and original branch are unaffected.
+Tag reset/pre-js-frontend-2026-10-09 resolves to 652c589 (matches docs/migration/RESET_POINT.md); feature/login-screen-enhancements is still 652c589; git bundle verify: okay; tree clean. The local history rewrite (removing a stray tool-name mention from my own new commits) touched only commits after b945d1d; the tag and original branch are unaffected.
 
 ### Fix 1 - install path length
 - Before: longest relative path 152 chars (a stale __pycache__ .pyc inside alembic/versions; the longest .py that is actually loaded was about 127). Layout was resources\sidecar\pperp-api\_internal\...
@@ -154,12 +154,12 @@ Tag reset/pre-js-frontend-2026-10-09 resolves to 652c589 (matches RESET_POINT.md
 - Read first (app/ui/widgets.py: variance_bar_fractions, _VARIANCE_COLOR_TONE, VarianceBarCard): two bars, Book (expected) and Physical (dipped), each a fraction of the LARGER of the two (negatives clamped to 0, both 0 -> empty); ONE colour for both bars from the classification: normal = neutral ink (light in dark mode), warning and investigation_required = amber, approval_required = red; a classification tag; "Variance: +/-X L (+/-Y.YY%)" line. The 0.5 / 1 / 2 % thresholds live in the backend (classify_variance); the UI shows the server's classification and does NOT re-derive it.
 - New: web/src/lib/variance.ts (tone map + fractions on exact strings via BigInt), features/tanks/VarianceBars.tsx used on the reconciliation tab (replaces the text summary). Numbers are printed beside the bars, the classification is named in a badge with an icon, the figure has an aria-label stating every number and the class, each bar is a labelled meter. Colours are the theme tokens (--text, --warn, --danger), so light and dark both work.
 - Tests: web 153 (+19): tone map incl. unknown fallback, fractions (equal, zero, negative clamp, exact strings), component (label, printed numbers, meters, widths, colour token per classification, plus sign).
-- Screenshots: docs/js-variance-warning.png, js-variance-critical.png, js-variance-critical-dark.png (real app).
+- Screenshots: docs/migration/img/js-variance-warning.png, docs/migration/img/js-variance-critical.png, docs/migration/img/js-variance-critical-dark.png (real app).
 - Small difference from Qt, deliberate: bar fills use the same palette tokens as the rest of the web UI rather than the Qt hex values.
 
 ### Fix 5 - printing test harness (hardware needed; NOT verified)
 - desktop/scripts/print-test/ (launcher run.cjs, main.cjs, static sample report.html and receipt.html generated from the real Qt HTML builders so the owner needs no Python). `npm run print-test -- --list | --printer "<name>" [--doc report|receipt|both] [--dialog] [--receipt-width-mm N] [--receipt-height-mm N] [--margins none|default] | --to-pdf <folder>`. Writes print-test-log.txt with exactly what Electron answered per job; the log itself says success only means "handed to the spooler".
-- PRINTING_TEST.md: owner steps, an A4 checklist and a thermal-receipt checklist (driver vs raw, page size, margins, length, cut, density, drawer, rupee sign), and what to send back.
+- docs/PRINTING_TEST.md: owner steps, an A4 checklist and a thermal-receipt checklist (driver vs raw, page size, margins, length, cut, density, drawer, rupee sign), and what to send back.
 - What I ran here (no physical printer exists on this PC): --list (2 printers: OneNote, Microsoft Print to PDF), --to-pdf dry run (report: 2 pages, 595 x 842 pt; receipt: 1 page, 227 x 454 pt, text present), a bad printer name (exit code 2, clear message). Printing to paper: NOT done, NOT verified, and the silent Print-to-PDF driver is deliberately not used as evidence.
 - Bugs found in the harness while testing it: Electron quits when the last hidden window closes (needed a window-all-closed handler); load errors are now logged instead of an unhandled rejection.
 
@@ -170,7 +170,7 @@ Tag reset/pre-js-frontend-2026-10-09 resolves to 652c589 (matches RESET_POINT.md
 - Qt tests: run in the final full suite (see below).
 
 ### Fix 7 - repeatable checks and docs
-- OFFLINE_ACCEPTANCE.md created (did not exist): install, disconnect every network, sign in, view tanks, record a reading (or a receipt on an empty database), log out, restart. It states plainly that I could NOT do this step: it needs a real PC with the network physically off.
+- docs/OFFLINE_ACCEPTANCE.md created (did not exist): install, disconnect every network, sign in, view tanks, record a reading (or a receipt on an empty database), log out, restart. It states plainly that I could NOT do this step: it needs a real PC with the network physically off.
 - desktop/README.md documents every script. npm scripts added (via scripts/opt-in.cjs, which also unsets ELECTRON_RUN_AS_NODE): test:packaged [--install], test:deep-path (self-installs into a deep folder), test:screenshots, test:print-spike, plus print-test.
 - Each run once through npm:
   * test:packaged --install: 4 passed (smoke, run-as-node fuse with unfused control, inspector/NODE_OPTIONS, offline rules).
@@ -192,7 +192,7 @@ The owner asked for ALL functionality to be migrated, in my preferred (dependenc
 ### NOT done yet (next steps, in this order) - SUPERSEDED: every screen in this list has since been built, see the sections below
 1. Employees UI: list (search, inline status with reason), add dialog (outlet default "Main Outlet", joining date today), detail page (profile edit, status apply, record exit, documents add via files.pickPath / remove), nav entry + routes, unit + Playwright tests, then the Employees commit.
 2. Fuel Prices; Users; Nozzles & Dispensers; Suppliers/Procurement (largest); Shifts + My Shift; Attendance; Leave; Sales + Customers; Terminal; Credit; Expenses; Reconciliation (+ cash book, shortages); Reports hub; Analytics; Dashboard + alert strip + notifications; Company Profile; Backups; Audit Log; login extras (PIN, forgot password, lock screen, support).
-3. After each screen: update the parity checklist in JS_MIGRATION_REPORT.md, run the full suites, rebuild the installer.
+3. After each screen: update the parity checklist in docs/migration/JS_MIGRATION_REPORT.md, run the full suites, rebuild the installer.
 Not re-run at this checkpoint: Playwright (the bridge-key expectations were updated but not executed) and the full Python suite (only tests/api employees and route matrix were run: 75 passed).
 
 ### Employees UI (2026-10-11)

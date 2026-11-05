@@ -1,7 +1,7 @@
 # desktop - Electron shell for the new UI
 
 Electron main/preload (TypeScript), the Playwright end-to-end tests, and packaging. The web UI lives in `../web`,
-the local API in `../api`. Decision record: `../docs/adr-js-frontend.md`. Running log: `../JS_MIGRATION_LOG.md`.
+the local API in `../api`. Decision record: `../docs/adr-js-frontend.md`. Running log: `../docs/migration/JS_MIGRATION_LOG.md`.
 
 **Terminal note:** some terminals set `ELECTRON_RUN_AS_NODE=1`, which makes Electron behave as plain Node. Every
 script here removes it; if you run `electron` by hand, clear it first
@@ -34,14 +34,14 @@ inside the app and **fails the build above 130 characters** (see the log, Fix 1)
 | `npm run test:packaged -- --install` | the INSTALLED app: starts, Tanks works, `ELECTRON_RUN_AS_NODE=1` does not turn it into Node, the inspector and `NODE_OPTIONS` are refused, offline rules hold | `--install` silently installs `release/...Setup.exe` into the default folder first. Without it, the app must already be installed (or set `PPERP_PACKAGED_EXE`). |
 | `npm run test:deep-path`             | installs into a deliberately deep folder, checks the "path too long" message, uninstalls                                                                      | Shows the error window briefly. It leaves the default install unregistered, so run `test:packaged -- --install` again afterwards.                                |
 | `npm run test:screenshots`           | regenerates the screenshots in `../docs`                                                                                                                      |                                                                                                                                                                  |
-| `npm run test:print-spike`           | tries a silent print to the Windows default printer                                                                                                           | Skips itself ("INCONCLUSIVE") when only virtual printers (PDF, OneNote) exist; use `../PRINTING_TEST.md` on a real printer.                                      |
+| `npm run test:print-spike`           | tries a silent print to the Windows default printer                                                                                                           | Skips itself ("INCONCLUSIVE") when only virtual printers (PDF, OneNote) exist; use `../docs/PRINTING_TEST.md` on a real printer.                                      |
 
 The installed build has its Node inspector switched off (fuse), so these tests attach over Chromium's remote
 debugging port instead of Playwright's Electron mode.
 
 ## Printing on a real printer
 
-`npm run print-test -- --list` / `--printer "<name>"` / `--to-pdf <folder>`: see `../PRINTING_TEST.md`.
+`npm run print-test -- --list` / `--printer "<name>"` / `--to-pdf <folder>`: see `../docs/PRINTING_TEST.md`.
 
 ## Measuring
 

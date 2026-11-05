@@ -1,6 +1,6 @@
 # LAN multi-user build: report
 
-Branch `feature/lan-multi-user` (never pushed). Day-by-day detail and every judgment call: `LAN_LOG.md`. Design: `docs/adr-lan-multi-user.md`. Setup: `LAN_SETUP.md`, `docs/MAIN_PC_RUNBOOK.md`. Real-PC checks: `docs/LAN_MANUAL_CHECKLIST.md`.
+Branch `feature/lan-multi-user` (never pushed). Day-by-day detail and every judgment call: `docs/history/LAN_LOG.md`. Design: `docs/adr-lan-multi-user.md`. Setup: `docs/LAN_SETUP.md`, `docs/MAIN_PC_RUNBOOK.md`. Real-PC checks: `docs/LAN_MANUAL_CHECKLIST.md`.
 
 ## What was built
 | Phase | Result |

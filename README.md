@@ -1,385 +1,219 @@
 # Petrol Pump ERP
 
-A desktop-only, offline-first Petrol Pump Management ERP built with Python, SQLAlchemy 2.x, and PySide6. It is designed to run entirely on a petrol pump's local computer with **no internet connection required** — there is no web server, no cloud database, and no remote sync in this phase of the project (see [Two-phase plan](#two-phase-plan) below).
+An offline-first ERP for petrol pumps: shifts, nozzles and tanks, sales and credit, reconciliation, payroll, bank matching, daily reports, backups and a full audit trail. It runs on the pump's own computer with **no internet connection needed**: no cloud database, no web server exposed to the world, no remote sync.
 
-This README is the detailed, up-to-date entry point for the project. It reflects what is actually built and tested today, not the full aspirational scope — for that, see [ROADMAP.md](ROADMAP.md) and [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md).
+The project is in the middle of a planned move from a **PySide6 (Qt) desktop app** to an **Electron + React app** on the *same* Python business logic. Both UIs live in this repository so you can see the transition, one screen at a time.
+
+| | Qt app (original) | Electron app (new, the future) |
+|---|---|---|
+| UI | PySide6 widgets, `app/ui/` | React + TypeScript, `web/` |
+| Shell | Qt window | Electron, `desktop/` |
+| Talks to the business logic through | direct Python calls | a local FastAPI service, `api/` |
+| Business logic, database, permissions, audit log | `app/` | **the same `app/`, unchanged** |
+| Network use | none | none (strict CSP, request blocker, build fails on any external URL) |
+| Several PCs at one pump | no | yes: one Main PC plus Client PCs over mutual TLS |
 
 ---
 
-## Table of Contents
+## Table of contents
 
-- [Download & install (start here)](#download--install-start-here)
+- [From PySide6 to Electron](#from-pyside6-to-electron)
 - [Screenshots](#screenshots)
-- [What's built so far](#whats-built-so-far)
-- [Technology stack](#technology-stack)
-- [Project structure](#project-structure)
-- [Running the app from source](#running-the-app-from-source)
-- [Running the tests](#running-the-tests)
-- [Building a standalone Windows executable](#building-a-standalone-windows-executable)
-- [Troubleshooting](#troubleshooting)
+- [What the software does](#what-the-software-does)
 - [Architecture](#architecture)
-- [Security & data-integrity model](#security--data-integrity-model)
-- [Database](#database)
-- [Two-phase plan](#two-phase-plan)
+- [Run it](#run-it)
+- [Tests](#tests)
+- [Build installers](#build-installers)
+- [Project structure](#project-structure)
+- [Security and data integrity](#security-and-data-integrity)
 - [Documentation index](#documentation-index)
-- [Roadmap status](#roadmap-status)
+- [Status and what is next](#status-and-what-is-next)
 
 ---
 
-## Download & install (start here)
+## From PySide6 to Electron
 
-Pick the path that matches who you are. Everything runs **offline** — no account, internet connection, or server is needed once it's installed.
+**Why move.** The Qt app works and passed 996 tests, but its screens were slow to start (about 9 s from double-click to window when packaged as one file), hard to change, and could not print or lay out reports the same way on every PC. The owners also wanted several PCs at the pump (cashier, office, owner) working on one database. A web-technology front end in Electron gives identical rendering everywhere, full print control, quick start-up and a path to many screens at once.
 
-### Option A — I just want to use it (Windows, no Python needed)
+**How it was done, safely.**
 
-1. Open the repository's **[Releases page](https://github.com/Rahil-Mokashi/initial-capstone/releases)** and download the latest `PetrolPumpERP-Setup-<version>.exe` (installer) or `PetrolPumpERP.exe` (single portable file).
-2. Run it. The installer needs no administrator rights; the portable `.exe` just needs a double-click.
-3. Sign in with `admin` / `Admin@123`. You'll be forced to choose a new password straight away — do that, then create a named account for each staff member under **Masters → Users**.
+1. **Reset point first.** Before any migration code, a git tag marked the last known-good Qt state (`reset/pre-js-frontend-2026-10-09`) so the whole move could be rolled back.
+2. **Back end untouched.** `app/services`, `app/models`, `app/core`, Alembic migrations, RBAC meaning, the audit log and backup logic were not changed to suit the new UI. The API routers are thin and call the very same service methods the Qt windows call. Money (`Decimal`) crosses the wire as strings so nothing is rounded on the way.
+3. **One screen at a time.** The proof phase moved only **Tanks**, with a parity checklist against the Qt tank window, then every other Qt window followed, then screens the Qt app never had (Today, Checks, Close Shift, Daily Report, Credit control, Bank matching, Payroll, Devices).
+4. **Offline stays a hard rule.** The Electron shell blocks every non-local request, the page has a strict Content-Security-Policy, and `npm run build` fails if any external URL (CDN, web font, analytics) sneaks into the bundle.
+5. **Qt kept working throughout.** The Qt app and its installer stay buildable until the Electron app is accepted at the pump.
 
-> **No release published yet?** Releases are built automatically by CI when a version tag is pushed (`git tag v1.0.0 && git push origin v1.0.0`, see [installer/README.md](installer/README.md)). Until the first tag exists, use Option B, or build the `.exe` yourself ([instructions below](#building-a-standalone-windows-executable)).
+**Measured on the proof build** (details in [docs/migration/JS_MIGRATION_REPORT.md](docs/migration/JS_MIGRATION_REPORT.md)):
 
-**Full manual:** [docs/manual/Petrol_Pump_ERP_User_Manual.pdf](docs/manual/Petrol_Pump_ERP_User_Manual.pdf) walks through every screen, with screenshots.
+| | Electron + Python API | Qt (PyInstaller one-file) |
+|---|---|---|
+| Double-click to first window (median of 5) | **1.9 s** | 9.4 s |
+| Idle memory (working set) | 429 MB, 5 processes | 242 MB, 2 processes |
+| Installer | 132 MB (417 MB installed) | 111 MB exe |
 
-Your data lives in `%LOCALAPPDATA%\PetrolPumpERP\` (database, backups, logs, exported reports). Uninstalling never deletes it.
+The new app starts about five times faster and uses more memory and disk. That is the honest trade; memory on old pump PCs still needs a field check.
 
-### Option B — I want to run it from source (Windows / macOS / Linux)
+**The trail of decisions**
 
-You need **Python 3.13+** ([python.org/downloads](https://www.python.org/downloads/); on Windows tick *"Add python.exe to PATH"*) and **Git** ([git-scm.com](https://git-scm.com/downloads)) — or skip Git and use *Code → Download ZIP* on the GitHub page, then unzip it.
-
-```bash
-# 1. Get the code
-git clone https://github.com/Rahil-Mokashi/initial-capstone.git
-cd initial-capstone
-
-# 2. Create an isolated Python environment
-python -m venv venv
-venv\Scripts\activate            # Windows (PowerShell/cmd)
-source venv/bin/activate         # macOS / Linux
-
-# 3. Install dependencies
-pip install -r requirements.txt
-
-# 4. Run it
-python -m app.main
-```
-
-The first launch creates the database, applies every migration, seeds the roles/permissions and default fuel types, and opens the login screen. Sign in with `admin` / `Admin@123` and set a new password when prompted.
-
-**Want to see it with realistic data?** Load ~10 weeks of throwaway demo history (shifts, sales, purchases, expenses, credit customers) so every report and the sales forecast have something to show:
-
-```bash
-python scripts/seed_demo_data.py
-```
-
-To start clean again, close the app and delete `app/petrol_pump.db` (plus its `-wal`/`-shm` files).
-
-### Option C — I want to develop on it
-
-Do Option B, then run the test suite (`pytest`, ~996 tests) and read [DEVELOPMENT_GUIDELINES.md](DEVELOPMENT_GUIDELINES.md), [ARCHITECTURE.md](ARCHITECTURE.md) and [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md) before changing anything — the layering rules and the "never delete financial history" rule are enforced by convention, not by tooling.
+| Document | What it records |
+|---|---|
+| [docs/adr-js-frontend.md](docs/adr-js-frontend.md) | Why Electron (not Tauri), why a Python sidecar, the rules for the move |
+| [docs/migration/RESET_POINT.md](docs/migration/RESET_POINT.md) | The rollback point and how to return to it |
+| [docs/migration/JS_MIGRATION_LOG.md](docs/migration/JS_MIGRATION_LOG.md) | Running log of every screen, judgment call and open question |
+| [docs/migration/JS_MIGRATION_REPORT.md](docs/migration/JS_MIGRATION_REPORT.md) | The proof-phase report: parity checklist, test counts, measurements |
+| [docs/adr-lan-multi-user.md](docs/adr-lan-multi-user.md) | How several PCs share one database safely |
+| [docs/SOFTWARE_MAP.md](docs/SOFTWARE_MAP.md) | Which screen is for whom, and where each kind of change lives |
 
 ---
 
 ## Screenshots
 
-<table>
-<tr>
-<td width="50%">
+All pictures use made-up demo data.
 
-**Login**
+### Before (Qt) and after (Electron)
 
-![Login screen](docs/screenshots/login.png)
-
-</td>
-<td width="50%">
-
-**Login — invalid credentials**
-
-![Login error state](docs/screenshots/login-error.png)
-
-</td>
-</tr>
-<tr>
-<td width="50%">
-
-**Main window**
-
-![Main window with Employees/Attendance/Shifts navigation](docs/screenshots/main-window.png)
-
-</td>
-<td width="50%">
-
-**Employee list**
-
-![Employee list with search](docs/screenshots/employee-list.png)
-
-</td>
-</tr>
-<tr>
-<td width="50%">
-
-**Add employee**
-
-![Add employee form](docs/screenshots/employee-add-form.png)
-
-</td>
-<td width="50%">
-
-**Employee detail**
-
-![Employee detail with status/exit workflow and documents](docs/screenshots/employee-detail.png)
-
-</td>
-</tr>
-<tr>
-<td width="50%">
-
-**Attendance roster**
-
-![Daily attendance roster](docs/screenshots/attendance-list.png)
-
-</td>
-<td width="50%">
-
-**Mark attendance**
-
-![Mark attendance form](docs/screenshots/attendance-mark-form.png)
-
-</td>
-</tr>
-<tr>
-<td width="50%">
-
-**Shift list**
-
-![Shift list](docs/screenshots/shift-list.png)
-
-</td>
-<td width="50%">
-
-**Shift detail — nozzle assignments**
-
-![Shift detail with nozzle assignments](docs/screenshots/shift-detail.png)
-
-</td>
-</tr>
-<tr>
-<td width="50%">
-
-**Nozzle management — dispensers**
-
-![Dispenser management tab](docs/screenshots/nozzle-dispensers.png)
-
-</td>
-<td width="50%">
-
-**Nozzle management — nozzles**
-
-![Nozzle management tab](docs/screenshots/nozzle-nozzles.png)
-
-</td>
-</tr>
-</table>
-
----
-
-## What's built so far
-
-Everything below is implemented, tested, and running — not planned. Each module follows the same shape: SQLAlchemy model → repository → service (business rules, RBAC, audit logging) → PySide6 UI, with a Pydantic schema for input validation where the input has more than one or two fields.
-
-### Authentication & RBAC (Phase 4 — complete)
-- Login/logout with a styled login screen, session tokens (SHA-256 hashed at rest, never stored raw), and configurable session expiry with **auto-logout**
-- Six business roles seeded automatically: `ADMIN`, `OWNER`, `MANAGER`, `ACCOUNTANT`, `SHIFT_SUPERVISOR`, `ATTENDANT`, each with a starter permission set that grows as new modules are added
-- Account lockout after 5 failed login attempts (auto-expires after 15 minutes, or an admin can unlock it sooner); generic "invalid username or password" errors (no username enumeration)
-- Password hashing via PBKDF2-HMAC-SHA256 (200,000 iterations, random per-password salt) — never plaintext
-- A password policy (`validate_password_strength`) and a `require_permission` decorator used by every service method that needs an authorization check
-- Every authentication event (login success/failure/lockout, logout, session expiry) is written to an **immutable, append-only audit log**
-- **Quick sign-in & recovery** (2026-09-25): optional PIN sign-in for counter staff, a self-service forgot-password flow, a screen lock that re-prompts without ending the session, optional Windows Hello on the lock screen (needs the optional `winsdk` package; the app runs identically without it), remembered usernames, a Caps Lock warning, a lockout countdown, and an English/regional-language toggle on the login screen
-- **Forced first-login password change**: the seeded `admin` account (and any account an admin creates or resets) must set a new password before doing anything else
-
-### Employee & HR Management (Phase 5 — complete)
-- Employee master data distinct from login accounts (`Employee.user_id` optionally links to a `User`, but HR records can exist without login access)
-- Auto-generated sequential employee codes (`EMP-0001`, ...)
-- Document tracking (ID proof, etc.) with soft-delete, never a hard delete
-- Status lifecycle (`active` / `on_leave` / `suspended` / `terminated`) and exit tracking via `exit_date` — **an employee record is never deleted**, only its status changes, with every change audit-logged
-- Full search/list/add/edit UI, with the employee's **status changeable straight from the list row** (same mandatory reason prompt, same permission gate, same audit entry as the detail dialog — just fewer clicks)
-
-### Attendance Management (Phase 6 — complete)
-- Daily attendance roster, filterable by date
-- Statuses: present, absent, late, half-day, leave, holiday; check-in/check-out times; overtime tracking
-- One record per employee per day — marking twice is rejected
-- **Correction workflow**: changing an already-marked record requires a non-blank reason, a stricter permission check, and is audit-logged with the old and new values — never a silent overwrite
-
-### Shift Management (Phase 7 — complete, reconciliation deferred)
-- Shift open/close lifecycle — one shift per (date, label), e.g. "Morning" on a given day
-- Attendant-to-nozzle assignment with opening meter readings; prevents assigning the same employee twice or the same nozzle to two people within a shift
-- Closing meter readings required before an assignment can be marked complete (closing must be ≥ opening)
-- A shift cannot be closed while any nozzle assignment is still active
-- **Controlled reopening**: reopening a closed shift requires a stricter permission (not granted to `SHIFT_SUPERVISOR`) and a reason, and is audit-logged — a closed shift is never freely editable
-- Full cash/UPI/card/fuel reconciliation is now built (see Reconciliation Management, Phase 15) — it depended on the sales/payments/inventory modules existing first
-
-### Nozzle Management (Phase 8 — complete, full reports deferred)
-- Dispenser and Nozzle master data: create, and change status (active/inactive/maintenance) with a required reason, audit-logged
-- A nozzle can only be created under an active dispenser; deactivating a nozzle that's currently assigned in an open shift is blocked
-- Every dispenser has exactly 2 nozzles (confirmed business rule, enforced — a 3rd nozzle on the same dispenser is rejected); each nozzle dispenses one fuel type, commonly Petrol, Diesel, or Power (seeded by default)
-- Tabbed management screen (Dispensers / Nozzles) gated on view/manage permissions, same as every other module
-- **Attendant self-service "My Shift" view**: a logged-in attendant sees their own current nozzle/fuel/dispenser assignment and opening meter reading on a dedicated screen — previously attendants saw a completely empty dashboard since their role had no permissions at all
-
-### Tank & Inventory Management (Phase 9 — complete, full reports deferred)
-- Tank master data (distinct from a nozzle's fuel-type lookup — a pump can have multiple tanks per fuel type), status changes with a required reason
-- Dip readings recorded as observations that never silently change book stock
-- Transactions: receipt, issue, adjustment — rejects overflow past capacity, negative stock, or an adjustment with no reason
-- Fuel reconciliation: expected closing stock (opening + received − sold) compared against a physical reading, variance classified against configurable thresholds (normal/warning/investigation-required/approval-required) — never assumed to be theft; an accepted reconciliation becomes the new baseline
-
-### Fuel Type Summary (Phase 9/16 — complete)
-- A fuel-type-sectioned inventory report (Petrol / Diesel / Power), showing tank count, total capacity, current stock, nozzle/active-nozzle counts, and the latest reconciliation variance per fuel type
-- Supports Print, Print Preview, PDF export, and Excel export, per the project's reporting rules — see Reporting System below for the rest of Phase 16
-
-### User Management (Phase 4 extension — complete)
-- Admins/owners can create login accounts for any of the six roles, with multiple users allowed per role (several attendants, several accountants, etc.)
-- Password strength is validated on every new account (the existing policy, now actually wired in for the first time)
-- Activate/deactivate, unlock a locked account, and change a user's role — every action requires a non-blank reason and is audit-logged; accounts are never deleted
-- The "Users" button/dashboard card is only visible to roles holding `Permission.USER_MANAGE` (ADMIN/OWNER), following the same permission-gated visibility pattern used by every module — a logged-in user only ever sees the buttons and pages their role actually grants them
-- Self-service password change, plus a forced, un-skippable rotation right after login whenever an admin just set the account's password (new account or an explicit reset) — closes the "the temp password stays permanent" and "a forgotten password has no recovery path" gaps
-
-### Real database migrations, backup & restore (hardened 2026-08-16)
-- Schema changes go through Alembic (`app/database/migrations.py`), not a blunt `create_all()` — `init_db()` runs `alembic upgrade head` on every launch, including the very first one
-- A backup is taken automatically before any migration that's actually about to change an existing database, and can also be triggered manually from the Backups screen — both use SQLite's own online backup API so a backup taken mid-write (WAL mode) is still transactionally consistent, not a torn file copy
-- Restoring from a backup takes its own safety backup first, requires a reason, and is audit-logged, so a bad restore choice is itself recoverable
-- Every money/volume figure (fuel price, tank capacity/stock, meter readings, reconciliation numbers) is stored as `Numeric`/`Decimal`, not `Float`, so business-logic arithmetic can't silently accumulate binary-float rounding drift
-
-### Audit log viewer & report export (2026-08-16)
-- The audit trail (written by every service action since Phase 4) now has an actual screen to read it on — filterable by event type, actor, and date range, gated on `Permission.AUDIT_VIEW`
-- The fuel-type summary report supports Print, PDF export, and Excel export, not just an on-screen view — the pattern the rest of Phase 16's reports will reuse
-
-### Procurement Management (Phase 10 — complete, dedicated reports deferred)
-- Full tanker-to-tank workflow: Supplier -> Purchase Order -> Tanker Arrival -> Document Verification -> Fuel Quality Verification -> Pre-Dip Reading -> Unloading -> Post-Dip Reading -> Inventory Update -> Invoice -> Supplier Payment
-- Deliveries create real Tank readings and a real RECEIPT transaction through the same `TankService` path every other stock movement uses — never a parallel, unaudited shortcut
-- `quantity_received` is derived from post-dip minus pre-dip, never entered directly, so it can't drift from what was actually measured
-- A purchase order's status (partially delivered / delivered) is recomputed from its deliveries every time, not incremented — can't drift out of sync
-- Supplier invoices and payments: partial payments supported, a payment can't exceed the outstanding balance, an already-fully-paid invoice can't be paid again
-
-### Sales Management (Phase 11 — complete, sales reports/printable receipts deferred)
-- Every sale snapshots its own rate and amount at the moment of the transaction (never a live lookup against the fuel's current price) — fuel prices change over time, and a historical sale's amount must never silently shift
-- Recording a sale posts a real Tank ISSUE transaction through the same audited `TankService` path every other stock movement uses; cancelling a completed sale posts a compensating tank adjustment and requires a reason — the original sale is never deleted or overwritten
-- Supports cash, UPI, card, and credit payment methods; a credit sale requires a linked customer
-- The sale form adapts to who's using it: a Manager/Supervisor gets full shift/nozzle/employee pickers, while an Attendant gets an auto-resolved read-only view of their own active nozzle assignment — no picking something that isn't already true
-- Customer master data (name/contact/address) with the same create/deactivate-with-reason pattern used for Suppliers
-
-### Payment Management (Phase 12 — complete, reconciliation/reports deferred)
-- Every sale creates its own `Payment` record, settled separately from the sale itself: fuel can be dispensed (a completed sale) while money is still owed or a transaction later found to have failed
-- Cash/UPI/card payments start SUCCESS immediately; a credit sale's payment starts PENDING, settled later once Phase 13's customer payments exist
-- UPI reference numbers and card authorization codes are captured on the sale form and stored on the payment
-- `mark_payment_failed`/`refund_payment` cover the after-the-fact correction cases (e.g. a card declines after fuel is already dispensed) — both require a reason and are audit-logged, never a silent edit; cancelling a sale automatically reverses its payment
-
-### Credit Management (Phase 13 — complete, fuel-type-sectioned/aging reports deferred to Phase 16)
-- A customer needs a `CreditAccount` (credit limit + payment-due window) before they can be sold to on credit at all — opting in is a deliberate step, not implicit
-- Outstanding balance is always recomputed from credit sales minus customer payments, never stored or incremented, so it can never silently drift out of sync
-- Every credit sale checks the customer's available credit first — a sale that would exceed the limit is rejected outright, never silently allowed
-- Customer statements show every credit sale and payment with a running balance; accounts are flagged (not accused) as overdue once their oldest unpaid sale is older than the account's due window
-- Payments received from customers are append-only, mirroring the same "a correction is a new record" rule already applied to supplier payments
-
-### Expense Management (Phase 14 — complete, reconciliation/reports deferred)
-- Expense categories are simple name+status master data, never deleted, only deactivated, the same pattern already used for Supplier
-- Every expense records amount, date, employee, shift (optional), payment method (cash/UPI/card - not credit, which doesn't map to a real expense workflow), a receipt reference, and a description
-- Approval is a stricter permission than recording one, not granted to Accountant - the same split already used for reopening a closed shift
-- An expense is never deleted or edited once approved/rejected; rejecting requires a reason, both actions audit-logged
-
-### Reconciliation Management (Phase 15 — complete, dedicated reports deferred)
-- Cash, UPI, card, and expense reconciliation are folded into one per-shift reconciliation rather than four separate mechanisms, since they're all settled together from the same shift's Sale/Payment/Expense records
-- Expected totals are always computed from that data, never entered manually - an approved expense paid during the shift reduces the expected total for whichever method it was paid with; a still-pending expense doesn't count yet
-- A shift can only be reconciled once; the worst variance among cash/UPI/card decides the classification, reusing the same graduated NORMAL/WARNING/INVESTIGATION_REQUIRED/APPROVAL_REQUIRED scale already used for fuel reconciliation
-- A Shift Supervisor can perform a reconciliation, but only a Manager/Owner can approve one flagged as high-variance - matching the discrepancy workflow's supervisor-then-manager review structure
-- Fuel reconciliation (per tank, since Phase 9) stays its own separate mechanism - different unit, different cadence, not merged in
-
-### Reporting System (Phase 16 — partial: the reports every earlier phase promised are done, the full problemstatement.md enumeration isn't)
-- Six new reports, all sharing one generic table-report window and one Print/PDF/Excel export implementation: Sales, Payment Summary, Expense Summary, Credit by Fuel Type, Customer Outstanding, Shift Reconciliation
-- The Credit by Fuel Type report is honest about what the data supports: "extended" is attributable per fuel type via each sale's own nozzle link, but "collected"/"outstanding" are only shown at the portfolio level since customer payments aren't allocated to individual sales - no invented per-fuel figure
-- A single "Reports" screen lists every report the acting user can open, each gated on that report's own permission, rather than growing the dashboard by a card per report
-- Sales, Payments, Expenses, and Reconciliation reports support optional date-range filtering
-- Still deferred: the much larger set of daily/shift/attendant/HR/inventory/management reports listed in problemstatement.md #25-32
-
-### Printing System (Phase 17 — complete for every report/document that exists so far)
-- Every "Print" button across the app opens a real print preview (`QPrintPreviewDialog`), not a direct-to-printer dialog - Print and Print Preview are both satisfied from one entry point
-- CSV export added alongside the existing PDF/Excel export on every Phase 16 report
-- **Sales receipts**: a printable per-sale receipt (Print or Export PDF), closing a promise Phase 11 explicitly deferred to this phase
-- **Customer statements**: the credit statement dialog gained Print/Export PDF/Export Excel, reusing the same generic report export code as everything else
-- Still deferred: print configuration management (default printer/paper size/margins) and the remaining document types (shift/daily/attendance/employee/purchase/inventory/management) that depend on report types Phase 16 hasn't built yet
-
-### Backup & Recovery (Phase 18 — complete except configurable location, recovery documentation, and optional encryption)
-- Manual backup, pre-migration backup, backup history, and restore already existed from the 2026-08-16 audit pass
-- New: automatic scheduled backups (taken on startup once the most recent backup is more than 24 hours old), backup verification (every backup is integrity-checked immediately after being created, not just trusted), and an on-demand "Check Integrity" button (`PRAGMA integrity_check`)
-- A failed scheduled or pre-migration backup is logged and never blocks the app from starting
-- Still deferred: a configurable backup location (needs a settings screen that doesn't exist yet), written recovery-workflow documentation, and optional backup encryption
-
-### Business Insights: performance & sales forecast (2026-08-16, user-requested)
-- Period performance reports (daily/weekly/monthly/quarterly/yearly) show revenue, quantity, and estimated profit per fuel type
-- Profit uses the Weighted Average Cost method against actual purchase data - shown as "N/A" rather than guessed when no purchase history exists yet for a fuel
-- A sales forecast projects next week's sales per fuel type from recent weekly trends (simple, explainable linear regression - no black-box ML, no new heavy dependencies) and classifies it as a likely hike, a possible dip, or stable, with the reasoning spelled out; shows "not enough data yet" rather than a fake-confident guess when history is too short
-- Both views support Print, Print Preview, PDF, and Excel export, reached from the Reports hub as "Business Insights"
-
-### Navigation: a persistent sidebar grouped into Masters / Operations / Reports / Settings (2026-08-24, retheme 2026-08-25, restructured 2026-09-16)
-- A permanent left-hand sidebar (`app/ui/sidebar.py`) replaced the earlier "the dashboard is the only place to navigate from" model — every module page renders embedded inside `MainWindow`'s own content area (with a browser-style back button and breadcrumb trail for drill-downs) rather than as its own top-level window
-- The sidebar itself shows exactly four top-level rows — **Masters**, **Operations**, **Reports**, **Settings** — matching the client-supplied Morex ERP reference, not one row per individual module. Clicking a group opens its own landing page: a title, a one-line description of what the group covers, and every module the acting role can reach as a titled tile with a real, specific one-line description (`app/ui/group_landing_window.py`) — grouped under subheadings (e.g. Operations splits into "Sales & Shifts" / "Money" / "Procurement") rather than one undifferentiated wall of a dozen-plus tiles
-- Reports keeps its own existing hub screen (unchanged) as the fourth group, since it already listed every report the user could open the same way; Masters/Operations/Settings are newly built to match
-- Every tile is driven from one shared structure (`MainWindow._card_groups`) read by both the sidebar's visibility check and the landing pages — a module can never show up in one without the other, and a group with nothing the current role can see renders no row at all
-- A live KPI strip sits on the dashboard above everything else — today's sale count/revenue, shifts open right now, tanks running low on stock, pending purchase orders — each figure gated on the same permission its own module already uses
-
-### Persistent alert strip (2026-09-16, user-requested)
-- A strip above the content area, always visible (not hidden behind a click) on every screen, sourced from the existing `NotificationService` — the same computed alert list the dashboard's own "Attention Needed" section and the Alerts dropdown already read, never a second query path
-- Every alert renders as one self-contained, plain-language sentence: **what** went wrong, **where** (the real tank/customer/employee/shift name, never a bare id or enum name), and **what to do about it** — e.g. "MS-16 is low on fuel. 450.00 of 10000.00 litres remaining (4% of capacity). Reorder now — sales may have to stop once this tank runs out." A single alert shows its full sentence directly; several collapse to a count plus the single most urgent one named by name, expandable to a scrollable list
-- Clicking an alert opens the exact screen it concerns (e.g. a low-fuel alert opens Tanks, an overdue-credit alert opens Credit), not just the general dashboard
-
-### Leave Management (client-review pass, 2026-09-25)
-- Request/approve/reject/cancel workflow on behalf of an employee (`LeaveRequest`), deliberately scoped narrow — no leave-balance or entitlement policy is implemented, since none was specified
-- `LEAVE_MANAGE` (submit a request) mirrors `ATTENDANCE_MANAGE`'s role set — a supervisor/manager action, never the employee acting on their own behalf; `LEAVE_APPROVE` is a stricter, Manager-only permission, so a Shift Supervisor can never both submit and approve the same request
-- Approving a leave request automatically marks the employee's attendance as `leave` for the requested date(s) — one workflow, not two records that can drift apart
-- Only a `pending` request is a live state — approved/rejected/cancelled are all final; a mistaken decision is corrected with a new request or by correcting the attendance record it wrote, never by editing the original after the fact (the project's VOID/REVERSE/ADJUST-not-DELETE rule)
-
-### Employee cash shortages & shift cash book (client-review pass, 2026-09-16 – 2026-09-25)
-- A shift's reconciliation can book a named employee's cash shortage as a receivable (`EmployeeCashShortage`) rather than silently writing it off — booking one is a stricter permission than routine reconciliation (Manager and above only, never Shift Supervisor), since it is effectively an accusation against a named staff member
-- Recovery against a shortage (`EmployeeShortageRecovery`) is its own append-only record, the same "a correction is a new record, not an edit" pattern used everywhere else in this app
-- `ShiftCashBook` / `ShiftBankDeposit` track the physical cash a shift actually banks — denomination-level cash counting and bank deposit recording, reconciled against the shift's own expected cash total
-
-### Top-bar UX pass: keyboard shortcuts, live indicators, search (client-review pass, 2026-09-23 – 2026-09-25)
-- **Keyboard shortcuts** for counter workflows: `Ctrl+F` focuses the top-bar search, `F5` refreshes whatever page is open (calling that page's own `refresh()` if it has one), `Esc` steps back one level — three shortcuts, each a widely-known OS convention rather than a bespoke binding a counter attendant would have to be taught
-- **Offline indicator**: a static top-bar badge stating the app never needs or uses an internet connection — honest by construction, since there is no connection to poll or lose in the first place
-- **Current-shift indicator**: the top bar shows whether a shift is open on this pump right now (and which one), without opening the Shifts screen to check
-- **Global search** (`Ctrl+F`): searches employees, nozzles, tanks, and (for `USER_MANAGE` holders) user accounts across every module the logged-in role can actually see — reuses the exact same permission gate the sidebar/dashboard use, so it can never surface a record the navigation itself would have hidden
-- **Login screen redesign**: bigger, decluttered fields; the card resizes responsively with the window instead of clipping; hover/focus/press animations and an entrance fade+scale so the screen reads as live rather than static; a shake + auto-clearing password field on a failed attempt; error wording rewritten in plain, non-technical language everywhere it's produced (`AuthService`, `LoginBridge`, the app-wide generic-error fallback) — see `docs/screenshots/login.png` and `login-error.png`
-
-### Database integrity & exception handling (cross-cutting, hardened 2026-08-15)
-- SQLite foreign-key enforcement (`PRAGMA foreign_keys=ON`) and WAL mode (`PRAGMA journal_mode=WAL`) are enabled on every connection — every `ForeignKey()` declared in the models is actually enforced by the database, not just by application code
-- Every repository write commits through a shared `safe_commit()` helper that rolls back cleanly on failure, so a failed write can't leave a session unusable for the rest of that login
-- Application startup (`app/main.py`) wraps database init/seed failures into a single `DatabaseInitializationError` with a clear message and a logged traceback, instead of crashing with a raw stack trace
-- Every UI dialog's save/action handler catches its specific errors (validation, business-rule conflicts) for a precise message, then falls back to a generic "something went wrong" message for anything unexpected — logged in full, never left to crash the app or a Qt event-loop callback
-
-### Code health (2026-10, refactor pass)
-- Every full-page module window now shares one `PageWindow` base class (`app/ui/base_window.py`) for the page shell (dot-grid background + zero-margin layout) instead of each window copy-pasting the same block. Deliberately only the byte-for-byte identical part was extracted — table/button/refresh logic differs too much per window to force into one abstraction.
-
-Not yet built: the full problemstatement.md #25-32 reporting enumeration (daily/HR/inventory/management reports beyond the six already shipped), print configuration management, a configurable backup location, and a first real pilot at a pump (Phase 21). See [ROADMAP.md](ROADMAP.md) for the full phase-by-phase plan.
-
----
-
-## Technology stack
-
-| Concern | Choice | Status |
+| | Qt app | Electron app |
 |---|---|---|
-| Language | Python 3.13+ | in use |
-| Desktop UI | PySide6 (Qt for Python) | in use |
-| Database | SQLite (single file, WAL mode, FK enforcement) | in use |
-| ORM | SQLAlchemy 2.x | in use |
-| Validation | Pydantic v2 | in use |
-| Configuration | pydantic-settings | in use |
-| Testing | pytest + pytest-qt | in use — 996 tests |
-| Logging | Python standard `logging` | in use — console + a rotating file colocated with the database |
-| Migrations | Alembic | in use — `init_db()` runs `alembic upgrade head`, not `Base.metadata.create_all()` |
-| PDF reports | ReportLab | in use — fuel-type summary report, more reports to follow in Phase 16 |
-| Excel reports | openpyxl | in use — fuel-type summary report, more reports to follow in Phase 16 |
-| Packaging | PyInstaller | in use — see [Building a standalone Windows executable](#building-a-standalone-windows-executable) |
-| CI / releases | GitHub Actions | in use — `tests.yml` runs the full suite on every push/PR; `release.yml` builds the `.exe` + Inno Setup installer and attaches them to a GitHub Release when a `v*.*.*` tag is pushed |
-| Installer | Inno Setup | in use — `installer/petrol_pump_erp.iss` |
+| **Sign in** | ![Qt login](docs/screenshots/login.png) | ![Electron sign in](docs/guides/img/sign-in.png) |
+| **Shifts** | ![Qt shift list](docs/screenshots/shift-list.png) | ![Electron shifts](docs/guides/img/shifts.png) |
+| **Tanks** | Gauge cards in `app/ui/tank_window.py` | ![Electron tanks](docs/migration/img/js-tanks.png) |
 
-This table is deliberately honest about what's a real dependency today (see `requirements.txt`) versus what's still on the roadmap.
+### The Electron app
+
+| | |
+|---|---|
+| **Today (owner)**<br>![Today](docs/screenshots/12h/today-owner.png) | **Close Shift** (tally on one screen)<br>![Close shift](docs/guides/img/close-shift.png) |
+| **Checks** (every verification, failures first)<br>![Checks](docs/screenshots/12h/checks.png) | **Daily Report**<br>![Daily report](docs/screenshots/12h/daily-report-plus.png) |
+| **Credit ageing**<br>![Credit ageing](docs/screenshots/12h/credit-ageing.png) | **Bank matching**<br>![Bank matching](docs/screenshots/12h/bank-matching.png) |
+| **Devices** (PCs allowed on the Main PC)<br>![Devices](docs/screenshots/lan/devices.png) | **Tank variance, dark theme**<br>![Variance](docs/migration/img/js-variance-critical-dark.png) |
+
+More pictures, with plain-language explanations, are in the [User Guide](docs/guides/USER_GUIDE.md).
+
+---
+
+## What the software does
+
+Every module follows the same shape: model, repository, service (business rules, permission check, audit log), then a screen.
+
+- **Sign-in and roles**: PBKDF2 password hashing, session expiry with auto-logout, lockout after five wrong passwords, PIN sign-in, screen lock, forced password change on first login, RBAC for Admin, Owner, Manager, Accountant, Shift Supervisor, Attendant and Data Entry.
+- **Employees, attendance, leave, payroll**: status lifecycle (never deleted), documents, daily attendance with reasoned corrections, leave approval that writes attendance, payroll register with advances and Excel import.
+- **Shifts and nozzles**: shift open/close/reopen, nozzle assignment with meter readings, dispensers and nozzles as master data.
+- **Close Shift**: the cashier types closing meter readings and how the money was collected; a tally shows Balanced, Short or Excess before anything is saved, and the save is all-or-nothing.
+- **Tanks and fuel**: stock book, dip readings and dip chart, receipts, issues and adjustments, variance classification (normal, warning, investigation, approval), fuel prices with history.
+- **Procurement**: supplier, purchase order, tanker arrival, quality check, pre/post dip, unloading, invoice and supplier payment.
+- **Sales, payments, credit**: every sale snapshots its own rate; credit limits and due windows; ageing, follow-ups and statements; lubricants and bowser van sales.
+- **Expenses and reconciliation**: approval split from entry, per-shift cash, UPI and card reconciliation, employee shortage book, bank deposits and bank statement matching.
+- **Checks**: independent verifications re-run after every save, append-only and audit-logged, shown with failures first.
+- **Reports**: Daily Report (Classic and Plus), sales, payments, expenses, credit, reconciliation, business insights with a plain linear sales forecast. Every report supports preview, print, PDF and Excel.
+- **Backups and safety**: automatic backup before migrations and on a schedule, integrity check, restore with a safety backup, audit-log viewer, system health.
+- **Several PCs (LAN)**: a Main PC owns the one SQLite database; Client PCs hold no data. Devices are enrolled with a token, traffic is mutual TLS, and there is no plain-HTTP fallback. See [docs/LAN_SETUP.md](docs/LAN_SETUP.md).
+
+Owner decisions (rounding, credit over the limit, usual testing litres and so on) are **settings with questionnaire IDs**, not hard-coded rules, and appear under *Owner Choices*.
+
+---
+
+## Architecture
+
+```
+React screens  ->  FastAPI routers (thin)  ->  Services  ->  Repositories  ->  SQLAlchemy  ->  SQLite
+   web/               api/                    app/services    app/repositories                 (WAL, FKs)
+   inside Electron (desktop/)
+```
+
+The Qt app uses the same stack from `Services` down; its UI simply calls the services directly:
+
+```
+PySide6 windows (app/ui)  ->  Services  ->  Repositories  ->  SQLAlchemy  ->  SQLite
+```
+
+Rules that keep it understandable:
+
+- A screen never contains a business rule. A router never contains a business rule. A service never deletes history: it **voids, reverses or adjusts**, and writes the audit log.
+- UUID primary keys, enforced foreign keys, transactions for every financial write, schema changes only through Alembic migrations (`python scripts/new_migration.py "message"`).
+- A locked shift is enforced for every write path by `app/services/entry_lock_guard.py`.
+- On a Main PC the audit chain depends on one writer (`api/lan/writelock.py`).
+
+Full detail: [ARCHITECTURE.md](ARCHITECTURE.md) and [docs/SOFTWARE_MAP.md](docs/SOFTWARE_MAP.md).
+
+| Concern | Choice |
+|---|---|
+| Language, back end | Python 3.13+, SQLAlchemy 2.x, Alembic, Pydantic v2, pydantic-settings |
+| Database | SQLite, WAL mode, foreign keys on |
+| Local API | FastAPI + uvicorn, packaged as a PyInstaller sidecar |
+| New UI | React, TypeScript, Vite, Vitest |
+| Desktop shell | Electron (fuses applied, inspector off), electron-builder (NSIS), Playwright |
+| Original UI | PySide6, PyInstaller, Inno Setup |
+| Reports | ReportLab (PDF), openpyxl (Excel), CSV |
+| Tests | pytest, Vitest, Playwright |
+| CI | GitHub Actions: `tests.yml` on every push, `release.yml` builds the Qt exe and installer on a version tag |
+
+---
+
+## Run it
+
+You need **Python 3.13+**, and for the Electron app **Node.js 20+**.
+
+### The Electron app (new)
+
+```bash
+# 1. Python side
+python -m venv venv
+venv\Scripts\activate                 # Windows;  source venv/bin/activate on macOS/Linux
+pip install -r requirements.txt
+
+# 2. Build the UI, then start the shell (it starts the Python API itself)
+cd web && npm install && npm run build
+cd ../desktop && npm install && npm start
+```
+
+Terminals that set `ELECTRON_RUN_AS_NODE=1` make Electron behave as plain Node; the npm scripts clear it for you.
+
+### The Qt app (original)
+
+```bash
+python -m app.main
+```
+
+### First sign-in and data
+
+Both apps create the database on first launch, apply every migration and seed roles and permissions. Sign in with `admin` / `Admin@123`; you are forced to choose a new password straight away. That default is a published development credential, so never leave it in place on a real pump.
+
+| How you run it | Database |
+|---|---|
+| From source | `app/petrol_pump.db` |
+| Installed or packaged | `%LOCALAPPDATA%\PetrolPumpERP\petrol_pump.db` (uninstalling never deletes it) |
+| Override | set `PETROL_PUMP_DB_PATH` to any file |
+
+Want realistic data? `python scripts/seed_demo_data.py` loads about ten weeks of throwaway history. For one demo day on the new screens, run `python desktop/e2e/seed_demo_day.py` with `PETROL_PUMP_DB_PATH` pointing at a new file.
+
+---
+
+## Tests
+
+| Suite | Command | Count (last full run) |
+|---|---|---|
+| Python (services, API, LAN, Qt UI) | `pytest` | about 2,020 passed, 1 skipped |
+| Web unit | `cd web && npm test` | 409 |
+| Desktop unit | `cd desktop && npm test` | 48 |
+| End to end (real Electron, real Python API) | `cd desktop && npm run e2e` | 64 passed, 12 opt-in skipped |
+
+Run `npm run build` in `web/` before `npm run e2e`, because the e2e script does not rebuild the UI. Opt-in suites (installed app, deep install path, real printer, screenshots) are listed in [desktop/README.md](desktop/README.md). The Qt UI tests drive real widgets headlessly and never call `.exec()` on a modal dialog.
+
+---
+
+## Build installers
+
+**Electron app** (see [desktop/README.md](desktop/README.md)):
+
+```bash
+cd web && npm run build
+cd .. && pyinstaller api/pperp_api.spec --noconfirm --distpath desktop/sidecar-dist --workpath desktop/sidecar-build
+cd desktop && npm run dist          # release/Petrol Pump ERP Setup <version>.exe
+```
+
+The build measures the longest path inside the app and fails above 130 characters (Windows path limits). Code signing is not done yet.
+
+**Qt app**: `pyinstaller petrol_pump_erp.spec` for the single exe, then Inno Setup for the installer ([installer/README.md](installer/README.md)). Pushing a `v*.*.*` tag builds both on GitHub Actions and attaches them to a release.
 
 ---
 
@@ -387,148 +221,42 @@ This table is deliberately honest about what's a real dependency today (see `req
 
 ```
 PetrolPumpERP/
-├── app/
-│   ├── main.py                 # Entry point: init DB, seed data, launch UI
-│   ├── core/
-│   │   ├── config.py            # pydantic-settings app configuration
-│   │   ├── constants.py         # Roles, permissions, status enums, policy constants
-│   │   ├── exceptions.py        # AppError hierarchy (NotFoundError, ConflictError, ...)
-│   │   ├── logging.py
-│   │   ├── permissions.py       # @require_permission decorator
-│   │   └── security.py          # Password hashing/policy, session token hashing
-│   ├── database/
-│   │   ├── connection.py        # Engine, SessionLocal, FK/WAL PRAGMA setup
-│   │   ├── base.py              # Declarative Base, EntityMixin, StatusEnum
-│   │   └── seed.py              # Seeds roles, permissions, and the admin user
-│   ├── models/                  # SQLAlchemy ORM models (one file per entity)
-│   ├── repositories/            # Data access layer — one repository per model
-│   ├── schemas/                 # Pydantic input-validation schemas
-│   ├── services/                # Business logic, RBAC checks, audit logging
-│   └── ui/                      # PySide6 windows/dialogs, QML login screen, shared PageWindow base
-├── alembic/                     # Database migrations (run automatically on launch)
-├── tests/                       # pytest suite (996 tests)
+├── app/                  # Business logic shared by BOTH UIs
+│   ├── core/             #   config, constants (roles, permissions), security, exceptions
+│   ├── database/         #   engine, WAL/FK setup, seed, migrations runner
+│   ├── models/           #   SQLAlchemy models, UUID keys
+│   ├── repositories/     #   the only layer that talks SQL
+│   ├── schemas/          #   Pydantic input validation
+│   ├── services/         #   rules, RBAC, audit logging, checks, settings
+│   └── ui/               #   PySide6 windows (the original UI)
+├── api/                  # FastAPI sidecar: thin routers, check hook, LAN (api/lan)
+├── web/                  # React + TypeScript UI (src/features/<screen>/)
+├── desktop/              # Electron shell, Playwright e2e, packaging
+├── alembic/              # Database migrations
+├── tests/                # pytest (services, api, site, LAN, Qt UI)
+├── scripts/              # demo data, migration helper, benchmarks
+├── installer/            # Inno Setup script for the Qt app
 ├── docs/
-│   ├── user-guide.md            # Day-to-day staff guide
-│   ├── administrator-guide.md   # Install, users, config, backups, DB protection
-│   ├── recovery-guide.md        # What to do when something goes wrong
-│   ├── first-shift-runbook.md   # Walkthrough for the very first live shift
-│   └── screenshots/             # Screenshots used in this README
-├── scripts/                     # seed_demo_data.py, capture_screenshots.py, verification helpers
-├── installer/                   # Inno Setup script + build notes
-├── .github/workflows/           # tests.yml (CI) and release.yml (build + publish on tag)
-├── petrol_pump_erp.spec         # PyInstaller build config
-├── requirements.txt             # Loose ranges for local setup (requirements.lock = pinned CI/build set)
-├── README.md                    # You are here
-├── PROJECT_CONTEXT.md            # Living project memory: what's done, pending, known issues
-├── ARCHITECTURE.md               # Layered architecture, module responsibilities, diagrams
-├── ROADMAP.md                    # Phase-by-phase plan with granular checklists
-└── DEVELOPMENT_GUIDELINES.md                     # Development guidelines and architecture rules for this repo
+│   ├── guides/           # User guide and network setup guide (with screenshots)
+│   ├── migration/        # PySide6 -> Electron: reset point, log, report
+│   ├── history/          # Build logs and audit reports from earlier sessions
+│   ├── screenshots/      # Pictures used in this README
+│   └── *.md              # ADRs, runbooks, specs, administrator and recovery guides
+├── ARCHITECTURE.md  PROJECT_CONTEXT.md  ROADMAP.md  DEVELOPMENT_GUIDELINES.md
+└── petrol_pump_erp.spec  # Qt build config
 ```
 
 ---
 
-## Running the app from source
+## Security and data integrity
 
-See [Download & install](#download--install-start-here) for the full setup. Once your virtual environment is active:
-
-```bash
-python -m app.main
-```
-
-Where the data goes:
-
-| How you run it | Database location |
-|---|---|
-| From source (`python -m app.main`) | `app/petrol_pump.db` next to the code |
-| Packaged `.exe` / installer | `%LOCALAPPDATA%\PetrolPumpERP\petrol_pump.db` |
-| Either, to override | set the `PETROL_PUMP_DB_PATH` environment variable to any file path |
-
-**Default admin login:** username `admin`, password `Admin@123`. This is a known, publicly-committed development credential (`app/database/seed.py`), so the app **forces you to replace it at first login**. Never leave it in place on a real deployment.
-
-## Running the tests
-
-```bash
-pytest
-```
-
-All 996 tests should pass, in about 6-7 minutes (most of that is PySide6 widget construction across the UI test modules, not business logic). To run a single module's tests:
-
-```bash
-pytest tests/test_auth_rbac.py -v
-pytest tests/test_employee_service.py tests/test_employee_ui.py -v
-pytest tests/test_attendance_service.py tests/test_attendance_ui.py -v
-pytest tests/test_shift_service.py tests/test_shift_ui.py -v
-pytest tests/test_nozzle_service.py tests/test_nozzle_ui.py -v
-pytest tests/test_tank_service.py tests/test_tank_ui.py -v
-pytest tests/test_database_integrity.py -v
-```
-
-UI tests drive real PySide6 widgets (not mocks) but never call `.exec()` on a modal dialog — `QMessageBox`/`QInputDialog`/`QFileDialog` calls are monkeypatched where a test needs to simulate a user's choice, so the suite runs headlessly without hanging on a dialog waiting for a click that will never come.
-
----
-
-## Building a standalone Windows executable
-
-To hand the app to someone without them installing Python or any dependencies:
-
-```bash
-pip install -r requirements-build.txt
-pyinstaller petrol_pump_erp.spec
-```
-
-This produces a single file, `dist/PetrolPumpERP.exe` (~90MB — PySide6/Qt is the bulk of that). Copy that one file to any Windows PC and double-click it to run; nothing else needs to be installed. To wrap it in a proper Windows installer (Start Menu shortcuts, uninstaller), see [installer/README.md](installer/README.md) — or just push a version tag and let `release.yml` build and publish both.
-
-**Each install gets its own fresh, persistent database automatically.** This matters more than it sounds: a PyInstaller onefile build re-extracts itself to a new temporary directory on *every single launch*, so resolving the database path relative to the running executable (as a normal dev checkout does) would silently wipe the database on every restart once packaged. `app/database/connection.py` detects the frozen/packaged state and instead stores the database at `%LOCALAPPDATA%\PetrolPumpERP\petrol_pump.db` — a stable location that survives restarts and is private to whichever Windows user account runs it. This is covered by `tests/test_core_setup.py::test_frozen_build_uses_per_user_app_data_dir_not_temp_extraction_path`.
-
-On first launch on a new PC, the app creates that database, seeds the six roles/permissions and default fuel types, and creates the same dev admin login described above (`admin` / `Admin@123`), which must be changed at first login.
-
-⚠️ `petrol_pump_erp.spec` intentionally bundles matplotlib/PIL/tkinter even though this app doesn't use them directly — excluding them was tried and broke PySide6's Qt platform-plugin bundling (the app exited silently right after startup, no window, no error). See the comment at the top of the spec file for the full story before trying to slim the build down.
-
----
-
-## Troubleshooting
-
-| Symptom | Fix |
-|---|---|
-| `python` not found / wrong version | Install Python 3.13+ and re-open the terminal; check with `python --version`. On Windows try `py -3.13` in place of `python`. |
-| `venv\Scripts\activate` is blocked in PowerShell | Run `Set-ExecutionPolicy -Scope Process RemoteSigned` once in that window, or use `cmd` instead. |
-| `pip install` fails building a package | Upgrade pip first: `python -m pip install --upgrade pip`. PySide6 needs 64-bit Python. |
-| Locked out after 5 wrong passwords | The lock lifts by itself after 15 minutes, or an admin/owner can unlock the account right away under Masters → Users. |
-| Want a fresh database | Close the app and delete `petrol_pump.db` (and its `-wal`/`-shm` files) from the location in the table above. This erases all data — take a backup first if any of it matters. |
-| App won't start / something looks wrong | Check `petrol_pump_erp.log` (next to the database), then see [docs/recovery-guide.md](docs/recovery-guide.md). |
-
----
-
-## Architecture
-
-Clean layered architecture, enforced by convention (see [ARCHITECTURE.md](ARCHITECTURE.md) for the full picture and diagrams):
-
-```
-PySide6 UI  →  Service Layer  →  Repository Layer  →  SQLAlchemy  →  SQLite
-```
-
-- **UI** (`app/ui/`): presentation only. Widgets call a service method and render the result or the exception it raises — no business logic, no direct database access.
-- **Service** (`app/services/`): owns business rules, permission checks (`@require_permission`), and audit logging. This is where "can this happen" and "who did this and why" live.
-- **Repository** (`app/repositories/`): the only layer that talks SQL/SQLAlchemy. No business logic here — just data access.
-- **Models** (`app/models/`): SQLAlchemy ORM entities. UUID primary keys throughout, foreign keys actually enforced by SQLite (see [Database](#database)).
-
-## Security & data-integrity model
-
-- **RBAC everywhere**: every service method that mutates or reads sensitive data is wrapped in `@require_permission(...)`, checked against the acting user's role via the seeded `role_permissions` matrix.
-- **Audit trail**: `AuditLog` is append-only — its repository has no update or delete method. Every authentication event, employee change, attendance correction, and shift action is recorded with who/what/when/why and, where relevant, the old and new values.
-- **Never delete historical data**: employees exit via status + `exit_date`, not a `DELETE`. Documents are soft-deleted. Attendance corrections keep the correction reason and who made it rather than overwriting silently. Shifts are reopened (with a reason, under a stricter permission) rather than being edited after close.
-- **Passwords**: PBKDF2-HMAC-SHA256, 200,000 iterations, random salt per password. Session tokens are generated with `secrets.token_urlsafe` and stored only as a SHA-256 hash.
-
-## Database
-
-- Single-file SQLite database (`app/petrol_pump.db`), zero configuration, fully offline
-- **WAL mode** and **foreign-key enforcement** are turned on for every connection via a SQLAlchemy `connect` event listener (`app/database/connection.py`) — this is deliberately verified by `tests/test_database_integrity.py`, which checks the PRAGMAs are active and that an invalid foreign key is actually rejected by SQLite, not just by application-level checks
-- UUID (string) primary keys throughout
-- Schema changes go through real Alembic migrations (`app/database/migrations.py`) — `init_db()` runs `alembic upgrade head` on every launch, including the very first one, not a blunt `Base.metadata.create_all()`
-
-## Two-phase plan
-
-This offline desktop application is phase one of a two-phase plan. Once it proves itself in real use at a petrol pump, the intended second phase is a web application backed by a cloud database with cloud data synchronization. Architecture decisions in this phase — repository/service separation, UUID primary keys, clean domain models kept free of UI concerns — are made with that eventual migration in mind, even though no cloud or web code exists yet. Nothing in the current codebase assumes an internet connection.
+- **RBAC everywhere**: service methods are guarded by `@require_permission`; the API reuses them, so the web UI cannot do what the role cannot.
+- **Append-only audit log** with who, what, when, why and old/new values; the repository has no update or delete.
+- **Never silently change history**: employees leave by status, documents are soft-deleted, sales are cancelled with a compensating entry, closed shifts reopen only with a reason under a stricter permission.
+- **Passwords** are PBKDF2-HMAC-SHA256, 200,000 iterations, random salt. Session tokens are stored only as SHA-256 hashes.
+- **Money** is `Decimal` everywhere, never `float`, and crosses the API as a string.
+- **Backups** use SQLite's online backup API, are integrity-checked after creation, and a restore takes its own safety backup first.
+- **Offline**: only `app/services/mail_service.py` may ever connect out, and it is optional and off by default.
 
 ---
 
@@ -536,49 +264,36 @@ This offline desktop application is phase one of a two-phase plan. Once it prove
 
 | Document | Purpose |
 |---|---|
-| [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md) | Living project memory — completed modules, known bugs (fixed), known limitations, assumptions, next task. Read this first if you're picking the project back up. |
-| [ARCHITECTURE.md](ARCHITECTURE.md) | Layered architecture, module responsibilities, design principles, diagrams |
-| [ROADMAP.md](ROADMAP.md) | Phase-by-phase plan (22 phases) with granular, checked-off task lists |
-| [DEVELOPMENT_GUIDELINES.md](DEVELOPMENT_GUIDELINES.md) | Development guidelines and architecture rules for this codebase |
-| [problemstatement.md](problemstatement.md) | The original, complete project requirements |
-| [docs/user-guide.md](docs/user-guide.md) | Day-to-day guide for attendants, supervisors, managers, accountants |
-| [docs/administrator-guide.md](docs/administrator-guide.md) | Installation, user management, configuration, backups, protecting the database file |
-| [docs/recovery-guide.md](docs/recovery-guide.md) | Restoring from backup and handling data problems |
-| [docs/first-shift-runbook.md](docs/first-shift-runbook.md) | Step-by-step for the first live shift |
-| [installer/README.md](installer/README.md) | Building the Windows installer and cutting a release |
-
-## Roadmap status
-
-| Phase | Status |
-|---|---|
-| 1–3: Discovery, architecture, core framework | ✅ Complete |
-| 4: Authentication & RBAC | ✅ Complete |
-| 5: Employee & HR Management | ✅ Complete (HR reports deferred to Phase 16) |
-| 6: Attendance Management | ✅ Complete (holiday calendar/leave-balance tracking deferred) |
-| 7: Shift Management | ✅ Complete (full reconciliation deferred to Phase 15) |
-| 8: Nozzle Management | ✅ Complete (fuel-type-sectioned summary done; full nozzle reports deferred to Phase 16) |
-| 9: Tank & Inventory Management | ✅ Complete (fuel-type-sectioned summary done; full tank reports deferred to Phase 16) |
-| User Management (Phase 4 extension) | ✅ Complete — logins for all 6 roles, multiple users per role, password self-service |
-| Database migrations, backup/restore, audit log viewer, report export | ✅ Complete (2026-08-16, resolving a full build audit) — see below |
-| 10: Procurement Management | ✅ Complete (dedicated procurement reports deferred to Phase 16) |
-| 11: Sales Management | ✅ Complete (sales reports deferred to Phase 16, printable receipts deferred to Phase 17) |
-| 12: Payment Management | ✅ Complete (reconciliation workflows deferred to Phase 15, payment reports deferred to Phase 16) |
-| 13: Credit Management | ✅ Complete (fuel-type-sectioned/aging credit reports deferred to Phase 16) |
-| 14: Expense Management | ✅ Complete (expense reports deferred to Phase 16) |
-| 15: Reconciliation Management | ✅ Complete (dedicated reconciliation reports deferred to Phase 16) |
-| 16: Reporting System | 🟡 Partial — six reports closing out every earlier phase's own "deferred to Phase 16" promise; the full problemstatement.md #25-32 enumeration (daily/HR/inventory/management reports) is not started |
-| 17: Printing System | 🟡 Complete for every report/document that exists today (print preview, CSV export, receipts, statements); print configuration management and document types tied to the still-missing Phase 16 reports are deferred |
-| 18: Backup & Recovery | 🟡 Complete except configurable backup location, recovery-workflow documentation, and optional encryption |
-| 19: Testing | 🟡 Largely already satisfied by each module's own tests; added the one real gap (a cross-service integration test) |
-| 20: Packaging & Deployment | ✅ Mostly complete — standalone `.exe`, Inno Setup installer, tag-triggered GitHub Release workflow, optional `config.env`, and user/admin/recovery guides all exist; a first published release awaits a version tag |
-| 21: Pilot Deployment & Feedback | ⬜ Requires real-world deployment and feedback from actual pump operations |
-| 22: Final Release | ⬜ Depends on Phase 21 |
-| Client-perspective review pass (Leave, cash shortages, shift cash book, navigation restructure, alert strip, keyboard shortcuts, login redesign) | ✅ Complete (2026-09-16 – 2026-09-25) — see PROJECT_CONTEXT.md's own review-log entries for full detail on each item |
-
-See [ROADMAP.md](ROADMAP.md) for the full, granular breakdown of every phase.
+| [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md) | Living project memory: done, pending, decisions, next task. Read first when picking the project up. |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Layers, modules, diagrams |
+| [ROADMAP.md](ROADMAP.md) | Phase-by-phase plan with checklists |
+| [DEVELOPMENT_GUIDELINES.md](DEVELOPMENT_GUIDELINES.md) | Rules for working in this codebase |
+| [problemstatement.md](problemstatement.md) | The original requirements |
+| [docs/guides/USER_GUIDE.md](docs/guides/USER_GUIDE.md) | Illustrated guide for a first-time user (also as `.docx`) |
+| [docs/guides/NETWORK_SETUP_GUIDE.md](docs/guides/NETWORK_SETUP_GUIDE.md) | Setting up the Main PC and Client PCs |
+| [docs/administrator-guide.md](docs/administrator-guide.md) | Install, users, configuration, backups |
+| [docs/recovery-guide.md](docs/recovery-guide.md) | Restore and data-problem recovery |
+| [docs/first-shift-runbook.md](docs/first-shift-runbook.md) | The first live shift, step by step |
+| [docs/MAIN_PC_RUNBOOK.md](docs/MAIN_PC_RUNBOOK.md) | Care and recovery for the Main PC |
+| [docs/OFFLINE_ACCEPTANCE.md](docs/OFFLINE_ACCEPTANCE.md) | Owner's offline acceptance test (not yet performed) |
+| [docs/PRINTING_TEST.md](docs/PRINTING_TEST.md) | Printing check on a real printer (not yet performed) |
+| [docs/history/](docs/history/) | Build logs and audit reports, kept for the record |
 
 ---
 
+## Status and what is next
+
+**Done**: every Qt window has an Electron screen, plus the site-visit screens (Today, Checks, Close Shift, Daily Report, credit control, bank matching, payroll), multi-PC LAN mode, a pilot-readiness audit and a walk-through round of fixes.
+
+**Needs a human on real hardware** (cannot be proven from a development PC):
+
+- Printing on a real printer, and the offline acceptance test with the network cable out.
+- Windows Hello on the lock screen.
+- Memory on an old pump PC.
+- A first live pilot at a pump, then the final release.
+
+Open questions for the owners are listed in [docs/history/WALKTHROUGH_2026-10-17.md](docs/history/WALKTHROUGH_2026-10-17.md). The full phase table is in [ROADMAP.md](ROADMAP.md).
+
 ## License
 
-Proprietary - All rights reserved
+Proprietary. All rights reserved.

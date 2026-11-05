@@ -115,7 +115,7 @@ test.describe('printing from the Electron app', () => {
     const physical = printers.filter((p) => !/pdf|onenote|xps|fax/i.test(p.name));
     test.skip(
       physical.length === 0,
-      'INCONCLUSIVE: only virtual printers are installed. Use PRINTING_TEST.md on a real printer.',
+      'INCONCLUSIVE: only virtual printers are installed. Use docs/PRINTING_TEST.md on a real printer.',
     );
     // Electron may report no printer as default even when Windows has one; '' means "the system default".
     const def = printers.find((p) => p.isDefault) ?? { name: '', isDefault: true };

@@ -61,7 +61,7 @@ restricted). It never falls back to plain HTTP.
 |---|---|
 | A database on every PC plus synchronisation | Two PCs can both change one figure; merging money is a research problem. A pump needs one truth. |
 | The SQLite file on a shared folder | SQLite over SMB loses locks and corrupts under concurrent writers; nothing guards who may open it. |
-| A cloud server | Forbidden by the offline rule (CLAUDE.md); the pump must run with the internet cable out. |
+| A cloud server | Forbidden by the offline rule (DEVELOPMENT_GUIDELINES.md); the pump must run with the internet cable out. |
 | PostgreSQL | A real option, but a second product to install, secure, back up and explain to a non-technical owner. See below. |
 
 **What would justify PostgreSQL later:** sustained write contention (the Main PC regularly waits more than a second for the write
