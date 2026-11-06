@@ -22,7 +22,7 @@ import { AlertStrip, AlertsMenu } from '@/features/alerts/alerts';
 import { ChangePasswordDialog, SetPinDialog } from '@/features/auth/AccountDialogs';
 import { LockOverlay } from '@/features/auth/LockOverlay';
 import { cn } from '@/lib/cn';
-import { formatDateTime } from '@/lib/format';
+import { DISPLAY_LOCALE, formatDateTime } from '@/lib/format';
 import { isDark, setTheme } from '@/lib/theme';
 import { visibleGroups } from './nav';
 import { Button } from './ui/Button';
@@ -122,7 +122,7 @@ function Clock() {
     const id = window.setInterval(() => setNow(new Date()), 1000);
     return () => window.clearInterval(id);
   }, []);
-  const text = new Intl.DateTimeFormat(undefined, {
+  const text = new Intl.DateTimeFormat(DISPLAY_LOCALE, {
     weekday: 'short',
     day: '2-digit',
     month: 'short',
@@ -262,7 +262,7 @@ function ConnectionBadge() {
     polling: { tone: 'bg-warn-bg text-warn-fg border-warn', dot: 'bg-warn-fg', text: 'Main PC connected (refreshing every 20 s)' },
     offline: { tone: 'bg-danger-bg text-danger-fg border-danger', dot: 'bg-danger-fg', text: 'Main PC not reachable - read only' },
   }[link];
-  const updated = lastOk ? new Date(lastOk).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : null;
+  const updated = lastOk ? new Date(lastOk).toLocaleTimeString(DISPLAY_LOCALE, { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : null;
   return (
     <span role="status" className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${look.tone}`} title="Your data is on the pump's Main PC. This PC keeps no copy.">
       <span className={`size-2 rounded-full ${look.dot}`} aria-hidden />

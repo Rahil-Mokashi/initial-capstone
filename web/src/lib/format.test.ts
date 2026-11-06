@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   checkDecimal,
+  formatDate,
   formatLitres,
   formatPercent,
   formatQuantity,
@@ -54,5 +55,12 @@ describe('checkDecimal mirrors the server limits', () => {
   it('allows zero only when asked', () => {
     expect(checkDecimal('0.000', { nonZero: true })).toMatch(/zero/);
     expect(checkDecimal('-0', { negative: true, nonZero: true })).toMatch(/zero/);
+  });
+});
+
+describe('dates read the same on every PC', () => {
+  it('formats dates in the fixed display locale, not the machine one', () => {
+    expect(formatDate('2026-10-11')).toBe('11 Oct 2026');
+    expect(formatDate('not-a-date')).toBe('not-a-date');
   });
 });

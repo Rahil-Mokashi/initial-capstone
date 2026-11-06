@@ -10,7 +10,7 @@ import { TankDrawing } from '@/features/tanks/TankDrawing';
 import { LevelBadge, StatusPill } from '@/features/tanks/TankGauge';
 import { useTanks } from '@/features/tanks/queries';
 import { cn } from '@/lib/cn';
-import { formatMoney } from '@/lib/format';
+import { DISPLAY_LOCALE, formatMoney } from '@/lib/format';
 import { P } from '@/lib/permissions';
 import {
   ChecksCard,
@@ -350,7 +350,7 @@ export function DashboardPage() {
     true,
     60_000,
   );
-  const today = new Intl.DateTimeFormat(undefined, {
+  const today = new Intl.DateTimeFormat(DISPLAY_LOCALE, {
     weekday: 'long',
     day: '2-digit',
     month: 'long',

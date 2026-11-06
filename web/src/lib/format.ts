@@ -4,6 +4,9 @@
 
 const DECIMAL = /^-?\d+(\.\d+)?$/;
 
+/** Every date and time on screen uses this one locale, never the PC's own (same look on every pump PC and in CI). */
+export const DISPLAY_LOCALE = 'en-IN';
+
 /** 1234567 -> "12,34,567": the last three digits, then pairs (the Qt app's Indian grouping). */
 function groupIndian(digits: string): string {
   if (digits.length <= 3) return digits;
@@ -47,7 +50,7 @@ export function formatPercent(value: string): string {
 export function formatDateTime(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat(DISPLAY_LOCALE, {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
@@ -60,7 +63,7 @@ export function formatDate(isoDate: string): string {
   const d = new Date(`${isoDate}T00:00:00`);
   return Number.isNaN(d.getTime())
     ? isoDate
-    : new Intl.DateTimeFormat(undefined, {
+    : new Intl.DateTimeFormat(DISPLAY_LOCALE, {
         day: '2-digit',
         month: 'short',
         year: 'numeric',
