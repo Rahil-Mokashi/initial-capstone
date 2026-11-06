@@ -1,7 +1,9 @@
 """Fixtures for the HTTP API tests: a throwaway SQLite DB, seeded roles, one
 user per role we need, and a TestClient that sends the launch secret."""
 
+import shutil
 from datetime import date
+from functools import cache
 
 import pytest
 from fastapi.testclient import TestClient
@@ -27,15 +29,36 @@ def secret():
     return SECRET
 
 
-@pytest.fixture()
-def session_factory(tmp_path, monkeypatch):
-    engine = create_engine(f"sqlite:///{tmp_path / 'api_test.db'}", connect_args={"check_same_thread": False})
+def _engine_and_factory(path):
+    engine = create_engine(f"sqlite:///{path}", connect_args={"check_same_thread": False})
     factory = sessionmaker(autocommit=False, autoflush=False, bind=engine, expire_on_commit=False)
+    return engine, factory
+
+
+@pytest.fixture(scope="session")
+def _seeded_template(tmp_path_factory):
+    """Build the schema and run the seed ONCE per session; each test gets a private byte copy."""
+    path = tmp_path_factory.mktemp("api_template") / "template.db"
+    engine, factory = _engine_and_factory(path)
     Base.metadata.create_all(bind=engine)
-    # seed_initial_data() opens connection.SessionLocal; point it at the test DB.
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr("app.database.connection.engine", engine)
+        mp.setattr("app.database.connection.SessionLocal", factory)
+        seed_initial_data()
+    # WAL mode: fold the WAL into the main file so a plain copy holds the complete database.
+    with engine.connect() as conn:
+        conn.exec_driver_sql("PRAGMA wal_checkpoint(TRUNCATE)")
+    engine.dispose()
+    return path
+
+
+@pytest.fixture()
+def session_factory(tmp_path, monkeypatch, _seeded_template):
+    path = tmp_path / "api_test.db"
+    shutil.copyfile(_seeded_template, path)
+    engine, factory = _engine_and_factory(path)
     monkeypatch.setattr("app.database.connection.engine", engine)
     monkeypatch.setattr("app.database.connection.SessionLocal", factory)
-    seed_initial_data()
     yield factory
     engine.dispose()
 
@@ -47,11 +70,17 @@ def db(session_factory):
     session.close()
 
 
+@cache
+def _password_hash(password: str) -> str:
+    """One real PBKDF2 hash per session instead of seven per test."""
+    return hash_password(password)
+
+
 def _make_user(db, role_name: str, username: str, must_change_password: bool = False) -> User:
     user = User(
         username=username,
         email=f"{username}@example.com",
-        password_hash=hash_password(PASSWORD),
+        password_hash=_password_hash(PASSWORD),
         first_name=username.title(),
         last_name="Tester",
         role=db.query(Role).filter_by(name=role_name).first(),
